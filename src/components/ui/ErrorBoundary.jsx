@@ -25,19 +25,19 @@ export class ErrorBoundary extends React.Component {
       >
         <div
           className="max-w-md w-full rounded-xl p-5 shadow-lg"
-          style={{ background: "#FFFFFF", border: "1px solid #FECACA" }}
+          style={{ background: "var(--surface)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
           onClick={e => e.stopPropagation()}
         >
-          <div className="font-bold text-base mb-2" style={{ color: "#B91C1C" }}>
+          <div className="font-bold text-base mb-2" style={{ color: "var(--danger)" }}>
             Algo deu errado
           </div>
-          <div className="text-xs font-mono mb-3 p-2 rounded" style={{ background: "#FEF2F2", color: "#7F1D1D", whiteSpace: "pre-wrap", maxHeight: 200, overflow: "auto" }}>
+          <div className="text-xs font-mono mb-3 p-2 rounded" style={{ background: "var(--danger-bg)", color: "var(--danger)", whiteSpace: "pre-wrap", maxHeight: 200, overflow: "auto" }}>
             {this.state.error?.message || String(this.state.error)}
           </div>
           <button
             onClick={this.reset}
             className="px-3 py-1.5 text-xs font-semibold rounded-lg"
-            style={{ background: "var(--accent)", color: "#FFFFFF" }}
+            style={{ background: "var(--accent)", color: "var(--on-accent)" }}
           >
             Fechar
           </button>

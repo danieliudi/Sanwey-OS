@@ -37,8 +37,10 @@ import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatBRL, formatK, formatCurrency, calculateLandedCost } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 
 // ── helpers genéricos (compartilhados pelos 2 boards) ───────────────────────
 
@@ -127,14 +129,14 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             <input autoFocus type="text" placeholder="Ex.: Em análise"
               value={name} onChange={e => setName(e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -213,9 +215,9 @@ function CreateOperationModal({ title, fields, users, onSave, onClose }) {
             <AssigneeMultiSelect value={ownerIds} onChange={setOwnerIds} options={users} placeholder="Selecionar responsáveis…" />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>
           )}
-          <button type="submit" disabled={saving} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+          <button type="submit" disabled={saving} style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Criando…" : "Criar operação"}
           </button>
         </form>
@@ -492,7 +494,7 @@ function ComexKanbanColumn({
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
       className="flex flex-col rounded-lg transition-all duration-150"
-      style={{ width: 272, minWidth: 272, height: "100%", overflow: "hidden", border: "1px solid var(--border)", background: isDragOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none" }}
+      style={{ width: 272, minWidth: 272, height: "100%", overflow: "hidden", borderRight: stage.stageKey !== stages[stages.length - 1]?.stageKey ? "1px solid var(--border)" : "none", background: isDragOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none" }}
     >
       <div
         draggable={canWrite}
@@ -566,8 +568,27 @@ function ComexKanbanColumn({
 // ── Tabela ────────────────────────────────────────────────────────────────
 
 function ComexTableView({ operations, stages, columns, onRowClick }) {
+  const valueCol = columns.find(c => c.key === "value");
+  const metaCols = columns.slice(1).filter(c => c.key !== "value");
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={operations}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma operação encontrada."
+      title={(op) => op[columns[0].key] || "—"}
+      chips={(op) => {
+        const st = findStage(stages, op.stage);
+        return [{ label: st.name, color: st.color }];
+      }}
+      right={valueCol ? (op) => (
+        <span className="text-sm font-semibold" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+          {valueCol.render ? valueCol.render(op) : (op[valueCol.key] ?? "—")}
+        </span>
+      ) : undefined}
+      meta={(op) => metaCols.map(c => op[c.key]).filter(Boolean).join(" · ") || "—"}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -593,7 +614,7 @@ function ComexTableView({ operations, stages, columns, onRowClick }) {
                   </td>
                 ))}
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -603,6 +624,7 @@ function ComexTableView({ operations, stages, columns, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -721,7 +743,7 @@ function ComexCalendarView({ operations, stages, onSelect }) {
                 <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
                   <div className="flex justify-center mb-1">
                     <span className="flex items-center justify-center text-xs font-semibold select-none"
-                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "var(--on-accent)" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
                       {day.getDate()}
                     </span>
                   </div>
@@ -735,7 +757,7 @@ function ComexCalendarView({ operations, stages, onSelect }) {
                           onClick={() => onSelect(op)}
                           title={op.title}
                           className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                          style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40`, cursor: "pointer" }}
                         >
                           {op.title}
                         </button>
@@ -816,7 +838,7 @@ function ComexDrawer({
     <div style={{ minWidth: 0 }}>
       <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{op.title}</div>
       <div style={{ marginTop: 8 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: stageTextColor(st.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
         </span>
       </div>
@@ -884,7 +906,7 @@ function ComexDrawer({
   const right = (
     <>
       {canWrite && moveError && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#FEF2F2", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
           <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
           {moveError}
         </div>
@@ -1180,6 +1202,8 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
     [stages]
   );
 
+  const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
+
   const Icon = config.icon;
 
   return (
@@ -1206,10 +1230,10 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-              <ViewToggleButton active={viewMode === "kanban"}    onClick={() => setViewMode("kanban")}    icon={LayoutGrid}    label="Kanban" />
-              <ViewToggleButton active={viewMode === "table"}     onClick={() => setViewMode("table")}     icon={List}          label="Tabela" />
-              <ViewToggleButton active={viewMode === "calendar"}  onClick={() => setViewMode("calendar")}  icon={CalendarDays}  label="Calendário" />
-              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}    label="Análise" />
+              <ViewToggleButton active={viewMode === "kanban"}    onClick={() => setViewMode("kanban")}    icon={LayoutGrid}    label="Kanban" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "table"}     onClick={() => setViewMode("table")}     icon={List}          label="Tabela" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "calendar"}  onClick={() => setViewMode("calendar")}  icon={CalendarDays}  label="Calendário" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}    label="Análise" iconOnlyMobile />
             </div>
             {canWrite && <Button size="sm" icon={Plus} onClick={() => setShowCreate(true)}>Nova operação</Button>}
           </div>
@@ -1249,6 +1273,8 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
           getStageKey={(o) => o.stage}
           getStageEnteredAt={(o) => o.stageChangedAt}
           specificStats={specificStats}
+          getOwnerIds={(o) => o.ownerIds || []}
+          usersById={usersById}
         />
       ) : (
         <>
@@ -1425,9 +1451,9 @@ export function ComexView({ currentUser, users = [], canWrite, notifyMentions })
   );
 
   return subView === "importacao" ? (
-    <ComexBoard config={IMPORT_CONFIG} currentUser={currentUser} users={users} canWrite={canWrite} notifyMentions={notifyMentions} headerExtra={subViewToggle} />
+    <ComexBoard key="comex-importacao" config={IMPORT_CONFIG} currentUser={currentUser} users={users} canWrite={canWrite} notifyMentions={notifyMentions} headerExtra={subViewToggle} />
   ) : (
-    <ComexBoard config={EXPORT_CONFIG} currentUser={currentUser} users={users} canWrite={canWrite} notifyMentions={notifyMentions} headerExtra={subViewToggle} />
+    <ComexBoard key="comex-exportacao" config={EXPORT_CONFIG} currentUser={currentUser} users={users} canWrite={canWrite} notifyMentions={notifyMentions} headerExtra={subViewToggle} />
   );
 }
 

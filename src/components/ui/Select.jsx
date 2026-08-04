@@ -18,8 +18,8 @@ export function Select({ value, onChange, options, placeholder, className = "", 
         onChange={onChange}
         className={`w-full appearance-none ${sizeClass} border transition-colors duration-150 focus:outline-none focus:ring-2 cursor-pointer`}
         style={{
-          borderColor: "#E5E7EB",
-          background: "#FFFFFF",
+          borderColor: "var(--border)",
+          background: "var(--surface)",
           color: value ? "var(--text)" : "var(--text-dim)",
           "--tw-ring-color": "rgba(199,33,43,.15)",
         }}

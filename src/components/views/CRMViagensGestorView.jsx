@@ -45,13 +45,13 @@ const thSt = { fontSize: 10, fontWeight: 700, color: "var(--text-faint)", textTr
 
 const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 
-const errorBannerSt = { background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 };
+const errorBannerSt = { background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 };
 
 function btnStyle(kind, disabled, big) {
   // big=true: alvo de toque ~40px pra ações de decisão de reembolso no celular
   const base = { display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 8, padding: big ? "10px 14px" : "5px 10px", fontSize: big ? 13 : 11, fontWeight: 700, border: "none", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1, minHeight: big ? 40 : undefined };
-  if (kind === "primary") return { ...base, background: "var(--accent)", color: "#FFF" };
-  if (kind === "danger")  return { ...base, background: "var(--danger)", color: "#FFF" };
+  if (kind === "primary") return { ...base, background: "var(--accent)", color: "var(--on-accent)" };
+  if (kind === "danger")  return { ...base, background: "var(--danger)", color: "var(--on-danger)" };
   return { ...base, background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border)" };
 }
 
@@ -94,7 +94,7 @@ function VisitaCardMobile({ registro: r, showVendedorCol, nomePorId, today }) {
         border: "1px solid var(--border)",
         borderRadius: 10,
         padding: 12,
-        background: destaque ? "#FEF2F2" : "transparent",
+        background: destaque ? "var(--danger-bg)" : "transparent",
         borderLeft: destaque ? "3px solid var(--danger)" : "3px solid transparent",
       }}
     >
@@ -164,7 +164,7 @@ function VisitasTable({ registros, showVendedorCol, nomePorId, today }) {
                 borderRadius: 8,
                 marginTop: 4,
                 alignItems: "start",
-                background: destaque ? "#FEF2F2" : "transparent",
+                background: destaque ? "var(--danger-bg)" : "transparent",
                 borderLeft: destaque ? "3px solid var(--danger)" : "3px solid transparent",
               }}
             >
@@ -199,12 +199,12 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
         <span style={{ fontSize: 12, color: "var(--text-dim)" }}>{despesa.categoria}</span>
         <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{fmtMoney(despesa.valor)}</span>
         {divergente && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "#B45309", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 99, padding: "2px 8px" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--warning)", background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 99, padding: "2px 8px" }}>
             <AlertTriangle size={11} /> Comprovante mostra {fmtMoney(iaValor)}
           </span>
         )}
         {faltaComprovanteObrigatorio && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--danger)", background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 99, padding: "2px 8px" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 99, padding: "2px 8px" }}>
             <AlertTriangle size={11} /> Sem comprovante (obrigatório acima de {fmtMoney(COMPROVANTE_OBRIGATORIO_ACIMA_DE)})
           </span>
         )}
@@ -407,7 +407,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
             <Plane size={18} style={{ color: "var(--accent)" }} />
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Viagens & Reembolsos</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Viagens & Despesas</div>
             <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Visão do gestor</div>
           </div>
         </div>

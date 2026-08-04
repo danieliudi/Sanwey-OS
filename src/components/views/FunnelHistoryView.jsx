@@ -280,7 +280,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
       {error && (
         <div
           className="px-4 py-3 rounded-xl text-sm"
-          style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
         >
           Erro ao carregar histórico: {error.message || String(error)}
         </div>
@@ -390,7 +390,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                         {recycles > 0 && (
                           <span
                             className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ background: "#FEF3EC", color: "var(--amber)" }}
+                            style={{ background: "var(--amber-bg)", color: "var(--amber)" }}
                             title={`${recycles} reciclagem${recycles > 1 ? "s" : ""}`}
                           >
                             <Repeat2 size={10} />

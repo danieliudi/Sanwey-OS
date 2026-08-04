@@ -172,8 +172,8 @@ export function StageAdvancedModal({
                 <span
                   className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                   style={{
-                    background: stage.won ? "#E8F2EC" : "#FEF2F2",
-                    color: stage.won ? "#1A6E35" : "#B91C1C",
+                    background: stage.won ? "var(--success-bg)" : "var(--danger-bg)",
+                    color: stage.won ? "var(--success)" : "var(--danger)",
                   }}
                 >
                   {stage.won ? "Ganho" : "Perdido"}
@@ -243,7 +243,7 @@ export function StageAdvancedModal({
           )}
 
           {error && (
-            <div style={{ fontSize: 12, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 12px" }}>
+            <div style={{ fontSize: 12, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 8, padding: "8px 12px" }}>
               {error}
             </div>
           )}
@@ -275,7 +275,7 @@ export function StageAdvancedModal({
                     onClick={handleDelete}
                     disabled={deleting || saving}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-                    style={{ borderColor: "#FECACA", color: "var(--danger)", background: "var(--danger-bg)" }}
+                    style={{ borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)", color: "var(--danger)", background: "var(--danger-bg)" }}
                   >
                     <Trash2 size={12} />
                     {deleting ? "Excluindo…" : "Excluir esta etapa"}

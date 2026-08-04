@@ -26,7 +26,7 @@ export function PageHeader({ icon: Icon, title, subtitle, actions }) {
           </p>
         )}
       </div>
-      {actions && <div className="flex items-center gap-2.5 flex-shrink-0">{actions}</div>}
+      {actions && <div className="flex items-center flex-wrap gap-2.5 flex-shrink-0">{actions}</div>}
     </div>
   );
 }

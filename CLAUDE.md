@@ -8,8 +8,9 @@ código, não depois.
 
 Duas categorias de regra abaixo: **reaproveitamento obrigatório** (nunca
 reimplementar algo que já existe) e **processo de revisão** (design → frontend
-→ QA) pra tudo que for genuinamente novo. Reaproveitamento evita retrabalho por
-construção; revisão pega o que não dá pra generalizar.
+→ QA, mais Segurança quando aplicável — ver 3.1) pra tudo que for genuinamente
+novo. Reaproveitamento evita retrabalho por construção; revisão pega o que não
+dá pra generalizar.
 
 ---
 
@@ -36,6 +37,9 @@ Confirmado via grep de uso real no código (não é aspiracional):
 | Debounce de refetch em `postgres_changes` | `src/utils/debounce.js` | todo hook que assina Realtime |
 | Editor de campos por etapa (CRM e RH, um único componente) | `src/components/shared/stage-editor/StageFieldsPanel.jsx` (+ `CRMStageFieldsPanel.jsx`/`RHStageFieldsPanel.jsx` e demais arquivos da pasta) | Pipeline e todos os boards de RH — `StageFieldEditorModal.jsx`/`RHStageFieldEditorModal.jsx` (duas versões separadas, citadas em versões antigas deste arquivo) já foram deletados |
 | Título editável do card (lápis sempre visível, não só no hover — funciona em touch) | `src/components/shared/EditableTitle.jsx` | Campanhas, Entregas, Tarefas, Compras (`CampaignDetailDrawer`/`DeliverableDetailDrawer`/`MarketingTaskDetailDrawer`/`PurchaseRequestDetailDrawer`) — padrão da plataforma pra título de card, decidido com o Daniel 29/07/2026. **Funil de Vendas fica de fora por ora**: em `LeadDetailDrawer.jsx` o "título" é o Cliente vinculado (dedup por CNPJ via `ClientSelector`/`ClientQuickCreateModal`), não um texto solto — aplicar `EditableTitle` ali direto ignoraria o dedup. Não aplicar sem decidir antes como isso se encaixa. |
+| Tooltip (ícone "?" com texto explicativo) | `src/components/ui/HelpTooltip.jsx` | Extraído 31/07/2026 — era o mesmo SVG copiado 3x (`StatCard.jsx`, `CurrencyInput.jsx`, `CampaignDetailDrawer.jsx`'s `Field`), passou do limite da regra 4. Uso: `<HelpTooltip text={...} />` (prop `size` opcional, default 13). **Não é pra todo hint** — reservado a explicar um conceito/label que não tem elemento próprio pra segurar o hint (rótulo de `StatCard`, campo de formulário). Hint de um elemento que já existe (botão, ícone, texto truncado) continua usando `title="..."` nativo do HTML — é o padrão de facto pra isso (~90 ocorrências), não precisa do ícone dedicado. |
+| Toast (notificação temporária) | `src/components/shared/AppToast.jsx` | 8+ telas de Kanban (erro de transição de etapa) + update de versão/novidades no `App.jsx`. `variant="default"` (neutro) ou `variant="danger"` (erro) — cores via token (`--danger`/`--danger-bg`), nunca hex solto. `ChangelogToast.jsx` é variante deliberadamente separada (toast de "Novidades" tem timing/gatilho diferente, documentado no próprio arquivo) — não é duplicação. `alert()`/`window.confirm()` nativos ainda aparecem em ~15 arquivos como fallback onde não há slot de banner pronto — débito conhecido, não migrar de supetão só por existir; ao tocar uma dessas telas por outro motivo, prefira migrar pro `AppToast`/modal de confirmação compartilhado em vez de manter o nativo. |
+| Densidade de linha de tabela (Confortável/Compacta) | `src/components/shared/TableDensityToggle.jsx` + `src/hooks/use-table-density.js` | Extraído 03/08 durante o rollout do Focus Flutter UI Kit — só `RHFuncionariosView.jsx` usa hoje (referência do padrão "Tabela com filtro", regra 6). `useTableDensity(storageKey)` persiste por usuário via `localStorage`, uma chave por tela (ex.: `"rh-funcionarios-table-density"`) — mesmo espírito do toggle grade/lista já usado em `CardGrid` (`Card.jsx`), não reinventar. Ainda não propagado pras outras telas de tabela — extrair pro `shared/` já foi feito, falta só o rollout quando outra tela pedir. |
 
 **Tokens de design (CSS custom properties, `src/index.css`)** — 74+ arquivos já
 usam `var(--accent)`; nunca hardcode hex novo pra estado que já tem token:
@@ -50,6 +54,23 @@ usam `var(--accent)`; nunca hardcode hex novo pra estado que já tem token:
   próximo).
 - `--text`, `--text-dim`, `--border`, `--surface`, `--surface-alt` = neutros
   padrão, com variante dark mode automática.
+
+**Padrão de exclusão em toda página "Fornecedores"** — decidido com o Daniel
+31/07/2026: referência canônica é `src/components/views/FornecedoresView.jsx`
+(Marketing) — ícone `Trash2` no slot `menu` do `Card` compartilhado (canto
+superior direito do card na grade), abrindo um `ConfirmDeleteModal` construído
+sobre o `Modal` compartilhado (`src/components/ui/Modal.jsx`), com botões
+"Cancelar"/"Excluir" (`Excluir` em `var(--danger)`). `RHFornecedoresView.jsx`
+já segue este padrão (só o texto do corpo do modal muda por página, pra
+refletir o que realmente é perdido — em RH, contratos e histórico de eventos
+somem junto via `ON DELETE CASCADE`; em Marketing, cotações já enviadas
+continuam no histórico). Só existem 2 páginas de Fornecedores hoje
+(Marketing/RH) — por isso isto é uma convenção escrita, não um componente
+`shared/` extraído: regra 4 abaixo só manda extrair na 3ª ocorrência real. Se
+uma 3ª página de Fornecedores nascer, é o momento de extrair
+`ConfirmDeleteModal` (e o botão de lixeira no `menu`) pra `shared/` — antes
+disso, qualquer página nova de Fornecedores replica a estrutura acima
+olhando `FornecedoresView.jsx`, não inventa variante própria.
 
 ## 2. Duplicação conhecida — famílias paralelas (não crie uma terceira)
 
@@ -117,11 +138,60 @@ porque passaram pelo QA.
    interação, campo sem opções configuradas renderizando vazio, saudação/
    rascunho de IA com variável ausente, guardrail de transição de etapa
    ignorado).
+4. **Segurança** (`security-agent`, condicional — só entra quando a mudança
+   toca schema/migration, RLS, Storage, edge function, ou qualquer rota de
+   escrita/autenticação) — ver 3.1 pro checklist completo.
 
-Se estiver rodando como sessão do Claude Code, os três papéis já existem como
-sub-agentes em `.claude/agents/design-agent.md` / `frontend-agent.md` /
-`qa-agent.md` (local ao ambiente, fora do Git) — use-os via `Agent`/`Task`.
-Se não estiverem disponíveis na sessão, siga a sequência acima manualmente.
+Se estiver rodando como sessão do Claude Code, os quatro papéis já existem
+como sub-agentes em `.claude/agents/design-agent.md` / `frontend-agent.md` /
+`qa-agent.md` / `security-agent.md` (local ao ambiente, fora do Git) — use-os
+via `Agent`/`Task`. Se não estiverem disponíveis na sessão, siga a sequência
+acima manualmente.
+
+### 3.1 QA multi-lente (mudança não-trivial) e o papel de Segurança
+
+Decidido com o Daniel em 03/08/2026, depois de uma entrega real (vínculo
+Despesas↔Entregas/Tarefas) onde a checagem de segurança da RLS nova
+(comparar contra o predicado já em produção na tabela-irmã, rodar
+`get_advisors` depois da migration) foi feita à mão pelo orquestrador em vez
+de ser parte formal do processo — daqui pra frente isso é regra, não
+lembrete pontual.
+
+**QA multi-lente** — pra mudança que não seja um ajuste cosmético isolado
+(mexeu em hook/componente compartilhado, criou tabela nova, mudou RLS, mudou
+fluxo de autenticação/aprovação), rode o QA como 2-3 revisores independentes
+em paralelo, cada um com uma lente diferente, em vez de uma passada única:
+fidelidade à spec (o que o `qa-agent` já faz), correção funcional/
+não-regressão, e uma passada adversarial que assume por padrão que tem
+problema e só aprova se não achar nenhum caso de borda que quebre. Só
+aprove se a maioria concordar. Isso custa mais tempo/tokens que uma passada
+só — reserve pra mudança de risco real, não pra ajuste de 1 linha.
+
+**Segurança (`security-agent`)** — 4º papel, acionado sempre que a mudança
+tocar schema/migration nova, policy RLS nova ou alterada, bucket/path de
+Storage, edge function, ou rota que aceite escrita de usuário
+não-autenticado (formulário público). Roda depois do `frontend-agent`,
+antes de considerar o item pronto. Só revisa (mesma regra do `qa-agent`:
+aprova ou devolve achado específico `arquivo:linha`) — nunca aplica
+migration nem corrige RLS direto; aplicar migration continua exigindo
+confirmação explícita do Daniel (regra 5). Checklist mínimo:
+
+- RLS habilitada em toda tabela nova (`ENABLE ROW LEVEL SECURITY`).
+- Policy nova compara com o predicado já em produção na tabela-irmã mais
+  próxima, não inventa um modelo de permissão do zero — foi assim que a RLS
+  de `marketing_expense_deliverables`/`marketing_expense_tasks` foi
+  validada, espelhando `marketing_expense_items`.
+- Isolamento por empresa/tenant onde o dado é escopado por empresa (classe
+  de bug já encontrada nesta plataforma: `clients` sem isolamento, Storage
+  cross-fornecedor).
+- Nenhum self-escalation — usuário alterando a própria role/aprovação via
+  UPDATE na própria linha (já aconteceu em `profiles`, `rh_ferias`).
+- Edge function valida JWT e autorização de papel/empresa antes de agir
+  (já aconteceu edge function sem essa checagem).
+- Rota pública (formulário sem login) não grava coluna arbitrária nem
+  permite abuso sem limite de taxa.
+- Roda `get_advisors` (Supabase MCP, tipo `security`) depois de qualquer
+  migration aplicada — nenhum achado novo introduzido pela mudança.
 
 ## 4. Extração sob demanda — quando (e quando não) criar algo em `shared/`
 

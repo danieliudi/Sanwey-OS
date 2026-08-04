@@ -17,7 +17,7 @@ export const MODULE_GROUPS = [
       { id: "clients",             label: "Clientes" },
       { id: "signals",             label: "Sinais" },
       { id: "explorer",            label: "Explorador" },
-      { id: "crm-viagens",         label: "Viagens & Reembolsos" },
+      { id: "crm-viagens",         label: "Viagens & Despesas" },
       { id: "crossref",            label: "Cross-sell" },
       { id: "comex",               label: "Comex" },
     ],

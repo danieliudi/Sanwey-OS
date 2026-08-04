@@ -29,7 +29,9 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
+import { AppToast } from "../shared/AppToast";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
@@ -41,6 +43,7 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
+import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
@@ -175,14 +178,14 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             <input autoFocus type="text" placeholder="Ex.: Acompanhamento 30 dias"
               value={name} onChange={e => setName(e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -197,7 +200,7 @@ const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
-const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function dayKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -218,9 +221,9 @@ function InitialsAvatar({ name, size = 32 }) {
 
 function statusConfig(status) {
   switch (status) {
-    case "concluida":     return { label: "Concluída",     color: "var(--success)", bg: "#DCFCE7" };
-    case "em_andamento":  return { label: "Em andamento",  color: "var(--accent)", bg: "#DBEAFE" };
-    default:              return { label: "Pendente",      color: "var(--warning)", bg: "#FEF3C7" };
+    case "concluida":     return { label: "Concluída",     color: "var(--success)", bg: "var(--success-bg)" };
+    case "em_andamento":  return { label: "Em andamento",  color: "color-mix(in srgb, #2563EB 60%, var(--text))", bg: "color-mix(in srgb, #2563EB 12%, var(--surface))" };
+    default:              return { label: "Pendente",      color: "var(--warning)", bg: "var(--warning-bg)" };
   }
 }
 
@@ -314,7 +317,7 @@ function OnboardingKanbanColumn({
       style={{
         width: 272, minWidth: 272,
         overflow: "hidden",
-        border: "1px solid var(--border)",
+        borderRight: stage.stageKey !== stages[stages.length - 1]?.stageKey ? "1px solid var(--border)" : "none",
         background: isDragOver ? stage.color + "14" : "var(--surface-alt)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
         height: boardHeight,
@@ -511,7 +514,7 @@ function OnboardingDrawer({
         <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador.fullName}</div>
         <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{colaborador.jobTitle || "—"} · {colaborador.department || "—"}</div>
         <div style={{ marginTop: 8 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: stageTextColor(st.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
           </span>
         </div>
@@ -599,7 +602,7 @@ function OnboardingDrawer({
                     return <option key={t.id} value={t.id}>{base}{trilha}</option>;
                   })}
                 </select>
-                <button onClick={handleApplyTemplate} disabled={!templateId} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "0 12px", fontSize: 11, fontWeight: 700, cursor: templateId ? "pointer" : "default", opacity: templateId ? 1 : 0.5 }}>
+                <button onClick={handleApplyTemplate} disabled={!templateId} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "0 12px", fontSize: 11, fontWeight: 700, cursor: templateId ? "pointer" : "default", opacity: templateId ? 1 : 0.5 }}>
                   Aplicar
                 </button>
               </div>
@@ -650,7 +653,7 @@ function OnboardingDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>
@@ -776,10 +779,10 @@ function NovaTemplateModal({ onSave, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Salvar template"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -859,11 +862,11 @@ function BulkTarefaModal({ colaboradores, onApply, onClose }) {
 
         {done > 0 ? (
           <div style={{ padding: "28px 24px", textAlign: "center" }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#DCFCE7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--success-bg)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
               <Check size={24} color="var(--success)" />
             </div>
             <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>Tarefa enviada a {done} colaborador{done !== 1 ? "es" : ""}</div>
-            <button onClick={onClose} style={{ marginTop: 16, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>Fechar</button>
+            <button onClick={onClose} style={{ marginTop: 16, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>Fechar</button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", minHeight: 0, flex: 1 }}>
@@ -908,11 +911,11 @@ function BulkTarefaModal({ colaboradores, onApply, onClose }) {
                 </div>
               </div>
 
-              {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
+              {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
             </div>
 
             <div style={{ padding: "12px 24px 20px", display: "flex", gap: 8, borderTop: "1px solid var(--border)" }}>
-              <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+              <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
                 {saving ? "Enviando…" : `Enviar a ${selected.size}`}
               </button>
               <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -959,7 +962,29 @@ function MeuChecklist({ colaborador, tarefas, onStatusChange }) {
 
 function OnboardingTableView({ colaboradores, stages, tarefasByColaborador, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={colaboradores}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhum colaborador encontrado."
+      title={(c) => c.fullName}
+      chips={(c) => {
+        const st = findStage(stages, c.onboardingStage);
+        return [{ label: st.name, color: st.color }];
+      }}
+      right={(c) => {
+        const tarefas = tarefasByColaborador[c.id] || [];
+        const done = tarefas.filter((t) => t.status === "concluida").length;
+        return (
+          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+            {tarefas.length > 0 ? `${done}/${tarefas.length}` : "—"}
+          </span>
+        );
+      }}
+      meta={(c) => [c.jobTitle, c.department].filter(Boolean).join(" · ") || "—"}
+      metaRight={(c) => <span>{fmt(c.admissionDate)}</span>}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -991,7 +1016,7 @@ function OnboardingTableView({ colaboradores, stages, tarefasByColaborador, onRo
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.jobTitle || "—"}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.department || "—"}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -1003,6 +1028,7 @@ function OnboardingTableView({ colaboradores, stages, tarefasByColaborador, onRo
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -1030,7 +1056,7 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
 
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const offset = (first.getDay() + 6) % 7;
+    const offset = first.getDay();
     const start = new Date(first);
     start.setDate(first.getDate() - offset);
     const days = [];
@@ -1069,7 +1095,7 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
       </div>
       <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
         {WEEKDAYS.map(w => (
-          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+          <div key={w} className="px-2 py-2 text-[10px] font-bold text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
@@ -1080,8 +1106,10 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
-              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+              style={{ borderColor: "var(--border)", background: "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={isToday
+                ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
               <div className="flex flex-col gap-0.5">
@@ -1090,7 +1118,7 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
                   return (
                     <span key={c.id} onClick={() => onPillClick(c)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: st.color + "18", color: st.color }}
+                      style={{ background: st.color + "18", color: stageTextColor(st.color) }}
                       title={`${c.fullName} · ${st.name}`}>
                       {c.fullName}
                     </span>
@@ -1134,6 +1162,13 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   // nunca hardcoded — se não houver etapa terminal+lost configurada, a
   // opção "Excluir" fica indisponível (ver onDeleteCard abaixo).
   const onboardingRemovedStageKey = useMemo(() => stages.find((s) => s.terminal && s.lost)?.stageKey || null, [stages]);
+  // Contador do cabeçalho não deve incluir quem já foi "Removido" (etapa só
+  // visível na Tabela) — achado #13 do roteiro de treinamento de RH
+  // (31/07/2026), mesmo critério terminal&&lost já usado acima.
+  const colaboradoresEmOnboarding = useMemo(
+    () => onboardingRemovedStageKey ? colaboradores.filter((c) => c.onboardingStage !== onboardingRemovedStageKey) : colaboradores,
+    [colaboradores, onboardingRemovedStageKey]
+  );
   const onboardingStageFields = useRHStageFields("onboarding");
   const { users } = useProfiles();
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
@@ -1433,15 +1468,15 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
             <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Onboarding</h1>
           </div>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {colaboradores.length} colaborador{colaboradores.length !== 1 ? "es" : ""} no onboarding
+            {colaboradoresEmOnboarding.length} colaborador{colaboradoresEmOnboarding.length !== 1 ? "es" : ""} no onboarding
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
-            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
-            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
-            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
+            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
           {canWrite && (
             <>
@@ -1608,6 +1643,17 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           onAddActivity={(entry) => handleAddActivity(drawerColaborador.id, entry)}
           onUpdateActivity={handleUpdateActivity}
         />
+      )}
+
+      {/* moveError já aparece como banner dentro do drawer — mas mover pelo
+          menu do card (drawer fechado) bloqueava em silêncio, indistinguível
+          de "desabilitado" (achado #10 do roteiro de treinamento de RH,
+          31/07/2026). Mesmo padrão de toast já usado em outros Kanbans
+          (AppToast variant="danger", ver RHFeriasView.jsx). */}
+      {moveError && !drawerColaborador && (
+        <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setMoveError(null)}>
+          {moveError}
+        </AppToast>
       )}
 
       {novaTemplateOpen && (

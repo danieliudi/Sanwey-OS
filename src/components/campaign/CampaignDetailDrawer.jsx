@@ -13,6 +13,7 @@ import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { HelpTooltip } from "../ui/HelpTooltip";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
@@ -27,6 +28,7 @@ import { resolveVisibleFields } from "../../utils/field-conditions";
 import { RecordAIPanel } from "../shared/RecordAIPanel";
 import { campaignStageSuggestionPrompt, genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { formatK } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { EVENT_CHECKLIST_TEMPLATE } from "../../constants/event-checklist-template";
 import { supabase } from "../../lib/supabase";
@@ -203,7 +205,7 @@ function ApplyEventChecklistButton({ campaign, currentUser }) {
         className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl"
         style={{
           background: "var(--accent)",
-          color: "#FFF",
+          color: "var(--on-accent)",
           border: "none",
           cursor: (applying || loading) ? "not-allowed" : "pointer",
           opacity: (applying || loading) ? 0.7 : 1,
@@ -266,7 +268,7 @@ function ApplyEventChecklistButton({ campaign, currentUser }) {
           <button onClick={() => { setConfirming(false); setApplyError(null); }} disabled={applying} className="px-4 py-2 rounded-lg text-sm font-semibold border" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "transparent" }}>
             Cancelar
           </button>
-          <button onClick={handleApply} disabled={applying || taskCount === 0} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: "var(--accent)", color: "#FFF", border: "none", opacity: (applying || taskCount === 0) ? 0.6 : 1, cursor: (applying || taskCount === 0) ? "not-allowed" : "pointer" }}>
+          <button onClick={handleApply} disabled={applying || taskCount === 0} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", opacity: (applying || taskCount === 0) ? 0.6 : 1, cursor: (applying || taskCount === 0) ? "not-allowed" : "pointer" }}>
             <ListChecks size={13} />
             {applying ? "Aplicando…" : `Aplicar (${taskCount})`}
           </button>
@@ -288,7 +290,7 @@ function TriStateCheckbox({ state }) {
         className="inline-flex items-center justify-center rounded-sm flex-shrink-0"
         style={{ width: size, height: size, background: "var(--accent)", border: "none" }}
       >
-        <Check size={11} strokeWidth={3} style={{ color: "#FFF" }} />
+        <Check size={11} strokeWidth={3} style={{ color: "var(--on-accent)" }} />
       </span>
     );
   }
@@ -381,12 +383,12 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
       </div>
 
       {fileError && (
-        <div className="text-xs rounded-md px-3 py-2" style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}>
+        <div className="text-xs rounded-md px-3 py-2" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
           {fileError}
         </div>
       )}
       {error && (
-        <div className="text-xs rounded-md px-3 py-2" style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}>
+        <div className="text-xs rounded-md px-3 py-2" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
           {error}
         </div>
       )}
@@ -490,7 +492,7 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
           <div
             key={idx}
             className="flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer"
-            style={{ borderColor: item.done ? "#BBF7D0" : "var(--border)", background: item.done ? "#F0FDF4" : "var(--surface-alt)" }}
+            style={{ borderColor: item.done ? "color-mix(in srgb, var(--success) 35%, transparent)" : "var(--border)", background: item.done ? "var(--success-bg)" : "var(--surface-alt)" }}
             onClick={() => toggle(idx)}
           >
             <div
@@ -514,6 +516,11 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
           </div>
         ))}
       </div>
+      {items.length === 0 && !readOnly && (
+        <div className="text-xs text-center py-2 italic" style={{ color: "var(--text-dim)" }}>
+          Nenhum checklist criado ainda.
+        </div>
+      )}
       {!readOnly && (
         <div className="flex gap-2">
           <input
@@ -532,7 +539,7 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
             onClick={addItem}
             disabled={!newLabel.trim()}
             className="flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-xl"
-            style={{ background: newLabel.trim() ? "var(--accent)" : "var(--surface-alt)", color: newLabel.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newLabel.trim() ? "pointer" : "default" }}
+            style={{ background: newLabel.trim() ? "var(--accent)" : "var(--surface-alt)", color: newLabel.trim() ? "var(--on-accent)" : "var(--text-dim)", border: "none", cursor: newLabel.trim() ? "pointer" : "default" }}
           >
             <Plus size={12} />
             Adicionar
@@ -576,13 +583,7 @@ function Field({ label, children, hint }) {
     <div>
       <div className="flex items-center gap-1 mb-1">
         <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>{label}</div>
-        {hint && (
-          <span title={hint} style={{ cursor: "help", opacity: 0.5, display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
-            </svg>
-          </span>
-        )}
+        <HelpTooltip text={hint} size={11} />
       </div>
       {children}
     </div>
@@ -1710,7 +1711,7 @@ export function CampaignDetailDrawer({
       <div className="flex items-center gap-2 flex-wrap mb-1.5">
         {stage && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: stage.color + "22", color: stage.color, border: `1px solid ${stage.color}44` }}>
+            style={{ background: stage.color + "22", color: stageTextColor(stage.color), border: `1px solid ${stage.color}44` }}>
             {stage.name}
           </span>
         )}
@@ -1722,7 +1723,7 @@ export function CampaignDetailDrawer({
         )}
         {isAgencia && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }}>
+            style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}>
             Visitante
           </span>
         )}

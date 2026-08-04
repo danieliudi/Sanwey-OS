@@ -9,6 +9,7 @@ import {
 import { NEUTRAL, marketingUnitLabel } from "../../constants/companies";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
+import { stageTextColor } from "../../utils/stage-colors";
 import { useDeliverableAttachments }  from "../../hooks/use-deliverable-attachments";
 import { useDeliverableChecklists }   from "../../hooks/use-deliverable-checklists";
 import { useRHStageFields }           from "../../hooks/use-rh-stage-fields";
@@ -84,7 +85,7 @@ function DeliverableAIPanel({ item, currentUser, stage, stageFields = [], recent
 /* ── Shared input style ─────────────────────────────────────── */
 const inputBase = {
   width: "100%", fontSize: 13, borderRadius: 6,
-  border: "1px solid #D1D5DB", padding: "7px 10px",
+  border: "1px solid var(--border-strong)", padding: "7px 10px",
   background: "var(--surface)", color: "var(--text)", outline: "none",
 };
 const focusBorder = e => { e.target.style.borderColor = "var(--accent)"; };
@@ -103,7 +104,7 @@ function FieldRow({ label, required, hint, children }) {
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
-        {required && <span style={{ color: "#DC2626", marginRight: 2 }}>*</span>}
+        {required && <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>}
         {label}
       </div>
       {hint && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 5, lineHeight: 1.4 }}>{hint}</div>}
@@ -142,7 +143,7 @@ function AtividadesTab({ activities }) {
         <div key={i} style={{ display: "flex", gap: 10, paddingBottom: 14 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: typeColor[a.type] || "#9CA3AF", marginTop: 3 }} />
-            {i < sorted.length - 1 && <div style={{ width: 1, flex: 1, background: "#E5E7EB", marginTop: 4 }} />}
+            {i < sorted.length - 1 && <div style={{ width: 1, flex: 1, background: "var(--border)", marginTop: 4 }} />}
           </div>
           <div>
             <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{a.description}</div>
@@ -221,14 +222,14 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
           <div style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 500 }}>
             {uploading ? "Enviando…" : "Arraste ou clique para enviar"}
           </div>
-          <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 3 }}>PDF, Word, imagens, vídeos — máx 50 MB</div>
+          <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 3 }}>PDF, Word, imagens, vídeos — máx 50 MB</div>
           <input ref={inputRef} type="file" accept={ACCEPTED} multiple style={{ display: "none" }}
             onChange={e => { handleFiles(Array.from(e.target.files || [])); e.target.value = ""; }} />
         </div>
       )}
 
       {(fileErr || error) && (
-        <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 6, padding: "7px 10px", fontSize: 11 }}>
+        <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 6, padding: "7px 10px", fontSize: 11 }}>
           {fileErr || error}
         </div>
       )}
@@ -244,7 +245,7 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
           {attachments.map(att => {
             const Icon = fileIconFn(att.mime_type);
             return (
-              <div key={att.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+              <div key={att.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "var(--surface-alt)", borderRadius: 8, border: "1px solid var(--border)" }}>
                 <Icon size={16} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.file_name}</div>
@@ -258,8 +259,8 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
                 </button>
                 {canWrite && (
                   <button onClick={() => remove(att)} title="Remover"
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", padding: 4, borderRadius: 4, display: "flex" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: 4, borderRadius: 4, display: "flex" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>
                     <Trash2 size={14} />
                   </button>
@@ -296,21 +297,21 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
         const total = (cl.items || []).length;
         const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
         return (
-          <div key={cl.id} style={{ border: "1px solid #E5E7EB", borderRadius: 10, overflow: "hidden" }}>
-            <div style={{ background: "#F9FAFB", padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E5E7EB" }}>
+          <div key={cl.id} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+            <div style={{ background: "var(--surface-alt)", padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid var(--border)" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 12, color: "var(--text)" }}>{cl.title}</div>
                 <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>{done}/{total} concluídos</div>
               </div>
               {total > 0 && (
-                <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, overflow: "hidden" }}>
-                  <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? "#16A34A" : "var(--accent)", transition: "width 0.3s" }} />
+                <div style={{ width: 40, height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? "var(--success)" : "var(--accent)", transition: "width 0.3s" }} />
                 </div>
               )}
               {canWrite && (
                 <button onClick={() => deleteChecklist(cl.id)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", padding: 3, borderRadius: 4, display: "flex" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: 3, borderRadius: 4, display: "flex" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>
                   <Trash2 size={13} />
                 </button>
@@ -321,8 +322,8 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
                 <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button onClick={() => canWrite && toggleItem(cl.id, it.id)}
                     style={{
-                      width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${it.done ? "#16A34A" : "#D1D5DB"}`,
-                      background: it.done ? "#16A34A" : "#FFF",
+                      width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${it.done ? "var(--success)" : "var(--border-strong)"}`,
+                      background: it.done ? "var(--success)" : "var(--surface)",
                       cursor: canWrite ? "pointer" : "default",
                       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                       transition: "all 0.15s",
@@ -334,8 +335,8 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
                   </span>
                   {canWrite && (
                     <button onClick={() => removeItem(cl.id, it.id)}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 2, display: "flex" }}
-                      onMouseEnter={e => { e.currentTarget.style.color = "#DC2626"; }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 2, display: "flex" }}
+                      onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
                       onMouseLeave={e => { e.currentTarget.style.color = "#9CA3AF"; }}>
                       <X size={11} />
                     </button>
@@ -353,7 +354,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddItem(cl.id); } }}
                   />
                   <button onClick={() => handleAddItem(cl.id)}
-                    style={{ background: "var(--accent)", border: "none", borderRadius: 6, color: "#FFF", padding: "0 10px", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                    style={{ background: "var(--accent)", border: "none", borderRadius: 6, color: "var(--on-accent)", padding: "0 10px", cursor: "pointer", display: "flex", alignItems: "center" }}>
                     <Plus size={13} />
                   </button>
                 </div>
@@ -645,7 +646,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
                 <span
                   style={{
                     fontSize: 10, marginLeft: "auto",
-                    color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
+                    color: saveStatus === "saved" ? "var(--success)" : saveStatus === "error" ? "var(--danger)" : "var(--text-dim)",
                     fontWeight: saveStatus === "error" ? 700 : 400,
                   }}
                 >
@@ -706,7 +707,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prazo</div>
             {item.deadline
-              ? <span style={{ fontSize: 13, fontWeight: 600, color: new Date(item.deadline) < new Date() ? "#DC2626" : "var(--text)" }}>{formatDateBR(item.deadline)}</span>
+              ? <span style={{ fontSize: 13, fontWeight: 600, color: new Date(item.deadline) < new Date() ? "var(--danger)" : "var(--text)" }}>{formatDateBR(item.deadline)}</span>
               : <ReadValue value={null} />}
           </div>
         </div>
@@ -735,7 +736,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
       <div className="flex items-center gap-2 flex-wrap mb-1.5">
         {stageInfo && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: stageInfo.color + "22", color: stageInfo.color, border: `1px solid ${stageInfo.color}44` }}>
+            style={{ background: stageInfo.color + "22", color: stageTextColor(stageInfo.color), border: `1px solid ${stageInfo.color}44` }}>
             {stageInfo.name}
           </span>
         )}
@@ -766,7 +767,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
           <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Prazo</div>
-          <div className="text-xs font-bold mt-0.5" style={{ color: item.deadline && new Date(item.deadline) < new Date() ? "#DC2626" : "var(--text)" }}>
+          <div className="text-xs font-bold mt-0.5" style={{ color: item.deadline && new Date(item.deadline) < new Date() ? "var(--danger)" : "var(--text)" }}>
             {item.deadline ? formatDateBR(item.deadline) : "—"}
           </div>
         </div>
@@ -800,13 +801,13 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           Mover entrega para fase
         </div>
         {moveError && (
-          <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+          <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
             <AlertCircle size={12} className="shrink-0 mt-0.5" />
             {moveError}
           </div>
         )}
         {item.emailError && (
-          <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF3C7", color: "#92400E" }}>
+          <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
             <AlertCircle size={12} className="shrink-0 mt-0.5" />
             Falha ao avisar o solicitante por e-mail: {item.emailError}
           </div>
@@ -816,7 +817,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
             onClick={handleResendEmail}
             disabled={sendingEmail}
             className="flex items-center gap-1.5 px-3 py-1.5 mb-2 rounded-lg text-xs font-semibold"
-            style={{ background: "#FEF3C7", color: "#D97706" }}
+            style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
           >
             <RefreshCw size={13} /> {sendingEmail ? "Enviando…" : "Tentar enviar e-mail de novo"}
           </button>

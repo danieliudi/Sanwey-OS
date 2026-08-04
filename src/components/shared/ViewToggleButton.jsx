@@ -13,10 +13,15 @@ export function ViewToggleButton({ active, onClick, icon: Icon, label, iconOnlyM
       onClick={onClick}
       role="tab"
       aria-selected={active}
+      title={label}
+      aria-label={label}
       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
       style={{
         background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "#FFFFFF" : "var(--text-dim)",
+        // --on-accent, não #FFFFFF fixo — no dark mode --accent vira um
+        // creme claro, e texto branco fixo em cima ficava quase ilegível
+        // (achado real, reportado pelo Daniel).
+        color: active ? "var(--on-accent)" : "var(--text-dim)",
       }}
       onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}

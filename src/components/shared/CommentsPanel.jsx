@@ -33,6 +33,32 @@ function timeAgo(iso) {
   return new Date(iso).toLocaleDateString("pt-BR");
 }
 
+// Offline fase 1 (ver docs/design-spec-offline-leads-notas.md) — selo do
+// item enquanto está na fila local (use-offline-sync.js); some assim que
+// sincroniza, nunca vira um 4º status "synced" persistido.
+const OFFLINE_STATUS_BADGE = {
+  pending: { bg: "var(--surface-alt)", color: "var(--text-faint)", label: "🕐 Vai enviar quando voltar o sinal", clickable: false },
+  syncing: { bg: "var(--accent-tint)", color: "var(--accent)", label: "↻ Enviando…", clickable: false },
+  failed: { bg: "var(--danger-bg)", color: "var(--danger)", label: "⚠ Não sincronizou · toque para tentar de novo", clickable: true },
+};
+
+function OfflineStatusBadge({ status, onRetry }) {
+  const cfg = OFFLINE_STATUS_BADGE[status];
+  if (!cfg) return null;
+  const clickable = cfg.clickable && Boolean(onRetry);
+  const Tag = clickable ? "button" : "div";
+  return (
+    <Tag
+      type={clickable ? "button" : undefined}
+      onClick={clickable ? onRetry : undefined}
+      className="inline-flex items-center rounded-full px-2 py-0.5 mt-1 text-[10px] font-medium"
+      style={{ background: cfg.bg, color: cfg.color, border: "none", cursor: clickable ? "pointer" : "default" }}
+    >
+      {cfg.label}
+    </Tag>
+  );
+}
+
 function Avatar({ name, avatarBg, avatarUrl, initials, size = 24 }) {
   if (avatarUrl) {
     return <img src={avatarUrl} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
@@ -61,7 +87,7 @@ function renderTextWithMentions(text, mentionedNames = []) {
   );
 }
 
-export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [], onAddComment, onUpdateComment, disabled = false }) {
+export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [], onAddComment, onUpdateComment, onRetryOfflineActivity, disabled = false }) {
   const [draft, setDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [mentionQuery, setMentionQuery] = useState(null); // string | null — texto após o "@" atual
@@ -240,7 +266,7 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
                           onClick={() => saveEdit(c)}
                           disabled={!editDraft.trim()}
                           className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold"
-                          style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: "pointer", opacity: editDraft.trim() ? 1 : 0.5 }}
+                          style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer", opacity: editDraft.trim() ? 1 : 0.5 }}
                         >
                           <Check size={11} /> Salvar
                         </button>
@@ -270,6 +296,9 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
                           wordBreak: "break-word",
                           borderBottomRightRadius: isOwn ? 4 : 16,
                           borderBottomLeftRadius: isOwn ? 16 : 4,
+                          // Offline fase 1 — tracejado só enquanto pending/failed,
+                          // nunca depois de sincronizado (nem durante "syncing").
+                          border: (c.status === "pending" || c.status === "failed") ? "1px dashed var(--border)" : "none",
                         }}
                       >
                         {renderTextWithMentions(c.text, (c.mentionedNames || []))}
@@ -303,7 +332,7 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
                           <button
                             onClick={() => handleDelete(c)}
                             className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
-                            style={{ background: "var(--danger)", color: "#FFF", border: "none", cursor: "pointer" }}
+                            style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", cursor: "pointer" }}
                           >
                             Excluir?
                           </button>
@@ -317,6 +346,12 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
                         </div>
                       )}
                     </div>
+                  )}
+                  {c.status && (
+                    <OfflineStatusBadge
+                      status={c.status}
+                      onRetry={onRetryOfflineActivity ? () => onRetryOfflineActivity(c.id) : undefined}
+                    />
                   )}
                   <span className="text-[10px] mt-0.5 px-1" style={{ color: "var(--text-faint)" }}>
                     {timeAgo(c.createdAt)}{c.editedAt ? " · (editado)" : ""}
@@ -369,7 +404,7 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
               disabled={!draft.trim() || submitting}
               title="Enviar (Enter)"
               className="flex items-center justify-center rounded-full shrink-0 transition-opacity"
-              style={{ width: 34, height: 34, background: "var(--accent)", color: "#FFF", border: "none", cursor: draft.trim() ? "pointer" : "default", opacity: draft.trim() ? 1 : 0.4 }}
+              style={{ width: 34, height: 34, background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: draft.trim() ? "pointer" : "default", opacity: draft.trim() ? 1 : 0.4 }}
             >
               <Send size={14} />
             </button>

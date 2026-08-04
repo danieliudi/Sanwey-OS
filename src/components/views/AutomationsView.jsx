@@ -229,7 +229,7 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser, 
         <button
           onClick={() => mainTab === "agents" ? openAgentWizard() : openBuilder()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-          style={{ background: "var(--accent)", color: "#FFFFFF" }}
+          style={{ background: "var(--accent)", color: "var(--on-accent)" }}
           onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
         >
@@ -490,9 +490,9 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
                 <span
                   className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
                   style={{
-                    background: rule.module === "marketing" ? "#FDF4FF" : "#F0FDF4",
-                    color:      rule.module === "marketing" ? "#7C3AED" : "var(--success)",
-                    border:     `1px solid ${rule.module === "marketing" ? "#E9D5FF" : "#BBF7D0"}`,
+                    background: rule.module === "marketing" ? "var(--channel-social-bg)" : "var(--success-bg)",
+                    color:      rule.module === "marketing" ? "var(--channel-social-text)" : "var(--success)",
+                    border:     `1px solid ${rule.module === "marketing" ? "var(--channel-social-border)" : "color-mix(in srgb, var(--success) 35%, transparent)"}`,
                   }}
                 >
                   {rule.module === "marketing" ? "Marketing" : "Universal"}
@@ -526,7 +526,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
           onClick={onDelete}
           className="shrink-0 p-1.5 rounded-lg"
           style={{ color: "var(--text-faint)" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "#EF4444"; }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
           title="Excluir automação"
         >
@@ -735,7 +735,7 @@ function AgentCard({ rule, lastRunAt, confirmingDelete, onEdit, onToggle, onDele
             <span className="text-[11px]" style={{ color: "var(--text)" }}>Excluir?</span>
             <button
               onClick={onDeleteConfirm}
-              style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+              style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
             >
               Excluir
             </button>
@@ -1004,7 +1004,7 @@ function StepIdentification({ rule, setRule }) {
     <div className="space-y-4">
       <div>
         <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
-          Nome da automação <span style={{ color: "#EF4444" }}>*</span>
+          Nome da automação <span style={{ color: "var(--danger)" }}>*</span>
         </label>
         <input
           type="text"
@@ -1312,7 +1312,7 @@ function StepConditions({ rule, setRule }) {
               onClick={() => removeGroup(gi)}
               className="p-1 rounded"
               style={{ color: "var(--text-faint)" }}
-              onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
               onMouseLeave={e => { e.currentTarget.style.color = "var(--text-faint)"; }}
               title="Remover grupo"
             >
@@ -1457,7 +1457,7 @@ function ActionListEditor({ title, actions, setActions, allStages, fields, allow
                 onClick={() => removeAction(i)}
                 className="p-1 rounded"
                 style={{ color: "var(--text-faint)" }}
-                onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
                 onMouseLeave={e => { e.currentTarget.style.color = "var(--text-faint)"; }}
               >
                 <Trash2 size={12} />
@@ -1629,7 +1629,7 @@ function ActionConfig({ action: a, allStages, fields, setAction }) {
             onChange={e => setAction({ deliverableTitle: e.target.value })}
             placeholder="Onboarding: {empresa}"
             className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
-            style={{ borderColor: "#E5E7EB", color: "var(--text)" }}
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}
           />
           <p className="text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>Use {"{empresa}"} para inserir o nome do negócio automaticamente.</p>
         </div>
@@ -1639,7 +1639,7 @@ function ActionConfig({ action: a, allStages, fields, setAction }) {
             value={a.deliverablePriority || "media"}
             onChange={e => setAction({ deliverablePriority: e.target.value })}
             className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
-            style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
           >
             <option value="baixa">Baixa</option>
             <option value="media">Média</option>
@@ -1771,8 +1771,8 @@ function TemplateGallery({ onUseTemplate }) {
                 <span
                   className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
                   style={{
-                    background: t.rule.module === "marketing" ? "#FDF4FF" : "#F0FDF4",
-                    color:      t.rule.module === "marketing" ? "#7C3AED" : "var(--success)",
+                    background: t.rule.module === "marketing" ? "var(--channel-social-bg)" : "var(--success-bg)",
+                    color:      t.rule.module === "marketing" ? "var(--channel-social-text)" : "var(--success)",
                   }}
                 >
                   {t.rule.module === "marketing" ? "Marketing" : "Universal"}

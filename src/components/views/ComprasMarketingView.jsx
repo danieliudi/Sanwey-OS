@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ShoppingCart, Plus, LayoutGrid, List, CalendarDays as CalendarIcon, TrendingUp,
-  ChevronLeft, ChevronRight, X, XCircle, MessageCircle,
+  ChevronLeft, ChevronRight, ChevronDown, X, XCircle, MessageCircle,
 } from "lucide-react";
 import { useMarketingPurchaseRequests, PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-marketing-purchase-requests";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
@@ -10,8 +10,10 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
 import { formatK, formatBRL } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 import { formatDateBR, parseDateInput } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
 import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
@@ -43,7 +45,7 @@ const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
-const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 const inputBase = {
   width: "100%", fontSize: 13, borderRadius: 8,
@@ -105,7 +107,7 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
             <span
               title="Comentário novo"
               className="inline-flex items-center justify-center rounded-full"
-              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF", opacity: terminalAccentOpacity(isTerminal) }}
+              style={{ width: 16, height: 16, background: "var(--accent)", color: "var(--on-accent)", opacity: terminalAccentOpacity(isTerminal) }}
             >
               <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
             </span>
@@ -256,13 +258,13 @@ function CreateModal({ currentUser, onCreate, onClose }) {
           </div>
         </div>
 
-        {error && <div className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{error}</div>}
+        {error && <div className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{error}</div>}
 
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" onClick={guardedClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
           <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "var(--accent)", color: "#fff", opacity: saving ? 0.6 : 1 }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Criando…" : "Criar solicitação"}
           </button>
         </div>
@@ -278,7 +280,7 @@ function KanbanBoard({ purchasesByStage, suppliersById, usersById, users, onCard
     <div className="hidden lg:block relative">
       <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
         <div className="flex gap-2 h-full" style={{ minWidth: `${PURCHASE_STAGES.length * 280}px` }}>
-          {PURCHASE_STAGES.map(stage => {
+          {PURCHASE_STAGES.map((stage, idx) => {
             const color = STAGE_COLORS[stage.id] || "var(--text-dim)";
             const items = purchasesByStage[stage.id] || [];
             const isOver = dragOverStage === stage.id;
@@ -293,7 +295,7 @@ function KanbanBoard({ purchasesByStage, suppliersById, usersById, users, onCard
                   minWidth: 272,
                   height: "100%",
                   overflow: "hidden",
-                  border: "1px solid var(--border)",
+                  borderRight: idx < PURCHASE_STAGES.length - 1 ? "1px solid var(--border)" : "none",
                   background: isOver ? color + "14" : "var(--surface-alt)",
                   boxShadow: isOver ? `0 0 0 2px ${color}30` : "none",
                 }}>
@@ -375,6 +377,9 @@ function MobileKanban({ purchasesByStage, suppliersById, usersById, users, onCar
                     accentColor={color}
                   />
                 </div>
+                <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", color, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+                  <ChevronDown size={13} />
+                </div>
               </div>
             </button>
             {isOpen && (
@@ -396,7 +401,35 @@ function MobileKanban({ purchasesByStage, suppliersById, usersById, users, onCar
 /* ── Tabela ───────────────────────────────────────────────────────────── */
 function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={purchases}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma solicitação encontrada."
+      title={(p) => p.itemName}
+      chips={(p) => {
+        const color = STAGE_COLORS[p.stage] || "var(--text-dim)";
+        const stageInfo = PURCHASE_STAGES.find(s => s.id === p.stage) || (p.stage === PURCHASE_REJECTED_STAGE ? { name: "Rejeitado" } : null);
+        return [{ label: stageInfo?.name || p.stage, color }];
+      }}
+      right={(p) => (
+        <span className="text-sm font-semibold" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+          {p.totalValue != null ? formatBRL(p.totalValue) : "—"}
+        </span>
+      )}
+      meta={(p) => [p.requestNumber, suppliersById.get(p.supplierId)?.name].filter(Boolean).join(" · ") || "—"}
+      metaRight={(p) => {
+        const responsibleIds = p.responsibleIds?.length ? p.responsibleIds : (p.responsibleId ? [p.responsibleId] : []);
+        const resolvedResponsible = responsibleIds.map(id => usersById.get(id)).filter(Boolean);
+        return (
+          <>
+            {resolvedResponsible.length > 0 && <AvatarStack users={resolvedResponsible} size={18} max={2} />}
+            <span>{formatDateBR(p.dueDate)}</span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -428,7 +461,7 @@ function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
                 <td className="px-4 py-3 text-sm font-semibold text-right" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{p.totalValue != null ? formatBRL(p.totalValue) : "—"}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(p.dueDate)}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40` }}>
                     {stageInfo?.name || p.stage}
                   </span>
                 </td>
@@ -446,6 +479,7 @@ function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -473,7 +507,7 @@ function CalendarView({ purchases, onPillClick }) {
 
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const offset = (first.getDay() + 6) % 7;
+    const offset = first.getDay();
     const start = new Date(first);
     start.setDate(first.getDate() - offset);
     const days = [];
@@ -512,7 +546,7 @@ function CalendarView({ purchases, onPillClick }) {
       </div>
       <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
         {WEEKDAYS.map(w => (
-          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+          <div key={w} className="px-2 py-2 text-[10px] font-bold text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
@@ -523,8 +557,10 @@ function CalendarView({ purchases, onPillClick }) {
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
-              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+              style={{ borderColor: "var(--border)", background: "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={isToday
+                ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
               <div className="flex flex-col gap-0.5">
@@ -533,7 +569,7 @@ function CalendarView({ purchases, onPillClick }) {
                   return (
                     <span key={p.id} onClick={() => onPillClick(p)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: color + "18", color }}
+                      style={{ background: color + "18", color: stageTextColor(color) }}
                       title={`${p.requestNumber} · ${p.itemName}`}>
                       {p.itemName}
                     </span>
@@ -741,17 +777,17 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
         <div className="flex items-center gap-2 flex-wrap">
           <CopyPublicLinkButton url={`${window.location.origin}/solicitar-compra`} label="Copiar link público" title={`${window.location.origin}/solicitar-compra`} variant="strong" />
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}  label="Kanban" />
-            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}        label="Tabela" />
-            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
-            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
+            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}  label="Kanban" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}        label="Tabela" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 font-semibold"
             style={{
               background: "var(--accent)",
-              color: "#FFF",
+              color: "var(--on-accent)",
               border: "none",
               borderRadius: 10,
               padding: "6px 16px",
@@ -772,23 +808,23 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
 
       {/* Rejected strip — tira fina, não uma coluna do kanban */}
       {rejectedPurchases.length > 0 && (
-        <div className="mb-4 rounded-xl border" style={{ borderColor: "#FECACA", background: "#FEF2F2" }}>
+        <div className="mb-4 rounded-xl border" style={{ borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)", background: "var(--danger-bg)" }}>
           <button onClick={() => setShowRejected(v => !v)}
             className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer" style={{ background: "none", border: "none" }}>
-            <span className="flex items-center gap-2 text-xs font-semibold" style={{ color: "#B91C1C" }}>
+            <span className="flex items-center gap-2 text-xs font-semibold" style={{ color: "var(--danger)" }}>
               <XCircle size={13} />
-              {rejectedPurchases.length} solicitação{rejectedPurchases.length !== 1 ? "ões" : ""} rejeitada{rejectedPurchases.length !== 1 ? "s" : ""}
+              {rejectedPurchases.length} solicitaç{rejectedPurchases.length !== 1 ? "ões" : "ão"} rejeitada{rejectedPurchases.length !== 1 ? "s" : ""}
             </span>
-            <span className="text-xs font-semibold" style={{ color: "#B91C1C" }}>{showRejected ? "Ocultar" : "Ver"}</span>
+            <span className="text-xs font-semibold" style={{ color: "var(--danger)" }}>{showRejected ? "Ocultar" : "Ver"}</span>
           </button>
           {showRejected && (
             <div className="px-4 pb-3 space-y-1.5">
               {rejectedPurchases.map(p => (
                 <div key={p.id} onClick={() => setSelected(p)}
                   className="flex items-center justify-between text-xs px-3 py-2 rounded-lg cursor-pointer"
-                  style={{ background: "var(--surface)", border: "1px solid #FECACA" }}>
+                  style={{ background: "var(--surface)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
                   <span>
-                    <span className="font-mono font-bold mr-1.5" style={{ color: "#B91C1C" }}>{p.requestNumber}</span>
+                    <span className="font-mono font-bold mr-1.5" style={{ color: "var(--danger)" }}>{p.requestNumber}</span>
                     {p.itemName}
                   </span>
                   <span style={{ color: "var(--text-dim)" }}>{formatDateBR(p.createdAt)}</span>
@@ -800,11 +836,11 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
       )}
 
       {error && (
-        <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{error}</div>
+        <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{error}</div>
       )}
 
       {stageError && (
-        <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "#FEF3C7", color: "#92400E" }}>{stageError}</div>
+        <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>{stageError}</div>
       )}
 
       {loading ? (
@@ -837,6 +873,8 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
           getStageKey={p => p.stage}
           getStageEnteredAt={p => p.stageChangedAt}
           specificStats={purchaseSpecificStats}
+          getOwnerIds={p => p.responsibleIds?.length ? p.responsibleIds : (p.responsibleId ? [p.responsibleId] : [])}
+          usersById={usersById}
         />
       ) : (
         <CalendarView purchases={visiblePurchases} onPillClick={setSelected} />

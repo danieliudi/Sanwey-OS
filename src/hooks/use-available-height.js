@@ -39,6 +39,13 @@ export function useAvailableHeight(marginBottom = 16, deps = [], trailingRef = n
     };
     update();
     window.addEventListener("resize", update);
+    // Teclado virtual no mobile: em vários navegadores (Safari iOS em
+    // particular) abrir o teclado não dispara "resize" na window, só no
+    // `visualViewport` — sem isso, um board/shell de altura fixa (como o
+    // Chat) não encolhia quando o teclado abria e o composer ficava atrás
+    // dele. `window.innerHeight` já reflete o viewport visual na maioria dos
+    // navegadores modernos, então o mesmo `update()` serve.
+    window.visualViewport?.addEventListener("resize", update);
     // ResizeObserver no body (não só no próprio elemento) — o topo do
     // elemento se move quando QUALQUER coisa acima dele na página muda de
     // altura (filtros quebrando linha, banner de erro aparecendo, etc.),
@@ -47,6 +54,7 @@ export function useAvailableHeight(marginBottom = 16, deps = [], trailingRef = n
     ro.observe(document.body);
     return () => {
       window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
       ro.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

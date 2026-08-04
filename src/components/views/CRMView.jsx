@@ -26,6 +26,7 @@ import { useStageFields } from "../../hooks/use-stage-fields";
 import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { formatK } from "../../utils/currency";
+import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
 import { AppToast } from "../shared/AppToast";
@@ -210,7 +211,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
           type="submit"
           disabled={saving || !company.trim() || !sector}
           className="flex-1 text-xs font-semibold py-1.5 rounded-lg transition-opacity"
-          style={{ background: "var(--accent)", color: "#FFFFFF", opacity: saving || !company.trim() || !sector ? 0.5 : 1 }}
+          style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving || !company.trim() || !sector ? 0.5 : 1 }}
           onMouseEnter={e => { if (!saving && company.trim() && sector) e.currentTarget.style.background = "var(--accent-hover)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
         >
@@ -230,7 +231,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
       {error && (
         <div
           className="text-[11px] rounded-md px-2 py-1.5"
-          style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
         >
           {error}
         </div>
@@ -636,7 +637,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           </div>
           <button
             onClick={() => setStarredOnly(v => !v)}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "var(--border)"}`, background: starredOnly ? "#FFFBEB" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "var(--border)"}`, background: starredOnly ? "var(--warning-bg)" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
           >
             <Star size={11} fill={starredOnly ? "#F59E0B" : "none"} />
             Só favoritos
@@ -688,7 +689,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               className="flex items-center gap-1.5 font-semibold"
               style={{
                 background: "var(--accent)",
-                color: "#FFFFFF",
+                color: "var(--on-accent)",
                 border: "none",
                 borderRadius: 10,
                 padding: "6px 16px",
@@ -740,6 +741,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           records={scopedLeads}
           getStageKey={l => l.stage}
           getStageEnteredAt={l => l.stageChangedAt}
+          getOwnerIds={getLeadOwnerIds}
+          usersById={usersById}
         />
       ) : (<>
       {/* Mobile kanban: vertical collapsible stages */}
@@ -756,11 +759,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                  <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
-                  {bucket.total > 0 && <span className="text-xs font-semibold" style={{ color: stage.color + "99" }}>{formatK(bucket.total)}</span>}
+                  <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
+                  {bucket.total > 0 && <span className="text-xs font-semibold" style={{ color: stageTextColorStrong(stage.color) }}>{formatK(bucket.total)}</span>}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm" style={{ color: stage.color }}>{bucket.leads.length}</span>
+                  <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{bucket.leads.length}</span>
                   <div onClick={e => e.stopPropagation()}>
                     <KanbanColumnSortMenu
                       criteria={getSortCriteria(stage.id)}
@@ -803,7 +806,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                     <button
                       onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: isGroupView ? firstValidCompany : activeCompany })}
                       className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                      style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                      style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                     >
                       <Plus size={12} />
                       Nova oportunidade
@@ -823,7 +826,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           className="flex gap-2 h-full"
           style={{ minWidth: `${stages.length * 280}px` }}
         >
-          {stages.map(stage => {
+          {stages.map((stage, idx) => {
             const bucket = byStage[stage.id] || { leads: [], total: 0 };
             const isOver    = dragOverStage === stage.id;
             const isBlocked = blockedDrop === stage.id;
@@ -844,9 +847,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   minWidth: 272,
                   height: "100%",
                   overflow: "hidden",
-                  border: "1px solid var(--border)",
-                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? stage.color + "14" : "var(--surface-alt)",
-                  boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}40` : isOver && !canAccept ? "0 0 0 2px #FECACA" : "none",
+                  borderRight: idx < stages.length - 1 ? "1px solid var(--border)" : "none",
+                  background: isBlocked ? "var(--danger-bg)" : isOver && canAccept ? stage.color + "14" : "var(--surface-alt)",
+                  boxShadow: isBlocked ? "0 0 0 2px color-mix(in srgb, var(--danger) 20%, transparent)" : isOver && canAccept ? `0 0 0 2px ${stage.color}40` : isOver && !canAccept ? "0 0 0 2px color-mix(in srgb, var(--danger) 35%, transparent)" : "none",
                 }}
               >
                 {/* Cabeçalho encostado no topo da coluna, sem gap/sombra
@@ -886,7 +889,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   )}
                 >
                   {isBlocked ? (
-                    <div className="text-xs mt-1 font-semibold" style={{ color: "#B91C1C" }}>
+                    <div className="text-xs mt-1 font-semibold" style={{ color: "var(--danger)" }}>
                       Transição bloqueada
                     </div>
                   ) : (
@@ -944,7 +947,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                     <button
                       onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: isGroupView ? firstValidCompany : activeCompany })}
                       className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                      style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                      style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                     >
                       <Plus size={12} />
                       Nova oportunidade
@@ -1032,7 +1035,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     <button
       onClick={() => setShowAIChat(v => !v)}
       className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 hidden lg:flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
-      style={{ background: "var(--accent)", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
+      style={{ background: "var(--accent)", color: "var(--on-accent)", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
       onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
     >
@@ -1187,7 +1190,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="font-semibold text-sm" style={{ color: lead.value > 0 ? "#15803D" : "var(--text-dim)" }}>
+                <span className="font-semibold text-sm" style={{ color: lead.value > 0 ? "var(--success)" : "var(--text-dim)" }}>
                   {lead.value > 0 ? formatK(lead.value) : "—"}
                 </span>
                 {onStarToggle && (
@@ -1209,8 +1212,8 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                       padding: "1px 5px",
                       borderRadius: 4,
                       fontWeight: 700,
-                      background: lead.fitScore >= 80 ? "#DCFCE7" : lead.fitScore >= 50 ? "#FEF3C7" : "#FEE2E2",
-                      color: lead.fitScore >= 80 ? "#15803D" : lead.fitScore >= 50 ? "#B45309" : "#B91C1C",
+                      background: lead.fitScore >= 80 ? "var(--success-bg)" : lead.fitScore >= 50 ? "var(--warning-bg)" : "var(--danger-bg)",
+                      color: lead.fitScore >= 80 ? "var(--success)" : lead.fitScore >= 50 ? "var(--warning)" : "var(--danger)",
                     }}
                   >
                     {lead.fitScore}
@@ -1331,7 +1334,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                   ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
                 </td>
                 {/* Value */}
-                <td style={{ padding: "10px 12px", fontWeight: 600, color: lead.value > 0 ? "#15803D" : "var(--text-dim)" }}>
+                <td style={{ padding: "10px 12px", fontWeight: 600, color: lead.value > 0 ? "var(--success)" : "var(--text-dim)" }}>
                   {lead.value > 0 ? formatK(lead.value) : "—"}
                 </td>
                 {/* Fit Score */}
@@ -1343,8 +1346,8 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                       borderRadius: 4,
                       fontSize: 11,
                       fontWeight: 700,
-                      background: lead.fitScore >= 80 ? "#DCFCE7" : lead.fitScore >= 50 ? "#FEF3C7" : "#FEE2E2",
-                      color: lead.fitScore >= 80 ? "#15803D" : lead.fitScore >= 50 ? "#B45309" : "#B91C1C",
+                      background: lead.fitScore >= 80 ? "var(--success-bg)" : lead.fitScore >= 50 ? "var(--warning-bg)" : "var(--danger-bg)",
+                      color: lead.fitScore >= 80 ? "var(--success)" : lead.fitScore >= 50 ? "var(--warning)" : "var(--danger)",
                     }}>
                       {lead.fitScore}
                     </span>

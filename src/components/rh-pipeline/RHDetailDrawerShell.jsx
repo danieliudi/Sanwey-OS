@@ -74,10 +74,10 @@ function RHActivitiesPanel({ activities, currentUser, users }) {
       <ol className="space-y-3">
         {sorted.slice(0, 20).map((a, i) => (
           <li key={a.id ?? i} className="text-xs" style={{ color: "var(--text)" }}>
-            <div>
-              <span style={{ color: "var(--text-dim)" }}>{authorLabel(a.createdBy, currentUser, users)} </span>
-              {a.body}
+            <div className="truncate font-semibold" style={{ color: "var(--text-dim)" }}>
+              {authorLabel(a.createdBy, currentUser, users)}
             </div>
+            <div>{a.body}</div>
             <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
               {formatTimestamp(a.createdAt)}
             </div>
@@ -148,7 +148,7 @@ export function RHAttachmentsPanel({ domain, recordId, currentUser, readOnly = f
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
             style={{
               background: "var(--accent)",
-              color: "#FFFFFF",
+              color: "var(--on-accent)",
               border: "none",
               opacity: uploading ? 0.6 : 1,
               cursor: uploading ? "not-allowed" : "pointer",
@@ -168,7 +168,7 @@ export function RHAttachmentsPanel({ domain, recordId, currentUser, readOnly = f
       )}
 
       {error && (
-        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <AlertCircle size={13} className="shrink-0 mt-0.5" />
           {error}
         </div>
@@ -226,7 +226,7 @@ export function RHAttachmentsPanel({ domain, recordId, currentUser, readOnly = f
                   onClick={() => remove(att)}
                   className="p-1.5 rounded-lg transition-colors"
                   style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                   title="Remover arquivo"
                   aria-label="Remover arquivo"
@@ -287,7 +287,7 @@ export function RHChecklistsPanel({ domain, recordId, currentUser }) {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <AlertCircle size={13} className="shrink-0 mt-0.5" />
           {error}
         </div>
@@ -338,7 +338,7 @@ export function RHChecklistsPanel({ domain, recordId, currentUser }) {
                 onClick={() => deleteChecklist(cl.id)}
                 className="p-1 rounded transition-colors shrink-0"
                 style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
-                onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
                 onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
                 title="Remover checklist"
               >
@@ -352,7 +352,7 @@ export function RHChecklistsPanel({ domain, recordId, currentUser }) {
                 <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--surface-alt)" }}>
                   <div
                     className="h-full rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%`, background: progress === 100 ? "#16A34A" : "var(--accent)" }}
+                    style={{ width: `${progress}%`, background: progress === 100 ? "var(--success)" : "var(--accent)" }}
                   />
                 </div>
               </div>
@@ -387,7 +387,7 @@ export function RHChecklistsPanel({ domain, recordId, currentUser }) {
                     onClick={() => removeItem(cl.id, it.id)}
                     className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all"
                     style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
-                    onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
                     onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
                     title="Remover item"
                   >

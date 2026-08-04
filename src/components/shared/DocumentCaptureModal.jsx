@@ -133,7 +133,7 @@ export function DocumentCaptureModal({ onCapture, onClose, title = "Capturar doc
               {rejection.sugestao && <div style={{ fontSize: 12, color: "var(--text-dim)", textAlign: "center" }}>{rejection.sugestao}</div>}
               <button
                 onClick={() => setPhase("camera")}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
               >
                 <RotateCcw size={13} /> Tentar de novo
               </button>
@@ -164,7 +164,7 @@ export function DocumentCaptureModal({ onCapture, onClose, title = "Capturar doc
                   <button
                     onClick={handleCapture}
                     disabled={!cameraReady}
-                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: cameraReady ? "pointer" : "default", opacity: cameraReady ? 1 : 0.6 }}
+                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: cameraReady ? "pointer" : "default", opacity: cameraReady ? 1 : 0.6 }}
                   >
                     <Camera size={15} /> Capturar
                   </button>

@@ -80,8 +80,12 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
   }, [createRequest]);
 
   const deleteRequest = useCallback(async (id) => {
-    const { error } = await supabase.from(TABLE).delete().eq("id", id);
+    // .select() força retornar a linha apagada — sem isso, RLS que não casa
+    // nenhuma linha responde error:null (0 linhas afetadas), e o card sumia
+    // da UI sem o registro ter sido de fato removido no banco (reaparecia no F5).
+    const { data, error } = await supabase.from(TABLE).delete().eq("id", id).select("id");
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível excluir — sem permissão ou já removido.");
     setRequests(prev => prev.filter(r => r.id !== id));
   }, []);
 

@@ -126,7 +126,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
         {!isConfigured && (
           <div
             className="flex items-start gap-2 px-4 py-2.5 text-sm flex-shrink-0"
-            style={{ background: "#FEF3C7", color: "#92400E", borderBottom: "1px solid #FCD34D" }}
+            style={{ background: "var(--warning-bg)", color: "var(--warning)", borderBottom: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}
           >
             <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>Configure sua LLM nas Configurações → Integrações de IA</span>
@@ -177,7 +177,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                   className="text-sm px-3 py-2 rounded-2xl rounded-tl-sm max-w-[90%] whitespace-pre-line leading-relaxed"
                   style={
                     isError
-                      ? { background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }
+                      ? { background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }
                       : { background: "var(--surface-alt)", color: "var(--text)" }
                   }
                 >
@@ -272,7 +272,7 @@ function PipelineMiniChart({ type, aggregate }) {
       <div className="w-full rounded-xl border p-2" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
         <ResponsiveContainer width="100%" height={Math.max(120, data.length * 28 + 20)}>
           <BarChart data={data} layout="vertical" margin={{ top: 4, right: 40, left: 8, bottom: 0 }}>
-            <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+            <CartesianGrid stroke="var(--border)" horizontal={false} />
             <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={formatK} />
             <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={64} />
             <Tooltip formatter={(v) => formatK(v)} />
@@ -290,7 +290,7 @@ function PipelineMiniChart({ type, aggregate }) {
       <div className="w-full rounded-xl border p-2" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-            <CartesianGrid stroke="#F3F4F6" vertical={false} />
+            <CartesianGrid stroke="var(--border)" vertical={false} />
             <XAxis dataKey="name" tick={{ fontSize: 9 }} />
             <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
             <Tooltip />

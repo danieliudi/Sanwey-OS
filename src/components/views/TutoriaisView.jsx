@@ -103,7 +103,7 @@ function VideoCard({ video, onNavigate }) {
         ) : (
           <div
             className="flex items-center justify-center rounded-full"
-            style={{ width: 48, height: 48, background: "#E5E7EB" }}
+            style={{ width: 48, height: 48, background: "var(--surface-alt)" }}
           >
             <Play size={20} style={{ color: "var(--text-dim)", marginLeft: 2 }} />
           </div>
@@ -158,7 +158,7 @@ function RecipeCard({ recipe }) {
         </div>
         <span
           className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
-          style={{ background: recipe.difficultyColor + "18", color: recipe.difficultyColor }}
+          style={{ background: `color-mix(in srgb, ${recipe.difficultyColor} 15%, transparent)`, color: recipe.difficultyColor }}
         >
           {recipe.difficulty}
         </span>
@@ -168,7 +168,7 @@ function RecipeCard({ recipe }) {
         <div className="flex gap-2 items-start">
           <span
             className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5"
-            style={{ background: "#FEF3C7", color: "#B45309" }}
+            style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
           >
             Gatilho
           </span>
@@ -188,7 +188,7 @@ function RecipeCard({ recipe }) {
         <div className="flex gap-2 items-start">
           <span
             className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5"
-            style={{ background: "#ECFDF5", color: "#059669" }}
+            style={{ background: "var(--success-bg)", color: "var(--success)" }}
           >
             Ação
           </span>
@@ -366,13 +366,13 @@ export function TutoriaisView({ currentUser, onNavigate, initialTab }) {
           {/* Intro */}
           <div
             className="rounded-xl border p-5"
-            style={{ background: "#FFFBF0", borderColor: "#FDE68A" }}
+            style={{ background: "var(--warning-bg)", borderColor: "color-mix(in srgb, var(--warning) 35%, transparent)" }}
           >
             <div className="flex items-start gap-3">
-              <Zap size={18} style={{ color: "#B45309", flexShrink: 0, marginTop: 2 }} />
+              <Zap size={18} style={{ color: "var(--warning)", flexShrink: 0, marginTop: 2 }} />
               <div>
-                <p className="text-sm font-semibold mb-1" style={{ color: "#92400E" }}>O que são automações?</p>
-                <p className="text-sm leading-relaxed" style={{ color: "#78350F" }}>
+                <p className="text-sm font-semibold mb-1" style={{ color: "var(--warning)" }}>O que são automações?</p>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--warning)" }}>
                   {AUTOMATION_GUIDE.intro}
                 </p>
               </div>
@@ -393,7 +393,7 @@ export function TutoriaisView({ currentUser, onNavigate, initialTab }) {
                   <div className="flex flex-col items-center">
                     <div
                       className="flex items-center justify-center rounded-full font-bold text-sm shrink-0"
-                      style={{ width: 32, height: 32, background: "var(--accent)", color: "#FFFFFF", fontSize: 13 }}
+                      style={{ width: 32, height: 32, background: "var(--accent)", color: "var(--on-accent)", fontSize: 13 }}
                     >
                       {step.number}
                     </div>

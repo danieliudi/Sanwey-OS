@@ -5,6 +5,7 @@ import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { AppToast } from "../shared/AppToast";
 import { StageNavigator } from "../shared/StageNavigator";
 import { KanbanFab } from "../shared/KanbanFab";
@@ -29,6 +30,7 @@ import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { usePosvenda } from "../../hooks/use-posvenda";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { formatK } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 
@@ -49,7 +51,7 @@ function PosVendaCardBody({ kase, owners, sourceLead, onOpenLead }) {
         {kase.clientName}
       </div>
       <div className="flex items-center justify-between text-xs">
-        <span className="font-semibold" style={{ color: "#15803D" }}>{formatK(kase.value)}</span>
+        <span className="font-semibold" style={{ color: "var(--success)" }}>{formatK(kase.value)}</span>
         <AvatarStack users={owners} size={20} max={3} />
       </div>
       {sourceLead && (
@@ -189,7 +191,7 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
             </div>
           )}
           {error && (
-            <div className="text-xs rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}>
+            <div className="text-xs rounded-lg px-3 py-2" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
               {error}
             </div>
           )}
@@ -198,7 +200,7 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
               type="submit"
               disabled={saving || !clientName.trim()}
               className="flex-1 text-sm font-semibold py-2 rounded-xl transition-opacity"
-              style={{ background: "var(--accent)", color: "#FFFFFF", border: "none", opacity: saving || !clientName.trim() ? 0.5 : 1 }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", opacity: saving || !clientName.trim() ? 0.5 : 1 }}
             >
               {saving ? "Salvando…" : "Criar caso"}
             </button>
@@ -245,7 +247,7 @@ function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, user
       <div className="font-bold text-base truncate" style={{ color: "var(--text)" }}>{kase.clientName}</div>
       <span
         className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold"
-        style={{ background: `${st.color}18`, color: st.color, border: `1px solid ${st.color}40` }}
+        style={{ background: `${st.color}18`, color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}
       >
         <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color }} />
         {st.name}
@@ -383,7 +385,32 @@ function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, user
 
 function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={cases}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhum caso encontrado."
+      title={(kase) => kase.clientName}
+      chips={(kase) => {
+        const stage = stages.find(s => s.stageKey === kase.stage);
+        const color = stage?.color || "var(--text-dim)";
+        return [{ label: stage?.name || kase.stage, color }];
+      }}
+      right={(kase) => (
+        <span className="text-sm font-semibold" style={{ color: "var(--success)", whiteSpace: "nowrap" }}>{formatK(kase.value)}</span>
+      )}
+      metaRight={(kase) => {
+        const owners = (kase.ownerIds || []).map(id => usersById.get(id)).filter(Boolean);
+        const days = daysInStage(kase.stageChangedAt);
+        return (
+          <>
+            {owners.length > 0 && <AvatarStack users={owners} size={18} max={2} />}
+            <span>{kase.stageChangedAt ? `${days} dia${days !== 1 ? "s" : ""} na etapa` : "—"}</span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -410,9 +437,9 @@ function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
                 <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)", maxWidth: 220 }}>
                   <div className="truncate">{kase.clientName}</div>
                 </td>
-                <td className="px-4 py-3 text-xs font-semibold" style={{ color: "#15803D" }}>{formatK(kase.value)}</td>
+                <td className="px-4 py-3 text-xs font-semibold" style={{ color: "var(--success)", whiteSpace: "nowrap" }}>{formatK(kase.value)}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40` }}>
                     {stage?.name || kase.stage}
                   </span>
                 </td>
@@ -433,6 +460,7 @@ function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -552,7 +580,7 @@ function PosVendaCalendarView({ cases, stages, onSelect }) {
                 <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
                   <div className="flex justify-center mb-1">
                     <span className="flex items-center justify-center text-xs font-semibold select-none"
-                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "var(--on-accent)" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
                       {day.getDate()}
                     </span>
                   </div>
@@ -566,7 +594,7 @@ function PosVendaCalendarView({ cases, stages, onSelect }) {
                           onClick={() => onSelect(kase)}
                           title={kase.clientName}
                           className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                          style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40`, cursor: "pointer" }}
                         >
                           {kase.clientName}
                         </button>
@@ -666,14 +694,14 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             <input autoFocus type="text" placeholder="Ex.: Garantia estendida"
               value={name} onChange={e => setName(e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -888,10 +916,10 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-                <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" />
-                <ViewToggleButton active={viewMode === "table"} onClick={() => setViewMode("table")} icon={List} label="Tabela" />
-                <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
-                <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
+                <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
+                <ViewToggleButton active={viewMode === "table"} onClick={() => setViewMode("table")} icon={List} label="Tabela" iconOnlyMobile />
+                <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" iconOnlyMobile />
+                <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
               </div>
               {isManager && accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
                 <Select
@@ -909,7 +937,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                 <button
                   onClick={() => setCreateModalStage(firstNonTerminalStage)}
                   className="flex items-center gap-1.5 font-semibold"
-                  style={{ background: "var(--accent)", color: "#FFFFFF", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
+                  style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
                 >
                   <Plus size={14} />
                   Novo caso
@@ -947,6 +975,8 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
             getStageKey={c => c.stage}
             getStageEnteredAt={c => c.stageChangedAt}
             specificStats={posVendaSpecificStats}
+            getOwnerIds={c => c.ownerIds || []}
+            usersById={usersById}
           />
         )}
 
@@ -996,7 +1026,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
         <div className="hidden lg:block">
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-2 h-full" style={{ minWidth: `${stages.length * 280}px` }}>
-              {stages.map(stage => {
+              {stages.map((stage, idx) => {
                 const bucket = byStage[stage.stageKey] || { cases: [], total: 0 };
                 const isOver = dragOverStage === stage.stageKey;
                 return (
@@ -1008,7 +1038,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                     className="flex flex-col rounded-lg transition-all duration-150"
                     style={{
                       width: 272, minWidth: 272, height: "100%", overflow: "hidden",
-                      border: "1px solid var(--border)",
+                      borderRight: idx < stages.length - 1 ? "1px solid var(--border)" : "none",
                       background: isOver ? stage.color + "14" : "var(--surface-alt)",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none",
                     }}
@@ -1105,7 +1135,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                         <button
                           onClick={() => setCreateModalStage(stage)}
                           className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                          style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                          style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                         >
                           <Plus size={12} />
                           Novo caso

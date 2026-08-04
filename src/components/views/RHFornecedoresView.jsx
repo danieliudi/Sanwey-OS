@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Search, Bot,
+  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Search, Bot, Trash2,
 } from "lucide-react";
 import { AgentBuilderWizard } from "../agents/AgentBuilderWizard";
 import { useRHSuppliers } from "../../hooks/use-rh-suppliers";
@@ -32,9 +32,9 @@ const TIPO_LABELS = {
 };
 
 const STATUS_COLORS = {
-  ativo: { bg: "#DCFCE7", text: "#16A34A" },
-  vencido: { bg: "#FEE2E2", text: "#DC2626" },
-  renovacao_pendente: { bg: "#FEF3C7", text: "#D97706" },
+  ativo: { bg: "var(--success-bg)", text: "var(--success)" },
+  vencido: { bg: "var(--danger-bg)", text: "var(--danger)" },
+  renovacao_pendente: { bg: "var(--warning-bg)", text: "var(--warning)" },
   cancelado: { bg: "var(--surface-alt)", text: "var(--text-dim)" },
 };
 
@@ -129,7 +129,7 @@ function NovoFornecedorModal({ onSave, onClose }) {
           </div>
           {error && <div style={{ fontSize: 12, color: "var(--danger)" }}>{error}</div>}
           <div className="flex gap-2 mt-2">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
               {saving ? "Salvando…" : "Cadastrar"}
             </button>
             <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -215,7 +215,7 @@ function NovoContratoModal({ fornecedorId, users, onSave, onClose }) {
           </div>
           {error && <div style={{ fontSize: 12, color: "var(--danger)" }}>{error}</div>}
           <div className="flex gap-2 mt-2">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
               {saving ? "Salvando…" : "Criar contrato"}
             </button>
             <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -266,7 +266,7 @@ function NovoEventoForm({ contratoId, onSave, onDone }) {
       )}
       <input placeholder="Descrição (opcional)" className={inputCls} style={inputSt} value={form.descricao} onChange={(e) => setForm(f => ({ ...f, descricao: e.target.value }))} />
       <div className="flex gap-2">
-        <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
+        <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
           {saving ? "Salvando…" : "Registrar evento"}
         </button>
         <button type="button" onClick={onDone} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -427,7 +427,15 @@ function ContratosTableView({ contratos, suppliers, users, onRowClick }) {
 
   const rows = useMemo(() => {
     return contratos
-      .filter(c => statusFilter === "all" || c.status === statusFilter)
+      // "Vencido" nunca é atualizado automaticamente no campo `status` (fica
+      // manual) — filtrar só por status==="vencido" escondia contratos que
+      // já passaram da vigência mas continuam marcados "ativo" (achado #8 do
+      // roteiro de treinamento de RH, 31/07/2026). Calcula por data real.
+      .filter(c => {
+        if (statusFilter === "all") return true;
+        if (statusFilter === "vencido") return c.status === "ativo" && contratoFornecedorDiasParaVencer(c) < 0;
+        return c.status === statusFilter;
+      })
       .map(c => ({ contrato: c, diasParaVencer: c.status === "ativo" ? contratoFornecedorDiasParaVencer(c) : null }))
       .sort((a, b) => {
         const fa = a.contrato.vigenciaFim ? new Date(a.contrato.vigenciaFim).getTime() : Infinity;
@@ -501,12 +509,34 @@ function ContratosTableView({ contratos, suppliers, users, onRowClick }) {
   );
 }
 
+// Mesmo padrão de exclusão de fornecedor de FornecedoresView.jsx (Marketing)
+// — regra "toda página de Fornecedores" do CLAUDE.md. Só o texto do corpo
+// muda (aqui contratos/histórico são removidos junto, lá cotações continuam).
+function ConfirmDeleteModal({ fornecedor, contratoCount, onConfirm, onClose }) {
+  return (
+    <Modal open onClose={onClose} title="Excluir fornecedor?" width={400}>
+      <div className="p-6">
+        <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>
+          "{fornecedor.name}" será removido{contratoCount > 0 ? ` — junto com ${contratoCount} contrato(s) e o histórico de eventos vinculado` : ""}.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
+          <button onClick={onConfirm}
+            className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--danger)", color: "var(--on-danger)" }}>Excluir</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function RHFornecedoresView({ currentUser }) {
   const navigate = useNavigate();
-  const { suppliers, contratos, eventos, loading, createSupplier, createContrato, updateContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
+  const { suppliers, contratos, eventos, loading, createSupplier, deleteSupplier, createContrato, updateContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
   const { users } = useProfiles();
   const [novoOpen, setNovoOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   // "Ver fornecedor" (AgentActionsView, aviso interno do Agent Builder)
   // navega pra cá e abre o FornecedorDrawer já focado — mesmo padrão de
@@ -603,13 +633,13 @@ export function RHFornecedoresView({ currentUser }) {
           <button
             onClick={() => setNovoOpen(true)}
             className="flex items-center gap-1.5 font-semibold"
-            style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
+            style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
           >
             <Plus size={14} /> Novo fornecedor
           </button>
         </div>
       </div>
-      <p className="text-sm" style={{ color: "var(--text-dim)", marginTop: -8 }}>
+      <p className="text-sm" style={{ color: "var(--text-dim)" }}>
         Convênio médico, seguradora, terceirizada de RH — cadastro, contrato (vigência/valor) e histórico de reajustes, renovações, faturas e orçamentos.
       </p>
 
@@ -645,7 +675,7 @@ export function RHFornecedoresView({ currentUser }) {
             <button
               onClick={() => setNovoOpen(true)}
               className="flex items-center gap-1.5 font-semibold"
-              style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}
             >
               <Plus size={14} /> Novo fornecedor
             </button>
@@ -691,6 +721,15 @@ export function RHFornecedoresView({ currentUser }) {
                   : null
                 }
                 footer={`${contratoCountByFornecedor.get(s.id) || 0} contrato(s) ativo(s)`}
+                menu={
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(s); }}
+                    aria-label="Excluir fornecedor"
+                    style={{ color: "var(--danger)", background: "none", border: "none", cursor: "pointer", padding: 4 }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                }
               />
             );
           })}
@@ -699,6 +738,15 @@ export function RHFornecedoresView({ currentUser }) {
 
       {novoOpen && (
         <NovoFornecedorModal onSave={createSupplier} onClose={() => setNovoOpen(false)} />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDeleteModal
+          fornecedor={confirmDelete}
+          contratoCount={contratos.filter(c => c.fornecedorId === confirmDelete.id).length}
+          onConfirm={async () => { await deleteSupplier(confirmDelete.id); setConfirmDelete(null); }}
+          onClose={() => setConfirmDelete(null)}
+        />
       )}
 
       {agentWizardOpen && (

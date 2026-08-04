@@ -51,7 +51,7 @@ export function CRMViagensView({ currentUser, clients, onCreateClient, users, pu
   if (tabs.length === 0) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px", color: "var(--text-dim)", fontSize: 13 }}>
-        Você não tem acesso a Viagens & Reembolsos.
+        Você não tem acesso a Viagens & Despesas.
       </div>
     );
   }
@@ -60,7 +60,7 @@ export function CRMViagensView({ currentUser, clients, onCreateClient, users, pu
     <div className="flex flex-col gap-4">
       <PageHeader
         icon={Plane}
-        title="Viagens & Reembolsos"
+        title="Viagens & Despesas"
         subtitle="Planeje visitas, acompanhe aprovações e lance reembolsos do time comercial"
       />
       {tabs.length > 1 && (

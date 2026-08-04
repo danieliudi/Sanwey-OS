@@ -4,6 +4,8 @@ import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
 import { generateLeadsForAllCompanies } from "../data/generate-leads";
 import { mergeGanhoDefaults } from "../utils/won-stage-defaults";
+import { useConnectivity } from "./use-connectivity";
+import { saveLeadsSnapshot, readLeadsSnapshot, enqueueActivity } from "./use-offline-cache";
 
 // Maps DB snake_case row to camelCase lead object the rest of the app expects.
 function rowToLead(r) {
@@ -151,6 +153,12 @@ export function useLeads({ userId, role, companies } = {}) {
   const [error, setError] = useState(null);
   const activeRef = useRef(true);
 
+  const { isOnline } = useConnectivity();
+  // Idade do snapshot lido do IndexedDB quando o app abre já offline — só a
+  // UI (OfflineBanner) usa isso; não influencia nenhuma lógica de fetch.
+  const [cacheAge, setCacheAge] = useState(null);
+  const cacheAttemptedRef = useRef(false);
+
   const canQuery = isSupabaseConfigured && Boolean(userId) && (
     role === "admin" ||
     (role === "gerente" && Array.isArray(companies)) ||
@@ -169,7 +177,10 @@ export function useLeads({ userId, role, companies } = {}) {
         .order("created_at", { ascending: false });
       if (err) throw err;
       if (!activeRef.current) return;
-      setRemoteLeads((data || []).map(rowToLead));
+      const mapped = (data || []).map(rowToLead);
+      setRemoteLeads(mapped);
+      // Fire-and-forget — não bloqueia o state update por causa do cache.
+      saveLeadsSnapshot(mapped).catch(() => {});
     } catch (e) {
       if (!activeRef.current) return;
       setError(e);
@@ -215,6 +226,24 @@ export function useLeads({ userId, role, companies } = {}) {
       supabase.removeChannel(channel);
     };
   }, [userId, fetchAll]);
+
+  // Primeiro mount já offline: fetchAll() acima vai falhar (sem rede), então
+  // popula a partir do último snapshot salvo no IndexedDB em vez de deixar a
+  // tela vazia. Só tenta uma vez — não reage a toda transição de conectividade,
+  // só ao carregamento inicial sem nenhum lead ainda em memória.
+  useEffect(() => {
+    if (!isSupabaseConfigured || !userId) return;
+    if (isOnline) return;
+    if (cacheAttemptedRef.current) return;
+    if (remoteLeads.length > 0) return;
+    cacheAttemptedRef.current = true;
+    readLeadsSnapshot().then(({ leads: cachedLeads, cachedAt }) => {
+      if (!activeRef.current || !cachedLeads.length) return;
+      setRemoteLeads(cachedLeads);
+      setCacheAge(cachedAt);
+      setLoading(false);
+    }).catch(() => {});
+  }, [isOnline, userId, remoteLeads.length]);
 
   // Public leads array — from Supabase or localStorage depending on mode.
   const leads = isSupabaseConfigured ? remoteLeads : fallbackLeads;
@@ -337,14 +366,32 @@ export function useLeads({ userId, role, companies } = {}) {
   const addLeadActivity = useCallback(async (leadId, activity) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
+    // Gera o id ANTES de decidir online/offline — mesmo precedente de
+    // LeadCreateModal.jsx (crypto.randomUUID() no cliente), garante que a
+    // entrada enfileirada localmente e a que aparece otimisticamente na tela
+    // sejam idempotentes num retry.
+    const id = activity.id || crypto.randomUUID();
     const newActivity = {
-      id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       timestamp: new Date().toISOString(),
       ...activity,
+      id,
     };
+
+    if (isSupabaseConfigured && !isOnline) {
+      // Offline: aplica a MESMA atualização otimista local de sempre (a nota
+      // já aparece na tela, marcada com pending:true — metadado só de UI,
+      // nunca gravado no banco), mas NÃO chama supabase.update nem o
+      // rollback-via-refetch de updateLead — é o desvio de propósito do
+      // padrão online, documentado aqui pra não ser "corrigido" de volta.
+      const activities = [...(lead.activities || []), { ...newActivity, pending: true }];
+      setRemoteLeads(prev => prev.map(l => l.id === leadId ? { ...l, activities } : l));
+      await enqueueActivity({ id, leadId, activity: newActivity, userId });
+      return;
+    }
+
     const activities = [...(lead.activities || []), newActivity];
     await updateLead(leadId, { activities });
-  }, [leads, updateLead]);
+  }, [leads, updateLead, isOnline, userId]);
 
   const changeStage = useCallback(async (id, stage) => {
     const lead = leads.find(l => l.id === id);
@@ -439,5 +486,7 @@ export function useLeads({ userId, role, companies } = {}) {
     clearDemoLeads,
     refetch: fetchAll,
     canQuery,
-  }), [leads, loading, error, addLead, updateLead, deleteLead, duplicateLead, toggleStar, changeStage, addLeadActivity, loadDemoLeads, clearAllLeads, clearDemoLeads, fetchAll, canQuery]);
+    isOnline,
+    cacheAge,
+  }), [leads, loading, error, addLead, updateLead, deleteLead, duplicateLead, toggleStar, changeStage, addLeadActivity, loadDemoLeads, clearAllLeads, clearDemoLeads, fetchAll, canQuery, isOnline, cacheAge]);
 }

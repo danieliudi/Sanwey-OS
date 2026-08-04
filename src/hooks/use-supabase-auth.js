@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured, cameFromInviteLink } from "../lib/supabase";
+import { clearAll as clearOfflineCache } from "./use-offline-cache";
 
 // Loads the current user's profile row (role, companies, avatarBg, initials).
 // Expects a `profiles` table keyed by auth.users.id — see README for SQL.
+//
+// ai_config/calendar_token vivem em `profile_secrets` (RLS own-only, ver
+// migration 20260819_sec_profile_secrets_split.sql) — antes ficavam em
+// `profiles`, lida por LINHA inteira por gerente/marketing/rh/agencia/
+// supervisor via useProfiles(), o que vazava a chave de IA e o token de
+// calendário de colegas (achado de segurança). O embed abaixo só funciona
+// pro dono porque a RLS de profile_secrets é `id = auth.uid()`.
 async function loadProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("*")
+    .select("*, profile_secrets(ai_config, calendar_token)")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw error;
@@ -42,6 +50,11 @@ export function useSupabaseAuth() {
       if (!active) return;
       listenerHasFired = true;
       if (_event === "PASSWORD_RECOVERY") setIsPasswordRecovery(true);
+      // Achado de segurança (M4): limpar aqui (não só no signOut explícito)
+      // cobre também expiração/invalidação de sessão — sem isso, o snapshot
+      // de leads e a fila de notas do usuário anterior ficavam em claro no
+      // IndexedDB até um logout manual bem-sucedido.
+      if (_event === "SIGNED_OUT") clearOfflineCache().catch(() => {});
       setSession(newSession);
     });
 
@@ -109,6 +122,15 @@ export function useSupabaseAuth() {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    // Fila/cache offline são escopados por sessão do navegador, não por
+    // usuário — sem limpar aqui, o próximo login neste aparelho herdaria
+    // leads cacheados/notas pendentes de quem saiu. Achado de segurança
+    // (M4): antes era fire-and-forget (.catch sem await) — se a aba
+    // navegasse/recarregasse antes da transação do IndexedDB terminar, o
+    // cache podia sobreviver. Agora bloqueia o fim do signOut até limpar
+    // de verdade. (onAuthStateChange acima também limpa em SIGNED_OUT —
+    // clearAll é idempotente, cobre os dois caminhos sem duplicar risco.)
+    await clearOfflineCache().catch(() => {});
   }, []);
 
   const updateAuthUser = useCallback(async (patch) => {
@@ -151,12 +173,14 @@ export function useSupabaseAuth() {
           avatarUrl: profile.avatar_url || null,
           sectors: Array.isArray(profile.sectors) ? profile.sectors : [],
           supervisorId: profile.supervisor_id || null,
-          calendarToken: profile.calendar_token || null,
+          // profile_secrets vem embedado via FK (ver loadProfile acima) —
+          // supabase-js retorna objeto (relação 1:1, PK=FK), nunca array.
+          calendarToken: profile.profile_secrets?.calendar_token || null,
           // Só aqui — este fetch é escopado à própria linha (eq("id", userId)),
           // diferente do roster de useProfiles() (não deve expor ai_config de
           // ninguém além do próprio dono). Sem isso, o Provider/Model/Chave
           // salvos em Configurações nunca recarregavam após um refresh.
-          aiConfig: profile.ai_config || null,
+          aiConfig: profile.profile_secrets?.ai_config || null,
         }
       : null
   ), [session, profile]);

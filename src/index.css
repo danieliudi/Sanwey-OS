@@ -18,9 +18,12 @@
   --text-dim:      #57534E;
   --text-faint:    #706C65;
 
-  /* Action — único token white-label */
-  --accent:        #37352F;
-  --accent-hover:  #2A2925;
+  /* Action — único token white-label. Vermelho da marca (Manual v4.0) como
+     acento padrão da plataforma inteira — decidido com o Daniel 03/08/2026,
+     mockup e UI Kit aprovados na sessão. Continua white-label: quem
+     customizar em Configurações > Aparência sobrescreve. */
+  --accent:        #CC2936;
+  --accent-hover:  #8B0000;
   --on-accent:     #FFFFFF;
 
   /* Semantic status */
@@ -28,14 +31,21 @@
   --warning:       #B45309;
   --danger:        #B91C1C;
 
+  /* Texto sobre fundo sólido success/danger — mesmo racional do --on-accent:
+     no dark os tons clareiam e texto branco fixo perde contraste. */
+  --on-success:    #FFFFFF;
+  --on-danger:     #FFFFFF;
+
   /* Shape */
   --radius-sm:     6px;
   --radius-md:     8px;
   --radius-lg:     12px;
 
-  /* Elevation — cards ficam quase planos (1px de sombra), só "levantam" no
-     hover/foco. Nada de sombra pesada por padrão (tom Notion). */
-  --shadow-card:   0 1px 2px rgba(55,53,47,0.05);
+  /* Elevation — card em repouso não tem sombra nenhuma, só borda de 1px
+     (mockup Focus Flutter UI Kit aprovado 03/08) — generaliza o padrão que
+     TaskBucket.jsx/RHFeriasView.jsx/ComexView.jsx já usavam manualmente.
+     --shadow-pop continua a única elevação real, pra hover/popover/modal. */
+  --shadow-card:   none;
   --shadow-pop:    0 12px 32px rgba(55,53,47,0.14), 0 2px 8px rgba(55,53,47,0.06);
 
   /* Scrim atrás de modal/drawer/menu — antes cada tela reimplementava com
@@ -45,7 +55,7 @@
 
   /* Product tokens — identidade de empresa (não white-label) */
   --color-resibag:   #16A34A;
-  --color-industria: #C7212B;
+  --color-industria: #CC2936;
 
   /* Semantic extras */
   --amber:         #E8920A;
@@ -99,14 +109,20 @@
   --text:          #EBEBDF;
   --text-dim:      #B5B3A8;
   --text-faint:    #8C8882;
-  --accent:        #EBEBDF;
-  --accent-hover:  #FFFFFF;
-  --on-accent:     #1A1A18;
+  /* Vermelho intermediário — não o #CC2936 puro do claro (lido contra o
+     quase-preto #1A1A18, ficou apagado) nem clareado até salmão (1ª tentativa,
+     rejeitada). #D34752 é o meio-termo aprovado 03/08/2026. */
+  --accent:        #D34752;
+  --accent-hover:  #DA636C;
+  --on-accent:     #FFFFFF;
+  --color-industria: #D34752;
 
   /* Semantic colors — brighter for dark backgrounds */
   --success:       #4ADE80;
   --warning:       #FBBF24;
   --danger:        #F87171;
+  --on-success:    #14251C;
+  --on-danger:     #2B1214;
   --amber:         #FBBF24;
   --amber-bg:      rgba(251, 191, 36, 0.12);
 
@@ -127,8 +143,8 @@
   /* Tinted accent for active/hover states */
   --accent-tint:   color-mix(in srgb, var(--accent) 10%, transparent);
 
-  /* Sombra mais forte no escuro — rgba(0,0,0,..) some contra fundo escuro */
-  --shadow-card:   0 1px 2px rgba(0,0,0,0.22);
+  /* Card em repouso sem sombra também no escuro — mesma decisão do :root. */
+  --shadow-card:   none;
   --shadow-pop:    0 16px 40px rgba(0,0,0,0.45);
 
   /* Scrim mais forte no escuro — preto puro contra fundo já escuro precisa
@@ -136,8 +152,11 @@
   --overlay-scrim: rgba(0,0,0,0.6);
 }
 
-/* Native form controls in dark mode */
-[data-theme="dark"] select {
+/* Native form controls in dark mode — sem isto, select/checkbox/radio nativos
+   renderizam claros no tema escuro */
+[data-theme="dark"] select,
+[data-theme="dark"] input[type="checkbox"],
+[data-theme="dark"] input[type="radio"] {
   color-scheme: dark;
 }
 
@@ -187,6 +206,18 @@ body {
   .print\:hidden { display: none !important; }
   body { background: #FFFFFF !important; }
   @page { size: A4 landscape; margin: 1cm; }
+}
+
+/* Login: fio de fundo com movimento (ver LoginScreen.jsx) — traço único
+   animado via stroke-dashoffset, mesma técnica do mockup aprovado. */
+@keyframes login-fio-dash {
+  to { stroke-dashoffset: -1000; }
+}
+.login-fio-path {
+  animation: login-fio-dash 26s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-fio-path { animation: none; }
 }
 
 /* Impressão de documento avulso (ex.: proposta comercial) — imprime só o

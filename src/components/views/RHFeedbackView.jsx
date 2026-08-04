@@ -29,15 +29,18 @@ import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } 
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { EmptyState } from "../ui/EmptyState";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
+import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
@@ -81,7 +84,7 @@ const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
-const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function dayKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -180,6 +183,7 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!colaboradorId) { setError("Selecione o colaborador."); return; }
+    if (notaGeral == null) { setError("Dê uma nota geral antes de registrar — o feedback já nasce em Concluído, precisa refletir uma avaliação de fato feita."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -226,7 +230,7 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
               </div>
             </div>
             <div>
-              <label style={labelSt}>Nota geral</label>
+              <label style={labelSt}>Nota geral *</label>
               <RatingSelector value={notaGeral} onChange={setNotaGeral} />
             </div>
             <div>
@@ -243,10 +247,10 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Registrar feedback"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -372,10 +376,10 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
             {desfecho === "promovido" && (
               <div>
                 <label style={labelSt}>Novo salário (opcional)</label>
-                <input
-                  type="number" min="0" step="0.01" value={novoSalario}
-                  onChange={(e) => setNovoSalario(e.target.value)}
-                  placeholder={colaborador?.salary != null ? `Atual: ${formatBRL(colaborador.salary)}` : "R$ 0,00"}
+                <CurrencyInput
+                  value={novoSalario}
+                  onChange={setNovoSalario}
+                  placeholder={colaborador?.salary != null ? `Atual: ${formatBRL(colaborador.salary)}` : undefined}
                   className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt}
                 />
                 <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
@@ -398,10 +402,10 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
             )}
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Concluir avaliação"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -458,10 +462,10 @@ function AutoavaliacaoModal({ feedback, onSubmit, onClose }) {
           <label style={labelSt}>Sua avaliação</label>
           <RatingSelector value={rating} onChange={setRating} />
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Enviando…" : "Enviar autoavaliação"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -617,14 +621,14 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             <input autoFocus type="text" placeholder="Ex.: Autoavaliação"
               value={name} onChange={e => setName(e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -689,7 +693,7 @@ function FeedbackKanbanColumn({
         width: 272, minWidth: 272,
         height: boardHeight,
         overflow: "hidden",
-        border: "1px solid var(--border)",
+        borderRight: stage.stageKey !== stages[stages.length - 1]?.stageKey ? "1px solid var(--border)" : "none",
         background: isDragOver ? stage.color + "14" : "var(--surface-alt)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
       }}
@@ -848,7 +852,7 @@ function FeedbackDrawer({
         </button>
         <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{tipoLabel(feedback.tipo)} · {fmt(feedback.period_start)} – {fmt(feedback.period_end)}</div>
         <div style={{ marginTop: 8 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: stageTextColor(st.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
           </span>
         </div>
@@ -956,7 +960,7 @@ function FeedbackDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>
@@ -968,7 +972,7 @@ function FeedbackDrawer({
           />
           <button
             onClick={onComplete}
-            style={{ marginTop: 6, width: "100%", background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            style={{ marginTop: 6, width: "100%", background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
           >
             Concluir avaliação
           </button>
@@ -1023,7 +1027,29 @@ function FeedbackDrawer({
 
 function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={feedbacks}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhum ciclo encontrado."
+      title={(f) => colaboradoresById.get(f.user_id)?.fullName || "—"}
+      chips={(f) => {
+        const st = findStage(stages, f.status);
+        return [{ label: st.name, color: st.color }];
+      }}
+      meta={(f) => tipoLabel(f.tipo)}
+      metaRight={(f) => {
+        const evaluatorIds = f.evaluator_ids?.length ? f.evaluator_ids : (f.evaluator_id ? [f.evaluator_id] : []);
+        const resolvedEvaluators = evaluatorIds.map(id => usersById.get(id)).filter(Boolean);
+        return (
+          <>
+            {resolvedEvaluators.length > 0 && <AvatarStack users={resolvedEvaluators} size={18} max={2} />}
+            <span style={{ color: isAtrasado(f) ? "var(--danger)" : "var(--text-dim)", fontWeight: isAtrasado(f) ? 700 : 400 }}>{fmt(f.period_end)}</span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -1055,7 +1081,7 @@ function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, on
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{tipoLabel(f.tipo)}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -1074,6 +1100,7 @@ function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, on
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -1190,7 +1217,7 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
 
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const offset = (first.getDay() + 6) % 7;
+    const offset = first.getDay();
     const start = new Date(first);
     start.setDate(first.getDate() - offset);
     const days = [];
@@ -1229,7 +1256,7 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
       </div>
       <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
         {WEEKDAYS.map(w => (
-          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+          <div key={w} className="px-2 py-2 text-[10px] font-bold text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
@@ -1240,8 +1267,10 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
-              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+              style={{ borderColor: "var(--border)", background: "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={isToday
+                ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
               <div className="flex flex-col gap-0.5">
@@ -1251,7 +1280,7 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
                   return (
                     <span key={f.id} onClick={() => onPillClick(f)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: st.color + "18", color: st.color }}
+                      style={{ background: st.color + "18", color: stageTextColor(st.color) }}
                       title={`${colaborador?.fullName || "—"} · ${tipoLabel(f.tipo)}`}>
                       {colaborador?.fullName || tipoLabel(f.tipo)}
                     </span>
@@ -1562,9 +1591,9 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                   {pendentes.map(f => {
                     const isMine = meuColaborador?.id === f.user_id;
                     return (
-                      <div key={f.id} style={{ border: "1px solid #FDE68A", background: "var(--warning-bg)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                      <div key={f.id} style={{ border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", background: "var(--warning-bg)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                         <div style={{ flex: 1, minWidth: 180 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "#DBEAFE", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--channel-email-text)", background: "var(--channel-email-bg)", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
                           <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>Prazo {fmt(f.period_end)} · {autoavaliacaoLabel(f, meuColaborador)}</div>
                         </div>
                         {isMine && f.self_rating == null && (
@@ -1586,7 +1615,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                 {concluidos.map(f => (
                   <div key={f.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "#DBEAFE", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--channel-email-text)", background: "var(--channel-email-bg)", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
                       <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{fmt(f.period_end)}</span>
                     </div>
                     {(f.self_rating != null || f.manager_rating != null) && (
@@ -1628,11 +1657,11 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-              <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
-              <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
-              <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
-              <ViewToggleButton active={viewMode === "lembretes"} onClick={() => setViewMode("lembretes")} icon={BellRing} label="Lembretes" />
-              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
+              <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "lembretes"} onClick={() => setViewMode("lembretes")} icon={BellRing} label="Lembretes" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
             </div>
             {canWrite && (
               <Button size="sm" icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
@@ -1671,6 +1700,8 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           getStageKey={(f) => f.status}
           getStageEnteredAt={(f) => f.status_changed_at}
           specificStats={feedbackSpecificStats}
+          getOwnerIds={(f) => f.evaluator_ids?.length ? f.evaluator_ids : (f.evaluator_id ? [f.evaluator_id] : [])}
+          usersById={usersById}
         />
       ) : (
         <>

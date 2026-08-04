@@ -16,10 +16,10 @@ export function DynamicField({ field, value, onChange, users = [], disabled = fa
     fontSize: 12,
     padding: "6px 10px",
     borderRadius: 8,
-    border: "1px solid #D1D5DB",
+    border: "1px solid var(--border-strong)",
     outline: "none",
     color: "var(--text)",
-    background: "#FFFFFF",
+    background: "var(--surface)",
     boxSizing: "border-box",
   };
 
@@ -132,7 +132,7 @@ export function DynamicField({ field, value, onChange, users = [], disabled = fa
     <div className="space-y-1">
       <label className="block text-[11px] font-semibold" style={{ color: "var(--text-dim)" }}>
         {field.label}
-        {field.required && <span style={{ color: "#B91C1C", marginLeft: 3 }}>*</span>}
+        {field.required && <span style={{ color: "var(--danger)", marginLeft: 3 }}>*</span>}
       </label>
       {input}
       {field.helpText && (

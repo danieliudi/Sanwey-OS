@@ -137,7 +137,7 @@ const BTN_PRIMARY = {
 };
 
 const BTN_SECONDARY = {
-  background: "#FFFFFF",
+  background: "var(--surface)",
   color: "var(--text)",
   border: `1px solid #E5E7EB`,
   borderRadius: 8,
@@ -181,7 +181,7 @@ const SELECT_STYLE = {
   borderRadius: 8,
   fontSize: 13,
   color: "var(--text)",
-  background: "#FFFFFF",
+  background: "var(--surface)",
   outline: "none",
 };
 
@@ -410,7 +410,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
   const cardStyle = {
     width: "100%",
     maxWidth: 672,
-    background: "#FFFFFF",
+    background: "var(--surface)",
     borderRadius: 12,
     maxHeight: "90vh",
     overflowY: "auto",
@@ -459,7 +459,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                 height: 4,
                 flex: 1,
                 borderRadius: 2,
-                background: s <= step ? "var(--color-industria)" : "#E5E7EB",
+                background: s <= step ? "var(--color-industria)" : "var(--border)",
                 transition: "background 0.2s",
               }}
             />
@@ -520,7 +520,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
               </div>
 
               {parseError && (
-                <div style={{ background: "#FEF2F2", color: "#B91C1C", padding: "10px 14px", borderRadius: 8, fontSize: 13 }}>
+                <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "10px 14px", borderRadius: 8, fontSize: 13 }}>
                   {parseError}
                 </div>
               )}
@@ -579,7 +579,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                 <div style={{ border: `1px solid #E5E7EB`, borderRadius: 8, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
-                      <tr style={{ background: "#F5F5F3" }}>
+                      <tr style={{ background: "var(--surface-alt)" }}>
                         <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "var(--text)", width: "45%" }}>
                           Coluna da sua planilha
                         </th>
@@ -631,14 +631,14 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   <div
                     style={{
                       width: 56, height: 56, borderRadius: "50%",
-                      background: failedRows.length > 0 ? "#FEF2F2" : "#ECFDF5",
+                      background: failedRows.length > 0 ? "var(--danger-bg)" : "var(--success-bg)",
                       display: "flex", alignItems: "center",
                       justifyContent: "center", margin: "0 auto 16px",
                     }}
                   >
                     {failedRows.length > 0
-                      ? <X size={28} color="#DC2626" />
-                      : <Check size={28} color="#16A34A" />}
+                      ? <X size={28} color="var(--danger)" />
+                      : <Check size={28} color="var(--success)" />}
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
                     {failedRows.length > 0 ? "Importação concluída com falhas" : "Importação concluída!"}
@@ -652,15 +652,15 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                     <div
                       style={{
                         marginTop: 16, textAlign: "left", maxWidth: 480, marginLeft: "auto", marginRight: "auto",
-                        background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12,
+                        background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 10, padding: 12,
                         maxHeight: 180, overflowY: "auto",
                       }}
                     >
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#B91C1C", marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)", marginBottom: 6 }}>
                         Linhas que falharam — corrija e importe novamente:
                       </div>
                       {failedRows.map((f, i) => (
-                        <div key={i} style={{ fontSize: 12, color: "#7F1D1D", marginBottom: 4 }}>
+                        <div key={i} style={{ fontSize: 12, color: "var(--danger)", marginBottom: 4 }}>
                           Linha {f.row} ({f.company}): {f.error}
                         </div>
                       ))}
@@ -673,7 +673,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", marginBottom: 16 }}>
                     Importando {importProgress}/{importTotal}…
                   </div>
-                  <div style={{ background: "#E5E7EB", borderRadius: 4, height: 8, overflow: "hidden", maxWidth: 400, margin: "0 auto" }}>
+                  <div style={{ background: "var(--border)", borderRadius: 4, height: 8, overflow: "hidden", maxWidth: 400, margin: "0 auto" }}>
                     <div
                       style={{
                         height: "100%",
@@ -712,7 +712,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                     <div style={{ overflowX: "auto", border: `1px solid #E5E7EB`, borderRadius: 8 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 480 }}>
                         <thead>
-                          <tr style={{ background: "#F5F5F3" }}>
+                          <tr style={{ background: "var(--surface-alt)" }}>
                             {Object.entries(mapping)
                               .filter(([, fId]) => fId !== "")
                               .map(([colIdx, fId]) => {
@@ -730,7 +730,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                         </thead>
                         <tbody>
                           {rows.slice(0, 5).map((row, ri) => (
-                            <tr key={ri} style={{ borderTop: "1px solid #EEEEEE" }}>
+                            <tr key={ri} style={{ borderTop: "1px solid var(--border)" }}>
                               {Object.entries(mapping)
                                 .filter(([, fId]) => fId !== "")
                                 .map(([colIdx]) => (

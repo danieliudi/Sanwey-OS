@@ -14,12 +14,17 @@ import { X } from "lucide-react";
 // bloqueante (ex.: falha ao mover card de etapa).
 const VARIANTS = {
   default: { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)", iconColor: "var(--text-dim)" },
-  danger: { background: "#FEF2F2", borderColor: "#FCA5A5", color: "#B91C1C", iconColor: "#B91C1C" },
+  danger: { background: "var(--danger-bg)", borderColor: "var(--danger)", color: "var(--danger)", iconColor: "var(--danger)" },
 };
 
 const POSITIONS = {
-  "bottom-right": { bottom: 20, right: 20 },
+  "bottom-right": {}, // now handled via responsive className below (mobile-safe bottom offset)
   "top-right": { top: 16, right: 16 },
+};
+
+const POSITION_CLASSES = {
+  "bottom-right": "bottom-20 right-4 lg:bottom-5 lg:right-5",
+  "top-right": "",
 };
 
 export function AppToast({
@@ -38,7 +43,7 @@ export function AppToast({
 
   return (
     <div
-      className="fixed z-50 flex items-start gap-2.5 rounded-xl shadow-lg"
+      className={`fixed z-50 flex items-start gap-2.5 rounded-xl shadow-lg ${POSITION_CLASSES[position] ?? POSITION_CLASSES["bottom-right"]}`}
       style={{
         ...pos,
         maxWidth: 380,
@@ -67,7 +72,7 @@ export function AppToast({
             <button
               onClick={action.onClick}
               className="inline-flex items-center gap-1.5 text-xs font-bold mt-2 cursor-pointer"
-              style={{ color: "#FFF", background: "var(--accent)", border: "none", borderRadius: 7, padding: "6px 12px" }}
+              style={{ color: "var(--on-accent)", background: "var(--accent)", border: "none", borderRadius: 7, padding: "6px 12px" }}
             >
               {action.icon && <action.icon size={11} />}
               {action.label}

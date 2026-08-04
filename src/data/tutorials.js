@@ -90,6 +90,8 @@ export const VIDEO_TUTORIALS = {
       quickStart: { icon: "✏️", steps: ["Clique em qualquer card para abrir o painel de detalhes", "Edite campos diretamente: valor, setor, responsável, data de fechamento", "Use a seção 'Notas' para registrar interações e próximos passos"] } },
     { id: "v-c4", title: "Follow-up pelo calendário", description: "Negócios", duration: null, url: null,
       quickStart: { icon: "📅", steps: ["Alterne para a visão 'Calendário' no topo da tela de Negócios", "Cada card aparece na data de fechamento esperada", "Leads com data vencida aparecem em vermelho — priorize-os"] } },
+    { id: "v-c5", title: "Usando o Chat interno", description: "Chat", duration: null, url: null,
+      quickStart: { icon: "💬", steps: ["Clique em 'Chat' no menu lateral para ver canais da sua equipe e abrir conversas diretas — quem você pode chamar no privado segue a estrutura da empresa (seu setor, seu gestor ou quem responde a você)", "No campo de mensagem, use o ícone de carinha para abrir a paleta de emoji, ou o ícone de figurinha para mandar uma do pacote da empresa", "O ícone de clipe anexa um arquivo ou imagem — ele vira uma prévia antes de enviar, com um 'x' para remover se mudar de ideia", "Mensagens com linguagem imprópria não são enviadas — aparece um aviso na hora, visível só para quem escreveu", "Use os filtros no topo da lista (Todas/Não lidas/Canais/Diretas) para achar uma conversa mais rápido, e 'Arquivadas' para tirar uma conversa da lista sem apagar nada", "Segure o ícone de microfone para gravar um áudio, solte para enviar — arraste para o lado antes de soltar se quiser cancelar"] } },
   ],
   vendedor: [
     { id: "v-v1", title: "Visão geral do pipeline", description: "Negócios", duration: null, url: null,
@@ -102,6 +104,8 @@ export const VIDEO_TUTORIALS = {
       quickStart: { icon: "📅", steps: ["Alterne para 'Calendário' no seletor de visão", "Leads aparecem na data de fechamento prevista", "Cards vermelhos indicam atraso — priorize esses contatos"] } },
     { id: "v-v5", title: "Transformando sinais em leads", description: "Sinais", duration: null, url: null,
       quickStart: { icon: "📡", steps: ["Acesse 'Sinais' no menu lateral para ver alertas regulatórios e de mercado", "Clique em 'Criar lead a partir deste sinal' em qualquer card de sinal", "Digite o nome da empresa afetada e confirme — o lead vai direto ao Kanban"] } },
+    { id: "v-v6", title: "Usando o Chat interno", description: "Chat", duration: null, url: null,
+      quickStart: { icon: "💬", steps: ["Clique em 'Chat' no menu lateral para ver canais da sua equipe e abrir conversas diretas — quem você pode chamar no privado segue a estrutura da empresa (seu setor, seu gestor ou quem responde a você)", "No campo de mensagem, use o ícone de carinha para abrir a paleta de emoji, ou o ícone de figurinha para mandar uma do pacote da empresa", "O ícone de clipe anexa um arquivo ou imagem — ele vira uma prévia antes de enviar, com um 'x' para remover se mudar de ideia", "Mensagens com linguagem imprópria não são enviadas — aparece um aviso na hora, visível só para quem escreveu", "Use os filtros no topo da lista (Todas/Não lidas/Canais/Diretas) para achar uma conversa mais rápido, e 'Arquivadas' para tirar uma conversa da lista sem apagar nada", "Segure o ícone de microfone para gravar um áudio, solte para enviar — arraste para o lado antes de soltar se quiser cancelar"] } },
   ],
   gerente: [
     { id: "v-g1", title: "Gestão de equipe e convites", description: "Usuários", duration: null, url: null,
@@ -116,6 +120,10 @@ export const VIDEO_TUTORIALS = {
       quickStart: { icon: "📡", steps: ["Acesse 'Sinais' para monitorar alertas regulatórios e comerciais", "Filtre por urgência (Crítico, Alto, Médio) para priorizar atenção", "Use 'Criar lead' em sinais críticos para abrir oportunidades direto no pipeline"] } },
     { id: "v-g6", title: "Relatório histórico do funil", description: "Histórico do funil", duration: null, url: null,
       quickStart: { icon: "📈", steps: ["Acesse 'Histórico do funil' em Inteligência", "Cada célula mostra quantos dias um cliente esteve naquela etapa", "Cores mais intensas = mais tempo parado — identifique gargalos do processo"] } },
+    { id: "v-g7", title: "Usando o Chat interno", description: "Chat", duration: null, url: null,
+      quickStart: { icon: "💬", steps: ["Clique em 'Chat' no menu lateral para ver canais da sua equipe e abrir conversas diretas — quem você pode chamar no privado segue a estrutura da empresa (seu setor, seu gestor ou quem responde a você)", "No campo de mensagem, use o ícone de carinha para abrir a paleta de emoji, ou o ícone de figurinha para mandar uma do pacote da empresa", "O ícone de clipe anexa um arquivo ou imagem — ele vira uma prévia antes de enviar, com um 'x' para remover se mudar de ideia", "Mensagens com linguagem imprópria não são enviadas — aparece um aviso na hora, visível só para quem escreveu", "Use os filtros no topo da lista (Todas/Não lidas/Canais/Diretas) para achar uma conversa mais rápido, e 'Arquivadas' para tirar uma conversa da lista sem apagar nada", "Segure o ícone de microfone para gravar um áudio, solte para enviar — arraste para o lado antes de soltar se quiser cancelar"] } },
+    { id: "v-g8", title: "Chat: criando canais e gerenciando figurinhas", description: "Chat", duration: null, url: null,
+      quickStart: { icon: "🛠️", steps: ["Só gestores e admins criam canal novo — use o botão de criar canal no topo da lista de conversas do Chat", "Em Configurações → Figurinhas, arraste um PNG/WEBP (quadrado, fundo transparente, até 512×512) para adicionar ao pacote que todo mundo vê no ícone de figurinha", "Na mesma tela dá para desativar uma figurinha (some do picker, mas fica guardada) ou excluir de vez"] } },
   ],
 };
 VIDEO_TUTORIALS.admin = VIDEO_TUTORIALS.gerente;
@@ -133,6 +141,8 @@ VIDEO_TUTORIALS.marketing = [
     quickStart: { icon: "✅", steps: ["Abra uma campanha e acesse a aba 'Criativo' no painel lateral", "Marque cada item do checklist de aprovação conforme for revisado", "A agência pode visualizar os itens marcados em tempo real"] } },
   { id: "v-mkt6", title: "Solicitações: Material ou Compra", description: "Solicitações", duration: null, url: null,
     quickStart: { icon: "📥", steps: ["Um só link público (/solicitar-marketing) agora cobre os dois tipos — quem pede escolhe 'Material de Marketing' ou 'Compra' logo no topo", "Ambos chegam em 'Solicitações' como pendentes, com uma etiqueta azul (Material) ou roxa (Compra) pra diferenciar", "Ao aprovar Material, você escolhe o destino (Entrega ou Tarefa); Compra vai direto pro Kanban de Compras, sem escolha"] } },
+  { id: "v-mkt7", title: "Usando o Chat interno", description: "Chat", duration: null, url: null,
+    quickStart: { icon: "💬", steps: ["Clique em 'Chat' no menu lateral para ver canais da sua equipe e abrir conversas diretas — quem você pode chamar no privado segue a estrutura da empresa (seu setor, seu gestor ou quem responde a você)", "No campo de mensagem, use o ícone de carinha para abrir a paleta de emoji, ou o ícone de figurinha para mandar uma do pacote da empresa", "O ícone de clipe anexa um arquivo ou imagem — ele vira uma prévia antes de enviar, com um 'x' para remover se mudar de ideia", "Mensagens com linguagem imprópria não são enviadas — aparece um aviso na hora, visível só para quem escreveu", "Use os filtros no topo da lista (Todas/Não lidas/Canais/Diretas) para achar uma conversa mais rápido, e 'Arquivadas' para tirar uma conversa da lista sem apagar nada", "Segure o ícone de microfone para gravar um áudio, solte para enviar — arraste para o lado antes de soltar se quiser cancelar"] } },
 ];
 
 VIDEO_TUTORIALS.gerente_marketing = [
@@ -141,6 +151,8 @@ VIDEO_TUTORIALS.gerente_marketing = [
     quickStart: { icon: "📊", steps: ["Acesse 'Visão Geral' em Marketing para ver KPIs consolidados", "Acompanhe campanhas ativas, orçamento total e performance média", "Use o calendário para visualizar campanhas por data de lançamento"] } },
   { id: "v-gm2", title: "Automações de Marketing", description: "Automações", duration: null, url: null,
     quickStart: { icon: "⚡", steps: ["Acesse 'Automações' para criar regras específicas do módulo de Marketing", "Ative templates prontos: 'Campanha ao vivo' notifica a equipe automaticamente", "Defina alertas de SLA para campanhas paradas em Produção por mais de 10 dias"] } },
+  { id: "v-gm3", title: "Chat: criando canais e gerenciando figurinhas", description: "Chat", duration: null, url: null,
+    quickStart: { icon: "🛠️", steps: ["Só gestores e admins criam canal novo — use o botão de criar canal no topo da lista de conversas do Chat", "Em Configurações → Figurinhas, arraste um PNG/WEBP (quadrado, fundo transparente, até 512×512) para adicionar ao pacote que todo mundo vê no ícone de figurinha", "Na mesma tela dá para desativar uma figurinha (some do picker, mas fica guardada) ou excluir de vez"] } },
 ];
 
 VIDEO_TUTORIALS.agencia = [
@@ -150,6 +162,8 @@ VIDEO_TUTORIALS.agencia = [
     quickStart: { icon: "📎", steps: ["Abra uma campanha e acesse a aba 'Arquivos' no painel lateral", "Arraste ou clique para fazer upload de criativos, relatórios e comprovantes", "Os arquivos ficam vinculados à campanha e visíveis para toda a equipe Sanwey"] } },
   { id: "v-ag3", title: "Checklist de aprovação", description: "Campanhas", duration: null, url: null,
     quickStart: { icon: "✅", steps: ["Na aba 'Criativo', você pode marcar itens do checklist como comprovados", "Use isso para indicar que a agência entregou cada requisito da campanha", "A equipe interna recebe notificação quando itens são marcados"] } },
+  { id: "v-ag4", title: "Usando o Chat interno", description: "Chat", duration: null, url: null,
+    quickStart: { icon: "💬", steps: ["Clique em 'Chat' no menu lateral para ver canais e abrir conversas diretas com a equipe Sanwey", "No campo de mensagem, use o ícone de carinha para abrir a paleta de emoji, ou o ícone de figurinha para mandar uma do pacote da empresa", "O ícone de clipe anexa um arquivo ou imagem — ele vira uma prévia antes de enviar, com um 'x' para remover se mudar de ideia", "Mensagens com linguagem imprópria não são enviadas — aparece um aviso na hora, visível só para quem escreveu", "Use os filtros no topo da lista (Todas/Não lidas/Canais/Diretas) para achar uma conversa mais rápido, e 'Arquivadas' para tirar uma conversa da lista sem apagar nada", "Segure o ícone de microfone para gravar um áudio, solte para enviar — arraste para o lado antes de soltar se quiser cancelar"] } },
 ];
 
 VIDEO_TUTORIALS.rh = [
@@ -161,6 +175,8 @@ VIDEO_TUTORIALS.rh = [
     quickStart: { icon: "💼", steps: ["Acesse 'Recrutamento' para ver vagas abertas e candidatos no Kanban", "Crie vagas com cargo, departamento e requisitos; candidatos entram em 'Triagem'", "Arraste candidatos pelo pipeline: Triagem → Entrevista RH → Aprovado"] } },
   { id: "v-rh4", title: "Solicitações de férias", description: "Férias", duration: null, url: null,
     quickStart: { icon: "🏖️", steps: ["Acesse 'Férias & Licenças' para ver as solicitações pendentes", "Aprovadores: clique em 'Aprovar' ou 'Rejeitar' — o funcionário recebe e-mail automaticamente", "Visualize o calendário de ausências para checar conflitos de equipe"] } },
+  { id: "v-rh5", title: "Usando o Chat interno", description: "Chat", duration: null, url: null,
+    quickStart: { icon: "💬", steps: ["Clique em 'Chat' no menu lateral para ver canais da sua equipe e abrir conversas diretas — quem você pode chamar no privado segue a estrutura da empresa (seu setor, seu gestor ou quem responde a você)", "No campo de mensagem, use o ícone de carinha para abrir a paleta de emoji, ou o ícone de figurinha para mandar uma do pacote da empresa", "O ícone de clipe anexa um arquivo ou imagem — ele vira uma prévia antes de enviar, com um 'x' para remover se mudar de ideia", "Mensagens com linguagem imprópria não são enviadas — aparece um aviso na hora, visível só para quem escreveu", "Use os filtros no topo da lista (Todas/Não lidas/Canais/Diretas) para achar uma conversa mais rápido, e 'Arquivadas' para tirar uma conversa da lista sem apagar nada", "Segure o ícone de microfone para gravar um áudio, solte para enviar — arraste para o lado antes de soltar se quiser cancelar"] } },
 ];
 
 VIDEO_TUTORIALS.gerente_rh = [
@@ -169,6 +185,8 @@ VIDEO_TUTORIALS.gerente_rh = [
     quickStart: { icon: "🎉", steps: ["Quando um candidato chega em 'Aprovado', aparece o botão 'Converter'", "Clique em 'Converter' — você é levado para Funcionários com um banner de boas-vindas", "Use 'Enviar convite' para criar o acesso ao sistema para o novo funcionário"] } },
   { id: "v-grh2", title: "Aprovação de férias em lote", description: "Férias", duration: null, url: null,
     quickStart: { icon: "✅", steps: ["Acesse 'Férias & Licenças' e filtre por 'Pendente' para ver as aprovações em aberto", "Clique em cada solicitação para ver o período e checar o calendário de ausências", "Após aprovar/rejeitar, o sistema envia e-mail automático ao funcionário"] } },
+  { id: "v-grh3", title: "Chat: criando canais e gerenciando figurinhas", description: "Chat", duration: null, url: null,
+    quickStart: { icon: "🛠️", steps: ["Só gestores e admins criam canal novo — use o botão de criar canal no topo da lista de conversas do Chat", "Em Configurações → Figurinhas, arraste um PNG/WEBP (quadrado, fundo transparente, até 512×512) para adicionar ao pacote que todo mundo vê no ícone de figurinha", "Na mesma tela dá para desativar uma figurinha (some do picker, mas fica guardada) ou excluir de vez"] } },
 ];
 
 export const FAQ_ITEMS = [
@@ -195,6 +213,10 @@ export const FAQ_ITEMS = [
   {
     question: "Os dados ficam salvos se eu fechar o navegador?",
     answer: "Sim. Com Supabase configurado, tudo é salvo em nuvem em tempo real. Em modo offline, os dados ficam em localStorage do navegador.",
+  },
+  {
+    question: "O que acontece se eu perder a internet no meio de uma visita a cliente?",
+    answer: "No Funil de Vendas, seus negócios continuam aparecendo na tela com os últimos dados salvos (uma faixa amarela avisa que você está offline). Dá pra registrar uma nota normalmente — ela fica marcada como \"vai enviar quando voltar o sinal\" e sincroniza sozinha assim que a conexão voltar, sem precisar reabrir nada.",
   },
   {
     question: "O que são automações e quem pode criar?",
@@ -248,7 +270,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Etapa não é Ganho nem Perdido",
       action: "Mover para 'Renegociação' e notificar responsável",
       difficulty: "Fácil",
-      difficultyColor: "#16A34A",
+      difficultyColor: "var(--success)",
     },
     {
       id: "r2",
@@ -258,7 +280,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Valor estimado acima de R$ 100.000",
       action: "Notificar Gerente imediatamente",
       difficulty: "Fácil",
-      difficultyColor: "#16A34A",
+      difficultyColor: "var(--success)",
     },
     {
       id: "r3",
@@ -268,7 +290,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Sem responsável definido",
       action: "Distribuir em rodízio entre vendedores da unidade",
       difficulty: "Médio",
-      difficultyColor: "#E8920A",
+      difficultyColor: "var(--amber)",
     },
     {
       id: "r4",
@@ -278,7 +300,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Nenhuma atividade nos próximos 5 dias",
       action: "Notificar vendedor para fazer follow-up",
       difficulty: "Médio",
-      difficultyColor: "#E8920A",
+      difficultyColor: "var(--amber)",
     },
     {
       id: "r5",
@@ -288,7 +310,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Qualquer lead",
       action: "Notificar toda a equipe da unidade com valor do negócio",
       difficulty: "Fácil",
-      difficultyColor: "#16A34A",
+      difficultyColor: "var(--success)",
     },
     {
       id: "r6",
@@ -298,7 +320,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Motivo não é 'Concorrente ganhou (definitivo)'",
       action: "Criar alerta para gerente revisar e considerar reabrir",
       difficulty: "Avançado",
-      difficultyColor: "#C7212B",
+      difficultyColor: "var(--danger)",
     },
   ],
 };
@@ -321,7 +343,7 @@ export const AI_PROMPTS = [
   {
     category: "Estratégia comercial",
     icon: "🎯",
-    color: "#C7212B",
+    color: "#CC2936",
     bgColor: "#FBE9EB",
     prompts: [
       "Como responder à objeção 'não temos orçamento agora' sem perder o lead?",

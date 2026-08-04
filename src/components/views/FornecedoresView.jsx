@@ -117,7 +117,7 @@ function SupplierModal({ supplier, onSave, onClose }) {
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
           <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "var(--accent)", color: "#fff", opacity: saving ? 0.6 : 1 }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Salvando…" : "Salvar"}
           </button>
         </div>
@@ -138,7 +138,7 @@ function ConfirmDeleteModal({ supplier, onConfirm, onClose }) {
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
           <button onClick={onConfirm}
-            className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--danger)", color: "#fff" }}>Excluir</button>
+            className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--danger)", color: "var(--on-danger)" }}>Excluir</button>
         </div>
       </div>
     </Modal>
@@ -178,7 +178,7 @@ export function FornecedoresView({ user }) {
         actions={
           canWrite && (
             <button onClick={() => setEditing("new")} className="flex items-center gap-1.5 font-semibold"
-              style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}>
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}>
               <Plus size={14} /> Novo fornecedor
             </button>
           )
@@ -212,7 +212,7 @@ export function FornecedoresView({ user }) {
           description="Cadastre agências, gráficas, confecções e outros parceiros de marketing."
           action={canWrite && (
             <button onClick={() => setEditing("new")} className="flex items-center gap-1.5 font-semibold"
-              style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
               <Plus size={14} /> Novo fornecedor
             </button>
           )}

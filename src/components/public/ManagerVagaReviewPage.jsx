@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { Loader2, AlertCircle, ShieldCheck, FileText, ThumbsUp, ThumbsDown, CheckCircle2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
-const ACCENT = "#C7212B";
+const ACCENT = "#CC2936";
 
 // Página pública sem login (item 8): o gestor de área recebe um link por
 // e-mail e confirma o próprio e-mail aqui antes de ver qualquer candidato —

@@ -24,8 +24,8 @@ const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", bac
 const FILA_STATUS = {
   na_fila:  { label: "Agendado",  color: "var(--accent)",   bg: "var(--accent-tint)" },
   chamado:  { label: "Agendado",  color: "var(--accent)",   bg: "var(--accent-tint)" },
-  atendido: { label: "Atendido",  color: "var(--success)",  bg: "#DCFCE7" },
-  faltou:   { label: "Faltou",    color: "var(--danger)",   bg: "#FEE2E2" },
+  atendido: { label: "Atendido",  color: "var(--success)",  bg: "var(--success-bg)" },
+  faltou:   { label: "Faltou",    color: "var(--danger)",   bg: "var(--danger-bg)" },
 };
 
 // Serve tanto pra criação quanto pra edição de sessão — passar `sessao` com
@@ -104,9 +104,9 @@ function SessaoFormModal({ sessao, onSave, onClose }) {
           <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: -4 }}>
             Quem entrar pelo QR escolhe um horário livre dentro dessa janela — igual reserva de restaurante.
           </p>
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : isEdit ? "Salvar alterações" : "Criar sessão"}
             </button>
             <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -204,7 +204,7 @@ export function RHBemEstarView({ currentUser, canWrite }) {
             const isOpen = expanded.has(s.id);
             return (
               <div key={s.id} style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--surface)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--surface-alt)" }}>
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, padding: "12px 16px", background: "var(--surface-alt)" }}>
                   <button onClick={() => toggle(s.id)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>{s.titulo}</div>
                     <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
@@ -218,7 +218,7 @@ export function RHBemEstarView({ currentUser, canWrite }) {
                       <AlertTriangle size={11} /> Sem horário
                     </span>
                   )}
-                  <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "#DCFCE7" : "var(--surface)", borderRadius: 99, padding: "2px 10px" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "var(--success-bg)" : "var(--surface)", borderRadius: 99, padding: "2px 10px", flexShrink: 0 }}>
                     {aberta ? "Aberta" : "Encerrada"}
                   </span>
                   {canWrite && (
@@ -227,7 +227,7 @@ export function RHBemEstarView({ currentUser, canWrite }) {
                         <span style={{ fontSize: 11, color: "var(--text)", whiteSpace: "nowrap" }}>Excluir sessão e reservas?</span>
                         <button
                           onClick={() => { deletarSessao(s.id); setConfirmDeleteId(null); }}
-                          style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                          style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
                         >
                           Excluir
                         </button>

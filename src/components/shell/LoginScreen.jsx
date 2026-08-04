@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   ArrowRight, ChevronRight, Loader2, Mail, Lock, Eye, EyeOff,
-  Heart, ShieldCheck, BarChart3, Globe, ChevronDown,
+  Globe, ChevronDown,
   Megaphone, Calendar, BookOpen, Headphones, CheckCircle2, KeyRound,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
@@ -31,14 +31,17 @@ function translateAuthError(message) {
   return message;
 }
 
-const ACCENT_RED = "#C7212B";   // usado APENAS no painel esquerdo institucional (fundo escuro)
-const DARK_BG    = "#1A1414";   // painel esquerdo
-const ACCENT     = "var(--accent)";     // painel direito — token white-label
-const ACCENT_RING = "rgba(55,53,47,0.10)";
+const ACCENT     = "var(--accent)";
+// Antes era um rgba fixo calcado no antigo default neutro do --accent
+// (#37352F) — ficava dessincronizado assim que o token mudasse (agora é
+// vermelho da marca). color-mix acompanha var(--accent) automaticamente,
+// mesmo padrão de anel de foco já usado em StageFieldInput.jsx.
+const ACCENT_RING = "color-mix(in srgb, var(--accent) 12%, transparent)";
 
-// LoginScreen com layout split institucional, espelhando o mockup novo:
-// - Esquerda escura com watermark grande do logo, headline e valores
-// - Direita creme com form + barra inferior de atalhos
+// LoginScreen centralizado (mockup "Fio" aprovado 03/08/2026, substitui o
+// layout split institucional anterior): card único ao centro, com um traço
+// de fio contínuo e animado no fundo (mesma técnica do mockup, ver
+// .login-fio-path em src/index.css) em vez do painel escuro lateral.
 
 export function LoginScreen({
   supabaseEnabled,
@@ -50,147 +53,79 @@ export function LoginScreen({
   onMockLogin,
 }) {
   return (
-    <div className="min-h-screen flex" style={{ background: "var(--bg)" }}>
-      <LeftPanel />
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: "var(--bg)" }}>
+      <LoginFioBackground />
 
-      <div className="flex-1 flex flex-col relative">
-        {/* Top-right: language selector */}
-        <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10">
-          <LangSelector />
-        </div>
+      {/* Top-right: language selector */}
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10">
+        <LangSelector />
+      </div>
 
-        <div className="flex-1 flex items-center justify-center p-6 md:p-10 pt-16 md:pt-10">
-          <div className="w-full max-w-md">
-            {/* Brand mark — logo institucional completo já inclui símbolo,
-                wordmark "Sanwey", "desde 1984" e tagline */}
-            <div className="flex flex-col items-center text-center mb-6">
-              <img
-                src="/sanwey-logo.png"
-                alt="Sanwey — A marca que valoriza o seu produto"
-                style={{ width: 260, height: "auto", objectFit: "contain" }}
-                className="mb-3"
-              />
-              <div className="text-xs font-semibold uppercase mb-3" style={{ color: "var(--text-dim)", letterSpacing: "0.12em" }}>
-                Gestão Sanwey
-              </div>
-              <p className="text-sm max-w-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                Plataforma unificada de inteligência comercial<br />para as empresas do Grupo
-              </p>
-              <span className="block mt-3" style={{ width: 36, height: 2, background: "var(--accent)", borderRadius: 1 }} />
+      <div className="flex-1 flex items-center justify-center p-6 md:p-10 pt-16 md:pt-10 relative z-[1]">
+        <div className="w-full max-w-md">
+          {/* Brand mark — logo institucional completo já inclui símbolo,
+              wordmark "Sanwey", "desde 1984" e tagline */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <img
+              src="/sanwey-logo.png"
+              alt="Sanwey — A marca que valoriza o seu produto"
+              style={{ width: 260, height: "auto", objectFit: "contain" }}
+              className="mb-3"
+            />
+            <div className="text-xs font-semibold uppercase mb-3" style={{ color: "var(--text-dim)", letterSpacing: "0.12em" }}>
+              Gestão Sanwey
             </div>
-
-            {supabaseEnabled ? (
-              <SupabaseAuthCard
-                authError={authError}
-                authLoading={authLoading}
-                onSignIn={onSignIn}
-                onSignUp={onSignUp}
-              />
-            ) : (
-              <MockLoginCard users={users} onMockLogin={onMockLogin} />
-            )}
+            <p className="text-sm max-w-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
+              Plataforma unificada de inteligência comercial<br />para as empresas do Grupo
+            </p>
+            <span className="block mt-3" style={{ width: 36, height: 2, background: "var(--accent)", borderRadius: 1 }} />
           </div>
-        </div>
 
+          {supabaseEnabled ? (
+            <SupabaseAuthCard
+              authError={authError}
+              authLoading={authLoading}
+              onSignIn={onSignIn}
+              onSignUp={onSignUp}
+            />
+          ) : (
+            <MockLoginCard users={users} onMockLogin={onMockLogin} />
+          )}
+        </div>
+      </div>
+
+      <div className="relative z-[1]">
         <ResourceFooter />
       </div>
     </div>
   );
 }
 
-// ── Left panel ─────────────────────────────────────────────────────────────
+// ── Fio de fundo (mockup "Fio/Papel" aprovado) ─────────────────────────────
+// Traço único contínuo, cor do token --accent (acompanha claro/escuro e
+// qualquer frente comercial), com leve movimento de dashoffset — decorativo,
+// então fica atrás de tudo (z-index 0) e não intercepta clique/toque.
 
-function LeftPanel() {
+function LoginFioBackground() {
   return (
-    <div
-      className="hidden lg:flex lg:w-[30%] flex-col justify-between p-12 relative overflow-hidden"
-      style={{ background: DARK_BG, color: "#FFFFFF" }}
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none select-none"
+      viewBox="0 0 1180 760"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden
     >
-      {/* Watermark grande do símbolo no fundo (atrás de tudo, opacidade baixa).
-          Usamos o símbolo (não o logo completo) porque o texto institucional
-          do logo é preto e ficaria invisível sobre o fundo escuro mesmo
-          com opacidade baixa. */}
-      <img
-        src="/sanwey-simbolo.png"
-        alt=""
-        aria-hidden
-        className="absolute pointer-events-none select-none"
-        style={{
-          width: 580,
-          height: 580,
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
-          opacity: 0.05,
-          filter: "grayscale(1) brightness(2)",
-        }}
+      <path
+        className="login-fio-path"
+        d="M -40 600 C 160 700, 240 460, 400 500 S 580 690, 720 550 S 840 270, 1000 330 S 1180 170, 1260 110"
+        stroke="var(--accent)"
+        strokeWidth="2.5"
+        strokeDasharray="6 11"
+        strokeLinecap="round"
+        fill="none"
+        opacity="0.55"
       />
-
-      {/* Middle: headline + features */}
-      <div className="relative z-10 max-w-md">
-        <p className="text-sm mb-3" style={{ opacity: 0.85 }}>
-          Bem-vindo(a) <span style={{ color: ACCENT_RED, fontWeight: 700 }}>de volta!</span>
-        </p>
-        <h1 className="font-bold leading-[1.1] mb-10" style={{ fontSize: 42, letterSpacing: "-0.02em" }}>
-          Vamos juntos<br />
-          construir o<br />
-          <span style={{ color: ACCENT_RED }}>futuro.</span>
-        </h1>
-
-        <div className="space-y-0">
-          <ValuePoint
-            icon={Heart}
-            title="Um só time"
-            desc="Colaboração e confiança que fortalecem nossos resultados."
-          />
-          <Divider />
-          <ValuePoint
-            icon={ShieldCheck}
-            title="Segurança em primeiro lugar"
-            desc="Seus dados e informações protegidos com os mais altos padrões."
-          />
-          <Divider />
-          <ValuePoint
-            icon={BarChart3}
-            title="Informação que impulsiona"
-            desc="Ferramentas e dados para decisões mais assertivas."
-          />
-        </div>
-      </div>
-
-      {/* Bottom: valores */}
-      <div className="relative z-10 text-xs" style={{ opacity: 0.9 }}>
-        <div className="flex items-center gap-2 mb-1">
-          <Heart size={13} style={{ color: ACCENT_RED, fill: ACCENT_RED }} />
-          <span className="font-semibold">Respeito • Integridade • Excelência • Pioneirismo</span>
-        </div>
-        <div style={{ opacity: 0.65 }}>
-          Esses são os valores que nos conectam.
-        </div>
-      </div>
-    </div>
+    </svg>
   );
-}
-
-function ValuePoint({ icon: Icon, title, desc }) {
-  return (
-    <div className="flex items-start gap-3 py-4">
-      <span
-        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-        style={{ background: "rgba(200, 32, 46, 0.12)", color: ACCENT_RED }}
-      >
-        <Icon size={17} />
-      </span>
-      <div>
-        <div className="font-bold text-[15px] leading-tight mb-1">{title}</div>
-        <div className="text-[12.5px] leading-snug" style={{ opacity: 0.7 }}>{desc}</div>
-      </div>
-    </div>
-  );
-}
-
-function Divider() {
-  return <div style={{ height: 1, background: "#FFFFFF12" }} />;
 }
 
 // ── Language selector (cosmético por enquanto) ─────────────────────────────
@@ -200,7 +135,7 @@ function LangSelector() {
     <button
       type="button"
       className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: "var(--text)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
       onMouseEnter={e => { e.currentTarget.style.background = "#F8F4EF"; }}
       onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
       title="Idioma (em breve)"
@@ -297,11 +232,11 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
       {mode === "recovery" && recoverySent && (
         <div
           className="rounded-xl p-4 flex flex-col items-center gap-2 text-center mb-4"
-          style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}
+          style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}
         >
-          <CheckCircle2 size={28} style={{ color: "#16A34A" }} />
-          <div className="font-semibold text-sm" style={{ color: "#15803D" }}>E-mail enviado!</div>
-          <div className="text-xs" style={{ color: "#166534" }}>
+          <CheckCircle2 size={28} style={{ color: "var(--success)" }} />
+          <div className="font-semibold text-sm" style={{ color: "var(--success)" }}>E-mail enviado!</div>
+          <div className="text-xs" style={{ color: "var(--success)" }}>
             Verifique sua caixa de entrada em <strong>{email}</strong> e clique no link para redefinir a senha.
           </div>
           <button
@@ -380,7 +315,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
         {err && (
           <div
             className="text-xs px-3.5 py-2.5 rounded-lg"
-            style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FCA5A5" }}
+            style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
           >
             {translateAuthError(err.message) || "Não foi possível autenticar. Tente novamente."}
           </div>
@@ -510,10 +445,10 @@ export function PasswordResetScreen({ onReset, variant = "recovery" }) {
         </div>
 
         {done ? (
-          <div className="rounded-xl p-5 flex flex-col items-center gap-3 text-center" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
-            <CheckCircle2 size={32} style={{ color: "#16A34A" }} />
-            <div className="font-semibold" style={{ color: "#15803D" }}>{copy.doneTitle}</div>
-            <div className="text-xs" style={{ color: "#166534" }}>{copy.doneSubtitle}</div>
+          <div className="rounded-xl p-5 flex flex-col items-center gap-3 text-center" style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}>
+            <CheckCircle2 size={32} style={{ color: "var(--success)" }} />
+            <div className="font-semibold" style={{ color: "var(--success)" }}>{copy.doneTitle}</div>
+            <div className="text-xs" style={{ color: "var(--success)" }}>{copy.doneSubtitle}</div>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -534,7 +469,7 @@ export function PasswordResetScreen({ onReset, variant = "recovery" }) {
               onToggleShow={() => setShowPwd(v => !v)}
             />
             {error && (
-              <div className="text-xs px-3.5 py-2.5 rounded-lg" style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FCA5A5" }}>
+              <div className="text-xs px-3.5 py-2.5 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
                 {error}
               </div>
             )}

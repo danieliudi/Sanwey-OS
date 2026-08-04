@@ -36,6 +36,7 @@ import {
 import { RHJornadaEditor, formatScheduleBlocks } from "../rh-pipeline/RHJornadaEditor";
 import { RHBenefitsPicker } from "../rh-pipeline/RHBenefitsPicker";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
+import { COMPANIES } from "../../constants/companies";
 import { formatBRL } from "../../utils/currency";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
@@ -43,6 +44,7 @@ import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHManagerLinks } from "../../hooks/use-rh-manager-links";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { QRCodeButton } from "../shared/QRCodeButton";
 import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
@@ -74,6 +76,7 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
+import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
@@ -263,11 +266,11 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
 
         <div style={{ padding: "20px 24px 24px" }}>
           {!isConfigured ? (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
+            <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
               Configure uma LLM em <strong>Configurações → Integrações de IA</strong> para usar a triagem por currículo.
             </div>
           ) : provider !== "anthropic" ? (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
+            <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
               A triagem por currículo requer o provedor <strong>Anthropic (Claude)</strong> configurado — ele lê o PDF diretamente. Troque o provedor em Configurações → Integrações de IA.
             </div>
           ) : (
@@ -306,7 +309,7 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
               </div>
 
               {errorMsg && (
-                <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>
+                <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>
               )}
 
               <button
@@ -399,7 +402,7 @@ const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
-const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function dayKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -716,7 +719,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
               {error}
             </div>
           )}
@@ -725,7 +728,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
             <button
               type="submit"
               disabled={saving}
-              style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
+              style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
             >
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Criar vaga"}
             </button>
@@ -846,9 +849,9 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose, userId }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{error}</div>}
 
-          <button onClick={handleAdd} disabled={saving} style={{ marginTop: 10, width: "100%", background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+          <button onClick={handleAdd} disabled={saving} style={{ marginTop: 10, width: "100%", background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Adicionando…" : "Adicionar cargo"}
           </button>
         </div>
@@ -870,7 +873,7 @@ function VagaCard({ vaga, candidatosCount, usersById }) {
         <div className="flex gap-1 flex-wrap" style={{ marginBottom: 6 }}>
           {vaga.company_ids.map((id) => (
             <span key={id} style={{ fontSize: 9, fontWeight: 700, color: RH_FRENTE_COLORS[id] || "var(--text-dim)", background: `${RH_FRENTE_COLORS[id] || "#888"}18`, borderRadius: 99, padding: "1px 7px" }}>
-              {RH_FRENTE_LABELS[id] || id}
+              {RH_FRENTE_LABELS[id] || COMPANIES[id]?.short || id}
             </span>
           ))}
         </div>
@@ -908,7 +911,7 @@ function VagaKanbanColumn({
         width: 272, minWidth: 272,
         height: "100%",
         overflow: "hidden",
-        border: "1px solid var(--border)",
+        borderRight: stage.stageKey !== stages[stages.length - 1]?.stageKey ? "1px solid var(--border)" : "none",
         background: isDragOver ? stage.color + "14" : "var(--surface-alt)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
       }}
@@ -1026,7 +1029,7 @@ function VagaDrawer({
       <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{vaga.title}</div>
       <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{vaga.job_title || "—"} · {vaga.department || "—"}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageTextColor(stageInfo.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} /> {stageInfo.name}
         </span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: pri.color, fontSize: 11, fontWeight: 600 }}>
@@ -1034,7 +1037,7 @@ function VagaDrawer({
         </span>
         {(vaga.company_ids || []).map((id) => (
           <span key={id} style={{ fontSize: 11, fontWeight: 600, color: RH_FRENTE_COLORS[id] || "var(--text-dim)", background: `${RH_FRENTE_COLORS[id] || "#888"}18`, borderRadius: 99, padding: "2px 10px" }}>
-            {RH_FRENTE_LABELS[id] || id}
+            {RH_FRENTE_LABELS[id] || COMPANIES[id]?.short || id}
           </span>
         ))}
       </div>
@@ -1132,7 +1135,7 @@ function VagaDrawer({
                 href={whatsappShareUrl(vaga)}
                 target="_blank"
                 rel="noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
               >
                 <MessageSquare size={12} /> WhatsApp
               </a>
@@ -1141,7 +1144,7 @@ function VagaDrawer({
           )}
 
           <div className="flex gap-2">
-            <button onClick={() => onEdit(vaga)} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
+            <button onClick={() => onEdit(vaga)} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
               Editar vaga
             </button>
             <button onClick={() => onVerCandidatos(vaga.id)} style={{ flex: 1, background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
@@ -1234,7 +1237,7 @@ function VagaDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>
@@ -1335,7 +1338,7 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
         <div style={{ padding: "20px 24px 24px" }}>
           {emailFailedLink ? (
             <>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "var(--warning)", lineHeight: 1.5 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "var(--warning)", lineHeight: 1.5 }}>
                 <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
                 Link criado, mas o e-mail não foi enviado — copie o link e envie manualmente pro gestor.
               </div>
@@ -1377,7 +1380,7 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
             />
           </div>
           {error && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginTop: 12, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginTop: 12, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {error}
             </div>
@@ -1386,7 +1389,7 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
             <button
               onClick={handleSave}
               disabled={saving || !valid}
-              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !valid ? 0.6 : 1 }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !valid ? 0.6 : 1 }}
             >
               {saving ? "Enviando…" : "Enviar link"}
             </button>
@@ -1406,7 +1409,32 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
 
 function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={vagas}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma vaga encontrada."
+      title={(vaga) => vaga.title}
+      chips={(vaga) => {
+        const st = findStage(stages, vaga.stage);
+        const pri = priorityInfo(vaga.priority);
+        return [
+          { label: pri.name, color: pri.color },
+          { label: st.name, color: st.color },
+        ];
+      }}
+      right={(vaga) => {
+        const count = candidatosByVaga[vaga.id] || 0;
+        return (
+          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+            {count} candidato{count !== 1 ? "s" : ""}
+          </span>
+        );
+      }}
+      meta={(vaga) => [vaga.job_title, vaga.department].filter(Boolean).join(" · ") || "—"}
+      metaRight={(vaga) => <span>{fmt(vaga.hiring_deadline)}</span>}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full min-w-[720px] border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -1436,7 +1464,7 @@ function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -1448,6 +1476,7 @@ function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -1476,7 +1505,7 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
 
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const offset = (first.getDay() + 6) % 7;
+    const offset = first.getDay();
     const start = new Date(first);
     start.setDate(first.getDate() - offset);
     const days = [];
@@ -1515,7 +1544,7 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
       </div>
       <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
         {WEEKDAYS.map(w => (
-          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+          <div key={w} className="px-2 py-2 text-[10px] font-bold text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
@@ -1526,8 +1555,10 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
-              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+              style={{ borderColor: "var(--border)", background: "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={isToday
+                ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
               <div className="flex flex-col gap-0.5">
@@ -1536,7 +1567,7 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
                   return (
                     <span key={vaga.id} onClick={() => onPillClick(vaga)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: st.color + "18", color: st.color }}
+                      style={{ background: st.color + "18", color: stageTextColor(st.color) }}
                       title={vaga.title}>
                       {vaga.title}
                     </span>
@@ -1696,13 +1727,13 @@ function NovoCandidatoModal({ defaultStage, defaultVagaId, vagas, stages, onSave
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
               {error}
             </div>
           )}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Adicionando…" : "Adicionar candidato"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -1817,7 +1848,7 @@ function CandidatoDrawer({
         <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{candidato.name}</div>
         {candidato.email && <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{candidato.email}</div>}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageTextColor(stageInfo.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} />
             {stageInfo.name}
           </span>
@@ -1917,7 +1948,7 @@ function CandidatoDrawer({
 
       {/* Já contratado — sinal durável + sem botão de converter de novo */}
       {candidato.hired_at && (
-        <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <Check size={20} style={{ color: "var(--success)", flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>Contratado</div>
@@ -1931,8 +1962,8 @@ function CandidatoDrawer({
       {/* Convert to employee — only when aprovado e ainda não contratado */}
       {canWrite && candidato.stage === "aprovado" && !candidato.hired_at && onHire && (
         <div style={{
-          background: "#F0FDF4",
-          border: "1px solid #BBF7D0",
+          background: "var(--success-bg)",
+          border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)",
           borderRadius: 12,
           padding: "14px 16px",
           display: "flex",
@@ -1950,7 +1981,7 @@ function CandidatoDrawer({
             onClick={() => { onHire(candidato); onClose(); }}
             style={{
               background: "var(--success)",
-              color: "#FFF",
+              color: "var(--on-success)",
               border: "none",
               borderRadius: 8,
               padding: "6px 14px",
@@ -1999,7 +2030,7 @@ function CandidatoDrawer({
               <button
                 onClick={handleAddNote}
                 disabled={savingNote || !noteText.trim()}
-                style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
+                style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
               >
                 {savingNote ? "Salvando…" : "Salvar"}
               </button>
@@ -2060,7 +2091,7 @@ function CandidatoDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>
@@ -2072,7 +2103,7 @@ function CandidatoDrawer({
           />
 
           {reprovando && (
-            <div style={{ marginTop: 10, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12 }}>
+            <div style={{ marginTop: 10, background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 10, padding: 12 }}>
               <div style={{ ...labelSt, color: "var(--danger)" }}>Motivo da reprovação *</div>
               <textarea
                 value={motivoReprovacao}
@@ -2081,13 +2112,13 @@ function CandidatoDrawer({
                 rows={2}
                 autoFocus
                 className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
-                style={{ borderColor: "#FCA5A5", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+                style={{ borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
               />
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={confirmReprovacao}
                   disabled={savingStage || !motivoReprovacao.trim()}
-                  style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
+                  style={{ background: "var(--danger)", color: "var(--on-danger)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
                 >
                   {savingStage ? "Salvando…" : "Confirmar reprovação"}
                 </button>
@@ -2191,13 +2222,13 @@ function ReprovacaoDropModal({ info, onConfirm, onClose }) {
             rows={3}
             autoFocus
             className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
-            style={{ borderColor: "#FCA5A5", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+            style={{ borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
           />
           <div className="flex gap-2 mt-3">
             <button
               onClick={handleConfirm}
               disabled={saving || !motivo.trim()}
-              style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !motivo.trim() ? 0.6 : 1 }}
+              style={{ background: "var(--danger)", color: "var(--on-danger)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !motivo.trim() ? 0.6 : 1 }}
             >
               {saving ? "Salvando…" : "Confirmar"}
             </button>
@@ -2271,7 +2302,7 @@ function BulkReprovarModal({ selectedCandidatos, temEtapaReprovacao, onConfirm, 
               </div>
             )}
             <div className="flex mt-4">
-              <button onClick={onClose} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>Fechar</button>
+              <button onClick={onClose} style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>Fechar</button>
             </div>
           </div>
         ) : (
@@ -2306,7 +2337,7 @@ function BulkReprovarModal({ selectedCandidatos, temEtapaReprovacao, onConfirm, 
               <button
                 onClick={handleConfirm}
                 disabled={saving || total === 0}
-                style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || total === 0 ? 0.6 : 1 }}
+                style={{ background: "var(--danger)", color: "var(--on-danger)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || total === 0 ? 0.6 : 1 }}
               >
                 {saving ? "Processando…" : "Confirmar reprovação"}
               </button>
@@ -2348,7 +2379,7 @@ function CandidatoCardBody({ candidato: c, vagas }) {
             style={{
               fontSize: 10, fontWeight: 700,
               color: c.fit_score >= 70 ? "var(--success)" : c.fit_score >= 40 ? "var(--warning)" : "var(--danger)",
-              background: c.fit_score >= 70 ? "#DCFCE7" : c.fit_score >= 40 ? "#FEF3C7" : "#FEE2E2",
+              background: c.fit_score >= 70 ? "var(--success-bg)" : c.fit_score >= 40 ? "var(--warning-bg)" : "var(--danger-bg)",
               borderRadius: 99, padding: "1px 7px",
             }}
           >
@@ -2382,7 +2413,7 @@ function KanbanColumn({
         width: 272, minWidth: 272,
         height: "100%",
         overflow: "hidden",
-        border: "1px solid var(--border)",
+        borderRight: stage.stageKey !== stages[stages.length - 1]?.stageKey ? "1px solid var(--border)" : "none",
         background: isDragOver ? stage.color + "14" : "var(--surface-alt)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
       }}
@@ -2471,7 +2502,44 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
   const allSelected = selectable && candidatos.length > 0 && candidatos.every((c) => selectedIds?.has(c.id));
   const baseCols = 6;
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={candidatos}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhum candidato encontrado."
+      title={(c) => c.name}
+      chips={(c) => {
+        const st = findStage(stages, c.stage);
+        return [{ label: st.name, color: st.color }];
+      }}
+      right={(c) => (
+        <span className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <StarRating value={c.rating || 0} />
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={selectedIds?.has(c.id) || false}
+              onChange={() => onToggleSelect?.(c.id)}
+              title={c.email ? `Selecionar ${c.name}` : `${c.name} não tem e-mail`}
+              style={{ cursor: "pointer" }}
+            />
+          )}
+        </span>
+      )}
+      meta={(c) => {
+        const vagaTitle = vagas.find((v) => v.id === c.vaga_id)?.title;
+        return (
+          <>
+            <span className="truncate">{[vagaTitle, c.source].filter(Boolean).join(" · ") || "—"}</span>
+            {selectable && !c.email && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "var(--warning-bg)", color: "var(--warning)" }} title="Sem e-mail — não receberá retorno">sem e-mail</span>
+            )}
+          </>
+        );
+      }}
+      metaRight={(c) => <span>{fmt(c.created_at)}</span>}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full min-w-[720px] border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -2527,7 +2595,7 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{vagaTitle}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -2540,6 +2608,7 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -2568,7 +2637,7 @@ function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
 
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const offset = (first.getDay() + 6) % 7;
+    const offset = first.getDay();
     const start = new Date(first);
     start.setDate(first.getDate() - offset);
     const days = [];
@@ -2607,7 +2676,7 @@ function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
       </div>
       <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
         {WEEKDAYS.map(w => (
-          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+          <div key={w} className="px-2 py-2 text-[10px] font-bold text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
@@ -2618,8 +2687,10 @@ function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
-              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+              style={{ borderColor: "var(--border)", background: "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={isToday
+                ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
               <div className="flex flex-col gap-0.5">
@@ -2628,7 +2699,7 @@ function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
                   return (
                     <span key={c.id} onClick={() => onPillClick(c)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: st.color + "18", color: st.color }}
+                      style={{ background: st.color + "18", color: stageTextColor(st.color) }}
                       title={c.name}>
                       {c.name}
                     </span>
@@ -2705,6 +2776,20 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const { viewedAt: candViewedAt, markViewed: markCandViewed } = useRecordViews("rh_candidatos", user?.id);
   useEffect(() => { if (vagaDrawerId) markVagaViewed(vagaDrawerId); }, [vagaDrawerId]);
   useEffect(() => { if (selectedCandidatoId) markCandViewed(selectedCandidatoId); }, [selectedCandidatoId]);
+
+  // "Ver candidato" (AgentActionsView, sugestão do agente de Sourcing) navega
+  // pra cá e abre o candidato já focado — mesmo padrão de handoff via
+  // sessionStorage já usado por rhFornecedoresOpenId (RHFornecedoresView).
+  useEffect(() => {
+    try {
+      const id = sessionStorage.getItem("rhRecrutamentoOpenCandidatoId");
+      if (id) {
+        sessionStorage.removeItem("rhRecrutamentoOpenCandidatoId");
+        setViewMode("candidatos");
+        setSelectedCandidatoId(id);
+      }
+    } catch { /* sessionStorage indisponível — segue sem handoff */ }
+  }, []);
 
   // ── Reprovação em massa (Áudio 8): seleção múltipla na tabela de candidatos ──
   const [selectedCandIds, setSelectedCandIds] = useState(() => new Set());
@@ -3032,6 +3117,14 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   // Tempo médio de vaga aberta / faixa salarial: só entre as vagas ainda
   // abertas (não-terminais) — vagas encerradas não têm mais "runway" nem
   // representam a faixa salarial atualmente ofertada.
+  //
+  // Time-to-Fill / Time-to-Hire (estudo de mercado sobre aceleração de R&S,
+  // mockup aprovado com o Daniel): métricas distintas, não uma só —
+  // Time-to-Fill mede o atraso organizacional (vaga aprovada → aceite,
+  // via rh_vagas.approved_at, carimbado automaticamente quando a vaga sai
+  // do Rascunho); Time-to-Hire mede só o funil de seleção em si (candidato
+  // entra → aceite). Considera todo hired_at dentro das vagas visíveis no
+  // filtro atual, não só as abertas.
   const vagaSpecificStats = useMemo(() => {
     const open = vagasFrenteFiltradas.filter((v) => !vagaStages.find((s) => s.stageKey === v.stage)?.terminal);
     const withDeadline = open.filter((v) => v.hiring_deadline);
@@ -3041,6 +3134,20 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     const withSalary = open.filter((v) => v.salary_min != null || v.salary_max != null);
     const avgMin = withSalary.length > 0 ? withSalary.reduce((s, v) => s + (Number(v.salary_min) || 0), 0) / withSalary.length : null;
     const avgMax = withSalary.length > 0 ? withSalary.reduce((s, v) => s + (Number(v.salary_max) || 0), 0) / withSalary.length : null;
+
+    const fillDays = [];
+    const hireDays = [];
+    for (const c of candidatos) {
+      if (!c.hired_at || !c.vaga_id) continue;
+      const vaga = vagasFrenteFiltradas.find((v) => v.id === c.vaga_id);
+      if (!vaga) continue;
+      if (vaga.approved_at) fillDays.push(Math.round((new Date(c.hired_at) - new Date(vaga.approved_at)) / 86400000));
+      if (c.created_at) hireDays.push(Math.round((new Date(c.hired_at) - new Date(c.created_at)) / 86400000));
+    }
+    const avg = (arr) => (arr.length > 0 ? Math.round(arr.reduce((s, d) => s + d, 0) / arr.length) : null);
+    const avgFill = avg(fillDays);
+    const avgHire = avg(hireDays);
+
     return [
       {
         label: "Prazo médio p/ contratação",
@@ -3048,8 +3155,10 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
         color: avgDaysToDeadline !== null && avgDaysToDeadline < 0 ? "var(--danger)" : undefined,
       },
       { label: "Faixa salarial média", value: withSalary.length > 0 ? fmtSalaryRange(avgMin, avgMax) : "—" },
+      { label: "Time-to-Fill médio", value: avgFill !== null ? `${avgFill}d` : "—" },
+      { label: "Time-to-Hire médio", value: avgHire !== null ? `${avgHire}d` : "—" },
     ];
-  }, [vagasFrenteFiltradas, vagaStages]);
+  }, [vagasFrenteFiltradas, vagaStages, candidatos]);
 
   // Funil de conversão: % de candidatos que já chegaram a cada etapa
   // não-terminal ou além (orderIdx da etapa atual >= orderIdx da etapa do
@@ -3129,10 +3238,10 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           {/* Toggle Kanban / Tabela / Calendário — como exibir o modo (Vagas/
               Candidatos) já escolhido no título, não o quê exibir. */}
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <ViewToggleButton active={boardMode === "kanban"}   onClick={() => setBoardMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
-            <ViewToggleButton active={boardMode === "table"}    onClick={() => setBoardMode("table")}    icon={List}         label="Tabela" />
-            <ViewToggleButton active={boardMode === "calendar"} onClick={() => setBoardMode("calendar")} icon={CalendarIcon} label="Calendário" />
-            <ViewToggleButton active={boardMode === "analytics"} onClick={() => setBoardMode("analytics")} icon={TrendingUp} label="Análise" />
+            <ViewToggleButton active={boardMode === "kanban"}   onClick={() => setBoardMode("kanban")}   icon={LayoutGrid}   label="Kanban" iconOnlyMobile />
+            <ViewToggleButton active={boardMode === "table"}    onClick={() => setBoardMode("table")}    icon={List}         label="Tabela" iconOnlyMobile />
+            <ViewToggleButton active={boardMode === "calendar"} onClick={() => setBoardMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
+            <ViewToggleButton active={boardMode === "analytics"} onClick={() => setBoardMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
 
           {canWrite && (
@@ -3150,7 +3259,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
             <button
               onClick={() => setQuickAddVaga(true)}
               className="flex items-center gap-1.5 font-semibold"
-              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "none", cursor: "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "none", cursor: "pointer" }}
             >
               <Plus size={14} /> Nova vaga
             </button>
@@ -3193,6 +3302,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
             getStageKey={(v) => v.stage}
             getStageEnteredAt={(v) => v.stage_changed_at}
             specificStats={vagaSpecificStats}
+            getOwnerIds={(v) => v.responsible_ids || []}
+            usersById={usersById}
           />
         ) : (
           <>
@@ -3308,7 +3419,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                 href={whatsappShareUrl(activeVaga)}
                 target="_blank"
                 rel="noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
               >
                 <MessageSquare size={12} /> Compartilhar no WhatsApp
               </a>
@@ -3317,7 +3428,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           )}
 
           {activeVaga && activeVaga.stage !== "publicada" && (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 8, padding: "8px 14px", marginBottom: 16, fontSize: 12, color: "var(--warning)" }}>
+            <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 8, padding: "8px 14px", marginBottom: 16, fontSize: 12, color: "var(--warning)" }}>
               Essa vaga está em <strong>{findStage(vagaStages, activeVaga.stage).name}</strong> — mova para "Publicada" na aba Vagas pra liberar o link de candidatura.
             </div>
           )}
@@ -3359,7 +3470,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                     <button
                       onClick={() => setBulkReprovarOpen(true)}
                       className="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5"
-                      style={{ background: "var(--danger)", color: "#FFF", border: "none" }}
+                      style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none" }}
                     >
                       <Mail size={13} /> Reprovar e enviar retorno
                     </button>
@@ -3390,6 +3501,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
               getStageKey={(c) => c.stage}
               getStageEnteredAt={(c) => c.stage_changed_at}
               specificStats={candSpecificStats}
+              getOwnerIds={(c) => c.responsible_ids || []}
+              usersById={usersById}
             />
           ) : (
             <>

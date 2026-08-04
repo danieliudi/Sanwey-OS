@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart, RefreshCw, ListTodo, Handshake, Ship,
+  FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -15,13 +15,15 @@ import { DEFAULT_PIPELINE_STAGES } from "./constants/pipelines";
 import { ROUTES, sectionFromPath } from "./constants/routes";
 import { useModuleOverrides } from "./hooks/use-module-overrides";
 import { effectiveModules, ALL_MODULE_IDS } from "./utils/module-access";
-import { generateMarketSignals } from "./data/generate-signals";
+import { useMarketSignals } from "./hooks/use-market-signals";
 import { usePersistentState } from "./hooks/use-persistent-state";
 import { useCrossReferrals } from "./hooks/use-cross-referrals";
 import { useUserSettings } from "./hooks/use-user-settings";
 import { useSupabaseAuth } from "./hooks/use-supabase-auth";
 import { useLeads } from "./hooks/use-leads";
+import { useOfflineSync } from "./hooks/use-offline-sync";
 import { useClients } from "./hooks/use-clients";
+import { useChat } from "./hooks/use-chat";
 import { useNotifications } from "./hooks/use-notifications";
 import { useServerNotifications } from "./hooks/use-server-notifications";
 import { useProfiles } from "./hooks/use-profiles";
@@ -34,6 +36,7 @@ import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
 import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
+import { useMyColaborador } from "./hooks/use-my-colaborador";
 import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
 import { useCRMDespesas } from "./hooks/use-crm-despesas";
 import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim, contratoFornecedorDiasParaVencer } from "./utils/rh-compliance-dates";
@@ -55,8 +58,8 @@ import { TopBar } from "./components/shell/TopBar";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
 import { useRecordViews } from "./hooks/use-record-views";
 import { reopenAfterMove } from "./utils/reopen-after-move";
-import { SignalDetailDrawer } from "./components/lead/SignalDetailDrawer";
 import { ImportModal } from "./components/lead/ImportModal";
+import { ClientImportModal } from "./components/client/ClientImportModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
@@ -81,6 +84,7 @@ import { MarketingTarefasView } from "./components/views/MarketingTarefasView";
 import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
 import { MinhasTarefasView } from "./components/views/MinhasTarefasView";
+import { ChatView } from "./components/views/ChatView";
 import { MarketingRequestsView } from "./components/views/MarketingRequestsView";
 import { FornecedoresView } from "./components/views/FornecedoresView";
 import { ComprasMarketingView } from "./components/views/ComprasMarketingView";
@@ -101,14 +105,13 @@ import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
 import { AppToast } from "./components/shared/AppToast";
+import { OfflineBanner } from "./components/shared/OfflineBanner";
 import { ChangelogToast } from "./components/shared/ChangelogToast";
 import { useAppUpdate } from "./hooks/use-app-update";
 import { useChangelogNotice } from "./hooks/use-changelog-notice";
 import { useScreenTips } from "./hooks/use-screen-tips";
 import { useAgentsCoachmark } from "./hooks/use-agents-coachmark";
 import { AgentsSidebarCoachmark } from "./components/shell/AgentsSidebarCoachmark";
-
-const INITIAL_SIGNALS = generateMarketSignals();
 
 // Onboarding contextual por tela: reaproveita o quickStart que já existe em
 // VIDEO_TUTORIALS (src/data/tutorials.js), hoje só visível na tela separada
@@ -266,11 +269,28 @@ export default function App() {
     addLeadActivity,
     loadDemoLeads,
     clearAllLeads: clearAllLeadsRemote,
+    isOnline,
+    cacheAge,
   } = useLeads({
     userId: currentUser?.id,
     role: currentUser?.role,
     companies: currentUser?.companies,
   });
+
+  // Offline fase 1 (ver docs/design-spec-offline-leads-notas.md) — sincroniza
+  // a fila de notas enfileiradas offline assim que a conexão volta.
+  const {
+    pending: offlineActivityQueue,
+    syncMessage: offlineSyncMessage,
+    dismissSyncMessage: dismissOfflineSyncMessage,
+    retry: retryOfflineActivity,
+  } = useOfflineSync({ leads, updateLead: updateLeadRemote, userId: currentUser?.id });
+
+  const offlineStatusByActivityId = useMemo(() => {
+    const map = {};
+    for (const item of offlineActivityQueue) map[item.id] = item;
+    return map;
+  }, [offlineActivityQueue]);
 
   const {
     clients,
@@ -278,10 +298,17 @@ export default function App() {
     createClient,
     updateClient,
     deleteClient,
+    upsertClientBillingHistory,
   } = useClients({ userId: currentUser?.id });
 
-  // Signals are purely derived from the current date — no need to persist.
-  const [signals] = useState(INITIAL_SIGNALS);
+  // Só o total de não-lidas — o badge do Chat na navegação precisa disso em
+  // qualquer tela, não só dentro do próprio Chat. `incomingMessage` alimenta
+  // o toast Nível 1 (spec seção 5, docs/design-spec-chat-mobile-whatsapp.md)
+  // — reaproveita a MESMA subscription Realtime que já atualiza o badge, não
+  // abre uma segunda.
+  const { totalUnread: chatUnread, incomingMessage: chatIncomingMessage } = useChat({ userId: currentUser?.id });
+
+  const { signals } = useMarketSignals();
 
   const { crossReferrals, approve: approveCross, reject: rejectCross } = useCrossReferrals(leads);
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
@@ -307,7 +334,11 @@ export default function App() {
     role: currentUser?.role,
     roles: currentUser?.roles,
     companies: currentUser?.companies,
-    enabled: Boolean(currentUser) && (isMarketingUser || isAgencia),
+    // isDiretoria também acessa a rota de Despesas (App.jsx, guard da rota
+    // marketing-despesas) sem precisar de isMarketingUser — sem essa condição
+    // aqui, o dropdown "Campanha relacionada" ficava travado em "Nenhuma
+    // campanha cadastrada ainda" mesmo com campanhas reais existindo.
+    enabled: Boolean(currentUser) && (isMarketingUser || isAgencia || isDiretoria),
   });
 
   const {
@@ -373,6 +404,10 @@ export default function App() {
   // null (ver initialSelectedCampaignId/initialSelectedEmployeeId).
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  // Mesmo mecanismo pro toast de mensagem nova do Chat (spec seção 5) — o
+  // clique em "Abrir" precisa selecionar o canal certo dentro de ChatView,
+  // que mantém `selectedId` como state local (não sobe pro App.jsx).
+  const [selectedChatChannelId, setSelectedChatChannelId] = useState(null);
 
   // Mesmo mecanismo, agora pro painel de Conexões (Colaborador/Cliente): cada
   // grupo de conexão pode trocar de seção e abrir o registro específico na
@@ -410,6 +445,7 @@ export default function App() {
           type: "marketing_request",
           title: "Nova solicitação de marketing",
           body: `${r.requesterName || "Alguém"} pediu "${r.title}"${r.department ? ` (${r.department})` : ""}.`,
+          link: { module: "marketing_requests", id: r.id },
         });
       } else {
         requestsVistosRef.current.add(r.id);
@@ -438,6 +474,7 @@ export default function App() {
           type: "ferias_solicitada",
           title: "Nova solicitação de férias/licença",
           body: `${r.profiles?.name || "Alguém"} solicitou ${tipo?.toLowerCase?.() || tipo}.`,
+          link: { module: "rh_ferias", id: r.id },
         });
       } else {
         feriasVistosRef.current.add(r.id);
@@ -449,14 +486,14 @@ export default function App() {
   // colaborador quando o prazo (period_end) do ciclo pendente está a até 3
   // dias de vencer (ou já venceu) e ele ainda não preencheu a nota dele.
   const { feedbacks: meusCiclosFeedback } = useRHFeedback({ enabled: Boolean(currentUser) });
-  const [meuColaboradorId, setMeuColaboradorId] = useState(null);
-  useEffect(() => {
-    if (!currentUser?.id || !isSupabaseConfigured) return;
-    let active = true;
-    supabase.from("rh_colaboradores").select("id").eq("profile_id", currentUser.id).maybeSingle()
-      .then(({ data }) => { if (active) setMeuColaboradorId(data?.id || null); });
-    return () => { active = false; };
-  }, [currentUser?.id]);
+  // Via get_my_colaborador() (SECURITY DEFINER), não por select direto em
+  // rh_colaboradores: a policy ampla de self-select foi removida em
+  // 20260713_fix_..._scope, então o select direto voltava vazio justamente
+  // pro colaborador comum — quem mais precisa do lembrete. Também é o que
+  // decide se "Meu RH" aparece no menu (a tela só faz sentido pra quem tem
+  // ficha de colaborador).
+  const { meuColaborador } = useMyColaborador(currentUser);
+  const meuColaboradorId = meuColaborador?.id || null;
   const feedbackPrazoVistoRef = useRef(new Set());
   useEffect(() => {
     if (!meuColaboradorId) return;
@@ -470,6 +507,7 @@ export default function App() {
         type: "feedback_prazo",
         title: diasParaPrazo < 0 ? "Autoavaliação atrasada" : "Autoavaliação com prazo próximo",
         body: `Sua autoavaliação vence em ${new Date(f.period_end).toLocaleDateString("pt-BR")}. Preencha na aba Feedback.`,
+        link: { module: "rh_feedback", id: f.id },
       });
     }
   }, [meusCiclosFeedback, meuColaboradorId, pushNotification]);
@@ -495,6 +533,10 @@ export default function App() {
       complianceVistoRef.current.add(key);
       return true;
     };
+    // link.id de todo pushNotification abaixo é c.profileId, não c.id: a tela
+    // de Funcionários abre o card por id de PROFILE, não pelo id da linha
+    // rh_colaboradores (ver RHFuncionariosView.jsx:1553). profileId vem nulo
+    // pra colaborador sem login — cai no fallback de só trocar de seção.
     for (const c of colaboradoresParaLembretes) {
       if (c.employeeStatus !== "ativo") continue;
 
@@ -504,6 +546,7 @@ export default function App() {
           type: "compliance_experiencia",
           title: `Período de experiência vencendo (${exp.marco} dias)`,
           body: `${c.fullName}: faltam ${exp.diasRestantes} dia(s) pra decisão do marco de ${exp.marco} dias.`,
+          link: { module: "rh_funcionarios", id: c.profileId },
         });
       }
 
@@ -513,6 +556,7 @@ export default function App() {
           type: "compliance_aso",
           title: asoDias < 0 ? "ASO vencido" : "ASO vencendo",
           body: `${c.fullName}: exame periódico ${asoDias < 0 ? "venceu há " + Math.abs(asoDias) + " dia(s)" : "vence em " + asoDias + " dia(s)"}.`,
+          link: { module: "rh_funcionarios", id: c.profileId },
         });
       }
 
@@ -522,6 +566,7 @@ export default function App() {
           type: "compliance_contrato",
           title: contratoDias < 0 ? "Contrato temporário venceu" : "Fim de contrato temporário se aproximando",
           body: `${c.fullName}: contrato ${contratoDias < 0 ? "venceu há " + Math.abs(contratoDias) + " dia(s)" : "termina em " + contratoDias + " dia(s)"}.`,
+          link: { module: "rh_funcionarios", id: c.profileId },
         });
       }
 
@@ -533,16 +578,17 @@ export default function App() {
           type: "compliance_aprendiz",
           title: aprDias <= 0 ? "Contrato de aprendiz encerrado" : "Contrato de aprendiz encerrando",
           body: `${c.fullName}: contrato de aprendizagem ${aprDias < 0 ? "encerrou há " + Math.abs(aprDias) + " dia(s)" : "encerra em " + aprDias + " dia(s)"} — providencie efetivação/reposição.`,
+          link: { module: "rh_funcionarios", id: c.profileId },
         });
       }
 
       if (diasParaAniversario(c, hoje) === 0 && marcar(c.id, "aniversario")) {
-        pushNotification({ type: "aniversario", title: "Aniversário hoje 🎂", body: `Hoje é aniversário de ${c.fullName}.` });
+        pushNotification({ type: "aniversario", title: "Aniversário hoje 🎂", body: `Hoje é aniversário de ${c.fullName}.`, link: { module: "rh_funcionarios", id: c.profileId } });
       }
 
       if (diasParaBodasEmpresa(c, hoje) === 0 && marcar(c.id, "bodas_empresa")) {
         const anos = hoje.getFullYear() - new Date(c.admissionDate).getFullYear();
-        pushNotification({ type: "bodas_empresa", title: "Aniversário de empresa", body: `${c.fullName} completa ${anos} ano(s) de casa hoje.` });
+        pushNotification({ type: "bodas_empresa", title: "Aniversário de empresa", body: `${c.fullName} completa ${anos} ano(s) de casa hoje.`, link: { module: "rh_funcionarios", id: c.profileId } });
       }
     }
   }, [colaboradoresParaLembretes, isRHManager, pushNotification]);
@@ -575,6 +621,11 @@ export default function App() {
         type: "avaliacao_proxima",
         title: info.diasRestantes < 0 ? "Avaliação de desempenho atrasada" : "Avaliação de desempenho se aproximando",
         body: `${c.fullName}: próxima avaliação (${cicloTipoLabel(info.tipo)}) ${dueLabel}.`,
+        // Aponta pro funcionário (por profileId, não c.id — mesmo motivo do
+        // bloco de conformidade acima), não pra rh_feedback: nesse momento o
+        // ciclo ainda é só uma projeção (avaliacaoDiasParaProxima), não
+        // existe linha em rh_feedback pra abrir — só nasce quando é criado.
+        link: { module: "rh_funcionarios", id: c.profileId },
       });
       for (const dest of destinatarios) {
         sendRhEmail("avaliacao_proxima", dest.email, {
@@ -627,6 +678,7 @@ export default function App() {
         type: "contrato_fornecedor_vencendo",
         title: dias < 0 ? "Contrato com fornecedor vencido" : "Contrato com fornecedor vencendo",
         body: `${c.titulo}: ${dueLabel}.`,
+        link: { module: "rh_fornecedores", id: c.id },
       });
       const responsavel = c.responsavelId ? users.find((u) => u.id === c.responsavelId) : null;
       if (responsavel?.email) {
@@ -689,6 +741,7 @@ export default function App() {
         type: "reembolso_pendente_ha_dias",
         title: "Reembolso pendente há dias",
         body: `${d.categoria || "Despesa"} (${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(d.valor) || 0)}) está pendente há ${diasPendente} dias.`,
+        link: { module: "crm_despesas", id: d.id },
       });
     }
   }, [despesasParaLembretes, isManagerRole, pushNotification]);
@@ -743,6 +796,7 @@ export default function App() {
         type: "cross_sell",
         title: "Sugestão de cross-sell",
         body: `${c.companyName}: ${c.reason || "oportunidade entre frentes identificada"}.`,
+        link: { module: "crm_cross_sell", id: c.id },
       });
     }
   }, [crossReferrals, currentUserRoles, pushNotification]);
@@ -767,6 +821,7 @@ export default function App() {
       type: "weekly_digest",
       title: "Resumo semanal do pipeline",
       body: `${agg.totalLeads} negócios abertos, ${formatK(agg.openValue)} em aberto, ${agg.conversionRate}% de conversão.`,
+      link: { module: "pipeline_summary" },
     });
   }, [leads, users, isManagerRole, weeklyDigestLastSent, setWeeklyDigestLastSent, pushNotification]);
 
@@ -790,18 +845,22 @@ export default function App() {
         type: "new_candidato",
         title: "Novo candidato em processo seletivo",
         body: `${c.name} se candidatou.`,
+        link: { module: "rh_candidatos", id: c.id },
       });
     }
   }, [recrutamentoCandidatos, isRHUser, pushNotification]);
 
   const [activeCompany, setActiveCompany] = useState("all");
-  const [selectedSignal, setSelectedSignal] = useState(null);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [crmAutoCreate, setCrmAutoCreate] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [clientImportOpen, setClientImportOpen] = useState(false);
-
-  const closeSignalDrawer = useCallback(() => setSelectedSignal(null), []);
+  // Import de CLIENTES (carteira, sem virar negócio no Funil) — separado do
+  // clientImportOpen acima, que abre o importador de LEADS (usado também na
+  // tela de Comercial). Achado real: a tela de Clientes reaproveitava o
+  // mesmo estado/modal de leads, o que criaria um negócio fantasma por linha
+  // só pra povoar a lista de clientes.
+  const [clientRosterImportOpen, setClientRosterImportOpen] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = sidebarMobileOpen ? "hidden" : "";
@@ -840,10 +899,10 @@ export default function App() {
     { skip: showOnboarding || needRefresh || agentsCoachmarkVisible || changelogItems.length > 0 }
   );
 
-  // Destino genérico de uma notificação de @menção — leva pra tela certa
-  // (e, no caso de leads, abre o card exato); os outros módulos ainda não
-  // têm um jeito central de reabrir o card específico a partir daqui, então
-  // por ora só navegam até a seção certa.
+  // Destino genérico de uma notificação (@menção OU gerador local via
+  // pushNotification/use-notifications.js) — leva pra tela certa e, pros
+  // módulos com estado "selecionado" hoisted aqui (ver
+  // notificationDeepLinkSetters logo abaixo), abre o card exato.
   const NOTIFICATION_LINK_SECTIONS = {
     campaigns: "marketing",
     deliverables: "marketing-entregas",
@@ -859,6 +918,26 @@ export default function App() {
     rh_movimentacoes: "rh-cargos",
     comex_import_operations: "comex",
     comex_export_operations: "comex",
+    rh_funcionarios: "rh-funcionarios",
+    rh_fornecedores: "rh-fornecedores",
+    crm_despesas: "crm-viagens",
+    crm_cross_sell: "crossref",
+    pipeline_summary: "crm",
+  };
+  // Módulos com abertura do card específico, não só a troca de seção — mesmo
+  // mecanismo de deep-link do Cmd-K (initialSelectedXId/onInitialXConsumed já
+  // plugados em cada tela, ver App.jsx:401-419). Os módulos fora deste mapa
+  // (deliverables, marketing_tasks, purchase_requests, marketing_requests,
+  // rh_vagas, rh_candidatos, rh_onboarding, comex_*, crm_despesas,
+  // crm_cross_sell, pipeline_summary) ainda não têm um estado "selecionado"
+  // hoisted aqui — ficam só na navegação de seção até ganharem um.
+  const notificationDeepLinkSetters = {
+    campaigns: setSelectedCampaignId,
+    rh_ferias: setSelectedFeriasId,
+    rh_feedback: setSelectedAvaliacaoId,
+    rh_treinamentos: setSelectedTreinamentoAtribuicaoId,
+    rh_movimentacoes: setSelectedMovimentacaoId,
+    rh_funcionarios: setSelectedEmployeeId,
   };
   const handleNotificationNavigate = useCallback((link) => {
     // Pesquisas identificadas (RH2-7): a página de resposta vive fora do
@@ -873,8 +952,38 @@ export default function App() {
       return;
     }
     const target = NOTIFICATION_LINK_SECTIONS[link.module];
-    if (target) setSection(target);
-  }, [leads, setSelectedLead, setSection, navigate]);
+    if (!target) return;
+    setSection(target);
+    const setDeepLinkId = notificationDeepLinkSetters[link.module];
+    if (link.id && setDeepLinkId) setDeepLinkId(link.id);
+  }, [
+    leads, setSelectedLead, setSection, navigate,
+    setSelectedCampaignId, setSelectedFeriasId, setSelectedAvaliacaoId,
+    setSelectedTreinamentoAtribuicaoId, setSelectedMovimentacaoId, setSelectedEmployeeId,
+  ]);
+
+  // Toast Nível 1 de mensagem nova do Chat (spec seção 5,
+  // docs/design-spec-chat-mobile-whatsapp.md) — só dispara quando quem
+  // recebeu não está na tela de Chat agora (não tem como saber daqui qual
+  // canal está aberto dentro de ChatView, que é state local; "não está no
+  // Chat" cobre o caso descrito na spec sem abrir uma segunda subscription
+  // só pra isso). Deliberadamente sem `section` nas deps: precisa avaliar o
+  // valor de `section` no momento em que a mensagem chega, não re-disparar
+  // quando o usuário troca de tela depois.
+  const [chatToast, setChatToast] = useState(null);
+  useEffect(() => {
+    if (!chatIncomingMessage) return;
+    if (section === "chat") return;
+    setChatToast(chatIncomingMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatIncomingMessage]);
+
+  const handleOpenChatToast = useCallback(() => {
+    if (!chatToast) return;
+    setSelectedChatChannelId(chatToast.channelId);
+    setSection("chat");
+    setChatToast(null);
+  }, [chatToast, setSection]);
 
   // Mantém o drawer em sync quando o lead aberto muda via realtime
   // (outra sessão editou) ou via update otimista local.
@@ -1163,6 +1272,7 @@ export default function App() {
           label: null,
           items: [
             { id: "meu-rh", label: "Meu RH", icon: Home },
+            { id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined },
           ],
         },
       ];
@@ -1183,15 +1293,25 @@ export default function App() {
 
     const groups = [];
 
+    // "Meu RH" só faz sentido pra quem tem ficha em rh_colaboradores — sem
+    // ela a tela abre vazia (holerite, férias e dados pessoais são todos
+    // ancorados no id do colaborador, não no do profile).
+    const temFichaColaborador = Boolean(meuColaboradorId);
+
     // FASE 6: Minhas Tarefas é o pouso pós-login pra todo papel interno
     // (agência já saiu por cima, no `if` acima) — item de nav universal, já
     // que antes só quem caía na rota "dashboard" tinha um link direto pra ela
     // (todo o resto usava "Visão Geral" pra ir pro dashboard antigo do
     // próprio módulo).
+    // Chat fica ao lado de Minhas Tarefas, fora de qualquer grupo: é
+    // utilitário do dia a dia de todo mundo, não feature de um módulo
+    // (mesma lógica que já vale pra Minhas Tarefas). Decidido com o Daniel
+    // no mockup do Chat.
     groups.push({
       label: null,
       items: [
         { id: "dashboard", label: "Minhas Tarefas", icon: CheckSquare },
+        { id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined },
       ],
     });
 
@@ -1214,7 +1334,7 @@ export default function App() {
           { id: "clients",      label: "Clientes",   icon: Users },
           ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
           { id: "explorer",     label: "Explorador", icon: Globe2 },
-          { id: "crm-viagens",  label: "Viagens & Reembolsos", icon: Plane },
+          { id: "crm-viagens",  label: "Viagens & Despesas", icon: Plane },
           ...(isComex || isDiretoria ? [{ id: "comex", label: "Comex", icon: Ship }] : []),
         ],
       });
@@ -1271,14 +1391,27 @@ export default function App() {
     } else {
       // Todo colaborador (não só RH) precisa ver seu próprio checklist de
       // onboarding, treinamentos atribuídos e feedbacks — não é uma tela de
-      // gestão de RH.
+      // gestão de RH. "Meu RH" (/meu-rh) entra aqui só pra quem tem ficha de
+      // colaborador: a tela existia mas não estava em menu nenhum, então só
+      // era alcançável digitando a URL na mão.
       groups.push({
         label: "Meu Desenvolvimento",
         items: [
+          ...(temFichaColaborador ? [{ id: "meu-rh", label: "Meu RH", icon: Home }] : []),
           { id: "rh-onboarding",   label: "Onboarding",   icon: ClipboardCheck },
           { id: "rh-treinamentos", label: "Treinamentos", icon: GraduationCap },
           { id: "rh-feedback",     label: "Avaliação de Desempenho", icon: MessageSquareText },
         ],
+      });
+    }
+
+    // Quem é do RH/diretoria também é colaborador — tem holerite, ponto e
+    // férias próprios. O grupo acima não roda pra eles (já veem os boards de
+    // gestão), então "Meu RH" entra sozinho num grupo próprio.
+    if ((isRHUser || isDiretoria) && temFichaColaborador) {
+      groups.push({
+        label: "Meu Espaço",
+        items: [{ id: "meu-rh", label: "Meu RH", icon: Home }],
       });
     }
 
@@ -1332,7 +1465,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuColaboradorId, chatUnread]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1550,28 +1683,30 @@ export default function App() {
           onHelpClick={() => setSection("tutorials")}
         />
 
+        <OfflineBanner isOnline={isOnline} cacheAge={cacheAge} />
+
         <div className="px-4 py-4 sm:px-6 sm:py-6 lg:py-6 pb-24 lg:pb-6 flex-1 min-w-0">
         <ErrorBoundary
           fallback={({ error, reset }) => (
-            <div className="rounded-xl border p-6 max-w-2xl mx-auto mt-8" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>
-              <div className="font-bold text-base mb-2" style={{ color: "#B91C1C" }}>
+            <div className="rounded-xl border p-6 max-w-2xl mx-auto mt-8" style={{ background: "var(--danger-bg)", borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}>
+              <div className="font-bold text-base mb-2" style={{ color: "var(--danger)" }}>
                 Erro ao carregar esta tela
               </div>
-              <div className="text-xs mb-3" style={{ color: "#7F1D1D" }}>
+              <div className="text-xs mb-3" style={{ color: "var(--danger)" }}>
                 Algo travou no carregamento. Tente voltar ao Início ou recarregar a página.
               </div>
-              <div className="text-[11px] font-mono p-2 rounded mb-3" style={{ background: "#FFF", color: "#7F1D1D", whiteSpace: "pre-wrap", maxHeight: 160, overflow: "auto" }}>
+              <div className="text-[11px] font-mono p-2 rounded mb-3" style={{ background: "var(--surface)", color: "var(--danger)", whiteSpace: "pre-wrap", maxHeight: 160, overflow: "auto" }}>
                 {error?.message || String(error)}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => { setSection("dashboard"); reset(); }}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg"
-                        style={{ background: "var(--accent)", color: "#FFFFFF" }}>
+                        style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
                   Voltar ao Início
                 </button>
                 <button onClick={() => window.location.reload()}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg border"
-                        style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "#FFFFFF" }}>
+                        style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}>
                   Recarregar
                 </button>
               </div>
@@ -1605,6 +1740,20 @@ export default function App() {
               />
             )
           } />
+          {/* Chat é acessível a qualquer papel interno — inclusive portal-only
+              (chão de fábrica). Agência fica de fora: é fornecedor externo, e
+              a própria regra de DM no banco (chat_can_dm) já a exclui. */}
+          <Route path={ROUTES.chat} element={
+            isAgencia
+              ? <Navigate to={ROUTES.marketing} replace />
+              : (
+                <ChatView
+                  currentUser={currentUser}
+                  initialChannelId={selectedChatChannelId}
+                  onInitialChannelConsumed={() => setSelectedChatChannelId(null)}
+                />
+              )
+          } />
           <Route path={ROUTES["commercial-overview"]} element={
             (isAgencia || isPureMarketing || isPureRH)
               ? <Navigate to={ROUTES.dashboard} replace />
@@ -1625,7 +1774,6 @@ export default function App() {
               <SignalsView
                 activeCompany={activeCompany}
                 signals={signals}
-                onSignalClick={setSelectedSignal}
                 onAddLead={handleAddLead}
                 accessibleCompanies={accessibleCompanies}
               />
@@ -1722,7 +1870,7 @@ export default function App() {
                   onUpdate={updateClient}
                   onDelete={deleteClient}
                   canDelete={isManager}
-                  onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
+                  onOpenImport={isManager ? () => setClientRosterImportOpen(true) : undefined}
                   onOpenLead={setSelectedLead}
                   onOpenViagem={(id) => { setSection("crm-viagens"); setSelectedViagemId(id); }}
                 />
@@ -1809,6 +1957,8 @@ export default function App() {
               isRHManager={isRHManager}
               isComexManager={isComex || isDiretoria}
               isAdmin={isAdmin}
+              roles={currentUserRoles}
+              navGroups={navGroups}
               usersPanel={isManager ? (
                 <UserManagementView
                   users={users}
@@ -1986,7 +2136,12 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["meu-rh"]} element={
-            <MeuRHView currentUser={currentUser} notifyMentions={notifyMentions} />
+            <MeuRHView
+              currentUser={currentUser}
+              notifyMentions={notifyMentions}
+              notifications={serverNotifications}
+              markNotificationRead={markServerNotificationRead}
+            />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
           {/* Catch-all: rota desconhecida volta pro Início. */}
@@ -2025,6 +2180,8 @@ export default function App() {
           onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("crm"); }}
           notifyMentions={notifyMentions}
           pipelineTransitions={pipelineTransitions}
+          offlineStatusById={offlineStatusByActivityId}
+          onRetryOfflineActivity={retryOfflineActivity}
         />
       </ErrorBoundary>
 
@@ -2047,6 +2204,10 @@ export default function App() {
         <AgentsSidebarCoachmark visible={agentsCoachmarkVisible} onDismiss={dismissAgentsCoachmark} />
       )}
 
+      {offlineSyncMessage && !needRefresh && !agentsCoachmarkVisible && (
+        <AppToast title={offlineSyncMessage} onDismiss={dismissOfflineSyncMessage} />
+      )}
+
       {!needRefresh && !agentsCoachmarkVisible && changelogItems.length > 0 && (
         <ChangelogToast
           items={changelogItems}
@@ -2061,6 +2222,17 @@ export default function App() {
             {screenTip.steps.map((s, i) => <li key={i}>{s}</li>)}
           </ol>
         </AppToast>
+      )}
+
+      {chatToast && !needRefresh && !agentsCoachmarkVisible && !screenTip && (
+        <AppToast
+          icon={MessageSquareText}
+          iconBadge
+          title={chatToast.channelName}
+          description={`${chatToast.senderName ? `${chatToast.senderName}: ` : ""}${(chatToast.preview || "").slice(0, 90)}`}
+          onDismiss={() => setChatToast(null)}
+          action={{ label: "Abrir", onClick: handleOpenChatToast }}
+        />
       )}
 
       <CommandPalette
@@ -2085,16 +2257,15 @@ export default function App() {
         companies={accessibleCompanies || []}
       />
 
-      <ErrorBoundary>
-        <SignalDetailDrawer
-          signal={selectedSignal}
-          onClose={closeSignalDrawer}
-          onAddLead={handleAddLead}
-          currentUser={currentUser}
-          users={users}
-          pipelines={pipelines}
-        />
-      </ErrorBoundary>
+      <ClientImportModal
+        isOpen={clientRosterImportOpen}
+        onClose={() => setClientRosterImportOpen(false)}
+        clients={clients}
+        onCreateClient={createClient}
+        onUpdateClient={updateClient}
+        onUpsertBillingHistory={upsertClientBillingHistory}
+      />
+
     </div>
   );
 }

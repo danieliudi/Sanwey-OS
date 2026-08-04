@@ -22,7 +22,7 @@ export function KanbanFab({ label, onClick, flush = false }) {
     <button
       onClick={onClick}
       className="hidden lg:flex fixed bottom-6 z-50 items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
-      style={{ left: `calc(var(--sidebar-width) + ${flush ? 0 : 24}px)`, background: "var(--accent)", color: "#FFFFFF", boxShadow: "var(--shadow-pop)", border: "none", cursor: "pointer" }}
+      style={{ left: `calc(var(--sidebar-width) + ${flush ? 0 : 24}px)`, background: "var(--accent)", color: "var(--on-accent)", boxShadow: "var(--shadow-pop)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
       onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
     >

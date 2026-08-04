@@ -12,6 +12,13 @@ export function useMyColaborador(currentUser) {
 
   const fetchMeuColaborador = useCallback(async () => {
     if (!isSupabaseConfigured || !currentUser?.id) {
+      // currentUser some momentaneamente durante refresh de token/refetch de
+      // profile (use-supabase-auth.js) — sem isso, meuColaborador ficava com
+      // o valor da sessão anterior enquanto currentUser já era null, e
+      // MeuRHView.jsx acessava currentUser.id sem optional chaining sobre
+      // esse estado inconsistente (achado #5 do roteiro de treinamento de
+      // RH, 31/07/2026 — "erro diferente a cada tentativa").
+      setMeuColaborador(null);
       setLoading(false);
       return;
     }

@@ -143,13 +143,13 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
         style={{
           width: "min(96vw, 900px)",
           height: "min(94vh, 680px)",
-          background: "#FFFFFF",
+          background: "var(--surface)",
         }}
       >
         {/* Header */}
         <div
           className="flex items-center justify-between px-5 py-3.5 border-b shrink-0"
-          style={{ borderColor: "#E5E7EB", background: "#F8F9FA" }}
+          style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
         >
           <div>
             <div className="font-bold text-sm" style={{ color: "var(--text)" }}>
@@ -164,15 +164,17 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
               onClick={handleSave}
               className="px-4 py-1.5 text-xs font-semibold rounded-lg text-white transition-colors"
               style={{ background: "var(--accent)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#8B1419"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#8B0000"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
             >
               Salvar
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--text-dim)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               <X size={16} />
             </button>
@@ -186,8 +188,8 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
             className="overflow-y-auto border-r shrink-0"
             style={{
               width: 220,
-              borderColor: "#E5E7EB",
-              background: "#F8F9FA",
+              borderColor: "var(--border)",
+              background: "var(--surface-alt)",
               padding: "12px 10px",
             }}
           >
@@ -220,8 +222,8 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                       title="Clique para adicionar ao fim do formulário"
                       className="flex items-center gap-2 px-2.5 py-2 rounded-lg mb-1 cursor-grab active:cursor-grabbing select-none"
                       style={{
-                        background: "#FFFFFF",
-                        border: "1px solid #E5E7EB",
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
                         fontSize: 12,
                         color: "var(--text)",
                         boxShadow: "var(--shadow-card)",
@@ -247,12 +249,12 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
           >
             <div
               className="rounded-xl border overflow-hidden"
-              style={{ background: "#FFFFFF", borderColor: "#E5E7EB", maxWidth: 520, margin: "0 auto" }}
+              style={{ background: "var(--surface)", borderColor: "var(--border)", maxWidth: 520, margin: "0 auto" }}
             >
               {/* Form title bar */}
               <div
                 className="px-5 py-3.5 border-b flex items-center gap-2"
-                style={{ borderColor: "#E5E7EB", background: "#F8F9FA" }}
+                style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
               >
                 <div
                   className="w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold shrink-0"
@@ -300,7 +302,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                 {fields.length === 0 && (
                   <div
                     className="py-8 text-center text-xs rounded-lg border-2 border-dashed"
-                    style={{ color: "var(--text-dim)", borderColor: "#E5E7EB" }}
+                    style={{ color: "var(--text-dim)", borderColor: "var(--border)" }}
                   >
                     Arraste campos aqui
                   </div>
@@ -352,7 +354,7 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
       onMouseLeave={() => setHovered(false)}
       className="flex items-center gap-2 px-3 py-2.5 rounded-lg border select-none cursor-grab active:cursor-grabbing"
       style={{
-        background: hovered ? "#F8F9FA" : "#FFFFFF",
+        background: hovered ? "var(--surface-alt)" : "var(--surface)",
         borderColor: hovered ? "#D1D5DB" : "#E5E7EB",
         transition: "all 0.1s",
       }}
@@ -390,7 +392,7 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
       {field.locked ? (
         <span
           className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded"
-          style={{ background: "#F0FDF4", color: "#16A34A", letterSpacing: "0.1em" }}
+          style={{ background: "var(--success-bg)", color: "var(--success)", letterSpacing: "0.1em" }}
         >
           Fixo
         </span>
@@ -416,7 +418,7 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
             onClick={onRemove}
             className="p-1 rounded transition-colors"
             style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.background = "#FEE2E2"; }}
+            onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.background = "var(--danger-bg)"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
           >
             <Trash2 size={13} />

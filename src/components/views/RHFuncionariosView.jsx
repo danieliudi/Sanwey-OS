@@ -33,6 +33,7 @@ import {
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { useRHBeneficios } from "../../hooks/use-rh-beneficios";
 import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
 import { useColaboradorConnections } from "../../hooks/use-colaborador-connections";
@@ -45,6 +46,8 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { AppToast } from "../shared/AppToast";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
 import { ConnectionsPanel } from "../shared/ConnectionsPanel";
+import { TableDensityToggle } from "../shared/TableDensityToggle";
+import { useTableDensity } from "../../hooks/use-table-density";
 import { csvRow, triggerDownload, formatDate as formatCSVDate } from "../../utils/export-csv";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
 import { formatDateBR } from "../../utils/date";
@@ -54,8 +57,8 @@ import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
 
 const BENEFICIO_STATUS_COLORS = {
   solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
-  aprovado:   { bg: "#DBEAFE", text: "#2563EB" },
-  ativo:      { bg: "#DCFCE7", text: "#16A34A" },
+  aprovado:   { bg: "color-mix(in srgb, #2563EB 12%, var(--surface))", text: "color-mix(in srgb, #2563EB 60%, var(--text))" },
+  ativo:      { bg: "var(--success-bg)", text: "var(--success)" },
   cancelado:  { bg: "var(--surface-alt)", text: "var(--text-dim)" },
 };
 const BENEFICIO_STATUS_LABELS = { solicitado: "Solicitado", aprovado: "Aprovado", ativo: "Ativo", cancelado: "Cancelado" };
@@ -125,7 +128,7 @@ function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
               <option value="">Selecionar benefício…</option>
               {disponiveis.map(c => <option key={c.id} value={c.id}>{c.nomeExibicao}</option>)}
             </select>
-            <button onClick={handleSolicitar} disabled={saving || !pickedId} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+            <button onClick={handleSolicitar} disabled={saving || !pickedId} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               Solicitar
             </button>
             <button onClick={() => setPicking(false)} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 11 }}>
@@ -149,8 +152,8 @@ function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
 const SIGNATURE_STATUS_COLORS = {
   pendente_envio: { bg: "var(--surface-alt)", text: "var(--text-dim)" },
   enviado:        { bg: "var(--warning-bg)", text: "var(--warning)" },
-  assinado:       { bg: "#DCFCE7", text: "#16A34A" },
-  recusado:       { bg: "#FEE2E2", text: "#DC2626" },
+  assinado:       { bg: "var(--success-bg)", text: "var(--success)" },
+  recusado:       { bg: "var(--danger-bg)", text: "var(--danger)" },
   cancelado:      { bg: "var(--surface-alt)", text: "var(--text-dim)" },
 };
 const SIGNATURE_STATUS_LABELS = {
@@ -238,7 +241,7 @@ function SignatureSection({ colaboradorRow, canWrite }) {
               <button
                 onClick={handleSend}
                 disabled={sending || !file || !signerName.trim() || !signerEmail.trim()}
-                style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
               >
                 {sending ? "Enviando…" : "Enviar pra assinatura"}
               </button>
@@ -359,7 +362,7 @@ function SolicitacoesAtualizacaoSection({ colaboradorId, canWrite }) {
               <button
                 onClick={() => approve(r.id)}
                 disabled={busyId === r.id}
-                style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
               >
                 Aprovar
               </button>
@@ -553,7 +556,7 @@ function BulkDocumentUploadModal({ colaboradores, currentUser, onClose }) {
                         <button
                           onClick={() => approve(row.id)}
                           disabled={!row.manualId || busyId === row.id}
-                          style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: row.manualId ? "pointer" : "default", opacity: row.manualId ? 1 : 0.5 }}
+                          style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: row.manualId ? "pointer" : "default", opacity: row.manualId ? 1 : 0.5 }}
                         >
                           <Check size={12} /> {busyId === row.id ? "Enviando…" : "Aprovar"}
                         </button>
@@ -743,7 +746,7 @@ function BulkStatusModal({ count, onConfirm, onClose }) {
             onClick={handleApply}
             disabled={saving}
             style={{
-              flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10,
+              flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10,
               padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none",
               cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1,
             }}
@@ -860,6 +863,7 @@ function EmployeeDetailModal({
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState(null);
   const [emailWarning, setEmailWarning] = useState(null);
+  const { cargos: cargoTemplates } = useRHCargoTemplates({ userId: currentUser?.id });
   const [form, setForm] = useState({
     job_title:       user.job_title       || "",
     frente:          user.frente          || "",
@@ -877,6 +881,16 @@ function EmployeeDetailModal({
     desligamento_motivo: colaboradorRow?.desligamentoMotivo || "",
     desligamento_meta:   colaboradorRow?.desligamentoMeta || {},
   });
+
+  // Cargo virou select ligado ao catálogo de Cargos & Salários — ver mesmo
+  // comentário em NovoColaboradorModal.jsx (achado #6 do roteiro de
+  // treinamento de RH, 31/07/2026).
+  const cargoOptions = useMemo(() => {
+    const base = form.department
+      ? cargoTemplates.filter((c) => !c.department || c.department === form.department)
+      : cargoTemplates;
+    return [...base].sort((a, b) => a.name.localeCompare(b.name));
+  }, [cargoTemplates, form.department]);
 
   // Snapshot dos valores originais — usado só pra não travar retroativamente
   // um campo que esse registro já tinha vazio antes de virar obrigatório
@@ -1190,16 +1204,23 @@ function EmployeeDetailModal({
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label style={labelSt}>Cargo *</label>
-                  <input
-                    type="text"
+                  <select
                     value={form.job_title}
                     onChange={(e) => set("job_title", e.target.value)}
-                    placeholder="Ex: Analista Comercial"
-                    className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                    className="w-full text-sm rounded-xl border outline-none px-3 py-2"
                     style={inputSt}
-                    onFocus={focusBlue}
-                    onBlur={blurGray}
-                  />
+                  >
+                    <option value="">Selecionar</option>
+                    {form.job_title && !cargoOptions.some((c) => c.name === form.job_title) && (
+                      <option value={form.job_title}>{form.job_title} (fora do catálogo)</option>
+                    )}
+                    {cargoOptions.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                  {cargoOptions.length === 0 && (
+                    <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
+                      Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={labelSt}>Frente *</label>
@@ -1393,7 +1414,7 @@ function EmployeeDetailModal({
             )}
 
             {expInfo && (
-              <div style={{ marginTop: 14, background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
+              <div style={{ marginTop: 14, background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
                 Período de experiência CLT: marco de {expInfo.marco} dias em {expInfo.diasRestantes} dia(s).
               </div>
             )}
@@ -1409,7 +1430,7 @@ function EmployeeDetailModal({
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
               {error}
             </div>
           )}
@@ -1428,7 +1449,7 @@ function EmployeeDetailModal({
                 style={{
                   flex: 1,
                   background: "var(--accent)",
-                  color: "#FFF",
+                  color: "var(--on-accent)",
                   borderRadius: 10,
                   padding: "8px 16px",
                   fontSize: 13,
@@ -1514,6 +1535,9 @@ export function RHFuncionariosView({
   onOpenFerias,
 }) {
   const { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const [density, setDensity] = useTableDensity("rh-funcionarios-table-density");
+  const cellPadY = density === "compact" ? "py-1.5" : "py-3";
+  const headPadY = density === "compact" ? "py-1.5" : "py-2.5";
   const [confirmDelete, setConfirmDelete] = useState(null); // { message, onConfirm }
   const [search, setSearch]         = useState("");
   const [filterDept, setFilterDept] = useState("all");
@@ -1783,7 +1807,8 @@ export function RHFuncionariosView({
             Registro de colaboradores · {stats.total} no total
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
+          <TableDensityToggle density={density} onChange={setDensity} />
           <button
             onClick={handleExportCSV}
             disabled={filtered.length === 0}
@@ -1813,7 +1838,7 @@ export function RHFuncionariosView({
                 onClick={() => setNovoColaboradorOpen(true)}
                 className="flex items-center gap-1.5 font-semibold"
                 style={{
-                  background: "var(--accent)", color: "#FFF", borderRadius: 10,
+                  background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10,
                   padding: "6px 16px", fontSize: 13, border: "none",
                   cursor: "pointer",
                 }}
@@ -1999,7 +2024,7 @@ export function RHFuncionariosView({
               onClick={() => setBulkStatusOpen(true)}
               className="flex items-center gap-1.5 font-semibold"
               style={{
-                background: "var(--accent)", color: "#FFF", borderRadius: 8,
+                background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8,
                 padding: "5px 12px", fontSize: 12, border: "none",
                 cursor: "pointer",
               }}
@@ -2023,7 +2048,7 @@ export function RHFuncionariosView({
               <button
                 onClick={clearFilters}
                 className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
-                style={{ background: "var(--accent)", color: "#FFFFFF", border: "none" }}
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none" }}
               >
                 Limpar filtros
               </button>
@@ -2043,7 +2068,7 @@ export function RHFuncionariosView({
             <table className="w-full border-collapse">
               <thead>
                 <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
-                  <th className="px-4 py-2.5" style={{ width: 36 }}>
+                  <th className={`px-4 ${headPadY}`} style={{ width: 36 }}>
                     <input
                       type="checkbox"
                       checked={pageAllSelected}
@@ -2055,7 +2080,7 @@ export function RHFuncionariosView({
                   {FUNC_TABLE_COLS.map((col) => (
                     <th
                       key={col.id || col.label}
-                      className="text-left px-4 py-2.5"
+                      className={`text-left px-4 ${headPadY}`}
                       style={{
                         fontSize: 10,
                         fontWeight: 600,
@@ -2087,7 +2112,7 @@ export function RHFuncionariosView({
                     onMouseEnter={(e) => { if (!isChecked) e.currentTarget.style.background = "var(--surface-alt)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = isChecked ? "var(--accent-tint)" : "transparent"; }}
                   >
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className={`px-4 ${cellPadY}`} onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={isChecked}
@@ -2095,7 +2120,7 @@ export function RHFuncionariosView({
                         style={{ cursor: "pointer", accentColor: "var(--accent)", display: "block" }}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${cellPadY}`}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <Avatar user={u} size={34} />
                         <div>
@@ -2118,25 +2143,25 @@ export function RHFuncionariosView({
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text)" }}>
+                    <td className={`px-4 ${cellPadY}`} style={{ fontSize: 12, color: "var(--text)" }}>
                       {u.job_title || "—"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${cellPadY}`}>
                       <FrenteBadge frente={u.frente} />
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    <td className={`px-4 ${cellPadY}`} style={{ fontSize: 12, color: "var(--text-dim)" }}>
                       {u.department || "—"}
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    <td className={`px-4 ${cellPadY}`} style={{ fontSize: 12, color: "var(--text-dim)" }}>
                       {contractLabel(u.contract_type)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${cellPadY}`}>
                       <StatusBadge statusId={u.employee_status || "ativo"} />
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    <td className={`px-4 ${cellPadY}`} style={{ fontSize: 12, color: "var(--text-dim)" }}>
                       {fmt(u.admission_date)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${cellPadY}`}>
                       <ChevronRight size={14} style={{ color: "var(--text-dim)", opacity: 0.5 }} />
                     </td>
                   </tr>
@@ -2274,7 +2299,7 @@ export function RHFuncionariosView({
               </button>
               <button
                 onClick={confirmDelete.onConfirm}
-                style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, border: "none", background: "var(--danger)", color: "#FFF", cursor: "pointer" }}
+                style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, border: "none", background: "var(--danger)", color: "var(--on-danger)", cursor: "pointer" }}
               >
                 Excluir
               </button>

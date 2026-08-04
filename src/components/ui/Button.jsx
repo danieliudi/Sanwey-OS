@@ -1,9 +1,9 @@
 import React from "react";
 
 const SIZES = {
-  sm: { padding: "px-3 py-1.5", font: "text-xs", iconSize: 14, gap: "gap-1.5" },
-  md: { padding: "px-4 py-2",   font: "text-sm", iconSize: 15, gap: "gap-2" },
-  lg: { padding: "px-5 py-2.5", font: "text-sm", iconSize: 16, gap: "gap-2" },
+  sm: { padding: "px-3 py-2",   font: "text-xs", iconSize: 14, gap: "gap-1.5" },
+  md: { padding: "px-4 py-2.5", font: "text-sm", iconSize: 15, gap: "gap-2" },
+  lg: { padding: "px-5 py-3",   font: "text-sm", iconSize: 16, gap: "gap-2" },
 };
 
 export function Button({
@@ -15,10 +15,10 @@ export function Button({
 
   const variants = {
     primary:   { bg: a,                       color: "var(--on-accent)", border: a },
-    dark:      { bg: "var(--text)",            color: "#FFFFFF",          border: "var(--text)" },
+    dark:      { bg: "var(--text)",            color: "var(--surface)",   border: "var(--text)" },
     secondary: { bg: "var(--surface)",         color: "var(--text)",      border: "var(--border-strong)" },
     ghost:     { bg: "transparent",            color: "var(--text-dim)",  border: "transparent" },
-    danger:    { bg: "#FEF2F2",                color: "var(--danger)",    border: "#FECACA" },
+    danger:    { bg: "var(--danger-bg)",       color: "var(--danger)",    border: "color-mix(in srgb, var(--danger) 35%, transparent)" },
   };
   const v = variants[variant] || variants.primary;
   const s = SIZES[size];
@@ -32,7 +32,7 @@ export function Button({
       className={`
         inline-flex items-center justify-center font-semibold border
         transition-all duration-150 cursor-pointer select-none
-        rounded-sm
+        rounded-lg
         disabled:opacity-50 disabled:cursor-not-allowed
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1
         active:scale-[0.97]

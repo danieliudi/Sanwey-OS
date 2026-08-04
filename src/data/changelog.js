@@ -24,9 +24,197 @@
 
 export const CHANGELOG = [
   {
-    version: "4.4.2",
+    version: "4.18.2",
     items: [
       { kind: "correcao", text: "O anel de campos obrigatórios preenchidos no card de Entregas estava menor que o mesmo indicador em Funil de Vendas, Campanhas e RH — agora do mesmo tamanho em todos os Kanbans." },
+    ],
+  },
+  {
+    version: "4.18.1",
+    items: [
+      { kind: "correcao", text: "Notificações: os botões de filtro (Tudo/Menções/Sistema) não ficam mais parcialmente cobertos pela barra superior em janelas mais estreitas." },
+      { kind: "ajuste", text: "Notificações: o aviso \"Ativar notificações do navegador?\" agora pode ser dispensado com um X — volta a aparecer só num próximo acesso." },
+    ],
+  },
+  {
+    version: "4.18.0",
+    items: [
+      { kind: "novo", text: "Notificações: clicar em uma notificação agora leva direto até o card ou registro relacionado, em vez de só marcar como lida." },
+      { kind: "correcao", text: "Notificações: corrigido um problema visual que deixava os botões de filtro (Tudo/Menções/Sistema) quase invisíveis." },
+    ],
+  },
+  {
+    version: "4.17.0",
+    items: [
+      { kind: "ajuste", text: "Ajustes visuais em toda a plataforma: cards com sombra só ao passar o mouse (mais planos em repouso), badges/etiquetas viraram pílula e botões ficaram um pouco mais altos e arredondados." },
+      { kind: "ajuste", text: "Painel comercial: a faixa de indicadores no topo (leads, funil, valor ganho, fit score) ganhou um visual mais limpo, sem caixinha de ícone." },
+      { kind: "ajuste", text: "Kanban: a linha entre as colunas ficou mais discreta em todos os boards." },
+      { kind: "novo", text: "Funcionários: nova opção para alternar a tabela entre densidade Confortável e Compacta.", roles: ["rh", "gerente_rh"] },
+    ],
+  },
+  {
+    version: "4.16.0",
+    items: [
+      { kind: "ajuste", text: "Tela de login redesenhada: agora é um único card centralizado, com um traço sutil e animado no fundo em vez do painel dividido de antes." },
+    ],
+  },
+  {
+    version: "4.15.0",
+    items: [
+      { kind: "correcao", text: "Despesas: o campo \"Campanha relacionada\" voltou a mostrar as campanhas cadastradas — ficava vazio porque a lista não recarregava depois do login." },
+      { kind: "novo", text: "Despesas agora também pode se vincular a várias Entregas e várias Tarefas de Marketing, além da Campanha.", roles: ["marketing", "gerente_marketing", "agencia"] },
+    ],
+  },
+  {
+    version: "4.14.0",
+    items: [
+      { kind: "novo", text: "A cor de destaque da plataforma (botões, item ativo do menu, ícones em foco) agora é o vermelho oficial da Sanwey em toda tela — inclusive no modo escuro, que antes voltava pro neutro." },
+      { kind: "correcao", text: "Configurações > Aparência: uma cor de destaque personalizada agora se mantém ao alternar entre claro e escuro, em vez de sumir no escuro." },
+    ],
+  },
+  {
+    version: "4.13.2",
+    items: [
+      { kind: "ajuste", text: "Chat: os 4 filtros da lista de conversas (Todas/Não lidas/Canais/Diretas) viraram um único seletor — acabou o scroll horizontal feio na barra lateral." },
+    ],
+  },
+  {
+    version: "4.13.1",
+    items: [
+      { kind: "ajuste", text: "\"Viagens & Reembolsos\" agora se chama \"Viagens & Despesas\" em toda a plataforma." },
+      { kind: "correcao", text: "Celular: os botões da barra inferior voltaram a ficar com larguras iguais — um atalho de nome longo não empurra mais os vizinhos." },
+    ],
+  },
+  {
+    version: "4.13.0",
+    items: [
+      { kind: "ajuste", text: "Nomes e valores coloridos por etapa (chips \"Mover para\", cabeçalhos de coluna, etiquetas de tabela e calendário) agora são sempre legíveis — o fundo colorido continua igual, só o texto ganhou mais contraste. Vale também no modo escuro." },
+    ],
+  },
+  {
+    version: "4.12.0",
+    items: [
+      { kind: "novo", text: "Celular: a visão Tabela de todos os quadros agora mostra cards fáceis de ler (título, etapa, valor e responsáveis) em vez de uma tabela cortada — nenhuma informação fica mais escondida fora da tela. No computador, nada muda." },
+    ],
+  },
+  {
+    version: "4.11.0",
+    items: [
+      { kind: "novo", text: "Celular: ao abrir um card (RH, Marketing, Compras, Comex, Pós-venda), o botão \"Mover para →\" agora fica fixo no rodapé — sem precisar rolar até o fim pra mudar de etapa. Os detalhes do cabeçalho ficam atrás de \"+ detalhes\"." },
+      { kind: "ajuste", text: "Celular: a barra inferior mostra só os atalhos que cabem na tela (4 ou 5 + Menu) — nada mais fica cortado; os demais seguem no Menu." },
+      { kind: "ajuste", text: "Calendários unificados na plataforma toda: semana começa no domingo, e o dia de hoje aparece com um círculo na cor da sua frente." },
+    ],
+  },
+  {
+    version: "4.10.4",
+    items: [
+      { kind: "correcao", text: "Modo escuro: o card de Cliente vinculado no Funil de Vendas não aparece mais como caixa branca com texto invisível." },
+      { kind: "correcao", text: "Modo escuro: caixas de seleção e botões de opção agora acompanham o tema (antes ficavam brancos)." },
+      { kind: "correcao", text: "Modo escuro: botões Aprovar/Recusar e avisos coloridos legíveis de verdade — texto ajustado em ~30 pontos da plataforma." },
+      { kind: "correcao", text: "Modo escuro: faixas e etiquetas em tom pastel claro (Compras, editor de etapas, calendário do Funil, Novidades e outros) agora escurecem junto com o tema." },
+      { kind: "correcao", text: "Modo escuro: linhas de grade dos gráficos de Análise não ficam mais berrantes." },
+    ],
+  },
+  {
+    version: "4.10.3",
+    items: [
+      { kind: "correcao", text: "Comex: a aba Exportação agora carrega as operações ao trocar de Importação — antes ficava sempre vazia.", roles: ["comex", "diretoria"] },
+      { kind: "correcao", text: "Editor de etapas: o botão de fechar não some mais da tela em celulares pequenos." },
+      { kind: "correcao", text: "Mobile: menu \"Mover para etapa\" não fica mais parcialmente escondido atrás do menu inferior." },
+      { kind: "correcao", text: "Mobile: vários ajustes de texto cortado ou sobreposto — cards de Treinamentos e Bem-estar, etiquetas de etapa nas tabelas, campos de data em \"Nova campanha\" e formulários de Comunicação." },
+      { kind: "correcao", text: "Compras (celular): as etapas do quadro agora mostram a setinha de abrir/fechar, como os outros quadros." },
+      { kind: "correcao", text: "Textos corrigidos: \"sugestãoões\"/\"avaliaçãoões\" viraram \"sugestões\"/\"avaliações\", e etiquetas internas (ex.: \"industria\", \"negociacao\") agora aparecem com o nome certo." },
+    ],
+  },
+  {
+    version: "4.10.2",
+    items: [
+      { kind: "correcao", text: "Mobile: ícone do app não fica mais cortado com fundo preto ao abrir — agora tem fundo branco." },
+      { kind: "correcao", text: "Mobile: botões de cabeçalho (ex.: 'Novo Funcionário', 'Exportar CSV') não ficam mais cortados na borda da tela." },
+      { kind: "correcao", text: "Mobile: avisos e dicas de tela não ficam mais escondidos atrás do menu inferior." },
+      { kind: "correcao", text: "Mobile: abas 'Kanban/Tabela/Calendário/Análise' não ficam mais cortadas em telas pequenas — Pós-venda, Comex, Tarefas, Compras, Férias, Treinamentos, Recrutamento, Onboarding e Avaliação de Desempenho." },
+      { kind: "correcao", text: "Fornecedores (RH): texto de descrição não fica mais em cima do botão 'Novo fornecedor'." },
+    ],
+  },
+  {
+    version: "4.10.1",
+    items: [
+      { kind: "correcao", text: "Chat: conversa arquivada não conta mais no aviso de mensagens não lidas do menu — arquivar agora silencia de verdade." },
+    ],
+  },
+  {
+    version: "4.10.0",
+    items: [
+      { kind: "novo", text: "Chat: filtros rápidos (Todas, Não lidas, Canais, Diretas), conversa arquivada some da lista sem apagar nada, e no celular um botão flutuante abre uma conversa nova sem precisar rolar até o topo." },
+      { kind: "novo", text: "Chat: agora dá pra mandar mensagem de voz — segure o microfone pra gravar, solte pra enviar." },
+      { kind: "ajuste", text: "Chat: chegou mensagem nova enquanto você está em outra tela? Aparece um aviso rápido com o remetente, com atalho pra abrir a conversa direto." },
+    ],
+  },
+  {
+    version: "4.9.0",
+    items: [
+      { kind: "novo", text: "Barra de navegação do celular agora é personalizável — em Configurações → Barra inferior, escolha até 4 atalhos entre tudo que você já acessa na plataforma." },
+    ],
+  },
+  {
+    version: "4.8.0",
+    items: [
+      { kind: "novo", text: "Funil de Vendas: seus negócios continuam visíveis mesmo sem internet (mostrando os últimos dados salvos), e dá pra registrar uma nota mesmo assim — ela fica marcada como \"vai enviar quando voltar o sinal\" e sincroniza sozinha ao reconectar." },
+    ],
+  },
+  {
+    version: "4.7.0",
+    items: [
+      { kind: "novo", text: "Chat interno: agora dá pra mandar emoji (paleta com 32 opções), anexar arquivo/imagem e enviar figurinhas — tudo pelos novos ícones ao lado da caixa de mensagem." },
+      { kind: "ajuste", text: "Chat interno: mensagens com palavras impróprias não são enviadas — aparece um aviso na hora, só pra quem escreveu." },
+      { kind: "correcao", text: "Modo escuro: mais uma leva de selos e faixas de erro/sucesso/atenção que ainda ficavam com fundo claro e destoavam no tema escuro." },
+    ],
+  },
+  {
+    version: "4.6.0",
+    items: [
+      { kind: "novo", text: "Chat interno: novo item no topo do menu, com canais por equipe e conversas diretas em tempo real. Quem você pode chamar no privado segue a estrutura da empresa — mesmo setor/departamento, seu gestor direto ou quem responde a você." },
+      { kind: "correcao", text: "Modo escuro: em várias telas o texto e os ícones sumiam sobre fundos claros (selos de status, chips e faixas). Corrigido em toda a plataforma." },
+    ],
+  },
+  {
+    version: "4.5.0",
+    items: [
+      { kind: "novo", text: "Clientes: novo assistente de importação de planilha, dedicado ao cadastro de clientes — importa CNPJ, categoria, código externo por empresa, status e faturamento por ano, sem criar negócio nenhum no Funil de Vendas.", roles: ["admin", "gerente"] },
+      { kind: "ajuste", text: "Notificações: o sino agora separa \"Novas\" de \"Antes de hoje\" e tem filtro por tipo (Tudo/Menções/Sistema), pra achar mais rápido o que importa." },
+    ],
+  },
+  {
+    version: "4.4.5",
+    items: [
+      { kind: "correcao", text: "Busca global (Ctrl K): clicar na barra de busca deixava a tela em branco pra alguns usuários. Corrigido." },
+    ],
+  },
+  {
+    version: "4.4.4",
+    items: [
+      { kind: "ajuste", text: "Funcionários: o campo \"Cargo\" agora é um select ligado ao catálogo de Cargos & Salários (antes era texto livre, sem nenhuma relação com o catálogo) — cargos já cadastrados aparecem prontos pra escolher.", roles: ["gerente_rh", "rh"] },
+    ],
+  },
+  {
+    version: "4.4.3",
+    items: [
+      { kind: "correcao", text: "Férias & Licenças: \"+Solicitar\" falhava com erro técnico ao enviar — corrigido.", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Férias & Licenças: excluir um pedido às vezes não persistia de verdade (reaparecia ao atualizar a página) — corrigido.", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Férias & Licenças: recusar um pedido pelo atalho \"Mover para\" não pedia motivo nem avisava o colaborador por e-mail — agora sempre passa pelo mesmo fluxo do botão \"Recusar\".", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Meu RH: a tela podia quebrar ao abrir, com um erro diferente a cada tentativa — corrigido." },
+      { kind: "correcao", text: "Onboarding: mover um card pra etapa seguinte quando falta um campo obrigatório agora sempre avisa por quê, mesmo movendo pelo menu do card (antes só avisava com o card aberto).", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Onboarding: o contador do topo não conta mais quem já está na etapa \"Removido\".", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Avaliação de Desempenho: \"+Novo feedback\" exige uma nota geral antes de salvar — evita registro vazio já em \"Concluído\".", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Cargos & Salários: excluir um cargo agora mostra feedback visual na hora — antes parecia travado até a lista atualizar sozinha.", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Fornecedores (RH): o filtro \"Vencido\" agora identifica corretamente contratos que já passaram da vigência.", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Mensagem de erro de IA mais clara quando a chave configurada está sem cota/crédito no provedor." },
+    ],
+  },
+  {
+    version: "4.4.2",
+    items: [
+      { kind: "correcao", text: "Treinamentos: a tela travava inteira (\"Erro ao carregar esta tela\") ao clicar no menu — corrigido.", roles: ["gerente_rh", "rh"] },
     ],
   },
   {

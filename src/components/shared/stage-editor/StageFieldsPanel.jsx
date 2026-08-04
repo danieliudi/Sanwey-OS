@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { FIELD_TYPES, TYPE_ICON, OPTION_FIELD_TYPES } from "../../../constants/field-types";
 import { VALIDATION_PRESETS, VALIDATION_RULE_TYPES } from "../../../utils/field-validation";
+import { stageTextColor } from "../../../utils/stage-colors";
 import { slugifyKey } from "../../../hooks/use-stage-fields";
 import { StageConditionsModal } from "./StageConditionsModal";
 import { StageAdvancedModal } from "./StageAdvancedModal";
@@ -187,7 +188,7 @@ function AddFieldForm({ presetType, onAdd, onCancel, accent, busy }) {
       </div>
 
       {error && (
-        <div style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}>
+        <div style={{ fontSize: 12, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}>
           {error}
         </div>
       )}
@@ -270,7 +271,7 @@ function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, on
               title="Clique para renomear"
               style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}
             >
-              {field.required && <span style={{ color: "#B91C1C", marginRight: 3 }}>*</span>}
+              {field.required && <span style={{ color: "var(--danger)", marginRight: 3 }}>*</span>}
               {field.label}
             </div>
           )}
@@ -382,7 +383,7 @@ function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, on
             <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               <button
                 onClick={() => onDelete(field.id)}
-                style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, border: "none", background: "#B91C1C", color: "#FFF", cursor: "pointer" }}
+                style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, border: "none", background: "var(--danger)", color: "var(--on-danger)", cursor: "pointer" }}
               >
                 Remover
               </button>
@@ -397,7 +398,7 @@ function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, on
             <button
               onClick={() => setConfirmDel(true)}
               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--border-strong)", padding: 2, lineHeight: 0, flexShrink: 0 }}
-              onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
               onMouseLeave={e => { e.currentTarget.style.color = "var(--border-strong)"; }}
               title="Remover campo"
             >
@@ -576,7 +577,7 @@ export function StageFieldsPanel({
                 title={`Editar fase: ${stage.name}`}
                 style={{
                   background: `color-mix(in srgb, ${stageColor} 14%, var(--surface))`,
-                  color: stageColor,
+                  color: stageTextColor(stageColor),
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}
               >
@@ -584,7 +585,10 @@ export function StageFieldsPanel({
               </span>
               {headerBadge}
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            {/* ml-auto: com o X fora deste cluster (fix do X fora da tela em
+                360px), o justify-between do header passaria a centralizar este
+                bloco — o ml-auto devolve o alinhamento à direita do desktop. */}
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0 ml-auto">
               <button
                 onClick={() => setConditionsOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer"
@@ -607,16 +611,17 @@ export function StageFieldsPanel({
                   Opções Avançadas
                 </button>
               )}
-              <button
-                onClick={onClose}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, lineHeight: 0 }}
-                onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
-                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
-                aria-label="Fechar"
-              >
-                <X size={18} />
-              </button>
             </div>
+            <button
+              onClick={onClose}
+              className="shrink-0"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, lineHeight: 0 }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+              aria-label="Fechar"
+            >
+              <X size={18} />
+            </button>
           </div>
 
           {/* Corpo: sidebar de tipos + canvas */}
@@ -676,7 +681,7 @@ export function StageFieldsPanel({
                   className="rounded-lg px-3.5 py-2.5 mb-4"
                   style={{
                     background: `color-mix(in srgb, ${stageColor} 12%, var(--surface))`,
-                    color: stageColor, fontSize: 15, fontWeight: 700,
+                    color: stageTextColor(stageColor), fontSize: 15, fontWeight: 700,
                   }}
                 >
                   {stage.name}
@@ -725,7 +730,7 @@ export function StageFieldsPanel({
                 )}
 
                 {opError && (
-                  <div className="mb-3" style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px" }}>
+                  <div className="mb-3" style={{ fontSize: 12, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 6, padding: "6px 10px" }}>
                     {opError}
                   </div>
                 )}

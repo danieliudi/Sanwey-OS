@@ -9,6 +9,7 @@ import { MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/co
 import { PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-marketing-purchase-requests";
 import { formatDateBR } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
@@ -236,7 +237,9 @@ export function PurchaseRequestDetailDrawer({
       return undefined;
     }
     getLastPurchasePrice(supplierId, purchase.itemName)
-      .then(res => { if (alive) { setLastPrice(res); setLastPriceError(null); } })
+      // Compra "paga" sem valor registrado não tem o que comparar — tratar
+      // como sem histórico evita "R$ 0 em — (protocolo )" no painel.
+      .then(res => { if (alive) { setLastPrice(res && res.total_value != null ? res : null); setLastPriceError(null); } })
       .catch(err => { if (alive) { setLastPrice(null); setLastPriceError(err.message || String(err)); } });
     return () => { alive = false; };
   }, [supplierId, purchase.itemName, getLastPurchasePrice]);
@@ -494,7 +497,7 @@ export function PurchaseRequestDetailDrawer({
           </span>
         )}
         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-          style={{ background: stageColor + "18", color: stageColor, border: `1px solid ${stageColor}40` }}>
+          style={{ background: stageColor + "18", color: stageTextColor(stageColor), border: `1px solid ${stageColor}40` }}>
           {stageInfo?.name || purchase.stage}
         </span>
       </div>
@@ -509,7 +512,7 @@ export function PurchaseRequestDetailDrawer({
   const left = (
     <>
       {isRejected && (
-        <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>
+        <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <XCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
           <div>
             <div className="font-semibold text-sm">Solicitação rejeitada</div>
@@ -544,17 +547,17 @@ export function PurchaseRequestDetailDrawer({
       </div>
 
       {supplierId && (
-        <div className="rounded-xl border p-4" style={{ borderColor: "#BFDBFE", background: "#EFF6FF" }}>
+        <div className="rounded-xl border p-4" style={{ borderColor: "color-mix(in srgb, #2563EB 35%, transparent)", background: "color-mix(in srgb, #2563EB 12%, var(--surface))" }}>
           <div className="flex items-center gap-2 mb-1.5">
-            <TrendingUp size={13} style={{ color: "#1D4ED8" }} />
-            <span className="text-xs font-bold" style={{ color: "#1D4ED8" }}>Comparar com ano passado</span>
+            <TrendingUp size={13} style={{ color: "color-mix(in srgb, #2563EB 60%, var(--text))" }} />
+            <span className="text-xs font-bold" style={{ color: "color-mix(in srgb, #2563EB 60%, var(--text))" }}>Comparar com ano passado</span>
           </div>
           {lastPrice ? (
-            <div className="text-xs" style={{ color: "#1E3A8A", lineHeight: 1.6 }}>
+            <div className="text-xs" style={{ color: "var(--text-dim)", lineHeight: 1.6 }}>
               Última compra paga a este fornecedor: <strong>{formatBRL(Number(lastPrice.total_value))}</strong> em{" "}
               {formatDateBR(lastPrice.paid_at)} (protocolo {lastPrice.request_number})
               {priceDiff != null && (
-                <div className="flex items-center gap-1 mt-1 font-semibold" style={{ color: priceDiff > 0 ? "#DC2626" : priceDiff < 0 ? "#16A34A" : "#1E3A8A" }}>
+                <div className="flex items-center gap-1 mt-1 font-semibold" style={{ color: priceDiff > 0 ? "var(--danger)" : priceDiff < 0 ? "var(--success)" : "var(--text-dim)" }}>
                   {priceDiff > 0 ? <TrendingUp size={12} /> : priceDiff < 0 ? <TrendingDown size={12} /> : null}
                   {priceDiff === 0
                     ? "Mesmo valor da última compra"
@@ -563,9 +566,9 @@ export function PurchaseRequestDetailDrawer({
               )}
             </div>
           ) : lastPriceError ? (
-            <div className="text-xs" style={{ color: "#1E3A8A" }}>{lastPriceError}</div>
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>{lastPriceError}</div>
           ) : (
-            <div className="text-xs" style={{ color: "#1E3A8A" }}>Nenhuma compra paga anterior encontrada para este fornecedor e item.</div>
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma compra paga anterior encontrada para este fornecedor e item.</div>
           )}
         </div>
       )}
@@ -596,11 +599,11 @@ export function PurchaseRequestDetailDrawer({
                 </div>
               ))}
               {quotesError && (
-                <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{quotesError}</div>
+                <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{quotesError}</div>
               )}
               <button onClick={handleSaveQuotes} disabled={savingQuotes}
                 className="px-4 py-2 rounded-lg text-sm font-semibold"
-                style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: savingQuotes ? "default" : "pointer", opacity: savingQuotes ? 0.6 : 1 }}>
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: savingQuotes ? "default" : "pointer", opacity: savingQuotes ? 0.6 : 1 }}>
                 {savingQuotes ? "Salvando…" : "Salvar cotações"}
               </button>
             </>
@@ -611,7 +614,7 @@ export function PurchaseRequestDetailDrawer({
                 const won = q.supplierId && q.supplierId === purchase.supplierId;
                 return (
                   <div key={idx} className="flex items-center justify-between text-xs px-3 py-2 rounded-lg"
-                    style={won ? { background: "#DCFCE7", color: "#15803D", fontWeight: 700 } : { background: "var(--surface-alt)", color: "var(--text)" }}>
+                    style={won ? { background: "var(--success-bg)", color: "var(--success)", fontWeight: 700 } : { background: "var(--surface-alt)", color: "var(--text)" }}>
                     <span>{s?.name || "—"}{won ? " · vencedor" : ""}</span>
                     <span>{q.value != null ? formatBRL(Number(q.value)) : "—"}</span>
                   </div>
@@ -630,7 +633,7 @@ export function PurchaseRequestDetailDrawer({
           <div className="flex items-center gap-2 mb-2.5">
             <SectionLabel>Execução da compra</SectionLabel>
             {saveStatus && (
-              <span style={{ fontSize: 10, marginTop: -10, color: saveStatus === "saved" ? "#16A34A" : "#DC2626", fontWeight: 700 }}>
+              <span style={{ fontSize: 10, marginTop: -10, color: saveStatus === "saved" ? "var(--success)" : "var(--danger)", fontWeight: 700 }}>
                 {saveStatus === "saved" ? "✓ Salvo" : "✗ Falha ao salvar"}
               </span>
             )}
@@ -729,11 +732,11 @@ export function PurchaseRequestDetailDrawer({
             )}
 
             {saveError && (
-              <div className="text-xs px-3 py-2 rounded-lg mb-2 mt-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{saveError}</div>
+              <div className="text-xs px-3 py-2 rounded-lg mb-2 mt-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{saveError}</div>
             )}
             <button onClick={handleSaveFields} disabled={saving}
               className="px-4 py-2 rounded-lg text-sm font-semibold mt-2"
-              style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Salvar alterações"}
             </button>
           </fieldset>
@@ -757,7 +760,7 @@ export function PurchaseRequestDetailDrawer({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEF3C7", color: "#92400E" }}>
+            <div className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
               <AlertCircle size={12} />
               Anexe a nota fiscal para poder marcar como pago.
             </div>
@@ -772,7 +775,7 @@ export function PurchaseRequestDetailDrawer({
               onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadInvoice(f); e.target.value = ""; }} />
           </label>
           {uploadError && (
-            <div className="text-xs px-3 py-2 rounded-lg mt-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{uploadError}</div>
+            <div className="text-xs px-3 py-2 rounded-lg mt-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{uploadError}</div>
           )}
         </div>
       )}
@@ -876,7 +879,7 @@ export function PurchaseRequestDetailDrawer({
           </FieldRow>
 
           {actionError && (
-            <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{actionError}</div>
+            <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{actionError}</div>
           )}
 
           {!showReject ? (
@@ -884,14 +887,14 @@ export function PurchaseRequestDetailDrawer({
               {isCotacao && (
                 <button onClick={handleApprove} disabled={actionLoading || !canApproveNow}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: "#DCFCE7", color: "#15803D", border: "none", cursor: (actionLoading || !canApproveNow) ? "default" : "pointer", opacity: (actionLoading || !canApproveNow) ? 0.6 : 1 }}>
+                  style={{ background: "var(--success-bg)", color: "var(--success)", border: "none", cursor: (actionLoading || !canApproveNow) ? "default" : "pointer", opacity: (actionLoading || !canApproveNow) ? 0.6 : 1 }}>
                   <CheckCircle2 size={13} />
                   {actionLoading ? "Aprovando…" : "Aprovar"}
                 </button>
               )}
               <button onClick={() => setShowReject(true)} disabled={actionLoading}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                style={{ background: "#FEE2E2", color: "#DC2626", border: "none", cursor: actionLoading ? "default" : "pointer" }}>
+                style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "none", cursor: actionLoading ? "default" : "pointer" }}>
                 <XCircle size={13} />
                 Rejeitar
               </button>
@@ -908,7 +911,7 @@ export function PurchaseRequestDetailDrawer({
               <div className="flex items-center gap-2">
                 <button onClick={handleReject} disabled={actionLoading}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: "#DC2626", color: "#FFF", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
+                  style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
                   {actionLoading ? "Rejeitando…" : "Confirmar rejeição"}
                 </button>
                 <button onClick={() => { setShowReject(false); setRejectReason(""); }} disabled={actionLoading}
@@ -930,7 +933,7 @@ export function PurchaseRequestDetailDrawer({
           handleMoveStage nessa combinação (isPending && !canApprove) não
           aparecia em lugar nenhum — achado ao ampliar quem pode agir aqui. */}
       {!(isPending && canApprove) && actionError && (
-        <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{actionError}</div>
+        <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{actionError}</div>
       )}
 
       {!isRejected && !isPending && movableStages.length > 0 && (

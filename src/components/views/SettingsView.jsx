@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
-  ShieldCheck,
+  ShieldCheck, Image, Upload, PanelBottom, Menu as MenuIcon,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { AvatarCropModal } from "../shared/AvatarCropModal";
@@ -16,8 +16,23 @@ import {
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
+import { useChatStickers } from "../../hooks/use-chat-stickers";
 import { callAI } from "../../hooks/use-ai";
 import { friendlyAiErrorMessage } from "../../utils/ai-errors";
+import { useBottomNavPrefs, BOTTOM_NAV_MAX_SHORTCUTS } from "../../hooks/use-bottom-nav-prefs";
+import { getRoleTabs, flattenNavGroups } from "../shell/MobileBottomNav";
+
+// Mesmo critério de quem cria canal no Chat (chat_is_manager, migration
+// 20260812_chat_interno_fase1.sql) — replicado aqui (2ª ocorrência, também em
+// ChatView.jsx) porque nenhuma das flags de gestor já calculadas em App.jsx
+// (isManager/isMarketingManager/isRHManager/isComexManager) mapeia 1:1 pro
+// conjunto de roles do chat_is_manager (isComexManager, por exemplo, inclui
+// "comex" puro, que não é gestor pro Chat).
+const CHAT_MANAGER_ROLES = ["admin", "gerente", "gerente_marketing", "gerente_rh", "diretoria"];
+function isChatManagerUser(user) {
+  const roles = Array.isArray(user?.roles) ? user.roles : (user?.role ? [user.role] : []);
+  return roles.some(r => CHAT_MANAGER_ROLES.includes(r));
+}
 
 function Section({ title, description, children }) {
   return (
@@ -54,7 +69,7 @@ function CopyLinkButton({ url, className, style }) {
       className={className}
       style={{
         ...style,
-        ...(copied ? { background: "#DCFCE7", color: "#15803D", borderColor: "#BBF7D0" } : {}),
+        ...(copied ? { background: "var(--success-bg)", color: "var(--success)", borderColor: "color-mix(in srgb, var(--success) 35%, transparent)" } : {}),
       }}
       title={url}
     >
@@ -137,7 +152,7 @@ function ExportAuditPanel() {
             </thead>
             <tbody>
               {rows.map(r => (
-                <tr key={r.id} style={{ borderTop: "1px solid #F0F0F0" }}>
+                <tr key={r.id} style={{ borderTop: "1px solid var(--border)" }}>
                   <td className="py-1.5" style={{ color: "var(--text)" }}>{r.profiles?.name || "—"}</td>
                   <td className="py-1.5" style={{ color: "var(--text)" }}>{EXPORT_DOMAIN_LABEL[r.domain] || r.domain}</td>
                   <td className="py-1.5" style={{ color: "var(--text-dim)" }}>{r.record_count}</td>
@@ -148,6 +163,291 @@ function ExportAuditPanel() {
           </table>
         </div>
       )}
+    </Section>
+  );
+}
+
+// Painel de gestão de figurinhas do Chat interno — pacote único/global (sem
+// company_id, decisão do Daniel). `includeInactive: true` porque o gestor
+// precisa ver o que já foi desativado sem reativar às cegas (mesma regra da
+// policy de SELECT em chat_stickers).
+function StickersPanel() {
+  const { stickers, loading, error, uploadSticker, toggleStickerActive, deleteSticker, getPublicUrl } =
+    useChatStickers({ includeInactive: true });
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const inputRef = useRef(null);
+
+  const handleFiles = useCallback(async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      for (const file of files) {
+        if (!["image/png", "image/webp"].includes(file.type)) {
+          setUploadError("Só são aceitos arquivos PNG ou WEBP.");
+          continue;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+          setUploadError("Cada figurinha pode ter no máximo 2 MB.");
+          continue;
+        }
+        await uploadSticker(file);
+      }
+    } catch (e) {
+      setUploadError(e.message || "Erro ao enviar figurinha.");
+    } finally {
+      setUploading(false);
+    }
+  }, [uploadSticker]);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  }, [handleFiles]);
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await deleteSticker(confirmDelete.id);
+      setConfirmDelete(null);
+    } catch (e) {
+      setUploadError(e.message || "Erro ao excluir figurinha.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <>
+      <Section
+        title="Figurinhas do Chat"
+        description="Pacote único, compartilhado por toda a plataforma — não é por empresa. Todo colaborador vê as ativas no composer do Chat."
+      >
+        <div
+          className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 p-5 cursor-pointer transition-colors mb-4"
+          style={{
+            borderColor: dragOver ? "var(--accent)" : "var(--border-strong)",
+            background: dragOver ? "var(--accent-tint)" : "var(--surface-alt)",
+          }}
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+          aria-label="Clique ou arraste imagens para adicionar figurinhas"
+        >
+          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: dragOver ? "var(--accent-tint)" : "var(--surface-alt)" }}>
+            <Upload size={16} style={{ color: dragOver ? "var(--accent)" : "var(--text-dim)" }} />
+          </div>
+          <div className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
+            {uploading ? (
+              <span style={{ color: "var(--accent)" }}>Enviando…</span>
+            ) : (
+              <>
+                <span className="font-semibold" style={{ color: "var(--text)" }}>Clique ou arraste</span>{" "}
+                para adicionar uma figurinha
+                <div className="mt-0.5">Recomendado: quadrado, fundo transparente, até 512×512 · PNG ou WEBP, máx 2 MB</div>
+              </>
+            )}
+          </div>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            accept="image/png,image/webp"
+            className="hidden"
+            onChange={e => { if (e.target.files?.length) { handleFiles(e.target.files); e.target.value = ""; } }}
+          />
+        </div>
+
+        {uploadError && (
+          <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+            <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+            {uploadError}
+          </div>
+        )}
+
+        {error && (
+          <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>Carregando…</div>
+        ) : stickers.length === 0 ? (
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma figurinha cadastrada ainda.</div>
+        ) : (
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
+            {stickers.map(s => (
+              <div
+                key={s.id}
+                className="rounded-xl border p-3 flex flex-col gap-2"
+                style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={getPublicUrl(s.image_path)}
+                    alt={s.name}
+                    className="shrink-0"
+                    style={{ width: 44, height: 44, objectFit: "contain", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)" }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate text-sm font-semibold" style={{ color: "var(--text)" }}>{s.name}</div>
+                    <div className="text-xs" style={{ color: s.active ? "var(--success)" : "var(--text-faint)" }}>
+                      {s.active ? "Ativa" : "Inativa"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setConfirmDelete(s)}
+                    title="Excluir figurinha"
+                    aria-label="Excluir figurinha"
+                    className="p-1.5 rounded-lg transition-colors shrink-0"
+                    style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <ToggleRow
+                  label="Ativa no picker do Chat"
+                  checked={s.active}
+                  onChange={() => toggleStickerActive(s.id, !s.active)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Modal open={Boolean(confirmDelete)} onClose={() => setConfirmDelete(null)} title="Excluir figurinha?" width={400}>
+        <div className="p-6">
+          <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>
+            "{confirmDelete?.name}" será removida definitivamente — some do picker de todo mundo e o arquivo é apagado do armazenamento. Essa ação não pode ser desfeita.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmDelete(null)}
+              className="px-4 py-2 rounded-lg text-sm font-semibold border"
+              style={{ borderColor: "var(--border)", color: "var(--text)" }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="px-4 py-2 rounded-lg text-sm font-semibold"
+              style={{ background: "var(--danger)", color: "var(--on-danger)", opacity: deleting ? 0.6 : 1 }}
+            >
+              {deleting ? "Excluindo…" : "Excluir"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+// Escolha de até 4 atalhos da barra inferior mobile — localStorage por
+// usuário (docs/design-spec-atalhos-barra-inferior.md), sem tabela nova.
+// Sem seleção salva = comportamento atual (`getRoleTabs`), ninguém é afetado
+// até customizar. Limite de 4: opção não marcada fica desabilitada quando o
+// limite já foi atingido (mais simples de implementar sem risco de reordenar
+// a seleção do usuário à sua revelia).
+function BottomNavPrefsPanel({ currentUser, roles, navGroups }) {
+  const { selectedIds, setSelectedIds } = useBottomNavPrefs(currentUser?.id);
+  const items = useMemo(() => Array.from(flattenNavGroups(navGroups).values()), [navGroups]);
+  const defaultIds = useMemo(() => getRoleTabs(roles, navGroups).map(t => t.id), [roles, navGroups]);
+  const [draft, setDraft] = useState(() => (selectedIds && selectedIds.length ? selectedIds : defaultIds));
+  const [saved, setSaved] = useState(false);
+
+  const toggle = (id) => {
+    setSaved(false);
+    setDraft(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= BOTTOM_NAV_MAX_SHORTCUTS) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const previewItems = draft.map(id => items.find(i => i.id === id)).filter(Boolean);
+
+  return (
+    <Section
+      title="Barra inferior (mobile)"
+      description="Escolha até 4 atalhos fixos na barra de navegação do celular. 'Menu' continua sempre disponível como 5º item, com o restante das telas liberadas pro seu cargo."
+    >
+      <div className="rounded-xl border mb-4 overflow-hidden" style={{ borderColor: "var(--border)" }}>
+        <div className="flex" style={{ background: "var(--surface-alt)" }}>
+          {previewItems.map(({ id, label, icon: Icon }) => (
+            <div key={id} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 min-w-0">
+              <Icon size={20} strokeWidth={2.3} style={{ color: "var(--accent)" }} />
+              <span className="truncate" style={{ fontSize: 10, fontWeight: 600, color: "var(--accent)", maxWidth: "100%" }}>{label}</span>
+            </div>
+          ))}
+          {Array.from({ length: Math.max(0, BOTTOM_NAV_MAX_SHORTCUTS - previewItems.length) }).map((_, i) => (
+            <div key={`empty-${i}`} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5">
+              <div style={{ width: 20, height: 20, borderRadius: 6, border: "1.5px dashed var(--border-strong)" }} />
+            </div>
+          ))}
+          <div className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5">
+            <MenuIcon size={20} style={{ color: "var(--text-dim)" }} />
+            <span style={{ fontSize: 10, fontWeight: 500, color: "var(--text-dim)" }}>Menu</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="text-xs mb-2" style={{ color: "var(--text-dim)" }}>
+        {draft.length}/{BOTTOM_NAV_MAX_SHORTCUTS} selecionados
+      </div>
+
+      <div className="mb-4" style={{ maxHeight: 320, overflowY: "auto" }}>
+        {items.map(({ id, label, icon: Icon }) => {
+          const checked = draft.includes(id);
+          const limitReached = !checked && draft.length >= BOTTOM_NAV_MAX_SHORTCUTS;
+          return (
+            <label
+              key={id}
+              className="flex items-center justify-between gap-3 py-2 px-1 rounded-lg"
+              style={{ opacity: limitReached ? 0.45 : 1, cursor: limitReached ? "not-allowed" : "pointer" }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Icon size={16} style={{ color: "var(--text-dim)" }} />
+                <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{label}</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={limitReached}
+                onChange={() => toggle(id)}
+                className="w-4 h-4 shrink-0"
+                style={{ accentColor: "var(--accent)", cursor: limitReached ? "not-allowed" : "pointer" }}
+              />
+            </label>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button onClick={() => { setSelectedIds(draft); setSaved(true); }}>
+          Salvar
+        </Button>
+        {saved && (
+          <span className="text-xs flex items-center gap-1" style={{ color: "var(--success)" }}>
+            <Check size={13} /> Salvo
+          </span>
+        )}
+      </div>
     </Section>
   );
 }
@@ -164,9 +464,13 @@ const ROLE_LABEL = {
   gerente_rh:        "Gerente de RH",
 };
 
+// "Vermelho" (vermelho da marca, Manual v4.0) é o preset 0 — vira o default
+// de fato desde que virou o token --accent padrão em index.css (03/08/2026).
+// "Carvão" continua disponível pra quem preferir neutro, só deixou de ser o
+// primeiro da lista.
 const ACCENT_PRESETS = [
+  { label: "Vermelho",  value: "#CC2936", hover: "#8B0000" },
   { label: "Carvão",    value: "#37352F", hover: "#2A2925" },
-  { label: "Vermelho",  value: "#C7212B", hover: "#8B1419" },
   { label: "Verde",     value: "#16A34A", hover: "#15803D" },
   { label: "Azul",      value: "#1D4ED8", hover: "#1E3A8A" },
   { label: "Roxo",      value: "#7C3AED", hover: "#6D28D9" },
@@ -174,14 +478,14 @@ const ACCENT_PRESETS = [
   { label: "Rosa",      value: "#DB2777", hover: "#BE185D" },
 ];
 
+// Antes só aplicava no claro (`if (!isDark)`) — mesmo bug do TopBar.jsx: um
+// acento customizado sumia ao entrar no escuro, revertendo pro default do
+// CSS. Aplicar sempre faz a escolha persistir nos dois temas.
 function applyAccentGlobal(accent, hover) {
-  const isDark = document.documentElement.dataset.theme === "dark";
   localStorage.setItem("sanwey-accent", accent);
   localStorage.setItem("sanwey-accent-hover", hover);
-  if (!isDark) {
-    document.documentElement.style.setProperty("--accent", accent);
-    document.documentElement.style.setProperty("--accent-hover", hover);
-  }
+  document.documentElement.style.setProperty("--accent", accent);
+  document.documentElement.style.setProperty("--accent-hover", hover);
 }
 
 // Personal tabs available to every authenticated user.
@@ -191,6 +495,13 @@ const PERSONAL_TABS = [
   { id: "ia",            label: "Integrações IA",  icon: Bot     },
   { id: "aparencia",     label: "Aparência",       icon: Palette },
 ];
+
+// Escolha da barra inferior mobile é relevante pra todo cargo (a barra
+// aparece pra qualquer um em telas <lg, gerente incluso) — empurrada
+// explicitamente nos dois ramos de `tabs` abaixo, mesmo padrão já usado
+// pra "Figurinhas" (isChatManager), em vez de depender do spread de
+// PERSONAL_TABS (que hoje já não repassa "Aparência" pro ramo gerente).
+const ATALHOS_TAB = { id: "atalhos", label: "Barra inferior", icon: PanelBottom };
 
 // Manager-only tabs added on top of the personal ones.
 const MANAGER_TABS = [
@@ -205,22 +516,29 @@ export function SettingsView({
   onLoadAllDemoData, demoDataLoading = false, demoDataCounts = null,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
   usersPanel, isManager = false, isMarketingManager = false, isRHManager = false, isComexManager = false, isAdmin = false,
+  roles, navGroups,
 }) {
   // Painel Executivo não é mais exclusivo do gerente Comercial — gerente de
   // Marketing/RH/Comex também acessa a aba Preferências, só que só enxerga
   // (e só mexe n)o próprio recorte de widgets do Painel Executivo lá dentro.
   const canSeeExecutive = isManager || isMarketingManager || isRHManager || isComexManager;
+  const isChatManager = isChatManagerUser(currentUser);
   const [activeTab, setActiveTab] = useState("perfil");
   const tabs = useMemo(() => {
-    if (!isManager && !canSeeExecutive) return PERSONAL_TABS;
-    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Usuários
+    if (!isManager && !canSeeExecutive) {
+      const base = isChatManager ? [...PERSONAL_TABS, { id: "figurinhas", label: "Figurinhas", icon: Image }] : PERSONAL_TABS;
+      return [...base, ATALHOS_TAB];
+    }
+    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Figurinhas, Barra inferior, Usuários
     const list = [PERSONAL_TABS[0]];
     list.push(MANAGER_TABS[0]);
     list.push(PERSONAL_TABS[1], PERSONAL_TABS[2]);
     if (isManager) list.push(MANAGER_TABS[1], MANAGER_TABS[2]);
+    if (isChatManager) list.push({ id: "figurinhas", label: "Figurinhas", icon: Image });
+    list.push(ATALHOS_TAB);
     if (isAdmin) list.push({ id: "seguranca", label: "Segurança", icon: ShieldCheck });
     return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
-  }, [isManager, canSeeExecutive, usersPanel, isAdmin]);
+  }, [isManager, canSeeExecutive, usersPanel, isAdmin, isChatManager]);
 
   // ── Vagas públicas (Recrutamento) ─────────────────────────────────────
   // rh_vagas vem cru (snake_case) de useRHRecrutamento — sem mapper camelCase.
@@ -235,10 +553,10 @@ export function SettingsView({
 
   // ── Appearance / theme colors ────────────────────────────────────────
   const [accentColor, setAccentColor] = useState(
-    () => localStorage.getItem("sanwey-accent") || "#37352F"
+    () => localStorage.getItem("sanwey-accent") || "#CC2936"
   );
   const [hoverColor, setHoverColor] = useState(
-    () => localStorage.getItem("sanwey-accent-hover") || "#2A2925"
+    () => localStorage.getItem("sanwey-accent-hover") || "#8B0000"
   );
 
   const handleAccentPreset = (preset) => {
@@ -723,7 +1041,7 @@ export function SettingsView({
                       style={{
                         background: profileFeedback.type === "success" ? "var(--success-bg)" : "var(--danger-bg)",
                         color: profileFeedback.type === "success" ? "var(--success)" : "var(--danger)",
-                        border: `1px solid ${profileFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
+                        border: `1px solid ${profileFeedback.type === "success" ? "color-mix(in srgb, var(--success) 35%, transparent)" : "color-mix(in srgb, var(--danger) 35%, transparent)"}`,
                       }}
                     >
                       {profileFeedback.type === "success" ? <Check size={13} /> : <AlertTriangle size={13} />}
@@ -784,7 +1102,7 @@ export function SettingsView({
                       style={{
                         background: passwordFeedback.type === "success" ? "var(--success-bg)" : "var(--danger-bg)",
                         color: passwordFeedback.type === "success" ? "var(--success)" : "var(--danger)",
-                        border: `1px solid ${passwordFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
+                        border: `1px solid ${passwordFeedback.type === "success" ? "color-mix(in srgb, var(--success) 35%, transparent)" : "color-mix(in srgb, var(--danger) 35%, transparent)"}`,
                       }}
                     >
                       {passwordFeedback.type === "success" ? <Check size={13} /> : <AlertTriangle size={13} />}
@@ -875,7 +1193,7 @@ export function SettingsView({
                     title="Widgets do Painel Executivo"
                     description="Cada gerente de departamento só vê (e só escolhe) o próprio recorte do Painel Executivo."
                   >
-                    <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                       {EXECUTIVE_WIDGETS
                         .filter(w =>
                           (w.dept === "comercial" && isManager) ||
@@ -899,7 +1217,7 @@ export function SettingsView({
                   title="Etapas visíveis no Kanban"
                   description="Esconda etapas que você não usa no dia a dia."
                 >
-                  <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                  <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                     {DEFAULT_PIPELINE_STAGES.map(s => {
                       const checked = settings.visibleKanbanStages.includes(s.id);
                       // Última etapa visível não pode ser escondida — antes o
@@ -933,7 +1251,7 @@ export function SettingsView({
                   <div>
                     <div
                       className="pb-2 mb-1 border-b"
-                      style={{ borderColor: "#F0F0F0" }}
+                      style={{ borderColor: "var(--border)" }}
                     >
                       <span
                         className="font-bold tracking-wide"
@@ -942,7 +1260,7 @@ export function SettingsView({
                         Menções
                       </span>
                     </div>
-                    <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                       <ToggleRow
                         label="Notificar quando alguém me mencionar (@)"
                         sublabel="Ativado por padrão. Desative se não quiser receber notificação de @menção em comentários."
@@ -966,7 +1284,7 @@ export function SettingsView({
                       <div key={group.id}>
                         <div
                           className="pb-2 mb-1 border-b flex items-center justify-between"
-                          style={{ borderColor: "#F0F0F0" }}
+                          style={{ borderColor: "var(--border)" }}
                         >
                           <span
                             className="font-bold tracking-wide"
@@ -991,7 +1309,7 @@ export function SettingsView({
                             );
                           })()}
                         </div>
-                        <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                        <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                           {group.items.map(n => (
                             <ToggleRow
                               key={n.id}
@@ -1201,8 +1519,9 @@ export function SettingsView({
                         disabled={aiSaving}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
                         style={{
-                          background: aiSaving ? "#E5E7EB" : "var(--color-industria)",
+                          background: "var(--color-industria)",
                           border: "none",
+                          opacity: aiSaving ? 0.6 : 1,
                           cursor: aiSaving ? "wait" : "pointer",
                         }}
                       >
@@ -1252,7 +1571,7 @@ export function SettingsView({
                           {d4signStatus.configured ? "Configurado e ativo" : "Não configurado"}
                         </span>
                         {d4signStatus.configured && d4signStatus.sandbox && (
-                          <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                          <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
                             SANDBOX
                           </span>
                         )}
@@ -1416,11 +1735,16 @@ export function SettingsView({
               </div>
             )}
 
+            {/* ── ATALHOS DA BARRA INFERIOR (mobile) ── */}
+            {activeTab === "atalhos" && (
+              <BottomNavPrefsPanel currentUser={currentUser} roles={roles} navGroups={navGroups} />
+            )}
+
             {/* ── DADOS ── */}
             {activeTab === "dados" && (
               <div className="space-y-4">
                 {!supabaseEnabled && (
-                  <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid #FCD34D" }}>
+                  <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}>
                     Modo offline — dados armazenados localmente neste navegador.
                   </div>
                 )}
@@ -1435,13 +1759,13 @@ export function SettingsView({
                       Carregar dados de demonstração
                     </Button>
                   </div>
-                  <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+                  <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t" style={{ borderColor: "var(--border)" }}>
                     <Button
                       variant="ghost"
                       icon={Trash2}
                       onClick={handleClearLeads}
                       disabled={leadsCount === 0}
-                      style={{ color: "var(--danger)", borderColor: "#FECACA" }}
+                      style={{ color: "var(--danger)", borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}
                     >
                       Limpar todos os leads
                     </Button>
@@ -1465,7 +1789,7 @@ export function SettingsView({
                     description="Popula campanhas, entregas, despesas, solicitações e funcionários fictícios para explorar todas as áreas da plataforma."
                   >
                     {demoDataCounts && (
-                      <div className="mb-3 p-3 rounded-lg text-xs" style={{ background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0" }}>
+                      <div className="mb-3 p-3 rounded-lg text-xs" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}>
                         <strong>Carregado com sucesso:</strong>{" "}
                         {demoDataCounts.campaigns} campanhas,{" "}
                         {demoDataCounts.deliverables} entregas,{" "}
@@ -1498,7 +1822,7 @@ export function SettingsView({
                 >
                   <div
                     className="p-3.5 rounded-lg mb-4 flex items-start gap-2.5 text-xs"
-                    style={{ background: NEUTRAL.amber + "15" || "#FFF7ED", borderLeft: "3px solid var(--amber)", color: "var(--amber)" }}
+                    style={{ background: "var(--amber-bg)", borderLeft: "3px solid var(--amber)", color: "var(--amber)" }}
                   >
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                     <span className="leading-relaxed">
@@ -1521,7 +1845,7 @@ export function SettingsView({
                 <div className="space-y-6">
                   {/* ── Leads (Comercial) ── */}
                   <div>
-                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "var(--border)" }}>
                       <span
                         className="font-bold tracking-wide"
                         style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
@@ -1580,7 +1904,7 @@ export function SettingsView({
 
                   {/* ── Solicitações internas (Marketing) ── */}
                   <div>
-                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "var(--border)" }}>
                       <span
                         className="font-bold tracking-wide"
                         style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
@@ -1614,7 +1938,7 @@ export function SettingsView({
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
-                            style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                            style={{ background: "var(--accent)", color: "var(--on-accent)", textDecoration: "none" }}
                           >
                             <ExternalLink size={12} />
                             Abrir
@@ -1648,7 +1972,7 @@ export function SettingsView({
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
-                            style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                            style={{ background: "var(--accent)", color: "var(--on-accent)", textDecoration: "none" }}
                           >
                             <ExternalLink size={12} />
                             Abrir
@@ -1663,7 +1987,7 @@ export function SettingsView({
 
                   {/* ── Recrutamento (Vagas públicas) ── */}
                   <div>
-                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "var(--border)" }}>
                       <span
                         className="font-bold tracking-wide"
                         style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
@@ -1714,7 +2038,7 @@ export function SettingsView({
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
-                                    style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                                    style={{ background: "var(--accent)", color: "var(--on-accent)", textDecoration: "none" }}
                                   >
                                     <ExternalLink size={12} />
                                     Abrir
@@ -1731,6 +2055,9 @@ export function SettingsView({
                 </div>
               </Section>
             )}
+
+            {/* ── FIGURINHAS (chat_is_manager) ── */}
+            {activeTab === "figurinhas" && isChatManager && <StickersPanel />}
 
             {/* ── SEGURANÇA (admin) ── */}
             {activeTab === "seguranca" && isAdmin && (
@@ -1760,7 +2087,7 @@ export function SettingsView({
           </p>
           <div
             className="p-3 rounded-lg text-xs flex items-start gap-2"
-            style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}
+            style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
           >
             <AlertTriangle size={13} className="shrink-0 mt-0.5" />
             <span>Dados sincronizados com o Supabase serão excluídos do banco de dados permanentemente.</span>
@@ -1792,9 +2119,10 @@ export function SettingsView({
             <button
               onClick={handleClearConfirm}
               disabled={clearTyped !== "LIMPAR"}
-              className="px-4 py-2 text-sm rounded-lg font-semibold text-white transition-opacity"
+              className="px-4 py-2 text-sm rounded-lg font-semibold transition-opacity"
               style={{
                 background: "var(--danger)",
+                color: "var(--on-danger)",
                 opacity: clearTyped === "LIMPAR" ? 1 : 0.4,
                 cursor: clearTyped === "LIMPAR" ? "pointer" : "not-allowed",
                 border: "none",

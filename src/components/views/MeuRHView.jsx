@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useMyColaborador } from "../../hooks/use-my-colaborador";
-import { useServerNotifications } from "../../hooks/use-server-notifications";
 import { RHOnboardingView } from "./RHOnboardingView";
 import { RHTreinamentosView } from "./RHTreinamentosView";
 import { RHFeedbackView } from "./RHFeedbackView";
@@ -37,8 +36,12 @@ const STATUS_INFO = {
   recusado: { label: "Recusado", bg: "var(--danger-bg)",  text: "var(--danger)" },
 };
 
-function ComunicadosPanel({ currentUser }) {
-  const { notifications, markRead } = useServerNotifications({ currentUser });
+// notifications/markRead vêm por prop (do useServerNotifications já chamado
+// em App.jsx), não de uma 2ª chamada do hook aqui — App.jsx assina o canal
+// Realtime "notifications_<userId>" globalmente; uma 2ª assinatura com o
+// mesmo nome de canal, ao montar esta tela, derrubava o app inteiro com
+// "cannot add 'postgres_changes' callback ... after 'subscribe()'".
+function ComunicadosPanel({ notifications, markRead }) {
   const comunicados = useMemo(
     () => notifications.filter(n => n.type === "comunicado" || n.type === "comunicado_importante"),
     [notifications]
@@ -72,7 +75,11 @@ function ComunicadosPanel({ currentUser }) {
   );
 }
 
-function SolicitarFeriasForm({ currentUser, onCreated }) {
+// colaboradorId (rh_colaboradores.id), NÃO o id do profile: a FK de
+// rh_ferias.user_id foi migrada pra rh_colaboradores em 20260787, e as
+// policies de read/insert comparam por essa coluna. Gravar o id do profile
+// aqui violava a FK e fazia a lista voltar sempre vazia.
+function SolicitarFeriasForm({ colaboradorId, onCreated }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState("ferias");
   const [startDate, setStartDate] = useState("");
@@ -87,7 +94,7 @@ function SolicitarFeriasForm({ currentUser, onCreated }) {
     setSaving(true);
     setError(null);
     const { error: err } = await supabase.from("rh_ferias").insert({
-      user_id: currentUser.id,
+      user_id: colaboradorId,
       type,
       start_date: startDate,
       end_date: endDate,
@@ -106,7 +113,7 @@ function SolicitarFeriasForm({ currentUser, onCreated }) {
       <button
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 font-semibold"
-        style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "none", cursor: "pointer", marginBottom: 16 }}
+        style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "none", cursor: "pointer", marginBottom: 16 }}
       >
         <Plus size={14} /> Solicitar férias/afastamento
       </button>
@@ -144,7 +151,7 @@ function SolicitarFeriasForm({ currentUser, onCreated }) {
         <button
           onClick={handleSubmit}
           disabled={saving}
-          style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}
+          style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}
         >
           {saving && <Loader2 size={12} className="animate-spin" />} Enviar solicitação
         </button>
@@ -156,21 +163,21 @@ function SolicitarFeriasForm({ currentUser, onCreated }) {
   );
 }
 
-function MeuFeriasPanel({ currentUser, admissionDate }) {
+function MeuFeriasPanel({ colaboradorId, admissionDate }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRequests = React.useCallback(async () => {
-    if (!isSupabaseConfigured || !currentUser?.id) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !colaboradorId) { setLoading(false); return; }
     setLoading(true);
     const { data } = await supabase
       .from("rh_ferias")
       .select("*")
-      .eq("user_id", currentUser.id)
+      .eq("user_id", colaboradorId)
       .order("start_date", { ascending: false });
     setRequests(data || []);
     setLoading(false);
-  }, [currentUser?.id]);
+  }, [colaboradorId]);
 
   React.useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
@@ -187,7 +194,7 @@ function MeuFeriasPanel({ currentUser, admissionDate }) {
           </span>
         </div>
       )}
-      <SolicitarFeriasForm currentUser={currentUser} onCreated={fetchRequests} />
+      <SolicitarFeriasForm colaboradorId={colaboradorId} onCreated={fetchRequests} />
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : requests.length === 0 ? (
@@ -327,7 +334,7 @@ function EditEnderecoForm({ colaboradorId, currentUserId, meuColaborador, onSubm
         ))}
       </div>
       <div className="flex gap-2">
-        <button onClick={submit} disabled={saving} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+        <button onClick={submit} disabled={saving} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
           {saving ? "Enviando…" : "Enviar solicitação"}
         </button>
         <button onClick={() => setOpen(false)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-dim)", borderRadius: 8, padding: "5px 12px", fontSize: 12, cursor: "pointer" }}>
@@ -405,7 +412,7 @@ function MeusDadosPanel({ meuColaborador, currentUser }) {
           <div key={key}>
             <div className="flex items-center gap-1.5">
               <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
-              <EditFieldInline colaboradorId={meuColaborador.id} currentUserId={currentUser.id} dbField={dbField} currentValue={meuColaborador[key]} onSubmitted={bump} />
+              <EditFieldInline colaboradorId={meuColaborador.id} currentUserId={currentUser?.id} dbField={dbField} currentValue={meuColaborador[key]} onSubmitted={bump} />
             </div>
             <div style={{ fontSize: 13, color: "var(--text)", marginTop: 2 }}>{meuColaborador[key] || "—"}</div>
           </div>
@@ -413,7 +420,7 @@ function MeusDadosPanel({ meuColaborador, currentUser }) {
         <div style={{ gridColumn: "1 / -1" }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Endereço</div>
           <div style={{ fontSize: 13, color: "var(--text)", marginTop: 2, marginBottom: 6 }}>{endereco || "—"}</div>
-          <EditEnderecoForm colaboradorId={meuColaborador.id} currentUserId={currentUser.id} meuColaborador={meuColaborador} onSubmitted={bump} />
+          <EditEnderecoForm colaboradorId={meuColaborador.id} currentUserId={currentUser?.id} meuColaborador={meuColaborador} onSubmitted={bump} />
         </div>
       </div>
       <MinhasSolicitacoesList currentUser={currentUser} refreshKey={refreshKey} />
@@ -425,7 +432,7 @@ function MeusDadosPanel({ meuColaborador, currentUser }) {
   );
 }
 
-export function MeuRHView({ currentUser, notifyMentions }) {
+export function MeuRHView({ currentUser, notifyMentions, notifications, markNotificationRead }) {
   const [tab, setTab] = useState("comunicados");
   const { meuColaborador } = useMyColaborador(currentUser);
 
@@ -461,11 +468,11 @@ export function MeuRHView({ currentUser, notifyMentions }) {
         })}
       </div>
 
-      {tab === "comunicados" && <ComunicadosPanel currentUser={currentUser} />}
+      {tab === "comunicados" && <ComunicadosPanel notifications={notifications} markRead={markNotificationRead} />}
       {tab === "onboarding" && <RHOnboardingView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
       {tab === "treinamentos" && <RHTreinamentosView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
       {tab === "avaliacao" && <RHFeedbackView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
-      {tab === "ferias" && <MeuFeriasPanel currentUser={currentUser} admissionDate={meuColaborador?.admissionDate} />}
+      {tab === "ferias" && <MeuFeriasPanel colaboradorId={meuColaborador?.id} admissionDate={meuColaborador?.admissionDate} />}
       {tab === "documentos" && (
         meuColaborador ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>

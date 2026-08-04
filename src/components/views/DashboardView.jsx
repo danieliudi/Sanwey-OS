@@ -230,7 +230,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
             {totalTasks > 0 && ` · ${totalTasks} pendência${totalTasks !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
           <Button
             variant="secondary"
             icon={RefreshCcw}
@@ -268,33 +268,33 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
           <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
         ) : (
           <div
-            className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible"
+            className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:grid-cols-4 lg:gap-7 lg:overflow-visible lg:pb-[22px] lg:mb-[26px] lg:border-b lg:border-[var(--border)]"
             style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
           >
             {widgetVisible("leads_count") && (
               <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
                 <StatCard icon={Target} value={scopedLeads.length}
                   label={isManager ? (isGroupView ? "Leads no grupo" : "Leads da empresa") : "Meus leads"}
-                  trend={mom.leads.d} compact />
+                  trend={mom.leads.d} compact variant="ruler" />
               </div>
             )}
             {widgetVisible("pipeline_open") && (
               <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
                 <StatCard icon={HandCoins} value={formatK(stats.pipelineValue)}
                   label="Funil de Vendas aberto"
-                  sublabel={`${stats.openCount} oportunidades`} compact />
+                  sublabel={`${stats.openCount} oportunidades`} compact variant="ruler" />
               </div>
             )}
             {widgetVisible("won_value") && (
               <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
                 <StatCard icon={CheckCircle2} value={formatK(stats.wonValue)}
-                  label="Valor ganho" trend={mom.won.d} accent={accent} compact />
+                  label="Valor ganho" trend={mom.won.d} accent={accent} compact variant="ruler" />
               </div>
             )}
             {widgetVisible("avg_fit") && (
               <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
                 <StatCard icon={Gauge} value={stats.avgFit} label="Fit score médio"
-                  sublabel={`${stats.newCount} novos em 48h`} compact
+                  sublabel={`${stats.newCount} novos em 48h`} compact variant="ruler"
                   tooltip="Pontuação de 0 a 100 que indica o potencial do lead. Acima de 70 é considerado quente." />
               </div>
             )}

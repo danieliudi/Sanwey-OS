@@ -53,7 +53,13 @@ export default defineConfig({
         icons: [
           { src: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
           { src: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
-          { src: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          // Variante própria pro slot "maskable": o ícone normal tem fundo
+          // transparente e o círculo quase toca a borda do canvas — sem
+          // "safe zone", o mascaramento do próprio Android (que aplica sua
+          // forma por cima) cortava o círculo e mostrava a transparência
+          // como preto sólido. Fundo branco + círculo a ~78% do canvas
+          // (achado real, print do Daniel).
+          { src: "/android-chrome-512x512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
     }),

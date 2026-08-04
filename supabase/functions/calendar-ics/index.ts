@@ -65,13 +65,16 @@ Deno.serve(async (req: Request) => {
   const supabaseKey      = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const db = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
 
-  // Look up user by calendar_token
-  const { data: profile } = await db
-    .from("profiles")
-    .select("id, name, companies, role, roles")
+  // Look up user by calendar_token — token vive em `profile_secrets` desde
+  // a migration 20260819_sec_profile_secrets_split.sql (segurança: tirar
+  // segredo de coluna lida por linha inteira em profiles).
+  const { data: secret } = await db
+    .from("profile_secrets")
+    .select("id, profiles(id, name, companies, role, roles)")
     .eq("calendar_token", token)
     .maybeSingle();
 
+  const profile = secret?.profiles;
   if (!profile) {
     return new Response("Invalid token", { status: 401 });
   }

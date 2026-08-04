@@ -32,9 +32,9 @@ const TIPO_MOV = [
 const tipoMovLabel = (id) => TIPO_MOV.find((t) => t.id === id)?.label || id;
 
 const STATUS_INFO = {
-  pendente: { label: "Pendente", color: "var(--warning)", bg: "#FEF3C7", icon: Clock },
-  aprovado: { label: "Aprovado", color: "var(--success)", bg: "#DCFCE7", icon: Check },
-  recusado: { label: "Recusado", color: "var(--danger)", bg: "#FEE2E2", icon: XCircle },
+  pendente: { label: "Pendente", color: "var(--warning)", bg: "var(--warning-bg)", icon: Clock },
+  aprovado: { label: "Aprovado", color: "var(--success)", bg: "var(--success-bg)", icon: Check },
+  recusado: { label: "Recusado", color: "var(--danger)", bg: "var(--danger-bg)", icon: XCircle },
 };
 
 function fmt(dateStr) {
@@ -257,10 +257,10 @@ function CargoModal({ initialData, currentUser, onSave, onDelete, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving || deleting} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving || deleting} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Criar cargo"}
             </button>
             <button type="button" onClick={onClose} disabled={saving || deleting} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -391,10 +391,10 @@ function MovimentacaoModal({ colaboradores, cargos, onCreate, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Enviando…" : "Enviar para aprovação"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -471,7 +471,7 @@ function MovimentacaoCard({ mov, colaborador, isDirector, onAprovar, onRecusar, 
 
       {mov.status === "pendente" && isDirector && (
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button onClick={() => onAprovar(mov)} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+          <button onClick={() => onAprovar(mov)} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--success)", color: "var(--on-success)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
             <Check size={13} /> Aprovar
           </button>
           <button onClick={() => onRecusar(mov)} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--surface)", color: "var(--danger)", border: "1px solid var(--danger)", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
@@ -539,17 +539,18 @@ function MovimentacoesTableView({ movimentacoes, colaboradoresById, onDelete }) 
 
 // ── Menu de ações do card de cargo (kebab, affordance progressiva) ────────────
 
-function CargoCardMenu({ onEdit, onDelete }) {
+function CargoCardMenu({ onEdit, onDelete, busy }) {
   const [open, setOpen] = useState(false);
   const itemSt = { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "transparent", border: "none", cursor: "pointer", fontSize: 12, textAlign: "left" };
   return (
     <div style={{ position: "relative" }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        title="Ações do cargo"
-        style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", borderRadius: 6 }}
+        disabled={busy}
+        title={busy ? "Excluindo…" : "Ações do cargo"}
+        style={{ background: "transparent", border: "none", cursor: busy ? "default" : "pointer", color: "var(--text-dim)", padding: 4, display: "flex", borderRadius: 6, opacity: busy ? 0.5 : 1 }}
       >
-        <MoreVertical size={14} />
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <MoreVertical size={14} />}
       </button>
       {open && (
         <>
@@ -668,8 +669,14 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
   const handleDeleteCargo = async (cargo) => {
     if (!window.confirm(`Excluir o cargo "${cargo.name}"? Vagas que apontam pra ele deixam de ter o vínculo, mas não são apagadas.`)) return;
     setActionError(null);
+    // Sem feedback visual, o clique parecia travado até a lista atualizar
+    // sozinha (achado #7 do roteiro de treinamento de RH, 31/07/2026) — o
+    // delete já funcionava, só faltava o estado "ocupado" que as
+    // movimentações (busyId acima) já usam.
+    setBusyId(cargo.id);
     try { await deleteCargo(cargo.id); }
     catch (e) { setActionError(e?.message || "Erro ao excluir cargo."); }
+    finally { setBusyId(null); }
   };
 
   const handleDeleteMovimentacao = async (mov) => {
@@ -717,7 +724,7 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
         />
       </div>
 
-      {actionError && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{actionError}</div>}
+      {actionError && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{actionError}</div>}
 
       {tab === "cargos" ? (
         <>
@@ -772,7 +779,7 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
                   icon={<Briefcase size={cargoDensity === "list" ? 12 : 16} />}
                   title={c.name}
                   meta={[c.department, c.contract_type].filter(Boolean).join(" · ") || "—"}
-                  menu={canWrite ? <CargoCardMenu onEdit={() => setCargoModal({ data: c })} onDelete={() => handleDeleteCargo(c)} /> : null}
+                  menu={canWrite ? <CargoCardMenu onEdit={() => setCargoModal({ data: c })} onDelete={() => handleDeleteCargo(c)} busy={busyId === c.id} /> : null}
                   footer={fmtBanda(c.salary_min, c.salary_max)}
                 >
                   {c.description && (
@@ -821,14 +828,14 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
               <button
                 onClick={() => setMovViewMode("cards")}
                 className="flex items-center gap-1.5"
-                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "cards" ? "var(--accent)" : "transparent", color: movViewMode === "cards" ? "#FFF" : "var(--text-dim)" }}
+                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "cards" ? "var(--accent)" : "transparent", color: movViewMode === "cards" ? "var(--on-accent)" : "var(--text-dim)" }}
               >
                 <LayoutGrid size={13} /> Cards
               </button>
               <button
                 onClick={() => setMovViewMode("tabela")}
                 className="flex items-center gap-1.5"
-                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "tabela" ? "var(--accent)" : "transparent", color: movViewMode === "tabela" ? "#FFF" : "var(--text-dim)" }}
+                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "tabela" ? "var(--accent)" : "transparent", color: movViewMode === "tabela" ? "var(--on-accent)" : "var(--text-dim)" }}
               >
                 <List size={13} /> Tabela
               </button>

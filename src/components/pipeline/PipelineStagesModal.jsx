@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { CRMStageListManager } from "../shared/stage-editor/StageListManager";
+import { stageTextColor } from "../../utils/stage-colors";
 import { SellerPreviewModal } from "./SellerPreviewModal";
 
 /**
@@ -62,13 +63,13 @@ export function PipelineStagesModal({
       >
         <div
           className="rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col"
-          style={{ background: "#FFFFFF", maxHeight: "90vh" }}
+          style={{ background: "var(--surface)", maxHeight: "90vh" }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
           <div
             className="px-5 py-4 border-b flex items-start justify-between gap-3 flex-wrap"
-            style={{ borderColor: "#E5E7EB" }}
+            style={{ borderColor: "var(--border)" }}
           >
             <div>
               <div className="flex items-center gap-2">
@@ -145,7 +146,7 @@ export function PipelineStagesModal({
                           style={{
                             width: 22, height: 22,
                             background: stage.color + "18",
-                            color: stage.color,
+                            color: stageTextColor(stage.color),
                           }}
                         >
                           {stage.code}
@@ -154,8 +155,8 @@ export function PipelineStagesModal({
                           <span
                             className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
                             style={{
-                              background: stage.won ? "#E8F2EC" : "#FEF2F2",
-                              color: stage.won ? "#1A6E35" : "var(--danger)",
+                              background: stage.won ? "var(--success-bg)" : "var(--danger-bg)",
+                              color: stage.won ? "var(--success)" : "var(--danger)",
                             }}
                           >
                             {stage.won ? "Terminal" : "Perdido"}
@@ -211,7 +212,7 @@ export function PipelineStagesModal({
                     onClick={() => transitions.resetCompany(companyId)}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
                     style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.borderColor = "#FECACA"; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.borderColor = "color-mix(in srgb, var(--danger) 35%, transparent)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "var(--border)"; }}
                   >
                     <RotateCcw size={11} />
@@ -222,7 +223,7 @@ export function PipelineStagesModal({
 
               <div
                 className="px-4 py-2.5 flex items-start gap-2 text-xs border-b"
-                style={{ background: "#EFF6FF", borderColor: "#BFDBFE", color: "#1E40AF" }}
+                style={{ background: "color-mix(in srgb, #2563EB 12%, var(--surface))", borderColor: "color-mix(in srgb, #2563EB 35%, transparent)", color: "color-mix(in srgb, #2563EB 60%, var(--text))" }}
               >
                 <Info size={12} className="shrink-0 mt-0.5" />
                 <span>
@@ -230,7 +231,7 @@ export function PipelineStagesModal({
                 </span>
               </div>
 
-              <div className="divide-y" style={{ borderColor: "#F3F4F6" }}>
+              <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                 {sourceStages.map(fromStage => {
                   const allStageIds = safeStages.map(s => s.id);
                   const allowedDests = transitions.getAllowedDestinations(companyId, fromStage.id, allStageIds);
@@ -327,8 +328,8 @@ function StageRow({
         {/* Bulk actions — empilha abaixo do sm pra não ficar cortada pelo overflow-hidden do card pai */}
         <div className="flex items-center gap-1 flex-wrap w-full sm:w-auto sm:flex-nowrap sm:shrink-0">
           <BulkBtn onClick={onForwardOnly} icon={FastForward} label="Só avançar" tone={accent} />
-          <BulkBtn onClick={onSetAll}      icon={CheckCheck}   label="Permitir todas" tone="#047857" />
-          <BulkBtn onClick={onClearAll}    icon={Ban}          label="Bloquear todas" tone="#B91C1C" />
+          <BulkBtn onClick={onSetAll}      icon={CheckCheck}   label="Permitir todas" tone="var(--success)" />
+          <BulkBtn onClick={onClearAll}    icon={Ban}          label="Bloquear todas" tone="var(--danger)" />
           <button
             onClick={() => setExpanded(v => !v)}
             className="p-1 ml-1 cursor-pointer"
@@ -368,7 +369,7 @@ function BulkBtn({ onClick, icon: Icon, label, tone }) {
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = tone;
         e.currentTarget.style.color = tone;
-        e.currentTarget.style.background = tone + "0D";
+        e.currentTarget.style.background = `color-mix(in srgb, ${tone} 5%, transparent)`;
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = "var(--border)";
@@ -412,7 +413,7 @@ function DestPill({ stage, allowed, onClick }) {
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer"
       style={{
         background: "var(--surface-alt)",
-        color: "#9CA3AF",
+        color: "var(--text-faint)",
         border: "1px dashed var(--border-strong)",
         textDecoration: "line-through",
       }}
@@ -438,7 +439,7 @@ function PillSample({ allowed }) {
   ) : (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"
-      style={{ background: "var(--surface-alt)", color: "#9CA3AF", border: "1px dashed var(--border-strong)", textDecoration: "line-through" }}
+      style={{ background: "var(--surface-alt)", color: "var(--text-faint)", border: "1px dashed var(--border-strong)", textDecoration: "line-through" }}
     >
       <Lock size={9} /> bloq
     </span>

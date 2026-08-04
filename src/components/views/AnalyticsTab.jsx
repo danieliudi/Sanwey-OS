@@ -320,7 +320,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
             {stateData.length === 0 ? <EmptyState /> : (
               <ResponsiveContainer width="100%" height={Math.max(180, stateData.length * 28 + 50)}>
                 <BarChart data={stateData} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
-                  <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+                  <CartesianGrid stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={formatK} />
                   <YAxis dataKey="state" type="category" tick={{ fontSize: 11 }} width={28} />
                   <Tooltip formatter={v => formatK(v)} />
@@ -339,7 +339,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
             {cityData.length === 0 ? <EmptyState /> : (
               <ResponsiveContainer width="100%" height={Math.max(180, cityData.length * 28 + 50)}>
                 <BarChart data={cityData} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
-                  <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+                  <CartesianGrid stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={formatK} />
                   <YAxis dataKey="city" type="category" tick={{ fontSize: 10 }} width={90} />
                   <Tooltip formatter={v => formatK(v)} />
@@ -364,7 +364,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
             {sectorData.length === 0 ? <EmptyState /> : (
               <ResponsiveContainer width="100%" height={Math.max(180, sectorData.length * 28 + 50)}>
                 <BarChart data={sectorData} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
-                  <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+                  <CartesianGrid stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={formatK} />
                   <YAxis dataKey="sector" type="category" tick={{ fontSize: 10 }} width={120} />
                   <Tooltip formatter={v => formatK(v)} />
@@ -383,7 +383,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
             {skuData.length === 0 ? <EmptyState /> : (
               <ResponsiveContainer width="100%" height={Math.max(180, skuData.length * 28 + 50)}>
                 <BarChart data={skuData} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
-                  <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+                  <CartesianGrid stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={formatK} />
                   <YAxis dataKey="sku" type="category" tick={{ fontSize: 10 }} width={120} />
                   <Tooltip formatter={v => formatK(v)} />
@@ -447,7 +447,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                   layout="vertical"
                   margin={{ top: 4, right: 52, left: 4, bottom: 0 }}
                 >
-                  <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+                  <CartesianGrid stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} domain={[0, 100]} />
                   <YAxis dataKey="firstName" type="category" tick={{ fontSize: 11 }} width={72} />
                   <Tooltip formatter={v => `${v}%`} />

@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { TrendingUp } from "lucide-react";
 import { Eyebrow } from "./PanelHeading";
+import { AvatarStack } from "./AvatarStack";
 import { daysSince } from "../../utils/date";
 
 // Consolida as 3 cópias quase idênticas de `AnalyticsPanel` que existiam em
@@ -32,7 +33,53 @@ function MiniStat({ label, value, color }) {
   );
 }
 
-export function KanbanAnalyticsPanel({ stages, records, getStageKey, getStageEnteredAt, specificStats = [] }) {
+// "Atraso por responsável" (mockup aprovado com o Daniel): agrupa os
+// registros que JÁ estouraram o SLA pelo responsável real de cada um, em vez
+// de assumir um dono fixo por etapa. Só renderiza quando quem chama passa
+// `getOwnerIds` + `usersById` — board sem conceito de responsável
+// (Onboarding/Férias/Treinamentos) simplesmente não mostra a seção.
+function OwnerSlaTable({ rows }) {
+  const th = { textAlign: "left", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-faint)", padding: "0 10px 8px", borderBottom: "1px solid var(--border)" };
+  const td = { padding: 10, borderBottom: "1px solid var(--border)", fontSize: 13, color: "var(--text)" };
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={th}>Responsável</th>
+            <th style={{ ...th, textAlign: "right" }}>Registros com SLA estourado</th>
+            <th style={{ ...th, textAlign: "right" }}>Dias médios de atraso</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id}>
+              <td style={td}>
+                <div className="flex items-center gap-2">
+                  {r.user ? <AvatarStack users={[r.user]} size={22} /> : null}
+                  <span style={{ color: r.user ? "var(--text)" : "var(--text-dim)" }}>
+                    {r.user?.name || "Sem responsável atribuído"}
+                  </span>
+                </div>
+              </td>
+              <td style={{ ...td, textAlign: "right" }}>
+                <span
+                  className="inline-flex items-center justify-center font-bold"
+                  style={{ minWidth: 22, padding: "2px 7px", borderRadius: 999, background: "var(--danger-bg)", color: "var(--danger)", fontSize: 12 }}
+                >
+                  {r.count}
+                </span>
+              </td>
+              <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{r.avgOverdue}d</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function KanbanAnalyticsPanel({ stages, records, getStageKey, getStageEnteredAt, specificStats = [], getOwnerIds, usersById }) {
   const stageStats = useMemo(() => {
     const total = records.length;
     return stages.map(stage => {
@@ -65,6 +112,35 @@ export function KanbanAnalyticsPanel({ stages, records, getStageKey, getStageEnt
       overSla,
     };
   }, [records, stages, getStageKey, getStageEnteredAt]);
+
+  // Um registro com N responsáveis conta pra cada um — o atraso é
+  // compartilhado, não dividido. Sem responsável cai num balde próprio em vez
+  // de sumir da conta.
+  const ownerRows = useMemo(() => {
+    if (!getOwnerIds || !usersById) return [];
+    const byOwner = new Map();
+    for (const r of records) {
+      const enteredAt = getStageEnteredAt(r);
+      if (!enteredAt) continue;
+      const stage = stages.find((s) => s.key === getStageKey(r));
+      if (!stage?.slaDays) continue;
+      const days = daysSince(enteredAt);
+      if (days < stage.slaDays) continue;
+
+      const overdue = days - stage.slaDays;
+      const ids = (getOwnerIds(r) || []).filter(Boolean);
+      for (const id of ids.length > 0 ? ids : [null]) {
+        const key = id || "__none__";
+        const acc = byOwner.get(key) || { id: key, user: id ? usersById.get(id) : null, count: 0, overdueSum: 0 };
+        acc.count++;
+        acc.overdueSum += overdue;
+        byOwner.set(key, acc);
+      }
+    }
+    return [...byOwner.values()]
+      .map((o) => ({ ...o, avgOverdue: Math.round(o.overdueSum / o.count) }))
+      .sort((a, b) => b.count - a.count || b.avgOverdue - a.avgOverdue);
+  }, [records, stages, getStageKey, getStageEnteredAt, getOwnerIds, usersById]);
 
   if (records.length === 0) {
     return (
@@ -121,6 +197,13 @@ export function KanbanAnalyticsPanel({ stages, records, getStageKey, getStageEnt
             ))}
           </div>
         </>
+      )}
+
+      {ownerRows.length > 0 && (
+        <div className={specificStats.length > 0 ? "mt-6" : ""}>
+          <Eyebrow>Atraso por responsável</Eyebrow>
+          <OwnerSlaTable rows={ownerRows} />
+        </div>
       )}
     </div>
   );

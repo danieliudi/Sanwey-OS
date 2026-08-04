@@ -63,14 +63,14 @@ export function QRCodeButton({ url, title, buttonLabel = "QR code", compact = fa
               </button>
             </div>
 
-            <div ref={canvasWrapRef} style={{ display: "flex", justifyContent: "center", padding: 16, background: "#FFFFFF", borderRadius: 12, border: "1px solid var(--border)" }}>
+            <div ref={canvasWrapRef} style={{ display: "flex", justifyContent: "center", padding: 16, background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)" }}>
               <QRCodeCanvas value={url} size={200} level="M" includeMargin marginSize={2} />
             </div>
 
             <div style={{ fontSize: 11, color: "var(--text-dim)", textAlign: "center", marginTop: 10, wordBreak: "break-all" }}>{url}</div>
 
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-              <button onClick={handleDownload} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
+              <button onClick={handleDownload} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
                 <Download size={14} /> Baixar PNG
               </button>
               <button onClick={handleCopy} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>

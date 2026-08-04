@@ -23,7 +23,7 @@ import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompt
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
 import { EmptyState } from "../ui/EmptyState";
-import { formatK, formatM } from "../../utils/currency";
+import { formatK } from "../../utils/currency";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
 import { AnalyticsTab } from "./AnalyticsTab";
@@ -296,7 +296,7 @@ export function ExecutiveDashboard({
   const healthCards = [
     showComercialArea && {
       id: "comercial", label: "Comercial", color: "var(--text)",
-      value: formatM(totals.pipeline), sub: `${totals.stale} parado${totals.stale !== 1 ? "s" : ""}`,
+      value: formatK(totals.pipeline), sub: `${totals.stale} parado${totals.stale !== 1 ? "s" : ""}`,
     },
     showMarketingArea && {
       id: "marketing", label: "Marketing", color: "#7C3AED",
@@ -304,7 +304,7 @@ export function ExecutiveDashboard({
     },
     showRHArea && {
       id: "rh", label: "RH", color: "#0EA5E9",
-      value: vagasPublicadas, sub: `${avaliacoesPendentes} avaliação${avaliacoesPendentes !== 1 ? "ões" : ""} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
+      value: vagasPublicadas, sub: `${avaliacoesPendentes} avaliaç${avaliacoesPendentes !== 1 ? "ões" : "ão"} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
     },
     showComexArea && {
       id: "comex", label: "Comex", color: "#0D9488",
@@ -371,7 +371,7 @@ export function ExecutiveDashboard({
             <button
               onClick={() => navigate(ROUTES.settings)}
               className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
-              style={{ background: "var(--accent)", color: "#FFFFFF" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)" }}
             >
               Ir para Configurações
             </button>
@@ -444,8 +444,8 @@ export function ExecutiveDashboard({
                   Comercial
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
-                  <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
+                  <StatCard icon={HandCoins}    value={formatK(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
+                  <StatCard icon={TrendingUp}   value={formatK(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
                   <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
                   <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
                   <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
@@ -647,7 +647,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
         className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150 active:scale-95"
         style={{
           background: "var(--accent)",
-          color: "#FFFFFF",
+          color: "var(--on-accent)",
           border: "none",
           cursor: loading ? "not-allowed" : "pointer",
           opacity: loading ? 0.8 : 1,
@@ -662,7 +662,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
       {error && (
         <div
           className="flex items-start gap-2 text-sm px-3 py-2.5 rounded-lg"
-          style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
         >
           <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
           <span>{error}</span>
@@ -692,9 +692,9 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
               onClick={handleCopy}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
               style={{
-                background: copied ? "#F0FDF4" : "var(--surface)",
-                color: copied ? "#16A34A" : "var(--text-dim)",
-                borderColor: copied ? "#BBF7D0" : "var(--border)",
+                background: copied ? "var(--success-bg)" : "var(--surface)",
+                color: copied ? "var(--success)" : "var(--text-dim)",
+                borderColor: copied ? "color-mix(in srgb, var(--success) 35%, transparent)" : "var(--border)",
                 cursor: "pointer",
               }}
               onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
@@ -762,7 +762,7 @@ function AIExecutivePanel({ leads, users, currentUser }) {
         {!isConfigured && (
           <span
             className="text-xs font-medium px-3 py-1.5 rounded-full"
-            style={{ background: "#FEF3C7", color: "#92400E" }}
+            style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
           >
             Configure sua LLM nas Configurações → Integrações de IA
           </span>
@@ -825,7 +825,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages, showComercia
                       {formatK(m.pipeline)}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "#EFF2F5" }}>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-alt)" }}>
                     <div
                       className="h-full rounded-full transition-all"
                       style={{ width: `${pct}%`, background: m.company.primary }}
@@ -855,7 +855,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages, showComercia
                   </span>
                   <span className="text-xs" style={{ color: "var(--text-dim)" }}>{count} leads</span>
                 </div>
-                <div className="h-5 rounded-lg overflow-hidden" style={{ background: "#EFF2F5" }}>
+                <div className="h-5 rounded-lg overflow-hidden" style={{ background: "var(--surface-alt)" }}>
                   <div
                     className="h-full rounded-lg transition-all flex items-center justify-end pr-2"
                     style={{ width: `${Math.max(pct, 5)}%`, background: stage.color }}

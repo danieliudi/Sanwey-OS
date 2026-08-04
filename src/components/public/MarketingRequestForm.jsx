@@ -10,7 +10,7 @@ import {
   DELIVERABLE_REQUEST_TYPES,
 } from "../../constants/marketing-pipelines";
 
-const ACCENT = "#C7212B";
+const ACCENT = "#CC2936";
 
 const shell = {
   minHeight: "100vh",

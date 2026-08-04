@@ -6,6 +6,7 @@ import {
   Shield, GitMerge, Settings, Info, ExternalLink,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
+import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { AgentConfigModal } from "../agents/AgentConfigModal";
@@ -14,25 +15,27 @@ import { ROUTES } from "../../constants/routes";
 
 // ── Agent metadata ─────────────────────────────────────────────────────────
 const AGENTS = {
-  sdr_q:    { label: "SDR-Q",     sub: "Qualificador",         Icon: Target,    color: "var(--accent)", bg: "#EBF0F9" },
+  sdr_q:    { label: "SDR-Q",     sub: "Qualificador",         Icon: Target,    color: "#1D4ED8", bg: "#EBF0F9" },
   scout:    { label: "SCOUT",     sub: "Inteligência de Conta", Icon: Telescope, color: "#6B21A8", bg: "#F5F0FB" },
   cadencia: { label: "CADÊNCIA",  sub: "Follow-up Engine",      Icon: Repeat2,   color: "#C2410C", bg: "#FEF3EC" },
-  sentinela:{ label: "SENTINELA", sub: "Monitor de Funil",      Icon: Shield,    color: "#B91C1C", bg: "#FEF2F2" },
+  sentinela:{ label: "SENTINELA", sub: "Monitor de Funil",      Icon: Shield,    color: "var(--danger)", bg: "var(--danger-bg)" },
   cross:    { label: "CROSS",     sub: "Cross-sell",            Icon: GitMerge,  color: "#0F766E", bg: "#F0FDFA" },
 };
 
 // ── Priority config ────────────────────────────────────────────────────────
 const PRIORITY = {
-  urgent: { label: "Urgente",  color: "#B91C1C", bg: "#FEF2F2" },
+  urgent: { label: "Urgente",  color: "var(--danger)", bg: "var(--danger-bg)" },
   high:   { label: "Alta",     color: "#C2410C", bg: "#FEF3EC" },
-  normal: { label: "Normal",   color: "var(--accent)", bg: "#EBF0F9" },
-  low:    { label: "Baixa",    color: "#6B7280", bg: "var(--surface-alt)" },
+  normal: { label: "Normal",   color: "#1D4ED8", bg: "#EBF0F9" },
+  low:    { label: "Baixa",    color: "var(--text-dim)", bg: "var(--surface-alt)" },
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
+const STAGE_NAMES = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
+
 // ── Action card ────────────────────────────────────────────────────────────
-function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
+function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onOpenCandidato }) {
   const [expanded, setExpanded] = useState(false);
   const prio = PRIORITY[action.priority] || PRIORITY.normal;
   const payload = action.payload || {};
@@ -40,7 +43,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
   return (
     <div
       className="rounded-xl border"
-      style={{ borderColor: "#EFEFEF", background: "var(--surface)" }}
+      style={{ borderColor: "var(--border)", background: "var(--surface)" }}
     >
       {/* Header row */}
       <div className="px-4 py-3 flex items-start gap-3">
@@ -61,8 +64,8 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
             )}
             {action.leads?.stage && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{ background: "#EFEFEF", color: "var(--text-dim)" }}>
-                {action.leads.stage}
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+                {STAGE_NAMES[action.leads.stage] || action.leads.stage}
               </span>
             )}
             {payload.days_stale && (
@@ -84,6 +87,44 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
                 {payload.dias_para_vencer}d p/ vencer
               </span>
             )}
+            {/* Sugestão de Sourcing (Agent Builder) — sem lead_id, precisa do
+                payload pra mostrar quem é o candidato e pra qual vaga. */}
+            {payload.candidato_nome && (
+              <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+                {payload.candidato_nome}
+              </span>
+            )}
+            {payload.vaga_titulo && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+                {payload.vaga_titulo}
+              </span>
+            )}
+            {/* Sugestão de Sinal de Mercado (Rotina de pesquisa real) — sem
+                lead_id, o payload é a única fonte de contexto no card fechado. */}
+            {action.action_type === "sugestao_sinal_mercado" && payload.source && (
+              <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+                {payload.source}
+              </span>
+            )}
+            {action.action_type === "sugestao_sinal_mercado" && payload.urgency && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+                {payload.urgency}
+              </span>
+            )}
+            {/* Sugestão de Prospect (Explorador, mesma Rotina) */}
+            {action.action_type === "sugestao_prospect" && payload.sector && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+                {payload.sector}
+              </span>
+            )}
+            {action.action_type === "sugestao_prospect" && payload.fit_score != null && (
+              <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                Fit {payload.fit_score}
+              </span>
+            )}
           </div>
           <p className="text-sm font-semibold leading-snug" style={{ color: "var(--text)" }}>
             {action.title}
@@ -93,13 +134,13 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
               {action.summary}
             </p>
           )}
-          <p className="text-[10px] mt-1.5" style={{ color: "#C0C4CC" }}>
+          <p className="text-[10px] mt-1.5" style={{ color: "var(--text-faint)" }}>
             {relativeTime(action.created_at)}
           </p>
         </div>
 
         {/* Expand toggle */}
-        {(payload.draft_email || payload.recommended_action) && (
+        {(payload.draft_email || payload.recommended_action || payload.justificativa || payload.excerpt || payload.evidence) && (
           <button
             onClick={() => setExpanded(v => !v)}
             className="shrink-0 p-1 rounded-xl"
@@ -112,8 +153,8 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
       </div>
 
       {/* Expanded payload */}
-      {expanded && (payload.draft_email || payload.recommended_action) && (
-        <div className="mx-4 mb-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "#F8F9FA" }}>
+      {expanded && (payload.draft_email || payload.recommended_action || payload.justificativa || payload.excerpt || payload.evidence) && (
+        <div className="mx-4 mb-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
           {action.action_type === "email_fornecedor" &&
             (payload.fornecedor_contact_name || payload.fornecedor_email || payload.fornecedor_phone) && (
             <div className="px-3 pt-3 pb-1.5 flex items-start gap-2 border-b" style={{ borderColor: "var(--border)" }}>
@@ -174,6 +215,59 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
               </button>
             </div>
           )}
+          {payload.justificativa && (
+            <div className="px-3 pb-3 pt-1 flex items-start gap-2">
+              <Zap size={11} className="mt-0.5 shrink-0" style={{ color: "#C2410C" }} />
+              <p className="text-xs" style={{ color: "var(--text)" }}>
+                <span className="font-semibold">Por que é aderente: </span>
+                {payload.justificativa}
+              </p>
+            </div>
+          )}
+          {action.action_type === "sugestao_candidato_vaga" && payload.candidato_id && (
+            <div className="px-3 pb-3">
+              <button
+                onClick={() => onOpenCandidato(payload.candidato_id)}
+                className="flex items-center gap-1.5 text-xs font-semibold"
+                style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                <ExternalLink size={11} />
+                Ver candidato{payload.candidato_nome ? ` — ${payload.candidato_nome}` : ""}
+              </button>
+            </div>
+          )}
+          {action.action_type === "sugestao_sinal_mercado" && payload.excerpt && (
+            <div className="px-3 pb-3 pt-1">
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>
+                {payload.excerpt}
+              </p>
+              {payload.url && (
+                <a
+                  href={payload.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-semibold mt-2"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <ExternalLink size={11} />
+                  Ver fonte
+                </a>
+              )}
+            </div>
+          )}
+          {action.action_type === "sugestao_prospect" && payload.evidence && (
+            <div className="px-3 pb-3 pt-1">
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>
+                <span className="font-semibold">Por que é um bom prospect: </span>
+                {payload.evidence}
+              </p>
+              {(payload.city || payload.state || payload.cnpj) && (
+                <p className="text-[10px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+                  {[payload.cnpj, [payload.city, payload.state].filter(Boolean).join("/")].filter(Boolean).join(" · ")}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -184,8 +278,8 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
             onClick={() => onResolve(action.id, "approved")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-opacity"
-            style={{ background: "var(--success)", color: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
-            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "#155d2b"; }}
+            style={{ background: "var(--success)", color: "var(--on-success)", opacity: resolving === action.id ? 0.6 : 1 }}
+            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "color-mix(in srgb, var(--success) 85%, var(--text))"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--success)"; }}
           >
             <CheckCircle2 size={12} />
@@ -195,9 +289,9 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
             onClick={() => onResolve(action.id, "rejected")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-opacity"
-            style={{ borderColor: "var(--danger)", color: "var(--danger)", background: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
-            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "#FEF2F2"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            style={{ borderColor: "var(--danger)", color: "var(--danger)", background: "var(--surface)", opacity: resolving === action.id ? 0.6 : 1 }}
+            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "var(--danger-bg)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           >
             <XCircle size={12} />
             Rejeitar
@@ -206,9 +300,9 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
             onClick={() => onResolve(action.id, "ignored")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-opacity"
-            style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", opacity: resolving === action.id ? 0.6 : 1 }}
             onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "var(--surface-alt)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           >
             <EyeOff size={12} />
             Ignorar
@@ -222,7 +316,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
           <span
             className="text-[10px] font-bold px-2 py-0.5 rounded-full"
             style={{
-              background: action.status === "approved" ? "#E8F2EC" : action.status === "rejected" ? "#FEF2F2" : "var(--surface-alt)",
+              background: action.status === "approved" ? "var(--success-bg)" : action.status === "rejected" ? "var(--danger-bg)" : "var(--surface-alt)",
               color: action.status === "approved" ? "var(--success)" : action.status === "rejected" ? "var(--danger)" : "var(--text-dim)",
             }}
           >
@@ -235,9 +329,9 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
 }
 
 // ── Agent section ──────────────────────────────────────────────────────────
-function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, onOpenFornecedor }) {
+function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, onOpenFornecedor, onOpenCandidato }) {
   const [open, setOpen] = useState(true);
-  const meta = metaOverride || AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: "var(--text-dim)", bg: "var(--surface-alt)" };
+  const meta = metaOverride || AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: "var(--text)", bg: "var(--surface-alt)", onColor: "var(--surface)" };
   const { Icon } = meta;
   const pendingCount = actions.filter(a => a.status === "pending").length;
 
@@ -253,7 +347,7 @@ function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, on
           className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: meta.color }}
         >
-          <Icon size={15} color="#FFFFFF" />
+          <Icon size={15} color={meta.onColor || "#FFFFFF"} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -269,7 +363,7 @@ function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, on
           {pendingCount > 0 && (
             <span
               className="text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
-              style={{ background: meta.color, color: "#FFFFFF" }}
+              style={{ background: meta.color, color: meta.onColor || "#FFFFFF" }}
             >
               {pendingCount}
             </span>
@@ -282,7 +376,7 @@ function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, on
 
       {/* Cards */}
       {open && (
-        <div className="divide-y" style={{ borderColor: "#EFEFEF" }}>
+        <div className="divide-y" style={{ borderColor: "var(--border)" }}>
           {actions.map(action => (
             <ActionCard
               key={action.id}
@@ -291,6 +385,7 @@ function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, on
               onResolve={onResolve}
               resolving={resolving}
               onOpenFornecedor={onOpenFornecedor}
+              onOpenCandidato={onOpenCandidato}
             />
           ))}
         </div>
@@ -413,6 +508,15 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
     navigate(ROUTES["rh-fornecedores"]);
   }, [navigate]);
 
+  // "Ver candidato" (ActionCard, sugestão de Sourcing) navega pra
+  // RHRecrutamentoView e abre o candidato já focado — mesmo handoff.
+  const onOpenCandidato = useCallback((candidatoId) => {
+    try {
+      sessionStorage.setItem("rhRecrutamentoOpenCandidatoId", candidatoId);
+    } catch { /* sessionStorage indisponível (modo privado etc.) — segue sem handoff */ }
+    navigate(ROUTES["rh-recrutamento"]);
+  }, [navigate]);
+
   // ── Group by agent ────────────────────────────────────────────────────────
   const agentOrder = ["cadencia", "sentinela", "sdr_q", "scout", "cross"];
 
@@ -446,6 +550,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
       Icon: Bot,
       color: "var(--accent)",
       bg: "var(--surface-alt)",
+      onColor: "var(--on-accent)",
     };
   });
 
@@ -505,11 +610,11 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
             {loading
               ? "Carregando sugestões…"
               : totalPending > 0
-              ? `${totalPending} sugestão${totalPending !== 1 ? "ões" : ""} pendente${totalPending !== 1 ? "s" : ""} aguardando decisão`
+              ? `${totalPending} sugest${totalPending !== 1 ? "ões" : "ão"} pendente${totalPending !== 1 ? "s" : ""} aguardando decisão`
               : "Nenhuma sugestão pendente — pipeline em dia"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
           {isManager && (
             <button
               onClick={() => setConfigOpen(true)}
@@ -562,7 +667,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
 
       {/* Filter tabs */}
       <div className="overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-      <div className="flex items-center gap-1 border-b" style={{ borderColor: "#EFEFEF", width: "max-content", minWidth: "100%" }}>
+      <div className="flex items-center gap-1 border-b" style={{ borderColor: "var(--border)", width: "max-content", minWidth: "100%" }}>
         {[
           { key: "pending",  label: "Pendentes" },
           { key: "approved", label: "Aprovados" },
@@ -593,7 +698,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
       {resolveError && (
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-          style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger)" }}
         >
           <AlertTriangle size={12} />
           {resolveError}
@@ -611,7 +716,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
       {!loading && error && (
         <div
           className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
-          style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger)" }}
         >
           <AlertTriangle size={14} />
           {error}
@@ -625,7 +730,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"
             style={{ background: "var(--surface-alt)" }}
           >
-            <TrendingUp size={24} style={{ color: "#9CA3AF" }} />
+            <TrendingUp size={24} style={{ color: "var(--text-faint)" }} />
           </div>
           <div>
             <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
@@ -651,6 +756,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
               onResolve={handleResolve}
               resolving={resolving}
               onOpenFornecedor={onOpenFornecedor}
+              onOpenCandidato={onOpenCandidato}
             />
           ))}
         </div>
@@ -668,6 +774,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
               resolving={resolving}
               metaOverride={sectionMetaOverrides[agentId]}
               onOpenFornecedor={onOpenFornecedor}
+              onOpenCandidato={onOpenCandidato}
             />
           ))}
         </div>

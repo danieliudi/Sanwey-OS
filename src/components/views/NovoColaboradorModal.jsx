@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check, Camera, Trash2 } from "lucide-react";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
@@ -10,6 +10,7 @@ import { documentExtractionPrompt } from "../../constants/ai-prompts";
 import { periodoExperienciaInfo } from "../../utils/rh-compliance-dates";
 import { DocumentCaptureModal } from "../shared/DocumentCaptureModal";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -54,7 +55,18 @@ function parseExtraction(text) {
 
 export function NovoColaboradorModal({ currentUser, initialData, hireContext, contextNote, stageId, users, onSave, onClose, onDelete }) {
   const { complete, isConfigured, provider } = useAI(currentUser);
+  const { cargos: cargoTemplates } = useRHCargoTemplates({ userId: currentUser?.id });
   const [form, setForm] = useState(() => initialData ? { ...EMPTY_FORM, ...initialData } : EMPTY_FORM);
+  // Cargo virou select ligado ao catálogo de Cargos & Salários (rh_cargo_templates)
+  // — antes era texto livre, sem nenhuma relação com o catálogo (achado #6 do
+  // roteiro de treinamento de RH, 31/07/2026). Filtra por departamento quando
+  // já escolhido; sem departamento ainda, mostra o catálogo inteiro.
+  const cargoOptions = useMemo(() => {
+    const base = form.department
+      ? cargoTemplates.filter((c) => !c.department || c.department === form.department)
+      : cargoTemplates;
+    return [...base].sort((a, b) => a.name.localeCompare(b.name));
+  }, [cargoTemplates, form.department]);
   // Campos da etapa de Onboarding (só quando criado via "+" de uma coluna do
   // Kanban) — mesmo mecanismo de campos customizados por etapa usado em
   // vaga/candidato/campanha. `stageId` ausente (fluxo de contratação via
@@ -271,7 +283,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
             </div>
           )}
           {hireContext && (
-            <div style={{ background: "var(--success-bg)", border: "1px solid #BBF7D0", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+            <div style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "var(--success)", marginBottom: 6 }}>
                 Convertendo candidato aprovado{hireContext.vagaTitle ? ` — vaga "${hireContext.vagaTitle}"` : ""}
               </div>
@@ -401,7 +413,18 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
             <div className="ncm-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Cargo *</label>
-                <input ref={registerField("jobTitle")} type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} placeholder="Ex: Operador de produção" className={inputCls} style={fieldSt("jobTitle")} onFocus={focusBlue} onBlur={blurGray} />
+                <select ref={registerField("jobTitle")} value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} className={inputCls} style={fieldSt("jobTitle")}>
+                  <option value="">Selecionar</option>
+                  {form.jobTitle && !cargoOptions.some((c) => c.name === form.jobTitle) && (
+                    <option value={form.jobTitle}>{form.jobTitle} (fora do catálogo)</option>
+                  )}
+                  {cargoOptions.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+                {cargoOptions.length === 0 && (
+                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
+                    Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.
+                  </div>
+                )}
               </div>
               <div>
                 <label style={labelSt}>Frente *</label>
@@ -485,7 +508,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
               if (!exp) return null;
               const custom = Number(form.periodoExperienciaDias) > 0;
               return (
-                <div style={{ background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
+                <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
                   {custom
                     ? `Período de experiência: ${exp.marco} dias — termina em ${exp.diasRestantes} dia(s).`
                     : `Período de experiência CLT (padrão): marco de ${exp.marco} dias em ${exp.diasRestantes} dia(s). Informe "Dias de período de experiência" acima pra usar um valor diferente do padrão.`}
@@ -520,14 +543,14 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
           </div>
 
           {error && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "16px 0 0" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "16px 0 0" }}>
               <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
               <span>{error}</span>
             </div>
           )}
 
           <div className="flex gap-2 mt-5">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Cadastrar funcionário"}
             </button>
             <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>

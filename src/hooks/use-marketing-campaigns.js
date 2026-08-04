@@ -96,7 +96,7 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
       setLoading(false);
       setHasLoadedOnce(true);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => { if (enabled) fetchAll(); }, [fetchAll, enabled]);
 
@@ -122,7 +122,7 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [enabled]);
 
   const createCampaign = useCallback(async (campaign) => {
     if (!isSupabaseConfigured || !canWrite) return null;

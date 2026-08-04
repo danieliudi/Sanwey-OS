@@ -333,10 +333,10 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           </div>
         </div>
         {importResult.errors.length > 0 && (
-          <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-sm max-w-md w-full">
-            <div className="font-semibold text-red-800 mb-2">Erros:</div>
+          <div className="p-4 rounded-xl border text-sm max-w-md w-full" style={{ background: "var(--danger-bg)", borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}>
+            <div className="font-semibold mb-2" style={{ color: "var(--danger)" }}>Erros:</div>
             {importResult.errors.map((e, i) => (
-              <div key={i} className="text-red-700">{e.company}: {e.err}</div>
+              <div key={i} style={{ color: "var(--danger)" }}>{e.company}: {e.err}</div>
             ))}
           </div>
         )}
@@ -376,10 +376,10 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
       {/* Format instructions */}
       <div
         className="p-4 rounded-xl border text-xs leading-relaxed"
-        style={{ background: "#FFFBF0", borderColor: "#FDE68A", color: "#78350F" }}
+        style={{ background: "var(--warning-bg)", borderColor: "color-mix(in srgb, var(--warning) 35%, transparent)", color: "var(--warning)" }}
       >
         <div className="font-semibold mb-1.5">Colunas esperadas (Swapcard / RD Station Events)</div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1" style={{ color: "#92400E" }}>
+        <div className="flex flex-wrap gap-x-4 gap-y-1" style={{ color: "var(--warning)" }}>
           <span>✓ First Name / Last Name</span>
           <span>✓ Company / Email</span>
           <span>✓ Job Title / Mobile Phone</span>
@@ -387,7 +387,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           <span>✓ Porte da empresa / Área de atuação</span>
           <span>✓ Exhibitor Member (para atribuição ao vendedor)</span>
         </div>
-        <div className="mt-1.5" style={{ color: "#B45309" }}>
+        <div className="mt-1.5" style={{ color: "var(--warning)" }}>
           Formatos aceitos: <strong>.xlsx</strong> e <strong>.csv</strong> · Máx. 5 MB · Use o modelo acima como referência.
         </div>
       </div>
@@ -416,7 +416,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
               Planilha (.xlsx)
             </label>
             <div
-              className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-gray-50"
+              className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors"
               style={{ borderColor: "var(--border-strong)", background: "var(--surface-alt)" }}
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
@@ -441,8 +441,10 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           <div className="flex items-end">
             <button
               onClick={reset}
-              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border transition-colors hover:bg-gray-50"
+              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border transition-colors"
               style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               <RefreshCw size={14} />Trocar arquivo
             </button>
@@ -465,7 +467,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
         <>
           {unassignedCount > 0 && (
             <div className="flex items-center gap-2 p-3 rounded-xl border-l-4 text-sm"
-              style={{ background: "#FFF9EC", borderLeftColor: "var(--amber)", color: "var(--text)" }}>
+              style={{ background: "var(--amber-bg)", borderLeftColor: "var(--amber)", color: "var(--text)" }}>
               <TriangleAlert size={14} style={{ color: "var(--amber)", flexShrink: 0 }} />
               {unassignedCount} lead{unassignedCount > 1 ? "s" : ""} sem vendedor atribuído — defina antes de importar ou deixe para o gerente redistribuir depois.
             </div>
@@ -506,7 +508,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
 
           {/* Import CTA */}
           <div className="flex items-center justify-between p-4 rounded-xl border sticky bottom-4"
-            style={{ background: "#FFFFFF", borderColor: "#EFEFEF", boxShadow: "var(--shadow-pop)" }}>
+            style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-pop)" }}>
             <div className="text-sm" style={{ color: "var(--text-dim)" }}>
               <span className="font-semibold" style={{ color: "var(--text)" }}>{selectedRows.length} leads</span> serão adicionados ao pipeline em <strong>Prospecção</strong>
             </div>
@@ -550,8 +552,10 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
   return (
     <div style={{ opacity: isDup ? 0.5 : 1 }}>
       <div
-        className="grid items-center px-3 py-2.5 hover:bg-gray-50 transition-colors"
+        className="grid items-center px-3 py-2.5 transition-colors"
         style={{ gridTemplateColumns: "32px 1fr 120px 140px 160px 100px 32px" }}
+        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
       >
         {/* Checkbox */}
         <button
@@ -572,7 +576,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             {row.company}
             {isDup && (
               <span className="ml-2 text-[9px] font-normal px-1.5 py-0.5 rounded"
-                style={{ background: "#FEF3EC", color: "var(--amber)" }}>
+                style={{ background: "var(--amber-bg)", color: "var(--amber)" }}>
                 duplicado
               </span>
             )}
@@ -595,7 +599,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             onChange={e => onUpdate({ companyId: e.target.value })}
             disabled={isDup || !row._selected}
             className="text-xs rounded-xl border px-2 py-1 w-full"
-            style={{ borderColor: "#DCDCDC", color: "var(--text)", background: "#FFFFFF" }}
+            style={{ borderColor: "#DCDCDC", color: "var(--text)", background: "var(--surface)" }}
           >
             {companyOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -611,7 +615,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             style={{
               borderColor: !row.owner && row._selected ? "var(--amber)" : "#DCDCDC",
               color: "var(--text)",
-              background: "#FFFFFF",
+              background: "var(--surface)",
             }}
           >
             {sellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -629,7 +633,12 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
         </div>
 
         {/* Expand */}
-        <button onClick={onToggleExpand} className="p-1 rounded hover:bg-gray-100 transition-colors">
+        <button
+          onClick={onToggleExpand}
+          className="p-1 rounded transition-colors"
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+        >
           {expanded ? <ChevronUp size={14} style={{ color: "var(--text-dim)" }} /> : <ChevronDown size={14} style={{ color: "var(--text-dim)" }} />}
         </button>
       </div>
@@ -637,7 +646,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
       {/* Expanded detail */}
       {expanded && (
         <div className="px-10 pb-3 pt-1 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs border-t"
-          style={{ borderColor: "#EFF2F5", background: "var(--surface)" }}>
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <DetailField label="CNPJ" value={row.cnpj || "—"} />
           <DetailField label="Email" value={row.contactEmail || "—"} />
           <DetailField label="Telefone" value={row.phone || "—"} />

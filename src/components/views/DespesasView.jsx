@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, AlertCircle, ShoppingCart, Clock, CheckCircle2 } from "lucide-react";
 import { useMarketingExpenses, useMarketingExpenseItems } from "../../hooks/use-marketing-expenses";
+import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
+import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
 import { EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK, formatBRL } from "../../utils/currency";
@@ -10,6 +12,7 @@ import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { supabase } from "../../lib/supabase";
 import { PageHeader } from "../shared/PageHeader";
 import { StatCard } from "../ui/StatCard";
+import { EntityMultiSelect } from "../shared/EntityMultiSelect";
 
 const RECEIPT_BUCKET = "marketing-attachments";
 
@@ -22,6 +25,8 @@ const EMPTY_FORM = {
   invoiceDate: "",
   campaignId:  null,
   companyIds:  [],
+  deliverableIds: [],
+  taskIds:     [],
   notes:       "",
   receiptUrl:  null,
 };
@@ -32,9 +37,9 @@ function StatusBadge({ status }) {
     <span
       className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
       style={{
-        background: isPago ? "#DCFCE7" : "#FEF3C7",
+        background: isPago ? "var(--success-bg)" : "var(--warning-bg)",
         color:      isPago ? "var(--success)" : "var(--warning)",
-        border:     `1px solid ${isPago ? "#BBF7D0" : "#FDE68A"}`,
+        border:     `1px solid ${isPago ? "color-mix(in srgb, var(--success) 35%, transparent)" : "color-mix(in srgb, var(--warning) 35%, transparent)"}`,
       }}
     >
       {isPago ? "Pago" : "Pendente"}
@@ -107,7 +112,7 @@ function ExpenseItemRow({ row, onChange, onRemove }) {
   );
 }
 
-function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser }) {
+function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], onSave, onClose, currentUser }) {
   // Id gerado no cliente pra despesas novas — permite subir a nota fiscal
   // pro Storage (path `expense-invoices/${id}/...`) antes mesmo do primeiro
   // save, casando o nome da pasta com o id real da linha criada (em vez de
@@ -180,6 +185,18 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
       : [...form.companyIds, id]
     );
   };
+
+  // Sem filtro por empresa aqui — o dropdown de "Campanha relacionada" logo
+  // abaixo também não filtra `campaigns` por empresa hoje, os 3 seletores
+  // seguem a mesma regra pra não introduzir uma assimetria nova.
+  const filteredDeliverables = useMemo(
+    () => form.campaignId ? deliverables.filter(d => d.campaignId === form.campaignId) : deliverables,
+    [deliverables, form.campaignId]
+  );
+  const filteredTasks = useMemo(
+    () => form.campaignId ? tasks.filter(t => t.campaignId === form.campaignId) : tasks,
+    [tasks, form.campaignId]
+  );
 
   const handleUploadReceipt = async (file) => {
     setUploading(true);
@@ -323,15 +340,40 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
             <select
               value={form.campaignId || ""}
               onChange={e => set("campaignId", e.target.value || null)}
-              disabled={campaigns.length === 0}
               className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-              style={{ borderColor: "var(--border-strong)", color: form.campaignId ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", cursor: campaigns.length === 0 ? "default" : "pointer" }}
+              style={{ borderColor: "var(--border-strong)", color: form.campaignId ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
             >
               <option value="">{campaigns.length === 0 ? "Nenhuma campanha cadastrada ainda" : "Sem campanha vinculada"}</option>
               {campaigns.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+              Entregas vinculadas (opcional)
+            </div>
+            <EntityMultiSelect
+              value={form.deliverableIds}
+              onChange={v => set("deliverableIds", v)}
+              options={filteredDeliverables.map(d => ({ id: d.id, label: d.title }))}
+              placeholder="Selecionar entregas…"
+              emptyLabel="Nenhuma entrega disponível."
+            />
+          </div>
+
+          <div>
+            <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+              Tarefas vinculadas (opcional)
+            </div>
+            <EntityMultiSelect
+              value={form.taskIds}
+              onChange={v => set("taskIds", v)}
+              options={filteredTasks.map(t => ({ id: t.id, label: t.title }))}
+              placeholder="Selecionar tarefas…"
+              emptyLabel="Nenhuma tarefa disponível."
+            />
           </div>
 
           <div className="flex gap-2">
@@ -379,8 +421,7 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
             <div className="flex gap-2">
               <div className="flex-1">
                 <CurrencyInput
-                  prefix={null}
-                  placeholder="Valor R$"
+                  placeholder="Valor"
                   value={form.amount}
                   onChange={v => set("amount", v)}
                   className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
@@ -532,7 +573,7 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
           />
 
           {error && (
-            <div className="text-[12px] rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "var(--danger)" }}>
+            <div className="text-[12px] rounded-lg px-3 py-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
               {error}
             </div>
           )}
@@ -542,7 +583,7 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
               type="submit"
               disabled={saving || !form.description.trim()}
               className="flex-1 text-sm font-semibold py-2 rounded-xl"
-              style={{ background: "var(--accent)", color: "#FFF", opacity: saving || !form.description.trim() ? 0.5 : 1, border: "none", cursor: saving || !form.description.trim() ? "default" : "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving || !form.description.trim() ? 0.5 : 1, border: "none", cursor: saving || !form.description.trim() ? "default" : "pointer" }}
             >
               {saving ? "Salvando…" : "Salvar"}
             </button>
@@ -561,6 +602,30 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
   );
 }
 
+function LinkedChips({ items = [] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (items.length === 0) return <span style={{ color: "var(--text-faint)" }}>—</span>;
+  const shown = expanded ? items : items.slice(0, 2);
+  const overflow = items.length - shown.length;
+  return (
+    <div className="flex flex-wrap gap-1 items-center">
+      {shown.map(it => (
+        <span key={it.id} title={it.label} className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold truncate"
+          style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", maxWidth: 90 }}>
+          {it.label}
+        </span>
+      ))}
+      {overflow > 0 && (
+        <button type="button" onClick={() => setExpanded(true)}
+          className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+          style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)", cursor: "pointer" }}>
+          +{overflow} mais
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function DespesasView({ user, users = [], campaigns = [] }) {
   const {
     expenses,
@@ -571,7 +636,12 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
     deleteExpense,
   } = useMarketingExpenses({ userId: user?.id, role: user?.role });
 
+  const { deliverables } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
+  const { tasks } = useMarketingTasks({ userId: user?.id, role: user?.role, roles: user?.roles });
+
   const campaignMap = useMemo(() => Object.fromEntries(campaigns.map(c => [c.id, c])), [campaigns]);
+  const deliverableMap = useMemo(() => Object.fromEntries(deliverables.map(d => [d.id, d])), [deliverables]);
+  const taskMap = useMemo(() => Object.fromEntries(tasks.map(t => [t.id, t])), [tasks]);
 
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus]     = useState("all");
@@ -633,7 +703,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
             <button
               onClick={openNew}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer" }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
             >
@@ -694,7 +764,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
           <table className="w-full border-collapse">
             <thead>
               <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
-                {["Descrição", "Campanha", "Categoria", "Empresa(s)", "Valor", "Vencimento", "Status", ""].map(h => (
+                {["Descrição", "Campanha", "Entregas", "Tarefas", "Categoria", "Empresa(s)", "Valor", "Vencimento", "Status", ""].map(h => (
                   <th
                     key={h}
                     className={h === "Valor" ? "text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" : "text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide"}
@@ -708,7 +778,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>
+                  <td colSpan={10} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>
                     Nenhuma despesa encontrada com os filtros selecionados.
                   </td>
                 </tr>
@@ -749,6 +819,12 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                       : <span style={{ color: "var(--text-faint)" }}>—</span>
                     }
                   </td>
+                  <td className="px-4 py-3 text-xs" style={{ maxWidth: 160 }}>
+                    <LinkedChips items={(expense.deliverableIds || []).map(id => deliverableMap[id]).filter(Boolean).map(d => ({ id: d.id, label: d.title }))} />
+                  </td>
+                  <td className="px-4 py-3 text-xs" style={{ maxWidth: 160 }}>
+                    <LinkedChips items={(expense.taskIds || []).map(id => taskMap[id]).filter(Boolean).map(t => ({ id: t.id, label: t.title }))} />
+                  </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
                     {expense.category}
                   </td>
@@ -788,7 +864,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                           <span className="text-[11px]" style={{ color: "var(--text)" }}>Excluir?</span>
                           <button
                             onClick={() => { deleteExpense(expense.id); setConfirmDeleteId(null); }}
-                            style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                            style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
                           >
                             Excluir
                           </button>
@@ -832,7 +908,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                               display: "flex",
                               alignItems: "center",
                             }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "var(--danger)"; }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
                             onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
                           >
                             <Trash2 size={13} />
@@ -852,6 +928,8 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
         <ExpenseModal
           initial={modalExpense}
           campaigns={campaigns}
+          deliverables={deliverables}
+          tasks={tasks}
           onSave={handleSave}
           onClose={closeModal}
           currentUser={user}

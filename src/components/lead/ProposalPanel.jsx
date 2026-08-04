@@ -73,7 +73,7 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
         {!isConfigured && (
           <div
             className="flex items-start gap-2 text-xs px-3 py-2.5 rounded-lg mb-3"
-            style={{ background: "#FEF3C7", color: "#92400E" }}
+            style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
           >
             <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>Configure sua LLM nas Configurações → Integrações de IA</span>
@@ -86,7 +86,7 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
             disabled={loading || !isConfigured}
             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150"
             style={{
-              background: !isConfigured ? "#E5E7EB" : RED,
+              background: !isConfigured ? "var(--surface-alt)" : RED,
               color: !isConfigured ? "var(--text-dim)" : "#FFFFFF",
               cursor: loading || !isConfigured ? "not-allowed" : "pointer",
               border: "none",
@@ -102,14 +102,14 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
               onChange={e => setDraft(e.target.value)}
               rows={14}
               className="w-full text-sm rounded-lg border px-3 py-2.5 outline-none resize-vertical"
-              style={{ borderColor: BORDER, background: "#FFFFFF", color: "var(--text)", fontFamily: "inherit", lineHeight: 1.6 }}
+              style={{ borderColor: BORDER, background: "var(--surface)", color: "var(--text)", fontFamily: "inherit", lineHeight: 1.6 }}
             />
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleGenerate}
                 disabled={loading}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
-                style={{ background: "#FFFFFF", color: "var(--text-dim)", borderColor: BORDER, cursor: "pointer" }}
+                style={{ background: "var(--surface)", color: "var(--text-dim)", borderColor: BORDER, cursor: "pointer" }}
               >
                 <RotateCcw size={11} />
                 Gerar novamente
@@ -129,7 +129,7 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
         {error && (
           <div
             className="flex items-start gap-2 text-sm px-3 py-2.5 rounded-lg mt-3"
-            style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }}
+            style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
           >
             <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>{error}</span>

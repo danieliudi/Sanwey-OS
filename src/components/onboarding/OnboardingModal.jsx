@@ -18,7 +18,7 @@ export function OnboardingModal({ currentUser, onDone }) {
         className="relative w-full flex flex-col"
         style={{
           maxWidth: 480,
-          background: "#FFFFFF",
+          background: "var(--surface)",
           borderRadius: 20,
           border: "1px solid var(--border)",
           boxShadow: "var(--shadow-pop)",
@@ -32,7 +32,7 @@ export function OnboardingModal({ currentUser, onDone }) {
         <button
           onClick={onDone}
           className="absolute top-4 right-4 flex items-center justify-center rounded-full transition-colors"
-          style={{ width: 28, height: 28, background: "#F5F4F2", color: "var(--text-dim)", border: "none", cursor: "pointer" }}
+          style={{ width: 28, height: 28, background: "var(--surface-alt)", color: "var(--text-dim)", border: "none", cursor: "pointer" }}
           title="Fechar"
         >
           <X size={14} />
