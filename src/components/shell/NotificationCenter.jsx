@@ -242,7 +242,7 @@ export function NotificationCenter({
                     className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full transition-colors"
                     style={{
                       border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-                      background: active ? "var(--accent)" : "var(--surface)",
+                      background: active ? "var(--accent)" : "var(--surface-alt)",
                       color: active ? "var(--on-accent)" : "var(--text-dim)",
                       cursor: "pointer",
                     }}

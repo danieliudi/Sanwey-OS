@@ -15,7 +15,7 @@ function isTypeEnabled(prefs, type) {
   return prefs?.[prefId] !== false;
 }
 
-function createNotification({ type, title, body, leadId, companyId }) {
+function createNotification({ type, title, body, leadId, companyId, link }) {
   return {
     id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     type,
@@ -23,6 +23,10 @@ function createNotification({ type, title, body, leadId, companyId }) {
     body,
     leadId: leadId || null,
     companyId: companyId || null,
+    // Mesmo formato genérico { module, id } que use-server-notifications.js já
+    // usa pras notificações de @menção — permite o NotificationCenter navegar
+    // até o card certo em vez de só marcar como lida (App.jsx:handleNotificationNavigate).
+    link: link || null,
     read: false,
     createdAt: new Date().toISOString(),
   };
