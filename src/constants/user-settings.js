@@ -151,11 +151,10 @@ export const DEFAULT_USER_SETTINGS = {
     return acc;
   }, {}),
   density: "comfortable",
-  // Tarefas Pessoais: feature opt-in, desligada por padrão (diferente de
-  // visibleExecutiveWidgets, que nasce com tudo ligado e o usuário desliga
-  // o que não quer) — aqui o padrão é NÃO mostrar o item no menu até o
-  // usuário ativar em Configurações → Meu perfil. Mesmo mecanismo de
-  // persistência (useUserSettings/usePersistentState, localStorage por
-  // usuário) — não um toggle novo do zero.
-  personalTasksEnabled: false,
+  // Tarefas Pessoais: feature opt-in, ligada por padrão a pedido do Daniel
+  // (03/08) — usuário que não quiser desliga em Configurações →
+  // Preferências. Mesmo mecanismo de persistência (useUserSettings/
+  // usePersistentState, localStorage por usuário) — não um toggle novo do
+  // zero.
+  personalTasksEnabled: true,
 };

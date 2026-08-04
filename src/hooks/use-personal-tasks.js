@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
 const TABLE = "personal_tasks";
+
+// Contador de módulo, não por-hook — garante nome de canal único mesmo
+// quando duas instâncias deste hook montam no mesmo milissegundo (ex.: o
+// badge do menu em App.jsx e a tela PersonalTasksView.jsx, ambas montadas
+// ao mesmo tempo quando a feature está ligada e o usuário abre a tela).
+let personalTasksChannelSeq = 0;
 
 function rowToTask(r) {
   return {
@@ -45,6 +51,9 @@ export function usePersonalTasks({ userId, enabled = true } = {}) {
   const [tasks, setTasks]     = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(null);
+  // Id só desta instância do hook — ver personalTasksChannelSeq acima.
+  const instanceIdRef = useRef(null);
+  if (instanceIdRef.current === null) instanceIdRef.current = ++personalTasksChannelSeq;
 
   const active = isSupabaseConfigured && enabled && Boolean(userId);
 
@@ -77,7 +86,7 @@ export function usePersonalTasks({ userId, enabled = true } = {}) {
     if (!active) return;
     const debouncedFetch = debounce(() => fetchTasks(), 400);
     const channel = supabase
-      .channel(`personal_tasks_rt_${userId}`)
+      .channel(`personal_tasks_rt_${userId}_${instanceIdRef.current}`)
       .on("postgres_changes", {
         event:  "*",
         schema: "public",
