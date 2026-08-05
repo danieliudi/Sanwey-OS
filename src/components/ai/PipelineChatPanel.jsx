@@ -129,7 +129,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
             style={{ background: "var(--warning-bg)", color: "var(--warning)", borderBottom: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}
           >
             <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-            <span>Configure sua LLM nas Configurações → Integrações de IA</span>
+            <span>Configure sua LLM nas Configurações → Integrações</span>
           </div>
         )}
 

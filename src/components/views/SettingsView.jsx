@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
-  ShieldCheck, Image, Upload, PanelBottom, Menu as MenuIcon,
+  ShieldCheck, Image, Upload, PanelBottom, Menu as MenuIcon, Inbox, Briefcase,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { AvatarCropModal } from "../shared/AvatarCropModal";
@@ -10,11 +10,11 @@ import { supabase } from "../../lib/supabase";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { AI_PROVIDERS, AI_PROVIDER_MAP } from "../../constants/ai-providers";
-import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import {
-  EXECUTIVE_WIDGETS, NOTIFICATION_GROUPS,
+  EXECUTIVE_WIDGETS, NOTIFICATION_GROUPS, NOTIFICATION_AREAS, WIRED_NOTIFICATION_PREFS,
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
+import { Tabs } from "../shared/Tabs";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useChatStickers } from "../../hooks/use-chat-stickers";
 import { callAI } from "../../hooks/use-ai";
@@ -509,27 +509,48 @@ function applyAccentGlobal(accent, hover) {
   document.documentElement.style.setProperty("--accent-hover", hover);
 }
 
-// Personal tabs available to every authenticated user.
-const PERSONAL_TABS = [
-  { id: "perfil",        label: "Perfil",          icon: User    },
-  { id: "notificacoes", label: "Notificações",     icon: Bell    },
-  { id: "ia",            label: "Integrações IA",  icon: Bot     },
-  { id: "aparencia",     label: "Aparência",       icon: Palette },
-];
+// Menu em 3 grupos — auditoria de 05/08/2026. Antes eram até 10 itens planos
+// montados em dois ramos (pessoal x gestor), e o ramo de gestor simplesmente
+// nunca incluía "Aparência": quem tinha cargo de gestão não conseguia trocar a
+// cor da marca, justamente quem faria isso. Agora o que é pessoal vale pra
+// todo cargo, e o que era item de menu com conteúdo curto (Barra inferior,
+// Figurinhas, Empresas, Painel Executivo, Dados de demonstração) virou aba
+// interna da página correspondente, via o Tabs.jsx compartilhado.
+function buildTabGroups({ isManager, canSeeExecutive, isChatManager, isAdmin, hasUsersPanel }) {
+  const groups = [
+    {
+      label: "Minha conta",
+      items: [
+        { id: "perfil",       label: "Perfil",       icon: User    },
+        { id: "preferencias", label: "Preferências", icon: Sliders },
+        { id: "notificacoes", label: "Notificações", icon: Bell    },
+      ],
+    },
+  ];
 
-// Escolha da barra inferior mobile é relevante pra todo cargo (a barra
-// aparece pra qualquer um em telas <lg, gerente incluso) — empurrada
-// explicitamente nos dois ramos de `tabs` abaixo, mesmo padrão já usado
-// pra "Figurinhas" (isChatManager), em vez de depender do spread de
-// PERSONAL_TABS (que hoje já não repassa "Aparência" pro ramo gerente).
-const ATALHOS_TAB = { id: "atalhos", label: "Barra inferior", icon: PanelBottom };
+  // "Geral" reúne o que configura a plataforma pra empresa inteira. Aparece
+  // pra quem tem ao menos uma das três abas de dentro — o gate fino fica em
+  // cada aba, preservando exatamente quem já via cada bloco antes.
+  const plataforma = [];
+  if (isManager || canSeeExecutive || isChatManager) {
+    plataforma.push({ id: "geral", label: "Geral", icon: Globe });
+  }
+  if (isManager) plataforma.push({ id: "captura", label: "Captura pública", icon: Link2 });
+  // Integrações vale pra todo cargo: qualquer um pode cadastrar a própria
+  // chave de IA. As seções org-wide (IA da empresa, D4Sign) continuam com o
+  // gate delas por dentro.
+  plataforma.push({ id: "integracoes", label: "Integrações", icon: Zap });
+  groups.push({ label: "Plataforma", items: plataforma });
 
-// Manager-only tabs added on top of the personal ones.
-const MANAGER_TABS = [
-  { id: "preferencias", label: "Preferências",     icon: Sliders  },
-  { id: "captura",       label: "Captura pública", icon: Link2    },
-  { id: "dados",         label: "Dados",           icon: Database },
-];
+  const administracao = [];
+  if (hasUsersPanel) administracao.push({ id: "usuarios", label: "Usuários", icon: UserCog });
+  if (isManager || isAdmin) {
+    administracao.push({ id: "seguranca", label: "Segurança & dados", icon: ShieldCheck });
+  }
+  if (administracao.length > 0) groups.push({ label: "Administração", items: administracao });
+
+  return groups;
+}
 
 export function SettingsView({
   settings, onUpdate, onReset, onClearLocalData, currentUser,
@@ -545,21 +566,36 @@ export function SettingsView({
   const canSeeExecutive = isManager || isMarketingManager || isRHManager || isComexManager;
   const isChatManager = isChatManagerUser(currentUser);
   const [activeTab, setActiveTab] = useState("perfil");
-  const tabs = useMemo(() => {
-    if (!isManager && !canSeeExecutive) {
-      const base = isChatManager ? [...PERSONAL_TABS, { id: "figurinhas", label: "Figurinhas", icon: Image }] : PERSONAL_TABS;
-      return [...base, ATALHOS_TAB];
-    }
-    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Figurinhas, Barra inferior, Usuários
-    const list = [PERSONAL_TABS[0]];
-    list.push(MANAGER_TABS[0]);
-    list.push(PERSONAL_TABS[1], PERSONAL_TABS[2]);
-    if (isManager) list.push(MANAGER_TABS[1], MANAGER_TABS[2]);
-    if (isChatManager) list.push({ id: "figurinhas", label: "Figurinhas", icon: Image });
-    list.push(ATALHOS_TAB);
-    if (isAdmin) list.push({ id: "seguranca", label: "Segurança", icon: ShieldCheck });
-    return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
-  }, [isManager, canSeeExecutive, usersPanel, isAdmin, isChatManager]);
+  const tabGroups = useMemo(
+    () => buildTabGroups({
+      isManager, canSeeExecutive, isChatManager, isAdmin, hasUsersPanel: Boolean(usersPanel),
+    }),
+    [isManager, canSeeExecutive, isChatManager, isAdmin, usersPanel]
+  );
+  // Lista achatada — a barra horizontal do mobile não tem espaço pra cabeçalho
+  // de grupo, então mostra os mesmos itens em sequência.
+  const flatTabs = useMemo(() => tabGroups.flatMap(g => g.items), [tabGroups]);
+
+  // Aba interna de cada página (idioma do Tabs.jsx compartilhado). Estado
+  // separado por página pra que trocar de item no menu e voltar não perca
+  // onde a pessoa estava.
+  const [perfilTab,  setPerfilTab]  = useState("dados");
+  const [prefTab,    setPrefTab]    = useState("aparencia");
+  const [notifArea,  setNotifArea]  = useState("comercial");
+  const [geralTab,   setGeralTab]   = useState(isManager ? "empresas" : (canSeeExecutive ? "executivo" : "chat"));
+  const [capturaTab, setCapturaTab] = useState("leads");
+  const [integTab,   setIntegTab]   = useState("ia");
+  const [segTab,     setSegTab]     = useState("demo");
+
+  // Abas de "Geral" montadas conforme o cargo — cada uma preserva exatamente
+  // o gate que a seção já tinha quando era item de menu separado.
+  const geralTabs = useMemo(() => {
+    const t = [];
+    if (isManager)       t.push({ id: "empresas",  label: "Empresas",        icon: Globe });
+    if (canSeeExecutive) t.push({ id: "executivo", label: "Painel Executivo", icon: Sliders });
+    if (isChatManager)   t.push({ id: "chat",      label: "Chat",            icon: Image });
+    return t;
+  }, [isManager, canSeeExecutive, isChatManager]);
 
   // ── Vagas públicas (Recrutamento) ─────────────────────────────────────
   // rh_vagas vem cru (snake_case) de useRHRecrutamento — sem mapper camelCase.
@@ -721,7 +757,7 @@ export function SettingsView({
   // editável por aqui, mesmo padrão do D4Sign abaixo.
   const [orgAiStatus, setOrgAiStatus] = useState(null); // null=carregando | { configured, provider } | { error }
   useEffect(() => {
-    if (activeTab !== "ia" || !isAdmin) return;
+    if (activeTab !== "integracoes" || !isAdmin) return;
     let cancelled = false;
     supabase.functions.invoke("ai-assistant", { body: { action: "status" } }).then(({ data, error }) => {
       if (cancelled) return;
@@ -737,7 +773,7 @@ export function SettingsView({
   // auditoria de fricção de 18/07: quem realmente usa não conseguia ver).
   const canSeeD4Sign = isManager || isRHManager;
   useEffect(() => {
-    if (activeTab !== "ia" || !canSeeD4Sign) return;
+    if (activeTab !== "integracoes" || !canSeeD4Sign) return;
     let cancelled = false;
     supabase.functions.invoke("d4sign-status", { body: {} }).then(({ data, error }) => {
       if (cancelled) return;
@@ -836,15 +872,6 @@ export function SettingsView({
     });
   }, [settings.visibleExecutiveWidgets, onUpdate]);
 
-  const toggleStage = useCallback((id) => {
-    const has = settings.visibleKanbanStages.includes(id);
-    const next = has
-      ? settings.visibleKanbanStages.filter(s => s !== id)
-      : [...settings.visibleKanbanStages, id];
-    if (next.length === 0) return;
-    onUpdate({ visibleKanbanStages: next });
-  }, [settings.visibleKanbanStages, onUpdate]);
-
   const toggleNotification = useCallback((id) => {
     onUpdate({
       notifications: {
@@ -859,8 +886,10 @@ export function SettingsView({
   // leads", que exigem confirmação (a segunda até digitar uma palavra). A
   // fricção antes de uma ação destrutiva deveria refletir o tamanho do
   // estrago, não a tela em que o botão está. Achado da auditoria de 18/07.
+  // Texto lista o que a ação realmente apaga hoje — "empresas ativas, widgets,
+  // notificações" tinha ficado defasado desde que a Lista Pessoal entrou.
   const handleResetSettings = useCallback(() => {
-    if (window.confirm("Isso vai restaurar todas as preferências (empresas ativas, widgets, notificações) para o padrão. Continuar?")) {
+    if (window.confirm("Isso vai restaurar suas preferências (aparência, notificações, Lista Pessoal e, se você for gestor, empresas ativas e widgets do Painel Executivo) para o padrão. Continuar?")) {
       onReset();
     }
   }, [onReset]);
@@ -898,17 +927,22 @@ export function SettingsView({
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             Configurações
           </h1>
+          {/* Subtítulo derivado do que a pessoa realmente enxerga. Antes
+              alternava só entre gestor Comercial e "todo o resto", então
+              gerente de RH/Marketing lia "integrações pessoais" enquanto via
+              a configuração da empresa inteira. */}
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {isManager
-              ? "Gerencie seu perfil, preferências e integrações"
-              : "Atualize seus dados, notificações e integrações pessoais"}
+            {isManager || canSeeExecutive
+              ? "Sua conta, a configuração da plataforma e as integrações"
+              : "Seu perfil, suas preferências e suas notificações"}
           </p>
         </div>
-        {isManager && (
-          <Button variant="ghost" icon={RotateCcw} onClick={handleResetSettings}>
-            Restaurar padrão
-          </Button>
-        )}
+        {/* Restaurar padrão vale pra qualquer cargo: mexe em notificações,
+            aparência e Lista Pessoal, que todo usuário tem. Antes só
+            aparecia pra gestor. */}
+        <Button variant="ghost" icon={RotateCcw} onClick={handleResetSettings}>
+          Restaurar padrão
+        </Button>
       </div>
 
       {/* Tab layout */}
@@ -916,39 +950,53 @@ export function SettingsView({
 
         {/* Sidebar nav — lg only */}
         <nav className="hidden lg:flex flex-col gap-0.5 shrink-0" style={{ width: 200 }}>
-          {tabs.map(tab => {
-            const active = activeTab === tab.id;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left w-full"
+          {tabGroups.map((group, gi) => (
+            <React.Fragment key={group.label}>
+              <div
+                className="font-bold"
                 style={{
-                  background: active ? "var(--accent-tint)" : "transparent",
-                  color: active ? "var(--accent)" : "var(--text-dim)",
-                  boxShadow: active ? "inset 3px 0 0 var(--accent)" : "inset 3px 0 0 transparent",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={e => {
-                  if (!active) {
-                    e.currentTarget.style.background = "var(--surface-alt)";
-                    e.currentTarget.style.color = "var(--text)";
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!active) {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "var(--text-dim)";
-                  }
+                  fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase",
+                  color: "var(--text-faint)", padding: "0 12px",
+                  margin: gi === 0 ? "0 0 6px" : "16px 0 6px",
                 }}
               >
-                <Icon size={15} strokeWidth={2} />
-                {tab.label}
-              </button>
-            );
-          })}
+                {group.label}
+              </div>
+              {group.items.map(tab => {
+                const active = activeTab === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150 text-left w-full"
+                    style={{
+                      background: active ? "var(--accent-tint)" : "transparent",
+                      color: active ? "var(--accent)" : "var(--text-dim)",
+                      boxShadow: active ? "inset 3px 0 0 var(--accent)" : "inset 3px 0 0 transparent",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={e => {
+                      if (!active) {
+                        e.currentTarget.style.background = "var(--surface-alt)";
+                        e.currentTarget.style.color = "var(--text)";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!active) {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "var(--text-dim)";
+                      }
+                    }}
+                  >
+                    <Icon size={15} strokeWidth={2} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </React.Fragment>
+          ))}
         </nav>
 
         {/* Stack on mobile */}
@@ -956,7 +1004,7 @@ export function SettingsView({
 
           {/* Mobile horizontal tabs — lg:hidden */}
           <div className="lg:hidden flex gap-1.5 overflow-x-auto mb-4" style={{ scrollbarWidth: "none" }}>
-            {tabs.map(tab => {
+            {flatTabs.map(tab => {
               const active = activeTab === tab.id;
               const Icon = tab.icon;
               return (
@@ -965,8 +1013,10 @@ export function SettingsView({
                   onClick={() => setActiveTab(tab.id)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold shrink-0 transition-all"
                   style={{
-                    background: active ? "var(--accent)" : "#F1EDE8",
-                    color: active ? "#FFFFFF" : "var(--text-dim)",
+                    /* era #F1EDE8 fixo — virava chip quase branco no tema
+                       escuro (mesma classe de bug dos badges de canal). */
+                    background: active ? "var(--accent)" : "var(--surface-alt)",
+                    color: active ? "var(--on-accent)" : "var(--text-dim)",
                     border: "none",
                     cursor: "pointer",
                   }}
@@ -984,6 +1034,16 @@ export function SettingsView({
             {/* ── PERFIL ── */}
             {activeTab === "perfil" && (
               <div className="space-y-4">
+                <Tabs
+                  tabs={[
+                    { id: "dados", label: "Dados", icon: User },
+                    { id: "senha", label: "Senha", icon: Key },
+                  ]}
+                  active={perfilTab}
+                  onChange={setPerfilTab}
+                />
+
+                {perfilTab === "dados" && (
                 <Section title="Meu perfil">
                   {/* Avatar + info */}
                   <div className="flex items-center gap-4 mb-5">
@@ -1003,7 +1063,7 @@ export function SettingsView({
                         onClick={() => fileRef.current?.click()}
                         title="Alterar foto"
                         className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center"
-                        style={{ background: "var(--color-industria)", color: "#FFF", border: "2px solid #FFF", cursor: "pointer" }}
+                        style={{ background: "var(--accent)", color: "#FFF", border: "2px solid #FFF", cursor: "pointer" }}
                       >
                         <Camera size={13} />
                       </button>
@@ -1033,7 +1093,7 @@ export function SettingsView({
                         onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))}
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                         style={{ borderColor: "var(--border)", color: "var(--text)", outline: "none", background: "var(--surface)" }}
-                        onFocus={e => { e.target.style.borderColor = "var(--color-industria)"; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                        onFocus={e => { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)"; }}
                         onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
                     </div>
@@ -1047,7 +1107,7 @@ export function SettingsView({
                         onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))}
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                         style={{ borderColor: "var(--border)", color: "var(--text)", outline: "none", background: "var(--surface)" }}
-                        onFocus={e => { e.target.style.borderColor = "var(--color-industria)"; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                        onFocus={e => { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)"; }}
                         onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
                       {!supabaseEnabled && (
@@ -1074,13 +1134,19 @@ export function SettingsView({
                     onClick={handleProfileSave}
                     disabled={profileSaving}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all"
-                    style={{ background: "var(--color-industria)", opacity: profileSaving ? 0.7 : 1, cursor: profileSaving ? "not-allowed" : "pointer" }}
+                    style={{ background: "var(--accent)", opacity: profileSaving ? 0.7 : 1, cursor: profileSaving ? "not-allowed" : "pointer" }}
                   >
                     {profileSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                     Salvar alterações
                   </button>
                 </Section>
+                )}
 
+                {/* A Lista Pessoal saiu daqui: ligar/desligar um recurso é
+                    preferência, não dado de identidade. Agora vive em
+                    Preferências → Recursos. */}
+
+                {perfilTab === "senha" && (
                 <Section title="Alterar senha" description="Disponível apenas com autenticação ativa.">
                   <div className="space-y-3 mb-4">
                     <div>
@@ -1095,7 +1161,7 @@ export function SettingsView({
                         placeholder="Mínimo 6 caracteres"
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                         style={{ borderColor: "var(--border)", color: "var(--text)", outline: "none", background: "var(--surface)" }}
-                        onFocus={e => { e.target.style.borderColor = "var(--color-industria)"; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                        onFocus={e => { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)"; }}
                         onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
                     </div>
@@ -1111,7 +1177,7 @@ export function SettingsView({
                         placeholder="Repita a nova senha"
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                         style={{ borderColor: "var(--border)", color: "var(--text)", outline: "none", background: "var(--surface)" }}
-                        onFocus={e => { e.target.style.borderColor = "var(--color-industria)"; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                        onFocus={e => { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)"; }}
                         onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
                     </div>
@@ -1147,25 +1213,26 @@ export function SettingsView({
                     Alterar senha
                   </button>
                 </Section>
+                )}
               </div>
             )}
 
-            {/* ── PREFERÊNCIAS ── */}
-            {activeTab === "preferencias" && (
+            {/* ── GERAL (configuração da plataforma) ── */}
+            {/* `geralTab` pode apontar pra uma aba que não existe pro cargo (o
+                estado inicial é calculado na montagem, antes de as flags de
+                papel resolverem) — resolve contra a lista real, igual às outras
+                páginas, pra nunca renderizar página vazia. */}
+            {activeTab === "geral" && (() => {
+              const tab = geralTabs.some(t => t.id === geralTab) ? geralTab : geralTabs[0]?.id;
+              return (
               <div className="space-y-4">
-                <Section
-                  title="Lista Pessoal"
-                  description="Adiciona uma lista de tarefas privada, só sua, ao menu Meu Espaço."
-                >
-                  <ToggleRow
-                    label="Ativar Lista Pessoal"
-                    sublabel="Ninguém mais — nem gerentes, nem admin — vê o que você anota aqui."
-                    checked={Boolean(settings.personalTasksEnabled)}
-                    onChange={() => onUpdate({ personalTasksEnabled: !settings.personalTasksEnabled })}
-                  />
-                </Section>
+                {/* A Lista Pessoal ficava aqui (era a aba "Preferências", de
+                    gestor). Foi pra Preferências → Recursos, que agora é
+                    pessoal e existe pra todo cargo — esta página passou a ser
+                    só configuração da empresa. */}
+                <Tabs tabs={geralTabs} active={tab} onChange={setGeralTab} />
 
-                {isManager && (
+                {tab === "empresas" && isManager && (
                 <Section
                   title="Empresas ativas"
                   description="Quais empresas aparecem no seletor do topo e nos filtros do app."
@@ -1195,8 +1262,10 @@ export function SettingsView({
                           }}
                           onMouseEnter={e => {
                             if (!enabled) {
-                              e.currentTarget.style.borderColor = "#D0D0D0";
-                              e.currentTarget.style.background = "#F5F5F3";
+                              /* eram #D0D0D0/#F5F5F3 fixos — hover só existia
+                                 no tema claro, no escuro clareava o cartão. */
+                              e.currentTarget.style.borderColor = "var(--border-strong)";
+                              e.currentTarget.style.background = "var(--surface-alt)";
                             }
                           }}
                           onMouseLeave={e => {
@@ -1221,7 +1290,7 @@ export function SettingsView({
                 </Section>
                 )}
 
-                {canSeeExecutive && (
+                {tab === "executivo" && canSeeExecutive && (
                   <Section
                     title="Widgets do Painel Executivo"
                     description="Cada gerente de departamento só vê (e só escolhe) o próprio recorte do Painel Executivo."
@@ -1245,93 +1314,95 @@ export function SettingsView({
                   </Section>
                 )}
 
-                {isManager && (
-                <Section
-                  title="Etapas visíveis no Kanban"
-                  description="Esconda etapas que você não usa no dia a dia."
-                >
-                  <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                    {DEFAULT_PIPELINE_STAGES.map(s => {
-                      const checked = settings.visibleKanbanStages.includes(s.id);
-                      // Última etapa visível não pode ser escondida — antes o
-                      // clique simplesmente não fazia nada. Achado da auditoria
-                      // de fricção de 18/07.
-                      const isLastVisible = checked && settings.visibleKanbanStages.length === 1;
-                      return (
-                        <ToggleRow
-                          key={s.id}
-                          label={s.name}
-                          sublabel={isLastVisible ? "Pelo menos uma etapa precisa ficar visível" : undefined}
-                          checked={checked}
-                          disabled={isLastVisible}
-                          onChange={() => toggleStage(s.id)}
-                        />
-                      );
-                    })}
-                  </div>
-                </Section>
-                )}
+                {/* "Etapas visíveis no Kanban" foi removida aqui na auditoria
+                    de 05/08/2026 — ver comentário em use-user-settings.js.
+                    Esconder coluna do Funil agora é só do editor de etapas
+                    dentro do próprio Kanban. */}
+
+                {tab === "chat" && isChatManager && <StickersPanel />}
               </div>
-            )}
+              );
+            })()}
 
             {/* ── NOTIFICAÇÕES ── */}
-            {activeTab === "notificacoes" && (
-              <Section
-                title="Notificações"
-                description="Alertas visuais dentro do app, filtrados pelo seu papel."
-              >
-                <div className="space-y-4">
-                  <div>
-                    <div
-                      className="pb-2 mb-1 border-b"
-                      style={{ borderColor: "var(--border)" }}
-                    >
-                      <span
-                        className="font-bold tracking-wide"
-                        style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
-                      >
-                        Menções
-                      </span>
-                    </div>
-                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                      <ToggleRow
-                        label="Notificar quando alguém me mencionar (@)"
-                        sublabel="Ativado por padrão. Desative se não quiser receber notificação de @menção em comentários."
-                        checked={currentUser?.mentionNotificationsEnabled !== false}
-                        onChange={() => {
-                          if (onUpdateUser && currentUser?.id) {
-                            onUpdateUser(currentUser.id, { mentionNotificationsEnabled: !(currentUser?.mentionNotificationsEnabled !== false) });
-                          }
-                        }}
-                      />
-                    </div>
+            {/* Eram 9 blocos empilhados num scroll só. Agora quebrados por
+                área (NOTIFICATION_AREAS) e, principalmente: os toggles que
+                nenhum tipo de notificação consulta aparecem desabilitados com
+                o motivo, em vez de fingir que desligam algo — auditoria de
+                05/08/2026 achou 12 nessa situação. */}
+            {activeTab === "notificacoes" && (() => {
+              const userRoles = Array.isArray(currentUser?.roles) && currentUser.roles.length
+                ? currentUser.roles
+                : (currentUser?.role ? [currentUser.role] : []);
+              const visibleGroups = NOTIFICATION_GROUPS.filter(
+                g => !userRoles.length || g.roles.some(r => userRoles.includes(r))
+              );
+              // "Sistema" existe sempre: é onde mora o toggle de @menção, que
+              // vale pra qualquer cargo (e vive em profiles, não em settings).
+              const areas = NOTIFICATION_AREAS.filter(
+                a => a.id === "sistema" || visibleGroups.some(g => g.area === a.id)
+              );
+              const area = areas.some(a => a.id === notifArea) ? notifArea : areas[0]?.id;
+              const groups = visibleGroups.filter(g => g.area === area);
+
+              return (
+                <Section
+                  title="Notificações"
+                  description="Alertas dentro do app, filtrados pelo seu cargo."
+                >
+                  <div className="mb-4">
+                    <Tabs tabs={areas} active={area} onChange={setNotifArea} />
                   </div>
-                  {NOTIFICATION_GROUPS
-                    .filter(group => {
-                      const userRoles = Array.isArray(currentUser?.roles) && currentUser.roles.length
-                        ? currentUser.roles
-                        : (currentUser?.role ? [currentUser.role] : []);
-                      return !userRoles.length || group.roles.some(r => userRoles.includes(r));
-                    })
-                    .map(group => (
-                      <div key={group.id}>
-                        <div
-                          className="pb-2 mb-1 border-b flex items-center justify-between"
-                          style={{ borderColor: "var(--border)" }}
-                        >
+
+                  <div className="space-y-4">
+                    {area === "sistema" && (
+                      <div>
+                        <div className="pb-2 mb-1 border-b" style={{ borderColor: "var(--border)" }}>
                           <span
                             className="font-bold tracking-wide"
                             style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
                           >
-                            {group.label}
+                            Menções
                           </span>
-                          {(() => {
-                            const allOn = group.items.every(n => Boolean(settings.notifications[n.id]));
-                            return (
+                        </div>
+                        <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                          <ToggleRow
+                            label="Notificar quando alguém me mencionar (@)"
+                            sublabel="Ativado por padrão. Desative se não quiser receber notificação de @menção em comentários."
+                            checked={currentUser?.mentionNotificationsEnabled !== false}
+                            onChange={() => {
+                              if (onUpdateUser && currentUser?.id) {
+                                onUpdateUser(currentUser.id, { mentionNotificationsEnabled: !(currentUser?.mentionNotificationsEnabled !== false) });
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {groups.map(group => {
+                      // "Ativar/Desativar todos" só conta e só mexe no que
+                      // realmente funciona — senão o botão prometeria ligar
+                      // avisos que não existem.
+                      const wired = group.items.filter(n => WIRED_NOTIFICATION_PREFS.has(n.id));
+                      const allOn = wired.length > 0 && wired.every(n => Boolean(settings.notifications[n.id]));
+                      return (
+                        <div key={group.id}>
+                          <div
+                            className="pb-2 mb-1 border-b flex items-center justify-between"
+                            style={{ borderColor: "var(--border)" }}
+                          >
+                            <span
+                              className="font-bold tracking-wide"
+                              style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
+                            >
+                              {group.label}
+                            </span>
+                            {wired.length > 0 && (
                               <button
                                 onClick={() => {
                                   const update = {};
-                                  group.items.forEach(n => { update[n.id] = !allOn; });
+                                  wired.forEach(n => { update[n.id] = !allOn; });
                                   onUpdate({ notifications: { ...settings.notifications, ...update } });
                                 }}
                                 className="text-[10px] font-semibold"
@@ -1339,29 +1410,47 @@ export function SettingsView({
                               >
                                 {allOn ? "Desativar todos" : "Ativar todos"}
                               </button>
-                            );
-                          })()}
+                            )}
+                          </div>
+                          <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                            {group.items.map(n => {
+                              const isWired = WIRED_NOTIFICATION_PREFS.has(n.id);
+                              return (
+                                <ToggleRow
+                                  key={n.id}
+                                  label={n.label}
+                                  sublabel={isWired ? undefined : "Ainda não emitido pela plataforma — este aviso não chega, ligado ou não."}
+                                  checked={isWired && Boolean(settings.notifications[n.id])}
+                                  disabled={!isWired}
+                                  onChange={() => { if (isWired) toggleNotification(n.id); }}
+                                />
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                          {group.items.map(n => (
-                            <ToggleRow
-                              key={n.id}
-                              label={n.label}
-                              checked={Boolean(settings.notifications[n.id])}
-                              onChange={() => toggleNotification(n.id)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </Section>
-            )}
+                      );
+                    })}
+                  </div>
+                </Section>
+              );
+            })()}
 
-            {/* ── IA ── */}
-            {activeTab === "ia" && (
+            {/* ── INTEGRAÇÕES ── */}
+            {/* Era "Integrações IA", mas abriga o D4Sign (assinatura
+                eletrônica), que nunca teve relação com IA. Renomeada na
+                auditoria de 05/08/2026; IA virou uma aba dentro. */}
+            {activeTab === "integracoes" && (
               <div className="space-y-4">
-              {isAdmin && (
+              <Tabs
+                tabs={[
+                  { id: "ia", label: "Inteligência Artificial", icon: Bot },
+                  ...(canSeeD4Sign ? [{ id: "assinatura", label: "Assinatura eletrônica", icon: Key }] : []),
+                ]}
+                active={integTab}
+                onChange={setIntegTab}
+              />
+
+              {integTab === "ia" && isAdmin && (
                 <Section
                   title="IA da empresa (org-wide)"
                   description="Chave configurada uma vez pelo admin, usada como fallback pra quem não tem chave pessoal — assim vendedor/marketing/RH não precisam criar conta em provedor de IA nenhum pra usar os recursos."
@@ -1397,7 +1486,8 @@ export function SettingsView({
                   )}
                 </Section>
               )}
-              <Section title="Integrações de IA" description="Configure sua LLM para usar os recursos de IA do CRM (opcional — sua chave pessoal tem prioridade sobre a chave da empresa, se houver).">
+              {integTab === "ia" && (
+              <Section title="Minha chave pessoal" description="Opcional. Se preenchida, tem prioridade sobre a chave da empresa nos recursos de IA da plataforma.">
                 <div className="space-y-5">
                   {/* Status badge */}
                   {currentUser?.aiConfig?.provider && (
@@ -1429,8 +1519,8 @@ export function SettingsView({
                           className="py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all"
                           style={{
                             background: aiForm.provider === p.id ? NEUTRAL.red + "0F" : "var(--surface)",
-                            borderColor: aiForm.provider === p.id ? "var(--color-industria)" : "var(--border)",
-                            color: aiForm.provider === p.id ? "var(--color-industria)" : "var(--text)",
+                            borderColor: aiForm.provider === p.id ? "var(--accent)" : "var(--border)",
+                            color: aiForm.provider === p.id ? "var(--accent)" : "var(--text)",
                             cursor: "pointer",
                           }}
                         >
@@ -1453,7 +1543,7 @@ export function SettingsView({
                             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
                             style={{
                               background: aiForm.model === m.id ? NEUTRAL.red + "0F" : "var(--surface)",
-                              borderColor: aiForm.model === m.id ? "var(--color-industria)" : "var(--border)",
+                              borderColor: aiForm.model === m.id ? "var(--accent)" : "var(--border)",
                             }}
                           >
                             <input
@@ -1462,7 +1552,7 @@ export function SettingsView({
                               value={m.id}
                               checked={aiForm.model === m.id}
                               onChange={() => setAiForm(f => ({ ...f, model: m.id }))}
-                              style={{ accentColor: "var(--color-industria)" }}
+                              style={{ accentColor: "var(--accent)" }}
                             />
                             <span className="text-xs font-medium" style={{ color: "var(--text)" }}>{m.name}</span>
                           </label>
@@ -1485,7 +1575,7 @@ export function SettingsView({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs flex items-center gap-1"
-                          style={{ color: "var(--color-industria)" }}
+                          style={{ color: "var(--accent)" }}
                         >
                           <ExternalLink size={10} />Obter chave
                         </a>
@@ -1498,7 +1588,7 @@ export function SettingsView({
                           placeholder={selectedProvider.keyPlaceholder}
                           className="w-full text-sm rounded-xl border px-3 py-2.5 outline-none pr-16"
                           style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", fontFamily: "monospace" }}
-                          onFocus={e => { e.currentTarget.style.borderColor = "var(--color-industria)"; }}
+                          onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
                           onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
                         />
                         <button
@@ -1552,7 +1642,7 @@ export function SettingsView({
                         disabled={aiSaving}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
                         style={{
-                          background: "var(--color-industria)",
+                          background: "var(--accent)",
                           border: "none",
                           opacity: aiSaving ? 0.6 : 1,
                           cursor: aiSaving ? "wait" : "pointer",
@@ -1576,8 +1666,9 @@ export function SettingsView({
                   )}
                 </div>
               </Section>
+              )}
 
-              {canSeeD4Sign && (
+              {integTab === "assinatura" && canSeeD4Sign && (
                 <Section
                   title="Assinatura eletrônica (D4Sign)"
                   description="Usado pelo RH pra enviar documentos de colaboradores pra assinatura eletrônica."
@@ -1626,9 +1717,20 @@ export function SettingsView({
               </div>
             )}
 
-            {/* ── APARÊNCIA ── */}
-            {activeTab === "aparencia" && (
+            {/* ── PREFERÊNCIAS (pessoais — agora visível a todo cargo) ── */}
+            {activeTab === "preferencias" && (
               <div className="space-y-4">
+                <Tabs
+                  tabs={[
+                    { id: "aparencia", label: "Aparência",      icon: Palette },
+                    { id: "recursos",  label: "Recursos",       icon: Sparkles },
+                    { id: "atalhos",   label: "Barra inferior", icon: PanelBottom },
+                  ]}
+                  active={prefTab}
+                  onChange={setPrefTab}
+                />
+
+                {prefTab === "aparencia" && (<>
                 <Section
                   title="Cor de destaque"
                   description="Aplicada em botões, links ativos, barras de progresso e destaques em todo o sistema."
@@ -1765,118 +1867,172 @@ export function SettingsView({
                     A preferência é salva automaticamente.
                   </p>
                 </Section>
+                </>)}
+
+                {prefTab === "recursos" && (
+                <Section
+                  title="Recursos"
+                  description="Funcionalidades que você liga ou desliga só pra você — não afeta mais ninguém."
+                >
+                  <ToggleRow
+                    label="Lista Pessoal"
+                    sublabel="Lista de tarefas privada no menu Meu Espaço. Ninguém mais — nem gerente, nem admin — vê o que você anota nela."
+                    checked={Boolean(settings.personalTasksEnabled)}
+                    onChange={() => onUpdate({ personalTasksEnabled: !settings.personalTasksEnabled })}
+                  />
+                </Section>
+                )}
+
+                {prefTab === "atalhos" && (
+                  <BottomNavPrefsPanel currentUser={currentUser} roles={roles} navGroups={navGroups} />
+                )}
               </div>
             )}
 
-            {/* ── ATALHOS DA BARRA INFERIOR (mobile) ── */}
-            {activeTab === "atalhos" && (
-              <BottomNavPrefsPanel currentUser={currentUser} roles={roles} navGroups={navGroups} />
-            )}
+            {/* ── SEGURANÇA & DADOS ── */}
+            {/* Fusão de "Dados" + "Segurança" (auditoria de 05/08/2026): a
+                aba antiga colocava carregar dados fictícios ao lado de apagar
+                leads reais de forma irreversível, e "Segurança" tinha só o log
+                de exportações. Agora o destrutivo mora numa aba própria. */}
+            {activeTab === "seguranca" && (isManager || isAdmin) && (() => {
+              const segTabs = [
+                ...(isAdmin   ? [{ id: "exportacoes", label: "Exportações",   icon: ShieldCheck }]    : []),
+                ...(isManager ? [{ id: "demo",        label: "Demonstração",  icon: Database }]       : []),
+                ...(isManager ? [{ id: "risco",       label: "Zona de risco", icon: AlertTriangle }]  : []),
+              ];
+              const tab = segTabs.some(t => t.id === segTab) ? segTab : segTabs[0]?.id;
 
-            {/* ── DADOS ── */}
-            {activeTab === "dados" && (
-              <div className="space-y-4">
-                {!supabaseEnabled && (
-                  <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}>
-                    Modo offline — dados armazenados localmente neste navegador.
-                  </div>
-                )}
+              return (
+                <div className="space-y-4">
+                  <Tabs tabs={segTabs} active={tab} onChange={setSegTab} />
 
-                {/* ── Comercial (Leads) ── */}
-                <Section
-                  title="Dados de demonstração · Comercial"
-                  description={`${leadsCount} lead${leadsCount === 1 ? "" : "s"} no momento. Use para explorar a UI sem cadastrar dados reais.`}
-                >
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Button variant="secondary" icon={Sparkles} onClick={handleLoadDemo}>
-                      Carregar dados de demonstração
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t" style={{ borderColor: "var(--border)" }}>
-                    <Button
-                      variant="ghost"
-                      icon={Trash2}
-                      onClick={handleClearLeads}
-                      disabled={leadsCount === 0}
-                      style={{ color: "var(--danger)", borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}
-                    >
-                      Limpar todos os leads
-                    </Button>
-                    {leadsCount > 0 && (
-                      <span className="self-center text-xs flex items-center gap-1" style={{ color: "var(--danger)" }}>
-                        <AlertTriangle size={11} />
-                        Ação irreversível
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs leading-relaxed mt-3" style={{ color: "var(--text-dim)" }}>
-                    Gera ~68 empresas fictícias distribuídas entre Sanwey e Resibag, com setor, estado, porte e
-                    funil. Preenche os dropdowns do Explorador, Kanban e Executivo para testes.
-                  </p>
-                </Section>
+                  {tab === "exportacoes" && isAdmin && <ExportAuditPanel />}
 
-                {/* ── Marketing + RH ── */}
-                {supabaseEnabled && onLoadAllDemoData && (
-                  <Section
-                    title="Dados de demonstração · Marketing & RH"
-                    description="Popula campanhas, entregas, despesas, solicitações e funcionários fictícios para explorar todas as áreas da plataforma."
-                  >
-                    {demoDataCounts && (
-                      <div className="mb-3 p-3 rounded-lg text-xs" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}>
-                        <strong>Carregado com sucesso:</strong>{" "}
-                        {demoDataCounts.campaigns} campanhas,{" "}
-                        {demoDataCounts.deliverables} entregas,{" "}
-                        {demoDataCounts.expenses} despesas,{" "}
-                        {demoDataCounts.requests} solicitações,{" "}
-                        {demoDataCounts.colaboradores} funcionários.
+                  {tab === "demo" && isManager && (<>
+                    {!supabaseEnabled && (
+                      <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}>
+                        Modo offline — dados armazenados localmente neste navegador.
                       </div>
                     )}
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="secondary"
-                        icon={demoDataLoading ? Loader2 : Sparkles}
-                        onClick={onLoadAllDemoData}
-                        disabled={demoDataLoading}
-                      >
-                        {demoDataLoading ? "Carregando…" : "Carregar dados de demonstração"}
-                      </Button>
-                    </div>
-                    <p className="text-xs leading-relaxed mt-3" style={{ color: "var(--text-dim)" }}>
-                      Cria registros fictícios em: Campanhas de Marketing, Entregas, Despesas,
-                      Solicitações e Funcionários (RH). Os dados são marcados com <code>is_demo</code> e
-                      podem ser removidos individualmente em cada módulo.
-                    </p>
-                  </Section>
-                )}
 
-                <Section
-                  title="Dados locais"
-                  description="Apagar leads, configurações e sessão armazenados neste navegador."
-                >
-                  <div
-                    className="p-3.5 rounded-lg mb-4 flex items-start gap-2.5 text-xs"
-                    style={{ background: "var(--amber-bg)", borderLeft: "3px solid var(--amber)", color: "var(--amber)" }}
-                  >
-                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                    <span className="leading-relaxed">
-                      Isso não afeta dados sincronizados com o Supabase. Afeta só este navegador.
-                    </span>
-                  </div>
-                  <Button variant="secondary" icon={Trash2} onClick={handleClearLocal}>
-                    Limpar dados locais
-                  </Button>
-                </Section>
-              </div>
-            )}
+                    <Section
+                      title="Leads de exemplo · Comercial"
+                      description={`${leadsCount} lead${leadsCount === 1 ? "" : "s"} no momento. Use para explorar a plataforma sem cadastrar nada real.`}
+                    >
+                      <div className="flex flex-wrap gap-2">
+                        {/* Antes os dois botões desta tela se chamavam
+                            "Carregar dados de demonstração", idênticos. */}
+                        <Button variant="secondary" icon={Sparkles} onClick={handleLoadDemo}>
+                          Carregar leads de exemplo
+                        </Button>
+                      </div>
+                      <p className="text-xs leading-relaxed mt-3" style={{ color: "var(--text-dim)" }}>
+                        Gera ~68 empresas fictícias distribuídas entre Sanwey e Resibag, com setor, estado, porte e
+                        funil. Preenche os dropdowns do Explorador, Kanban e Executivo para testes.
+                      </p>
+                    </Section>
+
+                    {supabaseEnabled && onLoadAllDemoData && (
+                      <Section
+                        title="Dados de exemplo · Marketing e RH"
+                        description="Popula campanhas, entregas, despesas, solicitações e funcionários fictícios para explorar todas as áreas da plataforma."
+                      >
+                        {demoDataCounts && (
+                          <div className="mb-3 p-3 rounded-lg text-xs" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}>
+                            <strong>Carregado com sucesso:</strong>{" "}
+                            {demoDataCounts.campaigns} campanhas,{" "}
+                            {demoDataCounts.deliverables} entregas,{" "}
+                            {demoDataCounts.expenses} despesas,{" "}
+                            {demoDataCounts.requests} solicitações,{" "}
+                            {demoDataCounts.colaboradores} funcionários.
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="secondary"
+                            icon={demoDataLoading ? Loader2 : Sparkles}
+                            onClick={onLoadAllDemoData}
+                            disabled={demoDataLoading}
+                          >
+                            {demoDataLoading ? "Carregando…" : "Carregar dados de Marketing e RH"}
+                          </Button>
+                        </div>
+                        <p className="text-xs leading-relaxed mt-3" style={{ color: "var(--text-dim)" }}>
+                          Cria registros fictícios em: Campanhas de Marketing, Entregas, Despesas,
+                          Solicitações e Funcionários (RH). Os dados são marcados com <code>is_demo</code> e
+                          podem ser removidos individualmente em cada módulo.
+                        </p>
+                      </Section>
+                    )}
+                  </>)}
+
+                  {tab === "risco" && isManager && (<>
+                    <Section
+                      title="Dados locais"
+                      description="Apagar leads, configurações e sessão armazenados neste navegador."
+                    >
+                      <div
+                        className="p-3.5 rounded-lg mb-4 flex items-start gap-2.5 text-xs"
+                        style={{ background: "var(--amber-bg)", borderLeft: "3px solid var(--amber)", color: "var(--amber)" }}
+                      >
+                        <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                        <span className="leading-relaxed">
+                          Isso não afeta dados sincronizados com o Supabase. Afeta só este navegador.
+                        </span>
+                      </div>
+                      <Button variant="secondary" icon={Trash2} onClick={handleClearLocal}>
+                        Limpar dados locais
+                      </Button>
+                    </Section>
+
+                    <Section
+                      title="Excluir todos os leads"
+                      description="Remove do banco todos os leads do CRM, de todas as empresas. Não dá pra desfazer."
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          icon={Trash2}
+                          onClick={handleClearLeads}
+                          disabled={leadsCount === 0}
+                          style={{ color: "var(--danger)", borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}
+                        >
+                          Excluir todos os leads
+                        </Button>
+                        <span className="text-xs flex items-center gap-1" style={{ color: leadsCount > 0 ? "var(--danger)" : "var(--text-faint)" }}>
+                          <AlertTriangle size={11} />
+                          {leadsCount > 0 ? `${leadsCount} lead${leadsCount === 1 ? "" : "s"} serão apagados` : "Nenhum lead cadastrado"}
+                        </span>
+                      </div>
+                    </Section>
+                  </>)}
+                </div>
+              );
+            })()}
 
             {/* ── CAPTURA PÚBLICA ── */}
             {activeTab === "captura" && (
               <Section
                 title="Links de captura pública"
-                description="Compartilhe estes links onde fizer sentido — cada categoria abaixo alimenta um fluxo diferente da plataforma."
+                description="Compartilhe estes links onde fizer sentido — cada aba alimenta um fluxo diferente da plataforma."
               >
+                {/* Três públicos distintos (cliente, colega de outro setor,
+                    candidato) que quase nunca se consulta junto — eram três
+                    blocos empilhados num scroll só. */}
+                <div className="mb-4">
+                  <Tabs
+                    tabs={[
+                      { id: "leads",         label: "Leads",                 icon: Users },
+                      { id: "solicitacoes",  label: "Solicitações internas", icon: Inbox },
+                      { id: "vagas",         label: "Vagas",                 icon: Briefcase },
+                    ]}
+                    active={capturaTab}
+                    onChange={setCapturaTab}
+                  />
+                </div>
                 <div className="space-y-6">
                   {/* ── Leads (Comercial) ── */}
+                  {capturaTab === "leads" && (
                   <div>
                     <div className="pb-2 mb-3 border-b" style={{ borderColor: "var(--border)" }}>
                       <span
@@ -1927,15 +2083,19 @@ export function SettingsView({
                         );
                       })}
                     </div>
-                    <div className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style={{ background: "var(--surface-alt)", color: "#1E40AF", border: "1px solid #BFDBFE" }}>
+                    {/* eram #1E40AF/#BFDBFE fixos — ilegíveis no tema escuro.
+                        Os tokens de canal de e-mail já cobrem este azul. */}
+                    <div className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style={{ background: "var(--channel-email-bg)", color: "var(--channel-email-text)", border: "1px solid var(--channel-email-border)" }}>
                       <Link2 size={13} className="shrink-0 mt-0.5" />
                       <div>
                         <strong>Dica:</strong> adicione <code>?src=instagram</code>, <code>?src=whatsapp</code> ou outro identificador ao final da URL para rastrear a origem da captura no card do lead.
                       </div>
                     </div>
                   </div>
+                  )}
 
                   {/* ── Solicitações internas (Marketing) ── */}
+                  {capturaTab === "solicitacoes" && (
                   <div>
                     <div className="pb-2 mb-3 border-b" style={{ borderColor: "var(--border)" }}>
                       <span
@@ -2017,8 +2177,10 @@ export function SettingsView({
                       </code>
                     </div>
                   </div>
+                  )}
 
                   {/* ── Recrutamento (Vagas públicas) ── */}
+                  {capturaTab === "vagas" && (
                   <div>
                     <div className="pb-2 mb-3 border-b" style={{ borderColor: "var(--border)" }}>
                       <span
@@ -2085,19 +2247,13 @@ export function SettingsView({
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               </Section>
             )}
 
-            {/* ── FIGURINHAS (chat_is_manager) ── */}
-            {activeTab === "figurinhas" && isChatManager && <StickersPanel />}
-
-            {/* ── SEGURANÇA (admin) ── */}
-            {activeTab === "seguranca" && isAdmin && (
-              <div className="space-y-4">
-                <ExportAuditPanel />
-              </div>
-            )}
+            {/* Figurinhas virou aba de "Geral"; o log de exportações virou aba
+                de "Segurança & dados" — nenhum dos dois é mais item de menu. */}
 
             {/* ── USUÁRIOS ── */}
             {activeTab === "usuarios" && usersPanel}

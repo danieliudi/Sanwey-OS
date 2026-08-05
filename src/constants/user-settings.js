@@ -1,5 +1,4 @@
 import { COMPANY_IDS } from "./companies";
-import { DEFAULT_PIPELINE_STAGES } from "./pipelines";
 
 // Painel Executivo é cross-departamento (Comercial + Marketing + RH), não uma
 // tela do Comercial — cada executivo com acesso escolhe o que aparece no
@@ -22,10 +21,21 @@ export const EXECUTIVE_WIDGETS = [
   { id: "tab_posvenda",      label: "Aba Pós-venda",      dept: "comercial" },
 ];
 
+// Abas da tela de Notificações (auditoria de 05/08/2026): eram 9 blocos
+// empilhados num scroll só. `area` reparte os mesmos grupos — nenhum id de
+// item mudou, então preferência já salva continua valendo.
+export const NOTIFICATION_AREAS = [
+  { id: "comercial", label: "Comercial" },
+  { id: "marketing", label: "Marketing" },
+  { id: "rh",        label: "RH" },
+  { id: "sistema",   label: "Sistema" },
+];
+
 export const NOTIFICATION_GROUPS = [
   {
     id: "meus_leads",
     label: "Meus leads",
+    area: "comercial",
     roles: ["consultor", "vendedor", "gerente", "admin"],
     items: [
       { id: "new_lead_assigned", label: "Novo lead atribuído a mim", defaultOn: true },
@@ -37,6 +47,7 @@ export const NOTIFICATION_GROUPS = [
   {
     id: "equipe",
     label: "Equipe",
+    area: "comercial",
     roles: ["gerente", "admin"],
     items: [
       { id: "new_lead_team",     label: "Novo lead criado na equipe", defaultOn: true },
@@ -49,6 +60,7 @@ export const NOTIFICATION_GROUPS = [
   {
     id: "inteligencia",
     label: "Inteligência",
+    area: "comercial",
     roles: ["vendedor", "consultor", "gerente", "admin"],
     items: [
       { id: "cross_sell",        label: "Sugestões de cross-sell", defaultOn: true },
@@ -58,15 +70,16 @@ export const NOTIFICATION_GROUPS = [
   {
     id: "gestao",
     label: "Gestão",
+    area: "comercial",
     roles: ["gerente", "admin"],
     items: [
       { id: "weekly_digest",     label: "Resumo semanal do pipeline", defaultOn: true },
-      { id: "new_user_joined",   label: "Novo usuário na plataforma", defaultOn: false },
     ],
   },
   {
     id: "minhas_entregas",
     label: "Minhas entregas",
+    area: "marketing",
     roles: ["marketing", "gerente_marketing", "admin"],
     items: [
       { id: "new_deliverable_assigned", label: "Nova entrega atribuída a mim", defaultOn: true },
@@ -77,6 +90,7 @@ export const NOTIFICATION_GROUPS = [
   {
     id: "solicitacoes_marketing",
     label: "Solicitações",
+    area: "marketing",
     roles: ["marketing", "gerente_marketing", "admin"],
     items: [
       { id: "new_marketing_request",    label: "Nova solicitação recebida", defaultOn: true },
@@ -86,6 +100,7 @@ export const NOTIFICATION_GROUPS = [
   {
     id: "equipe_marketing",
     label: "Equipe de Marketing",
+    area: "marketing",
     roles: ["gerente_marketing", "admin"],
     items: [
       { id: "new_deliverable_team", label: "Nova entrega criada na equipe", defaultOn: false },
@@ -95,6 +110,7 @@ export const NOTIFICATION_GROUPS = [
   {
     id: "meus_processos_rh",
     label: "Meus processos",
+    area: "rh",
     roles: ["rh", "gerente_rh", "admin"],
     items: [
       { id: "new_candidato",          label: "Novo candidato em processo seletivo", defaultOn: true },
@@ -105,11 +121,25 @@ export const NOTIFICATION_GROUPS = [
   {
     id: "compliance_rh",
     label: "Conformidade",
+    area: "rh",
     roles: ["gerente_rh", "admin"],
     items: [
       { id: "aso_vencendo",           label: "ASO vencendo", defaultOn: true },
       { id: "contrato_vencendo",      label: "Contrato de experiência vencendo", defaultOn: true },
       { id: "aniversario_colaborador",label: "Aniversário de colaborador", defaultOn: false },
+    ],
+  },
+  {
+    // "Novo usuário na plataforma" saiu de "Gestão" (área Comercial) — não tem
+    // nada de comercial, é evento de plataforma. Convive na aba Sistema com o
+    // toggle de @menção, que fica fora deste array (vive em profiles, não em
+    // settings.notifications — ver SettingsView).
+    id: "plataforma",
+    label: "Plataforma",
+    area: "sistema",
+    roles: ["gerente", "admin"],
+    items: [
+      { id: "new_user_joined",   label: "Novo usuário na plataforma", defaultOn: false },
     ],
   },
 ];
@@ -137,24 +167,24 @@ export const NOTIFICATION_TYPE_TO_PREF = {
   new_candidato:          "new_candidato",
 };
 
-export const DENSITY_OPTIONS = [
-  { value: "comfortable", label: "Confortável" },
-  { value: "compact", label: "Compacto" },
-];
+// Toggles que realmente silenciam alguma coisa. O gate em use-notifications.js
+// só consulta a preferência quando o TIPO emitido aparece no mapa acima —
+// então um toggle que nenhum tipo aponta fica bonito na tela e não faz nada.
+// Auditoria de 05/08/2026 achou 12 nessa situação; em vez de escondê-los (o
+// silêncio foi justamente o que deixou passar), a tela os mostra desabilitados
+// com o motivo. Derivado do mapa, nunca escrito à mão: assim que alguém ligar
+// o tipo correspondente, o toggle volta a ficar ativo sozinho.
+export const WIRED_NOTIFICATION_PREFS = new Set(Object.values(NOTIFICATION_TYPE_TO_PREF));
 
 export const DEFAULT_USER_SETTINGS = {
   enabledCompanies: [...COMPANY_IDS],
   visibleExecutiveWidgets: EXECUTIVE_WIDGETS.map(w => w.id),
-  visibleKanbanStages: DEFAULT_PIPELINE_STAGES.map(s => s.id),
   notifications: NOTIFICATION_PREFS.reduce((acc, n) => {
     acc[n.id] = n.defaultOn;
     return acc;
   }, {}),
-  density: "comfortable",
-  // Tarefas Pessoais: feature opt-in, ligada por padrão a pedido do Daniel
-  // (03/08) — usuário que não quiser desliga em Configurações →
-  // Preferências. Mesmo mecanismo de persistência (useUserSettings/
-  // usePersistentState, localStorage por usuário) — não um toggle novo do
-  // zero.
+  // Lista Pessoal nasce ligada (decisão do Daniel, 04/08) — quem não
+  // quiser desliga em Configurações → Preferências → Recursos. Persistência
+  // pelo mesmo useUserSettings/localStorage do resto, sem tabela própria.
   personalTasksEnabled: true,
 };

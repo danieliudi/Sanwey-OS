@@ -76,7 +76,7 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
             style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
           >
             <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-            <span>Configure sua LLM nas Configurações → Integrações de IA</span>
+            <span>Configure sua LLM nas Configurações → Integrações</span>
           </div>
         )}
 

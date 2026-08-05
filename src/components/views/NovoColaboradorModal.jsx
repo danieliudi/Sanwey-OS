@@ -330,7 +330,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
             {fileError && <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 6 }}>{fileError}</div>}
             {!isConfigured && (
               <div style={{ fontSize: 11, color: "var(--warning)", marginTop: 6 }}>
-                Configure uma LLM (Anthropic) em Configurações → Integrações de IA para usar o preenchimento automático. O upload do documento continua funcionando normalmente.
+                Configure uma LLM (Anthropic) em Configurações → Integrações para usar o preenchimento automático. O upload do documento continua funcionando normalmente.
               </div>
             )}
             {isConfigured && provider !== "anthropic" && (

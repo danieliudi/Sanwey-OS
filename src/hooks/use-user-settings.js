@@ -1,23 +1,20 @@
 import { useCallback, useMemo } from "react";
 import { STORAGE_KEYS } from "../constants/storage-keys";
 import { DEFAULT_USER_SETTINGS } from "../constants/user-settings";
-import { DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
 import { usePersistentState } from "./use-persistent-state";
 
 // Shallow-merges any stored value with the defaults so new setting keys added
-// in future versions don't break existing users. Also migrates
-// `visibleKanbanStages` forward so newly-added pipeline stages don't end up
-// hidden from users whose preference was saved before the stage existed.
+// in future versions don't break existing users.
+//
+// Aqui existia também uma migração de `visibleKanbanStages` ("Etapas visíveis
+// no Kanban"). Removida na auditoria de 05/08/2026: ela só sabia das 7 etapas
+// da constante DEFAULT_PIPELINE_STAGES, mas as etapas do Funil viraram
+// configuráveis dentro do próprio Kanban — então etapa criada pelo usuário
+// nunca entrava na lista e era filtrada pra fora do board, sem aviso e sem
+// como religar pela interface. Esconder coluna agora é só do editor de etapas
+// do Kanban: uma fonte de verdade, não duas.
 function merge(stored) {
-  const out = { ...DEFAULT_USER_SETTINGS, ...(stored || {}) };
-  const currentIds = DEFAULT_PIPELINE_STAGES.map(s => s.id);
-  const visible = Array.isArray(out.visibleKanbanStages) ? out.visibleKanbanStages : [];
-  const set = new Set(visible);
-  const missing = currentIds.filter(id => !set.has(id));
-  if (missing.length > 0) {
-    out.visibleKanbanStages = [...visible, ...missing];
-  }
-  return out;
+  return { ...DEFAULT_USER_SETTINGS, ...(stored || {}) };
 }
 
 export function useUserSettings() {

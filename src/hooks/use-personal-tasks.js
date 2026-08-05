@@ -36,18 +36,16 @@ function taskToRow(data) {
   return row;
 }
 
-// Lista Pessoal (ex-"Tarefas Pessoais") — feature opt-in
-// (settings.personalTasksEnabled em Configurações → Preferências, default
-// ligado), privada por usuário: personal_tasks tem RLS com
-// `user_id = auth.uid()` sem nenhuma exceção de papel/gerência (ver
-// migration 20260826_personal_tasks.sql), então o filtro
-// `.eq("user_id", userId)" abaixo é só uma otimização de query — mesmo sem
+// Lista Pessoal (ex-"Tarefas Pessoais") — privada por usuário: personal_tasks
+// tem RLS com `user_id = auth.uid()` sem nenhuma exceção de papel/gerência
+// (ver migration 20260826_personal_tasks.sql), então o filtro
+// `.eq("user_id", userId)` abaixo é só uma otimização de query — mesmo sem
 // ele, o banco já não devolveria linha de outro usuário.
 //
-// `enabled` (default true) deixa o hook inerte — sem fetch nem subscription
-// — pra quem desligou o opt-in. App.jsx passa
-// `enabled: settings.personalTasksEnabled` pra não gerar tráfego Realtime à
-// toa pra quem desligou a feature.
+// A feature nasce LIGADA (settings.personalTasksEnabled, default true) e é
+// desligável em Configurações → Preferências → Recursos. `enabled` deixa o
+// hook inerte — sem fetch nem subscription — pra quem desligou, evitando
+// tráfego Realtime à toa.
 export function usePersonalTasks({ userId, enabled = true } = {}) {
   const [tasks, setTasks]     = useState([]);
   const [loading, setLoading] = useState(false);
