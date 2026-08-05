@@ -256,5 +256,17 @@ export function useMarketingExpenseItems() {
     if (err) throw err;
   }, []);
 
-  return { fetchItems, createExpenseItem, updateExpenseItem, deleteExpenseItem };
+  // Todos os itens de todas as despesas, sem filtro por expense_id — usado
+  // pelo filtro "Item" de DespesasView pra buscar por descrição de linha
+  // (ex.: "Seguro") em vez de categoria. Volume esperado é baixo o bastante
+  // (mesma premissa de useMarketingExpenses.fetchAll, que já traz tudo sem
+  // paginação) pra buscar tudo de uma vez e filtrar no cliente.
+  const fetchAllItems = useCallback(async () => {
+    if (!isSupabaseConfigured) return [];
+    const { data, error: err } = await supabase.from(ITEMS_TABLE).select("*");
+    if (err) throw err;
+    return (data || []).map(rowToExpenseItem);
+  }, []);
+
+  return { fetchItems, createExpenseItem, updateExpenseItem, deleteExpenseItem, fetchAllItems };
 }

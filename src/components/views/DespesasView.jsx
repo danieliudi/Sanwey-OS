@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, AlertCircle, ShoppingCart, Clock, CheckCircle2 } from "lucide-react";
+import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, AlertCircle, ShoppingCart, Clock, CheckCircle2, Search } from "lucide-react";
 import { useMarketingExpenses, useMarketingExpenseItems } from "../../hooks/use-marketing-expenses";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
@@ -8,13 +8,24 @@ import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK, formatBRL } from "../../utils/currency";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
-import { formatDateBR, localDateInputToISOString } from "../../utils/date";
+import { formatDateBR, localDateInputToISOString, parseDateInput } from "../../utils/date";
 import { supabase } from "../../lib/supabase";
 import { PageHeader } from "../shared/PageHeader";
 import { StatCard } from "../ui/StatCard";
 import { EntityMultiSelect } from "../shared/EntityMultiSelect";
 
 const RECEIPT_BUCKET = "marketing-attachments";
+
+// Ano usado pelo filtro "Ano": data da fatura quando existir, senão o
+// vencimento (que toda despesa tem) — decidido com o Daniel, mockup
+// aprovado 05/08. parseDateInput (não `new Date` cru) evita o bug de
+// data-only virando meia-noite UTC e "voltando" um dia em fuso negativo.
+function expenseYear(expense) {
+  const raw = expense.invoiceDate || expense.dueDate;
+  if (!raw) return null;
+  const d = parseDateInput(raw);
+  return Number.isNaN(d.getTime()) ? null : d.getFullYear();
+}
 
 const EMPTY_FORM = {
   description: "",
@@ -638,6 +649,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
 
   const { deliverables } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
   const { tasks } = useMarketingTasks({ userId: user?.id, role: user?.role, roles: user?.roles });
+  const { fetchAllItems } = useMarketingExpenseItems();
 
   const campaignMap = useMemo(() => Object.fromEntries(campaigns.map(c => [c.id, c])), [campaigns]);
   const deliverableMap = useMemo(() => Object.fromEntries(deliverables.map(d => [d.id, d])), [deliverables]);
@@ -646,18 +658,74 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus]     = useState("all");
   const [filterCompany, setFilterCompany]   = useState("all");
+  const [filterCampaign, setFilterCampaign] = useState("all");
+  const [filterYear, setFilterYear]         = useState("all");
+  const [filterItem, setFilterItem]         = useState("");
   const [modalExpense, setModalExpense]      = useState(null);
   const [modalOpen, setModalOpen]           = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
-  const filtered = useMemo(() => {
-    return expenses.filter(e => {
-      if (filterCategory !== "all" && e.category !== filterCategory) return false;
-      if (filterStatus !== "all" && e.status !== filterStatus) return false;
-      if (filterCompany !== "all" && !(e.companyIds || []).includes(filterCompany)) return false;
-      return true;
-    });
-  }, [expenses, filterCategory, filterStatus, filterCompany]);
+  // Todos os itens de todas as despesas, carregados uma vez — alimenta o
+  // filtro "Item" (busca por descrição de linha, ex.: "Seguro", não pela
+  // Categoria da despesa inteira). Ver DespesasView:653-680 pro cálculo.
+  const [allItems, setAllItems] = useState([]);
+  const [allItemsLoading, setAllItemsLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    fetchAllItems()
+      .then(data => { if (alive) setAllItems(data); })
+      .finally(() => { if (alive) setAllItemsLoading(false); });
+    return () => { alive = false; };
+  }, [fetchAllItems]);
+
+  const itemsByExpense = useMemo(() => {
+    const map = {};
+    for (const it of allItems) {
+      (map[it.expenseId] ||= []).push(it);
+    }
+    return map;
+  }, [allItems]);
+
+  const years = useMemo(() => {
+    const set = new Set();
+    expenses.forEach(e => { const y = expenseYear(e); if (y) set.add(y); });
+    return Array.from(set).sort((a, b) => b - a);
+  }, [expenses]);
+
+  const itemQuery = filterItem.trim().toLowerCase();
+
+  // Item ativo muda o que "bater o filtro" significa: uma despesa com itens
+  // detalhados só entra se ALGUM item bater (a soma usada no card de total
+  // é só desses itens, não da despesa inteira); uma despesa sem item nenhum
+  // cai no fallback de buscar na própria Descrição, valendo o valor cheio
+  // (decisão confirmada com o Daniel, mockup 05/08).
+  const { filtered, itemTotal } = useMemo(() => {
+    const rows = expenses
+      .filter(e => {
+        if (filterCategory !== "all" && e.category !== filterCategory) return false;
+        if (filterStatus !== "all" && e.status !== filterStatus) return false;
+        if (filterCompany !== "all" && !(e.companyIds || []).includes(filterCompany)) return false;
+        if (filterCampaign !== "all" && e.campaignId !== filterCampaign) return false;
+        if (filterYear !== "all" && String(expenseYear(e)) !== filterYear) return false;
+        return true;
+      })
+      .map(e => {
+        if (!itemQuery) return { expense: e, matchedAmount: null };
+        const items = itemsByExpense[e.id] || [];
+        if (items.length === 0) {
+          if (!e.description?.toLowerCase().includes(itemQuery)) return null;
+          return { expense: e, matchedAmount: e.amount || 0 };
+        }
+        const matches = items.filter(it => it.description?.toLowerCase().includes(itemQuery));
+        if (matches.length === 0) return null;
+        return { expense: e, matchedAmount: matches.reduce((s, it) => s + it.quantity * it.unitValue, 0) };
+      })
+      .filter(Boolean);
+    return {
+      filtered: rows.map(r => r.expense),
+      itemTotal: itemQuery ? rows.reduce((s, r) => s + (r.matchedAmount || 0), 0) : null,
+    };
+  }, [expenses, filterCategory, filterStatus, filterCompany, filterCampaign, filterYear, itemQuery, itemsByExpense]);
 
   const totals = useMemo(() => ({
     all:      filtered.reduce((s, e) => s + (e.amount || 0), 0),
@@ -714,10 +782,18 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4${itemQuery ? " lg:grid-cols-4" : ""}`}>
         <StatCard icon={DollarSign}  value={formatK(totals.all)}      label="Total" />
         <StatCard icon={Clock}       value={formatK(totals.pendente)} label="Pendente" valueColor="var(--warning)" />
         <StatCard icon={CheckCircle2} value={formatK(totals.pago)}    label="Pago"     valueColor="var(--success)" />
+        {itemQuery && (
+          <StatCard
+            icon={Search}
+            value={formatK(itemTotal || 0)}
+            label={`Total em "${filterItem.trim()}"`}
+            tooltip="Soma só das linhas de item que batem a busca — não da despesa inteira, que pode ter outros itens junto."
+          />
+        )}
       </div>
 
       <div className="flex items-center gap-2 flex-wrap mb-4">
@@ -751,6 +827,43 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
             <option key={id} value={id}>{COMPANIES[id]?.short}</option>
           ))}
         </select>
+        <select
+          value={filterCampaign}
+          onChange={e => setFilterCampaign(e.target.value)}
+          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+        >
+          <option value="all">Todas as campanhas</option>
+          {campaigns.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <select
+          value={filterYear}
+          onChange={e => setFilterYear(e.target.value)}
+          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+        >
+          <option value="all">Todos os anos</option>
+          {years.map(y => (
+            <option key={y} value={String(y)}>{y}</option>
+          ))}
+        </select>
+        <div
+          className="relative flex items-center rounded-xl border px-2.5"
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+          title={allItemsLoading ? "Carregando itens…" : undefined}
+        >
+          <Search size={12} style={{ color: "var(--text-faint)" }} />
+          <input
+            type="text"
+            value={filterItem}
+            onChange={e => setFilterItem(e.target.value)}
+            placeholder="Buscar item…"
+            className="text-xs outline-none py-1.5 px-1.5 bg-transparent"
+            style={{ color: "var(--text)", width: 120 }}
+          />
+        </div>
       </div>
 
       {loading && (
