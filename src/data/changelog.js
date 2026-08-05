@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.22.0",
+    items: [
+      { kind: "novo", text: "Em Comercial → Viagens & Reembolsos, ao planejar uma visita agora dá pra declarar \"Valor previsto\" — quanto você estima gastar. Gestor e Relatórios passam a cruzar automaticamente esse valor com o que foi de fato lançado como despesa." },
+      { kind: "novo", text: "Aba Gestão de Viagens & Reembolsos ganhou uma seção \"Divergências\": aponta despesa lançada sem visita planejada correspondente, visita planejada que nunca teve desfecho registrado, e despesas que estouraram o valor previsto em mais de 20%." },
+      { kind: "ajuste", text: "Relatórios de Viagens & Reembolsos agora mostra essas mesmas divergências resumidas, prontas pra levar à diretoria." },
+      { kind: "ajuste", text: "Marketing → Despesas: anexar nota fiscal deixou de ser obrigatório pra marcar uma despesa como paga." },
+    ],
+  },
+  {
     version: "4.21.0",
     items: [
       { kind: "ajuste", text: "Configurações foi reorganizada: o menu agora tem três grupos (Minha conta, Plataforma e Administração) em vez de uma lista longa, e cada página usa abas no topo — nada mais exige rolar a tela até o fim para achar um ajuste." },

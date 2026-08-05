@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, AlertCircle, ShoppingCart, Clock, CheckCircle2, Search } from "lucide-react";
+import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, ShoppingCart, Clock, CheckCircle2, Search } from "lucide-react";
 import { useMarketingExpenses, useMarketingExpenseItems } from "../../hooks/use-marketing-expenses";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
@@ -235,12 +235,6 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
     e.preventDefault();
     if (!form.description.trim()) { setError("Descrição obrigatória."); return; }
     if (form.companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
-    // Espelha o guard trigger do banco (marketing_expenses_require_receipt) —
-    // dá um erro inline em vez do usuário levar a exceção crua do Postgres.
-    if (form.status === "pago" && !form.receiptUrl) {
-      setError("Despesa paga exige nota fiscal anexada.");
-      return;
-    }
     setSaving(true);
     setError(null);
     try {
@@ -536,12 +530,6 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
                 />
               </label>
             </div>
-            {form.status === "pago" && !form.receiptUrl && (
-              <div className="flex items-center gap-1.5 text-xs mt-1.5" style={{ color: "var(--warning)" }}>
-                <AlertCircle size={11} />
-                Obrigatória para marcar como paga.
-              </div>
-            )}
           </div>
 
           <div>

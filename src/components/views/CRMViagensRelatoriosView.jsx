@@ -33,7 +33,7 @@ import { useCRMViagens } from "../../hooks/use-crm-viagens";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
 import { csvRow, triggerDownload, formatBRNumber, formatDate } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
-import { COMERCIAL_ROLES, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO } from "../../utils/viagens";
+import { COMERCIAL_ROLES, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO, computeViagemDivergencias, todayISO } from "../../utils/viagens";
 
 const CATEGORIA_COLORS = ["#7C3AED", "#2563EB", "#DB2777", "#D97706", "#059669", "#DC2626", "#0891B2", "#65A30D"];
 
@@ -229,6 +229,23 @@ export function CRMViagensRelatoriosView({ currentUser, users }) {
       .reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
     return { pctCumprido, totalAprovado, totalPendente, visitasRealizadas: realizados.length };
   }, [registrosFiltrados, despesasFiltradas]);
+
+  // Camada de divergência (mesma regra de CRMViagensGestorView, ver
+  // computeViagemDivergencias em utils/viagens.js) — pedido do gerente
+  // comercial: relatório pronto pra levar à diretoria, não só cumprimento
+  // do planejado.
+  const divergencias = useMemo(
+    () => computeViagemDivergencias(registrosFiltrados, despesasFiltradas, todayISO()),
+    [registrosFiltrados, despesasFiltradas]
+  );
+
+  const divergenciaKpis = useMemo(() => ({
+    semVisita: divergencias.filter((d) => d.tipo === "sem_visita").length,
+    sumiu: divergencias.filter((d) => d.tipo === "sumiu").length,
+    totalEstourado: divergencias
+      .filter((d) => d.tipo === "estouro")
+      .reduce((sum, d) => sum + (d.valorExcedente || 0), 0),
+  }), [divergencias]);
 
   const cumprimentoPorVendedor = useMemo(() => {
     if (selectedVendedorId !== "todos") return [];
@@ -435,6 +452,16 @@ export function CRMViagensRelatoriosView({ currentUser, users }) {
             <KpiTile label="Total aprovado" value={fmtMoney(kpis.totalAprovado)} color="var(--success)" />
             <KpiTile label="Total pendente" value={fmtMoney(kpis.totalPendente)} color="var(--warning)" />
             <KpiTile label="Visitas realizadas" value={kpis.visitasRealizadas} color="var(--text)" />
+          </div>
+
+          {/* Camada de divergência pra levar à diretoria — ver
+              computeViagemDivergencias em utils/viagens.js. Mesmos 3 tipos
+              mostrados linha a linha em CRMViagensGestorView, aqui só o
+              total do período selecionado. */}
+          <div className="grid grid-cols-2 sm:grid-cols-3" style={{ gap: 12 }}>
+            <KpiTile label="Despesas sem visita correspondente" value={divergenciaKpis.semVisita} color="var(--danger)" />
+            <KpiTile label="Visitas sem desfecho registrado" value={divergenciaKpis.sumiu} color="var(--danger)" />
+            <KpiTile label="Total estourado acima do previsto" value={fmtMoney(divergenciaKpis.totalEstourado)} color="var(--warning)" />
           </div>
 
           {selectedVendedorId === "todos" && (

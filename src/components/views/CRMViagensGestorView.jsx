@@ -17,7 +17,7 @@ import { useAI } from "../../hooks/use-ai";
 import { viagemCrossCheckPrompt } from "../../constants/ai-prompts";
 import { Badge } from "../ui/Badge";
 import { formatDateBR } from "../../utils/date";
-import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO } from "../../utils/viagens";
+import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO, computeViagemDivergencias } from "../../utils/viagens";
 
 const COMPROVANTE_OBRIGATORIO_ACIMA_DE = 100;
 
@@ -309,6 +309,14 @@ export function CRMViagensGestorView({ currentUser, users }) {
       .sort((a, b) => String(b.data_despesa || "").localeCompare(String(a.data_despesa || "")));
   }, [despesasFiltradas]);
 
+  // Ver computeViagemDivergencias em utils/viagens.js — mesma regra usada
+  // em Relatórios, pra não divergir os dois lugares que cruzam planejado ×
+  // realizado × despesa.
+  const divergencias = useMemo(
+    () => computeViagemDivergencias(registrosFiltrados, despesasFiltradas, today),
+    [registrosFiltrados, despesasFiltradas, today]
+  );
+
   const vendedorSelecionado = selectedVendedorId === "todos"
     ? null
     : vendedoresComerciais.find((v) => v.id === selectedVendedorId);
@@ -438,6 +446,44 @@ export function CRMViagensGestorView({ currentUser, users }) {
               <EmptyState icon={MapPin} text="Nenhuma visita planejada neste mês." />
             ) : (
               <VisitasTable registros={registrosFiltrados} showVendedorCol={showVendedorCol} nomePorId={nomePorId} today={today} />
+            )}
+          </section>
+
+          <section style={cardSt}>
+            <div style={sectionHeaderSt}>
+              <AlertTriangle size={16} style={{ color: "var(--warning)" }} />
+              Divergências — {monthLabel(selectedMonth)}
+            </div>
+            {divergencias.length === 0 ? (
+              <EmptyState icon={AlertTriangle} text="Nenhuma divergência encontrada neste mês." />
+            ) : (
+              <div className="flex flex-col">
+                {divergencias.map((div, idx) => (
+                  <div
+                    key={div.id}
+                    className="flex items-center"
+                    style={{ gap: 12, padding: "10px 0", borderTop: idx === 0 ? "none" : "1px solid var(--border)" }}
+                  >
+                    <span
+                      style={{
+                        width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                        background: div.severidade === "alta" ? "var(--danger)" : "var(--warning)",
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 12.5, color: "var(--text)" }}>
+                        {showVendedorCol ? (nomePorId.get(div.vendedorId) || "—") : ""}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 1 }}>{div.descricao}</div>
+                    </div>
+                    {div.valorLabel && (
+                      <div style={{ fontFamily: "ui-monospace,monospace", fontWeight: 700, fontSize: 12.5, color: "var(--warning)", whiteSpace: "nowrap" }}>
+                        {div.valorLabel}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </section>
 

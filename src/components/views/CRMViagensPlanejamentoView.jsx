@@ -142,9 +142,16 @@ function VisitaCard({ registro, onClick }) {
         </div>
         <Badge variant={info.variant}>{info.label}</Badge>
       </div>
-      <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: registro.objetivo || registro.cliente_nome ? 4 : 0 }}>
-        {formatDateBR(registro.data_planejada)}
-        {registro.cliente_nome && <> · {registro.cliente_nome}</>}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: registro.objetivo || registro.cliente_nome ? 4 : 0 }}>
+        <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
+          {formatDateBR(registro.data_planejada)}
+          {registro.cliente_nome && <> · {registro.cliente_nome}</>}
+        </div>
+        {registro.valor_previsto != null && (
+          <div style={{ fontSize: 11, color: "var(--text-faint)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+            Previsto {fmtMoney(registro.valor_previsto)}
+          </div>
+        )}
       </div>
       {registro.objetivo && (
         <div style={{ fontSize: 11, color: "var(--text-faint)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -164,6 +171,7 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
   const { suggestions, search: searchDestino, clear: clearDestinoSuggestions } = usePlacesAutocomplete();
   const [dataPlanejada, setDataPlanejada] = useState("");
   const [objetivo, setObjetivo] = useState("");
+  const [valorPrevisto, setValorPrevisto] = useState("");
   const [clientId, setClientId] = useState(null);
   const [quickCreateName, setQuickCreateName] = useState(null); // string | null — abre o mini-cadastro quando != null
   const [saving, setSaving] = useState(false);
@@ -187,6 +195,7 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
         destino_planejado: destino.trim(),
         data_planejada: dataPlanejada,
         objetivo: objetivo.trim() || null,
+        valor_previsto: valorPrevisto !== "" ? Number(valorPrevisto) : null,
         client_id: clientId || null,
         cliente_nome: selectedClient?.name || null,
       });
@@ -276,6 +285,16 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
             <div>
               <label style={LABEL_ST}>Objetivo</label>
               <textarea value={objetivo} onChange={(e) => setObjetivo(e.target.value)} placeholder="O que você planeja tratar nesta visita?" rows={3} className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={INPUT_ST} />
+            </div>
+            <div>
+              <label style={LABEL_ST}>Valor previsto</label>
+              <CurrencyInput
+                placeholder="Quanto você estima gastar nesta visita"
+                value={valorPrevisto}
+                onChange={setValorPrevisto}
+                className={INPUT_CLS}
+                style={INPUT_ST}
+              />
             </div>
           </div>
 
@@ -384,6 +403,13 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
             <div style={{ marginBottom: 20 }}>
               <div style={LABEL_ST}>Objetivo</div>
               <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{registro.objetivo}</div>
+            </div>
+          )}
+
+          {registro.valor_previsto != null && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={LABEL_ST}>Valor previsto</div>
+              <div style={{ fontSize: 13, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{fmtMoney(registro.valor_previsto)}</div>
             </div>
           )}
 
