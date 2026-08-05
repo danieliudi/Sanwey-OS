@@ -602,7 +602,7 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
                     className="font-semibold underline"
                     style={{ background: "none", border: "none", color: "var(--warning)", cursor: "pointer", padding: 0 }}
                   >
-                    Ir para Configurações → Integrações de IA
+                    Ir para Configurações → Integrações
                   </button>
                 </div>
               )}

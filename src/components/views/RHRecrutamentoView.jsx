@@ -267,11 +267,11 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
         <div style={{ padding: "20px 24px 24px" }}>
           {!isConfigured ? (
             <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
-              Configure uma LLM em <strong>Configurações → Integrações de IA</strong> para usar a triagem por currículo.
+              Configure uma LLM em <strong>Configurações → Integrações</strong> para usar a triagem por currículo.
             </div>
           ) : provider !== "anthropic" ? (
             <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
-              A triagem por currículo requer o provedor <strong>Anthropic (Claude)</strong> configurado — ele lê o PDF diretamente. Troque o provedor em Configurações → Integrações de IA.
+              A triagem por currículo requer o provedor <strong>Anthropic (Claude)</strong> configurado — ele lê o PDF diretamente. Troque o provedor em Configurações → Integrações.
             </div>
           ) : (
             <>

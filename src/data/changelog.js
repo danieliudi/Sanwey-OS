@@ -24,6 +24,17 @@
 
 export const CHANGELOG = [
   {
+    version: "4.21.0",
+    items: [
+      { kind: "ajuste", text: "Configurações foi reorganizada: o menu agora tem três grupos (Minha conta, Plataforma e Administração) em vez de uma lista longa, e cada página usa abas no topo — nada mais exige rolar a tela até o fim para achar um ajuste." },
+      { kind: "novo", text: "\"Aparência\" agora aparece para todo mundo. Quem tem cargo de gestão simplesmente não conseguia abrir essa tela e, por isso, não conseguia trocar a cor de destaque da plataforma." },
+      { kind: "correcao", text: "Criar uma etapa nova no Funil de Vendas fazia ela sumir do quadro. A configuração antiga de \"Etapas visíveis no Kanban\" só conhecia as 7 etapas originais e escondia qualquer outra — foi removida, e quem controla o que aparece agora é só o editor de etapas dentro do próprio Kanban." },
+      { kind: "correcao", text: "Em Notificações, 12 opções podiam ser desligadas mas o aviso continuava chegando. Agora elas aparecem desabilitadas, com o motivo, em vez de dar a impressão de funcionar." },
+      { kind: "ajuste", text: "\"Integrações IA\" virou \"Integrações\" — a tela também guarda a assinatura eletrônica, que não tem relação com IA. E a antiga aba \"Dados\" virou \"Segurança & dados\", com os dados de exemplo separados das ações que apagam registros de verdade." },
+      { kind: "ajuste", text: "O interruptor da Lista Pessoal agora fica em Configurações → Preferências → Recursos." },
+    ],
+  },
+  {
     version: "4.20.1",
     items: [
       { kind: "correcao", text: "Corrigido um erro que travava a tela ao abrir \"Lista Pessoal\" (antes \"Tarefas Pessoais\")." },
@@ -42,7 +53,7 @@ export const CHANGELOG = [
   {
     version: "4.19.0",
     items: [
-      { kind: "novo", text: "Nova aba \"Tarefas Pessoais\" no menu Meu Espaço: uma lista de tarefas privada, só sua — nem gerente, nem admin, ninguém mais vê o que você anota lá. É opt-in: ative em Configurações → Meu perfil pra ela aparecer no menu. Tem visão em Lista (agrupada por Hoje/Esta semana/Sem data) e em Kanban (A Fazer/Fazendo/Feito)." },
+      { kind: "novo", text: "Nova aba \"Tarefas Pessoais\" no menu Meu Espaço: uma lista de tarefas privada, só sua — nem gerente, nem admin, ninguém mais vê o que você anota lá. Tem visão em Lista (agrupada por Hoje/Esta semana/Sem data) e em Kanban (A Fazer/Fazendo/Feito)." },
       { kind: "ajuste", text: "O menu lateral agora tem um único grupo \"Meu Espaço\" no topo, reunindo Minhas Tarefas, Chat e (pra quem tem ficha de colaborador) Meu RH — antes Meu RH ficava num grupo separado, mais abaixo." },
     ],
   },

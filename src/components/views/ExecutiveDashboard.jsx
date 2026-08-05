@@ -366,7 +366,7 @@ export function ExecutiveDashboard({
         <EmptyState
           icon={Briefcase}
           title="Nada para mostrar aqui"
-          description="As áreas deste painel foram ocultadas em Configurações → Preferências. Habilite ao menos uma para ver os dados do seu departamento."
+          description="As áreas deste painel foram ocultadas em Configurações → Geral → Painel Executivo. Habilite ao menos uma para ver os dados do seu departamento."
           action={
             <button
               onClick={() => navigate(ROUTES.settings)}
@@ -764,7 +764,7 @@ function AIExecutivePanel({ leads, users, currentUser }) {
             className="text-xs font-medium px-3 py-1.5 rounded-full"
             style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
           >
-            Configure sua LLM nas Configurações → Integrações de IA
+            Configure sua LLM nas Configurações → Integrações
           </span>
         )}
       </div>

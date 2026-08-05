@@ -186,7 +186,7 @@ export function RecordAIPanel({ currentUser, features, defaultFeatureId, onSaveN
           border: "none",
           opacity: loading ? 0.8 : 1,
         }}
-        title={!isConfigured ? "Configure sua LLM nas Configurações → Integrações de IA" : undefined}
+        title={!isConfigured ? "Configure sua LLM nas Configurações → Integrações" : undefined}
         onMouseEnter={e => { if (!loading && isConfigured) e.currentTarget.style.filter = "brightness(0.9)"; }}
         onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
       >

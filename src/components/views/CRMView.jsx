@@ -318,7 +318,7 @@ function KpiCard({ label, value, sub }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage }) {
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
@@ -374,12 +374,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // check constraint rejects — pick the first one that's actually valid.
   const firstValidCompany = (user.companies || []).find(c => COMPANY_IDS.includes(c)) || "industria";
   const companyForPipeline = isGroupView ? firstValidCompany : activeCompany;
-  const allStages = pipelines[companyForPipeline] || DEFAULT_PIPELINE_STAGES;
-  const stages = useMemo(() => (
-    visibleStages && visibleStages.length > 0
-      ? allStages.filter(s => visibleStages.includes(s.id))
-      : allStages
-  ), [allStages, visibleStages]);
+  // Todas as etapas configuradas do funil, sem filtro de preferência. Existia
+  // aqui um filtro por `visibleStages` (Configurações → "Etapas visíveis no
+  // Kanban"), removido na auditoria de 05/08/2026: a lista de preferência só
+  // conhecia as 7 etapas da constante, então etapa criada pelo usuário no
+  // editor do próprio Kanban caía fora do filtro e sumia do board. Quem
+  // esconde coluna agora é só o editor de etapas.
+  const stages = pipelines[companyForPipeline] || DEFAULT_PIPELINE_STAGES;
 
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
   const accent = companyData?.primary || "#37352F";
@@ -729,7 +730,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       ) : viewMode === "table" ? (
         <LeadTableView
           leads={scopedLeads}
-          stages={allStages}
+          stages={stages}
           users={usersById}
           onLeadClick={onLeadClick}
           onStarToggle={onStarToggle}
@@ -1023,7 +1024,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         open={stageManagerOpen}
         onClose={() => setStageManagerOpen(false)}
         companyId={companyForPipeline}
-        stages={allStages}
+        stages={stages}
         transitions={pipelineTransitions}
         leads={leads}
         onReplacePipeline={onReplacePipeline}

@@ -316,10 +316,10 @@ export default function App() {
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
 
   // Lista Pessoal (ex-"Tarefas Pessoais", renomeada 05/08 pra não colidir
-  // com "Minhas Tarefas"): opt-in, settings.personalTasksEnabled, default
-  // true — `enabled` deixa o hook inerte (sem fetch/subscribe) pra quem
-  // desligou a feature. `openCount` alimenta o badge do item no menu, mesmo
-  // padrão do chatUnread acima.
+  // com "Minhas Tarefas"): nasce ligada (settings.personalTasksEnabled,
+  // default true) e é desligável em Configurações → Preferências → Recursos.
+  // `enabled` deixa o hook inerte (sem fetch/subscribe) pra quem desligou.
+  // `openCount` alimenta o badge do item no menu, igual ao chatUnread acima.
   const { openCount: personalTasksOpenCount } = usePersonalTasks({
     userId: currentUser?.id,
     enabled: Boolean(settings.personalTasksEnabled),
@@ -1325,9 +1325,9 @@ export default function App() {
     // "Meu Espaço" só com Meu RH. Consolidados num único grupo rotulado —
     // Meu RH entra aqui embaixo, sob a MESMA condição de sempre
     // (isRHUser||isDiretoria) && temFichaColaborador, sem ampliar nem reduzir
-    // quem já enxergava esse item. Lista Pessoal é opt-in
-    // (settings.personalTasksEnabled, Configurações → Preferências) — só
-    // aparece pra quem ligou a feature, item privado por usuário (RLS).
+    // quem já enxergava esse item. Lista Pessoal vem ligada por padrão
+    // (settings.personalTasksEnabled) e some daqui pra quem desligar em
+    // Configurações → Preferências → Recursos; é privada por usuário (RLS).
     groups.push({
       label: "Meu Espaço",
       items: [
@@ -1855,7 +1855,6 @@ export default function App() {
               onDeleteLead={deleteLead}
               onDuplicateLead={handleDuplicateLead}
               onStarToggle={toggleStar}
-              visibleStages={settings.visibleKanbanStages}
               pipelineTransitions={pipelineTransitions}
               clients={clients}
               onCreateClient={createClient}

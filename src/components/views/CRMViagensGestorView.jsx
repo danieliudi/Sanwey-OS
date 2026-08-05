@@ -454,7 +454,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
                   {aiResult ? "Analisar novamente" : "Analisar com IA"}
                 </button>
               ) : (
-                <span style={{ fontSize: 11, color: "var(--text-faint)" }}>Configure sua LLM em Configurações → Integrações de IA para usar esta função.</span>
+                <span style={{ fontSize: 11, color: "var(--text-faint)" }}>Configure sua LLM em Configurações → Integrações para usar esta função.</span>
               )}
             </div>
 

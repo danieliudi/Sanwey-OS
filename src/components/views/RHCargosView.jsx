@@ -245,7 +245,7 @@ function CargoModal({ initialData, currentUser, onSave, onDelete, onClose }) {
                 <button
                   type="button" onClick={handleGenerate}
                   disabled={aiLoading || !aiConfigured}
-                  title={aiConfigured ? "Gerar responsabilidades e requisitos com IA" : "Configure a IA em Configurações → Integrações de IA"}
+                  title={aiConfigured ? "Gerar responsabilidades e requisitos com IA" : "Configure a IA em Configurações → Integrações"}
                   style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: aiConfigured ? "var(--accent)" : "var(--text-dim)", background: "none", border: "none", cursor: aiLoading || !aiConfigured ? "default" : "pointer", opacity: aiLoading ? 0.6 : 1 }}
                 >
                   {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
