@@ -39,7 +39,7 @@ export function ChangelogToast({ items, onDismiss, onViewAll }) {
 
       <div style={{ padding: "4px 20px 6px" }}>
         {shown.map((item, i) => (
-          <div key={i} className="flex gap-2.5" style={{ padding: "10px 0", borderTop: i === 0 ? "none" : "1px solid var(--border)" }}>
+          <div key={i} className="flex items-start gap-2.5" style={{ padding: "10px 0", borderTop: i === 0 ? "none" : "1px solid var(--border)" }}>
             <Badge variant={KIND_VARIANT[item.kind] || "neutral"}>{KIND_LABEL[item.kind] || item.kind}</Badge>
             <span className="flex-1" style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--text)" }}>{item.text ?? item}</span>
           </div>
