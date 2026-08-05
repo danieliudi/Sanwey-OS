@@ -79,26 +79,47 @@ function CopyLinkButton({ url, className, style }) {
   );
 }
 
+// Switch encostado no rótulo, não mais um checkbox jogado no canto direito
+// (achado do Daniel, 04/08: "demorei alguns segundos pra entender o que
+// clicar") — <input> real segue no DOM (foco/teclado/leitor de tela
+// funcionam), só visualmente escondido atrás do trilho desenhado.
 function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
   return (
     <label
-      className="flex items-center justify-between gap-3 py-2.5 cursor-pointer"
+      className="flex items-start gap-3 py-2.5 cursor-pointer"
       style={{ opacity: disabled ? 0.5 : 1 }}
     >
+      <span
+        className="relative inline-flex shrink-0 peer-focus-visible:outline"
+        style={{ width: 34, height: 20, marginTop: 1 }}
+      >
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          disabled={disabled}
+          className="peer absolute inset-0 opacity-0 cursor-pointer"
+          style={{ margin: 0 }}
+        />
+        <span
+          className="absolute inset-0 rounded-full peer-focus-visible:[box-shadow:0_0_0_2px_var(--surface),0_0_0_4px_var(--accent)]"
+          style={{ background: checked ? "var(--accent)" : "var(--border-strong)", transition: "background 0.15s" }}
+        />
+        <span
+          className="absolute rounded-full"
+          style={{
+            top: 2, left: checked ? 16 : 2, width: 16, height: 16,
+            background: "var(--surface)", boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+            transition: "left 0.15s",
+          }}
+        />
+      </span>
       <div>
         <div className="text-sm font-medium" style={{ color: "var(--text)" }}>{label}</div>
         {sublabel && (
           <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{sublabel}</div>
         )}
       </div>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        disabled={disabled}
-        className="w-4 h-4 cursor-pointer"
-        style={{ accentColor: "var(--text)" }}
-      />
     </label>
   );
 }
@@ -1060,18 +1081,6 @@ export function SettingsView({
                   </button>
                 </Section>
 
-                <Section
-                  title="Tarefas Pessoais"
-                  description="Adiciona uma lista de tarefas privada, só sua, ao menu Meu Espaço."
-                >
-                  <ToggleRow
-                    label="Ativar Tarefas Pessoais"
-                    sublabel="Ninguém mais — nem gerentes, nem admin — vê o que você anota aqui."
-                    checked={Boolean(settings.personalTasksEnabled)}
-                    onChange={() => onUpdate({ personalTasksEnabled: !settings.personalTasksEnabled })}
-                  />
-                </Section>
-
                 <Section title="Alterar senha" description="Disponível apenas com autenticação ativa.">
                   <div className="space-y-3 mb-4">
                     <div>
@@ -1144,6 +1153,18 @@ export function SettingsView({
             {/* ── PREFERÊNCIAS ── */}
             {activeTab === "preferencias" && (
               <div className="space-y-4">
+                <Section
+                  title="Lista Pessoal"
+                  description="Adiciona uma lista de tarefas privada, só sua, ao menu Meu Espaço."
+                >
+                  <ToggleRow
+                    label="Ativar Lista Pessoal"
+                    sublabel="Ninguém mais — nem gerentes, nem admin — vê o que você anota aqui."
+                    checked={Boolean(settings.personalTasksEnabled)}
+                    onChange={() => onUpdate({ personalTasksEnabled: !settings.personalTasksEnabled })}
+                  />
+                </Section>
+
                 {isManager && (
                 <Section
                   title="Empresas ativas"

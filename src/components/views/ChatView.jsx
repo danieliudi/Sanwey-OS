@@ -321,7 +321,7 @@ function MessageBubble({ message, own }) {
   return (
     <div className={`flex items-end gap-2${own ? " flex-row-reverse" : ""}`}>
       {!own && <Avatar name={message.authorName} initials={message.authorInitials} bg={message.authorAvatarBg} size={26} />}
-      <div className="flex flex-col min-w-0" style={{ maxWidth: "78%", alignItems: own ? "flex-end" : "flex-start" }}>
+      <div className="flex flex-col min-w-0" style={{ maxWidth: "70%", alignItems: own ? "flex-end" : "flex-start" }}>
         {!own && (
           <span className="truncate px-1" style={{ fontSize: 11, fontWeight: 600, color: "var(--text-dim)", maxWidth: "100%" }}>
             {message.authorName || "Sistema"}
@@ -1151,7 +1151,7 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
               </button>
             </header>
 
-            <div ref={feedRef} className="flex-1 flex flex-col gap-3 px-3 py-4" style={{ minHeight: 0, overflowY: "auto" }}>
+            <div ref={feedRef} className="flex-1 flex flex-col gap-3 px-5 py-4 sm:px-6" style={{ minHeight: 0, overflowY: "auto" }}>
               {messagesLoading && messages.length === 0 ? (
                 <div className="text-center py-6" style={{ fontSize: 12, color: "var(--text-faint)" }}>Carregando mensagens…</div>
               ) : messages.length === 0 ? (

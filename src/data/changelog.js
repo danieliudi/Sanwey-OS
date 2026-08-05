@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.20.1",
+    items: [
+      { kind: "correcao", text: "Corrigido um erro que travava a tela ao abrir \"Lista Pessoal\" (antes \"Tarefas Pessoais\")." },
+      { kind: "ajuste", text: "\"Tarefas Pessoais\" virou \"Lista Pessoal\" pra não confundir com \"Minhas Tarefas\" — agora vem ativada por padrão e mudou de Perfil pra Preferências, em Configurações." },
+      { kind: "ajuste", text: "Os interruptores (liga/desliga) de Configurações agora ficam colados no texto do que controlam, em vez de jogados no canto direito." },
+      { kind: "ajuste", text: "Mais respiro entre os balões do Chat e a borda da janela de conversa." },
+    ],
+  },
+  {
     version: "4.20.0",
     items: [
       { kind: "novo", text: "Automações agora funcionam em Entregas, não só em Campanhas: escolha o quadro (\"Campanhas\" ou \"Entregas\") ao criar a regra, e as etapas mostradas passam a ser as daquele quadro específico." },

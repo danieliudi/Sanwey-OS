@@ -315,10 +315,11 @@ export default function App() {
   const { crossReferrals, approve: approveCross, reject: rejectCross } = useCrossReferrals(leads);
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
 
-  // Tarefas Pessoais: opt-in (settings.personalTasksEnabled, default false)
-  // — `enabled` deixa o hook inerte (sem fetch/subscribe) pra quem não ligou
-  // a feature, que é a maioria por padrão. `openCount` alimenta o badge do
-  // item "Tarefas Pessoais" no menu, mesmo padrão do chatUnread acima.
+  // Lista Pessoal (ex-"Tarefas Pessoais", renomeada 05/08 pra não colidir
+  // com "Minhas Tarefas"): opt-in, settings.personalTasksEnabled, default
+  // true — `enabled` deixa o hook inerte (sem fetch/subscribe) pra quem
+  // desligou a feature. `openCount` alimenta o badge do item no menu, mesmo
+  // padrão do chatUnread acima.
   const { openCount: personalTasksOpenCount } = usePersonalTasks({
     userId: currentUser?.id,
     enabled: Boolean(settings.personalTasksEnabled),
@@ -1324,8 +1325,8 @@ export default function App() {
     // "Meu Espaço" só com Meu RH. Consolidados num único grupo rotulado —
     // Meu RH entra aqui embaixo, sob a MESMA condição de sempre
     // (isRHUser||isDiretoria) && temFichaColaborador, sem ampliar nem reduzir
-    // quem já enxergava esse item. Tarefas Pessoais é opt-in
-    // (settings.personalTasksEnabled, Configurações → Meu perfil) — só
+    // quem já enxergava esse item. Lista Pessoal é opt-in
+    // (settings.personalTasksEnabled, Configurações → Preferências) — só
     // aparece pra quem ligou a feature, item privado por usuário (RLS).
     groups.push({
       label: "Meu Espaço",
@@ -1333,7 +1334,7 @@ export default function App() {
         { id: "dashboard", label: "Minhas Tarefas", icon: CheckSquare },
         { id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined },
         ...(settings.personalTasksEnabled
-          ? [{ id: "personal-tasks", label: "Tarefas Pessoais", icon: ListChecks, badge: personalTasksOpenCount || undefined }]
+          ? [{ id: "personal-tasks", label: "Lista Pessoal", icon: ListChecks, badge: personalTasksOpenCount || undefined }]
           : []),
         ...((isRHUser || isDiretoria) && temFichaColaborador
           ? [{ id: "meu-rh", label: "Meu RH", icon: Home }]
@@ -1435,7 +1436,7 @@ export default function App() {
     // férias próprios. O grupo "Meu Desenvolvimento" acima não roda pra eles
     // (já veem os boards de gestão) — "Meu RH" pra essa população vive no
     // grupo "Meu Espaço" no topo do menu (empurrado ali mesmo, junto de
-    // Minhas Tarefas/Chat/Tarefas Pessoais), não mais num grupo próprio aqui.
+    // Minhas Tarefas/Chat/Lista Pessoal), não mais num grupo próprio aqui.
 
     // "Inteligência": Executivo/Agentes ficam sob isManager (gerente Comercial
     // + admin, mesmo escopo de sempre). Insights entra à parte sob
@@ -1776,7 +1777,7 @@ export default function App() {
                 />
               )
           } />
-          {/* Tarefas Pessoais: a rota em si não checa o opt-in
+          {/* Lista Pessoal: a rota em si não checa o opt-in
               (settings.personalTasksEnabled) — só o item de menu depende
               dele. Digitar a URL direto com a feature desligada não expõe
               nada: personal_tasks é protegida por RLS (só o dono da linha
