@@ -519,6 +519,8 @@ export function MarketingTaskDetailDrawer({
             targets={(stages || []).filter(s => s.id !== item.stage)}
             onMove={handleMoveStage}
             getKey={(s) => s.id}
+            currentStageKey={item.stage}
+            allStages={stages}
           />
         )}
       </div>

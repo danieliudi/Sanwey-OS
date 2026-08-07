@@ -975,6 +975,8 @@ function FeedbackDrawer({
             targets={moveTargets}
             onMove={(stageKey) => onStageChange(feedback.id, stageKey)}
             getKey={(s) => s.stageKey}
+            currentStageKey={feedback.status}
+            allStages={stages}
           />
           <button
             onClick={onComplete}

@@ -1801,6 +1801,8 @@ export function CampaignDetailDrawer({
             targets={effectiveStages.filter(s => s.id !== stage?.id)}
             onMove={moveToStage}
             getKey={(s) => s.id}
+            currentStageKey={stage?.id}
+            allStages={effectiveStages}
           />
         </div>
       )}

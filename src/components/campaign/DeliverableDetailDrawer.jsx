@@ -840,6 +840,8 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
             targets={effectiveStages.filter(s => s.id !== item.stage)}
             onMove={handleMoveStage}
             getKey={(s) => s.id}
+            currentStageKey={item.stage}
+            allStages={effectiveStages}
           />
         )}
       </div>

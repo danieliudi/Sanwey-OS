@@ -1220,6 +1220,8 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           moveError={moveError}
           stageTargets={moveTargets}
           onMove={moveToStage}
+          currentStageKey={lead.stage}
+          allStages={companyStages}
           commentsFeed={commentsFeed}
           currentUser={currentUser}
           mentionableUsers={mentionableUsers}
@@ -1343,7 +1345,7 @@ function SideTabs({ activeTab, onChange }) {
 // mobile só dava pra avançar pra próxima etapa via CTA fixo, sem pular
 // etapa livremente e sem acesso a comentários/@menção). ──────────────
 function MoveAndCommentsPanel({
-  moveError, stageTargets, onMove,
+  moveError, stageTargets, onMove, currentStageKey, allStages,
   commentsFeed, currentUser, mentionableUsers, onAddComment, onUpdateComment, onRetryOfflineActivity,
   isManager, onNavigateToPipelineBuilder, onGoToIA,
   isWonStage, alreadySentToPosvenda, sendingToPosvenda, posvendaError, onSendToPosvenda,
@@ -1363,6 +1365,8 @@ function MoveAndCommentsPanel({
         targets={stageTargets}
         onMove={onMove}
         getKey={(s) => s.id}
+        currentStageKey={currentStageKey}
+        allStages={allStages}
       />
 
       {/* Enviar para Pós-venda — só aparece na etapa Ganho (rh_pipeline_stages

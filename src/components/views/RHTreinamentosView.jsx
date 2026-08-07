@@ -863,6 +863,8 @@ function AtribuicaoDrawer({
             targets={moveTargets}
             onMove={(stageKey) => onStageChange(atribuicao.id, stageKey)}
             getKey={(s) => s.stageKey}
+            currentStageKey={atribuicao.status}
+            allStages={stages}
           />
         </div>
       )}

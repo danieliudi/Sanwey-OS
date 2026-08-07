@@ -675,6 +675,8 @@ function OnboardingDrawer({
             targets={stages.filter((s) => s.stageKey !== colaborador.onboardingStage)}
             onMove={(stageKey) => onStageChange(colaborador.id, stageKey)}
             getKey={(s) => s.stageKey}
+            currentStageKey={colaborador.onboardingStage}
+            allStages={stages}
           />
         </div>
       )}

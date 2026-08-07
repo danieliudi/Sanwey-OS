@@ -923,7 +923,7 @@ function ComexDrawer({
       {canWrite && moveTargets.length > 0 && (
         <div>
           <div style={labelSt}>Mover para</div>
-          <StageNavigator targets={moveTargets} onMove={handleMoveClick} getKey={(s) => s.stageKey} disabled={busy} />
+          <StageNavigator targets={moveTargets} onMove={handleMoveClick} getKey={(s) => s.stageKey} disabled={busy} currentStageKey={op.stage} allStages={stages} />
         </div>
       )}
 

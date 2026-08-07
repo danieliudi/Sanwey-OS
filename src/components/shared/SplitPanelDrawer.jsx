@@ -202,6 +202,8 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
                     onMove={async (stageKey) => { setMoveSheetOpen(false); await p.onMove?.(stageKey); }}
                     getKey={p.getKey}
                     disabled={p.disabled}
+                    currentStageKey={p.currentStageKey}
+                    allStages={p.allStages}
                   />
                 );
               })}

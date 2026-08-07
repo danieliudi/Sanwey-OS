@@ -530,6 +530,8 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
           targets={moveTargets}
           onMove={(statusId) => onSetStatus(task.id, statusId)}
           getKey={(s) => s.id}
+          currentStageKey={task.status}
+          allStages={columns}
         />
       </div>
       <div>

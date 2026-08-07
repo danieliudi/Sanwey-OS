@@ -840,6 +840,8 @@ export function PurchaseRequestDetailDrawer({
             targets={[{ id: "cotacao", name: "Cotação", color: STAGE_COLORS.cotacao }]}
             onMove={handleMoveStage}
             getKey={s => s.id}
+            currentStageKey={purchase.stage}
+            allStages={PURCHASE_STAGES}
           />
         </div>
       )}
@@ -935,7 +937,7 @@ export function PurchaseRequestDetailDrawer({
       {!isRejected && !isPending && movableStages.length > 0 && (
         <div>
           <SectionLabel>Mover para</SectionLabel>
-          <StageNavigator targets={movableStages} onMove={handleMoveStage} getKey={s => s.id} />
+          <StageNavigator targets={movableStages} onMove={handleMoveStage} getKey={s => s.id} currentStageKey={purchase.stage} allStages={PURCHASE_STAGES} />
         </div>
       )}
 

@@ -1256,6 +1256,8 @@ function VagaDrawer({
             targets={stages.filter((s) => s.stageKey !== vaga.stage)}
             onMove={(stageKey) => onStageChange(vaga.id, stageKey)}
             getKey={(s) => s.stageKey}
+            currentStageKey={vaga.stage}
+            allStages={stages}
           />
         </div>
       )}
@@ -2121,6 +2123,8 @@ function CandidatoDrawer({
             targets={stages.filter((s) => s.stageKey !== candidato.stage)}
             onMove={requestStageChange}
             getKey={(s) => s.stageKey}
+            currentStageKey={candidato.stage}
+            allStages={stages}
           />
 
           {reprovando && (

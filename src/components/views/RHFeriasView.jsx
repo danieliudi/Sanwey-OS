@@ -738,6 +738,8 @@ function FeriasDrawer({
             onMove={handleMoveClick}
             getKey={(s) => s.stageKey}
             disabled={busy}
+            currentStageKey={req.status}
+            allStages={stages}
           />
         </div>
       )}

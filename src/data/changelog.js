@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.29.0",
+    items: [
+      { kind: "novo", text: "Ao mover um card de etapa, as próximas etapas agora aparecem em destaque (preenchidas, com seta pra frente) e as etapas já passadas ficam discretas, separadas por \"Etapas anteriores\" — em todos os quadros da plataforma, facilitando entender o que é avançar e o que é voltar." },
+      { kind: "ajuste", text: "O Funil de Vendas agora segue o mesmo padrão de card dos demais quadros (coluna da esquerda com dados do lead, centro com os campos daquela etapa); o campo \"Etapa do funil\" separado foi removido por duplicar o \"Mover para\"." },
+    ],
+  },
+  {
     version: "4.28.0",
     items: [
       { kind: "novo", text: "Nos cards de Entregas, Campanhas, Compras e todos os boards de RH (Onboarding, Férias, Feedback, Vagas, Candidatos, Comex), a coluna da esquerda agora reúne prazo/etapa/departamento seguidos das abas (Form, Atividades, Histórico, IA, Anexos, Checklist) — o centro do card ficou só com os campos daquela etapa, sempre visíveis." },
