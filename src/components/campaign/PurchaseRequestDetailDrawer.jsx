@@ -195,7 +195,7 @@ export function PurchaseRequestDetailDrawer({
   const [lastPrice,     setLastPrice]     = useState(null);
   const [lastPriceError, setLastPriceError] = useState(null);
 
-  const [centerTab, setCenterTab] = useState("fase");
+  const [centerTab, setCenterTab] = useState("atividades");
 
   useEffect(() => {
     setSupplierId(purchase.supplierId || "");
@@ -572,10 +572,55 @@ export function PurchaseRequestDetailDrawer({
           )}
         </div>
       )}
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "2px 0" }} />
+
+      <DetailDrawerTabs
+        tabs={[
+          { id: "atividades", label: "Atividades", icon: Activity },
+          { id: "historico",  label: "Histórico",  icon: History },
+          { id: "ia",         label: "IA",         icon: Sparkles },
+          { id: "anexos",     label: "Anexos",     icon: Paperclip },
+          { id: "checklist",  label: "Checklist",  icon: ListChecks },
+        ]}
+        activeId={centerTab}
+        onChange={setCenterTab}
+      />
+      {centerTab === "atividades" && <ActivityLog activities={purchase.activities || []} />}
+      {centerTab === "historico" && (
+        <RHStageHistoryPanel domain="marketing_purchase_requests" recordId={purchase.id} stages={PURCHASE_STAGES} currentUser={currentUser} users={users} />
+      )}
+      {centerTab === "ia" && (
+        <RecordAIPanel
+          currentUser={currentUser}
+          features={[{
+            id: "summary",
+            label: "Resumo & Próximo passo",
+            buildMessages: () => genericCardSummaryPrompt({
+              title: purchase.itemName,
+              domainLabel: "Compras",
+              stageName: stageInfo?.name || purchase.stage,
+              slaDays: stageInfo?.slaDays,
+              daysInStage: purchase.stageChangedAt
+                ? Math.floor((Date.now() - new Date(purchase.stageChangedAt)) / 86400000)
+                : 0,
+              customFields: aiStageFields,
+              recentComments: aiRecentComments,
+            }),
+          }]}
+          defaultFeatureId="summary"
+        />
+      )}
+      {centerTab === "anexos" && (
+        <RHAttachmentsPanel domain="marketing_purchase_requests" recordId={purchase.id} currentUser={currentUser} />
+      )}
+      {centerTab === "checklist" && (
+        <RHChecklistsPanel domain="marketing_purchase_requests" recordId={purchase.id} currentUser={currentUser} />
+      )}
     </>
   );
 
-  const formTabContent = (
+  const center = (
     <>
       {/* Cotação de fornecedores — editável na etapa "Cotação"; recapitulação
           read-only depois (mostra o vencedor destacado). Aposenta o fluxo
@@ -778,55 +823,6 @@ export function PurchaseRequestDetailDrawer({
             <div className="text-xs px-3 py-2 rounded-lg mt-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{uploadError}</div>
           )}
         </div>
-      )}
-    </>
-  );
-
-  const center = (
-    <>
-      <DetailDrawerTabs
-        tabs={[
-          { id: "fase",       label: "Fase atual", icon: Layers },
-          { id: "atividades", label: "Atividades", icon: Activity },
-          { id: "historico",  label: "Histórico",  icon: History },
-          { id: "ia",         label: "IA",         icon: Sparkles },
-          { id: "anexos",     label: "Anexos",     icon: Paperclip },
-          { id: "checklist",  label: "Checklist",  icon: ListChecks },
-        ]}
-        activeId={centerTab}
-        onChange={setCenterTab}
-      />
-      {centerTab === "fase" && formTabContent}
-      {centerTab === "atividades" && <ActivityLog activities={purchase.activities || []} />}
-      {centerTab === "historico" && (
-        <RHStageHistoryPanel domain="marketing_purchase_requests" recordId={purchase.id} stages={PURCHASE_STAGES} currentUser={currentUser} users={users} />
-      )}
-      {centerTab === "ia" && (
-        <RecordAIPanel
-          currentUser={currentUser}
-          features={[{
-            id: "summary",
-            label: "Resumo & Próximo passo",
-            buildMessages: () => genericCardSummaryPrompt({
-              title: purchase.itemName,
-              domainLabel: "Compras",
-              stageName: stageInfo?.name || purchase.stage,
-              slaDays: stageInfo?.slaDays,
-              daysInStage: purchase.stageChangedAt
-                ? Math.floor((Date.now() - new Date(purchase.stageChangedAt)) / 86400000)
-                : 0,
-              customFields: aiStageFields,
-              recentComments: aiRecentComments,
-            }),
-          }]}
-          defaultFeatureId="summary"
-        />
-      )}
-      {centerTab === "anexos" && (
-        <RHAttachmentsPanel domain="marketing_purchase_requests" recordId={purchase.id} currentUser={currentUser} />
-      )}
-      {centerTab === "checklist" && (
-        <RHChecklistsPanel domain="marketing_purchase_requests" recordId={purchase.id} currentUser={currentUser} />
       )}
     </>
   );
