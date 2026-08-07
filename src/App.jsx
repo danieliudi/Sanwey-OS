@@ -2228,6 +2228,7 @@ export default function App() {
           currentUser={currentUser}
           pipelines={pipelines}
           onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("crm"); }}
+          onEditFields={() => { closeDrawer(); setSection("crm"); }}
           notifyMentions={notifyMentions}
           pipelineTransitions={pipelineTransitions}
           offlineStatusById={offlineStatusByActivityId}

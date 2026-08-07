@@ -3,9 +3,9 @@ import {
   X, MapPin, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, Linkedin, Newspaper, MessageSquareWarning, Search,
   Check, Trash2, Mail, ChevronDown, ChevronUp,
-  Clock, GitBranch, CalendarClock, ArrowRight, History,
+  Clock, GitBranch, CalendarClock, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
-  File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake, Layers,
+  File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -13,8 +13,8 @@ import { mergeGanhoDefaults } from "../../utils/won-stage-defaults";
 import { CompanyTag } from "../ui/CompanyTag";
 import { UrgencyTag } from "../ui/UrgencyTag";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
-import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { formatK, formatBRL } from "../../utils/currency";
 import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
 import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
@@ -35,15 +35,12 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
 import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
 
-export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
+export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
-  const [sideTab, setSideTab] = useState("fase");
-  const [mobileTab, setMobileTab] = useState("info");
+  const [sideTab, setSideTab] = useState("form");
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [editingContactEmail, setEditingContactEmail] = useState(false);
   const [contactEmailDraft, setContactEmailDraft] = useState("");
   const [contactEmailError, setContactEmailError] = useState(null);
@@ -77,7 +74,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     setCustomDraft({});
     customDraftRef.current = {};
     setCustomSaveState(null);
-    setMobileTab("info");
     setMoveError(null);
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     return () => {
@@ -126,14 +122,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   // configuradas), não a lista estática — assim o botão de mover reflete a
   // cor/ordem de etapa que aparece no board.
   const companyStages = (lead?.companyId && pipelines?.[lead.companyId]) || DEFAULT_PIPELINE_STAGES;
-  const stageNav = useMemo(() => {
-    if (!lead?.stage) return { prev: null, next: null };
-    const idx = companyStages.findIndex(s => s.id === lead.stage);
-    if (idx < 0) return { prev: null, next: null };
-    const prev = idx > 0 ? companyStages[idx - 1] : null;
-    const next = idx < companyStages.length - 1 ? companyStages[idx + 1] : null;
-    return { prev, next };
-  }, [lead?.stage, companyStages]);
 
   const moveToStage = useCallback((toStage) => {
     if (!lead || !toStage) return;
@@ -221,7 +209,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
       setStage(lead.stage);
       setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
       setShowFollowUpInput(false);
-      setConfirmDelete(false);
       setEditingContactEmail(false);
       setContactEmailDraft(lead.contactEmail || "");
       setNoteText("");
@@ -453,16 +440,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     (!pipelineTransitions || pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, s.id))
   );
 
-  // Opções do select "Etapa do funil" vindas do pipeline real da empresa
-  // (mesma fonte de moveTargets/stageNav) — etapa removida some, renome
-  // aparece. A estática DEFAULT_PIPELINE_STAGES ficava defasada.
-  const stageOptions = companyStages.map(s => ({ value: s.id, label: s.name }));
-
-  const nextAllowed = Boolean(
-    stageNav.next &&
-    (!pipelineTransitions || pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, stageNav.next.id))
-  );
-
   const handleCopyDraft = () => {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(emailDraft).then(() => {
@@ -470,37 +447,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
         setTimeout(() => setCopied(false), 2000);
       });
     }
-  };
-
-  const handleStageChange = (e) => {
-    const newStage = e.target.value;
-    if (!newStage || newStage === lead.stage) return;
-    // Mesma matriz de transições que já bloqueia drag/menu — o select era o
-    // único caminho que ignorava a configuração de "Editar etapas".
-    if (pipelineTransitions && !pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, newStage)) {
-      const target = companyStages.find(s => s.id === newStage);
-      setMoveError(`Transição de "${currentStageInfo?.name || lead.stage}" para "${target?.name || newStage}" não é permitida pela configuração do funil.`);
-      return;
-    }
-    const missing = getMissingRequiredFields(customDefs, customValuesByKey);
-    if (missing.length > 0) {
-      setMoveError(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
-      return;
-    }
-    const invalid = getInvalidFields(customDefs, customValuesByKey);
-    if (invalid.length > 0) {
-      setMoveError(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
-      return;
-    }
-    setMoveError(null);
-    setStage(newStage);
-    const nowISO = new Date().toISOString();
-    const patch = { stage: newStage, status: newStage, stageChangedAt: nowISO };
-    if (newStage === "ganho" && lead.stage !== "ganho") {
-      const mergedCF = mergeGanhoDefaults(lead.customFields, lead, nowISO);
-      if (mergedCF) patch.customFields = mergedCF;
-    }
-    onUpdate(lead.id, patch);
   };
 
   // FASE 5: mais de um responsável por card. `owner` (escalar) continua
@@ -587,149 +533,19 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     ))
   );
 
-  const handleDeleteConfirmed = async () => {
-    if (!onDelete) return;
-    setDeleting(true);
-    try {
-      await onDelete(lead.id);
-      onClose();
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-40 flex lg:items-center lg:justify-center lg:p-6"
-      style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-6xl lg:rounded-2xl lg:max-h-[92vh]"
-        style={{
-          background: "var(--surface)",
-          boxShadow: "var(--shadow-pop)",
-          overflow: "hidden",
-          height: "100%",
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Mobile header */}
-        <div className="lg:hidden sticky top-0 z-10 flex flex-col shrink-0" style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
-          <div className="flex items-center justify-between px-4 py-3">
-            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
-              <X size={20} />
-            </button>
-            <div className="flex-1 mx-3 text-center min-w-0">
-              <div className="font-bold text-sm truncate" style={{ color: "var(--text)" }}>{lead.company}</div>
-              <div className="text-xs" style={{ color: "var(--text-dim)" }}><CompanyTag companyId={lead.companyId} /></div>
-            </div>
-            <div className="flex items-center gap-1">
-              {canDelete && !confirmDelete && (
-                <button onClick={() => setConfirmDelete(true)} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
-                  <Trash2 size={16} />
-                </button>
-              )}
-              {/* Mesmo texto/par de botões do header desktop (e do
-                  SplitPanelDrawer compartilhado, usado por Campanhas) —
-                  antes essa versão mobile só tinha "Excluir" sem "Cancelar",
-                  divergindo do resto da plataforma (BUG-06 da auditoria
-                  de QA: 3 padrões de confirmação de exclusão distintos). */}
-              {canDelete && confirmDelete && (
-                <div className="flex items-center gap-1">
-                  <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none" }}>
-                    {deleting ? "Excluindo…" : "Confirmar exclusão"}
-                  </button>
-                  <button onClick={() => setConfirmDelete(false)} className="px-2 py-1 rounded-lg text-xs cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
-                    Cancelar
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-          {/* Mobile tab bar */}
-          <div className="flex border-t" style={{ borderColor: "var(--border)" }}>
-            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }, { id: "acoes", label: "AÇÕES" }].map(t => (
-              <button
-                key={t.id}
-                onClick={() => setMobileTab(t.id)}
-                className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
-                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "var(--accent)" : "transparent"}`, color: mobileTab === t.id ? "var(--accent)" : "var(--text-dim)" }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+    <SplitPanelDrawer
+      onClose={onClose}
+      onDelete={canDelete ? () => onDelete(lead.id) : undefined}
+      deleteLabel="Excluir card"
+      header={(
+        <div className="flex items-center gap-2">
+          <CompanyTag companyId={lead.companyId} />
+          <UrgencyTag urgency={lead.urgency} />
         </div>
-
-        {/* Desktop header */}
-        <div
-          className="hidden lg:flex sticky top-0 z-10 px-5 py-3.5 border-b items-center justify-between"
-          style={{ background: "var(--surface)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}
-        >
-          <div className="flex items-center gap-2">
-            <CompanyTag companyId={lead.companyId} />
-            <UrgencyTag urgency={lead.urgency} />
-          </div>
-          <div className="flex items-center gap-1">
-            {canDelete && !confirmDelete && (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
-                style={{ color: "var(--text-dim)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                aria-label="Excluir card"
-                title="Excluir card"
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
-            {canDelete && confirmDelete && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={handleDeleteConfirmed}
-                  disabled={deleting}
-                  className="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
-                  style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", opacity: deleting ? 0.6 : 1 }}
-                  onMouseEnter={e => { if (!deleting) e.currentTarget.style.background = "color-mix(in srgb, var(--danger) 80%, black)"; }}
-                  onMouseLeave={e => { if (!deleting) e.currentTarget.style.background = "var(--danger)"; }}
-                >
-                  {deleting ? "Excluindo…" : "Confirmar exclusão"}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="p-1.5 rounded-lg text-xs cursor-pointer transition-colors"
-                  style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                >
-                  Cancelar
-                </button>
-              </div>
-            )}
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
-              style={{ color: "var(--text-dim)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              aria-label="Fechar"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* ── BODY: 3 colunas (esquerda info / centro form da etapa / direita movimentação) ── */}
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-
-          {/* ───── LEFT SIDEBAR ───────────────────────────────────────── */}
-          <aside
-            className={`w-full lg:w-[320px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}
-            style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
-          >
+      )}
+      left={(
+        <>
             {/* Cliente vinculado — substitui o bloco de empresa */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -1036,133 +852,327 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               </div>
             )}
 
-          </aside>
-
-          {/* ───── CENTER ─────────────────────────────────────────────── */}
-          <main className={`flex-1 min-w-0 overflow-y-auto p-5 space-y-4 pb-20 lg:pb-5${mobileTab !== "stage" ? " hidden lg:block" : ""}`}>
-
-          {/* Tabs — mesma posição/padrão da família RH (Onboarding,
-              Recrutamento etc.): tira strip de aba da lateral esquerda
-              (320px, apertada) e coloca no centro, junto do formulário. */}
-          <SideTabs activeTab={sideTab} onChange={setSideTab} />
-
-          {/* ── Tab: Form (só o Formulário Inicial — snapshot da criação) ── */}
-          {sideTab === "form" && (
-          <>
-          {/* Formulário Inicial — dados preenchidos na criação do card */}
-          {!customValues.capture_customer_name && (
-            <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <div className="text-xs font-semibold mb-3" style={{ color: company.primary }}>
-                Formulário Inicial
+            {/* Overlap (gerente) — sobe da antiga aba "Fase atual" pro bloco
+                de identidade: fica sempre visível, não é campo da etapa. */}
+            {isManager && overlaps.length > 0 && (
+              <div
+                className="p-3.5 rounded-xl border-l-4"
+                style={{ background: "#FFFBE6", borderLeftColor: "var(--amber)", borderTop: "1px solid #FFE680", borderRight: "1px solid #FFE680", borderBottom: "1px solid #FFE680" }}
+              >
+                <div className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "#9A7A00" }}>
+                  <Network size={12} />
+                  Overlap detectado · visível só para gerente
+                </div>
+                <div className="text-sm mb-2" style={{ color: "var(--text)" }}>
+                  Este cliente também está ativo em:
+                </div>
+                {overlaps.map(o => {
+                  // FASE 5: overlap precisa considerar todo responsável do
+                  // outro negócio, não só o `owner` escalar (que pode estar
+                  // desatualizado se o negócio ganhou co-responsáveis depois).
+                  const names = getLeadOwnerIds(o).map(id => users.find(x => x.id === id)?.name).filter(Boolean);
+                  return (
+                    <div
+                      key={o.id}
+                      className="text-xs p-2 rounded-lg mb-1 flex items-center justify-between"
+                      style={{ background: "var(--surface)" }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <CompanyTag companyId={o.companyId} />
+                        <span style={{ color: "var(--text)" }}>{names.length ? names.join(", ") : "—"}</span>
+                      </div>
+                      <span className="font-mono" style={{ color: "var(--text-dim)" }}>
+                        {formatK(o.value)} · {o.stage}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-              <dl className="space-y-2.5 text-sm">
-                <CaptureRow label="Empresa" value={lead.company} />
-                {lead.cnpj && <CaptureRow label="CNPJ" value={lead.cnpj} mono />}
-                {lead.razaoSocial && <CaptureRow label="Razão Social" value={lead.razaoSocial} />}
-                {lead.contactEmail && (
-                  <CaptureRow label="E-mail do Contato" value={lead.contactEmail}
-                    link={`mailto:${lead.contactEmail}`} />
+            )}
+
+            {/* Produto — só mostra se tiver SKU */}
+            {(lead.skuName || lead.quantity > 0) && (
+              <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
+                  <Package size={12} />Produto vinculado
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{lead.skuName || "—"}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
+                      {lead.quantity || 0} un × {formatBRL(lead.unitPrice)}
+                    </div>
+                  </div>
+                  <div className="font-bold text-lg" style={{ color: "var(--text)" }}>
+                    {formatK(lead.value, 1)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Follow-up inline */}
+            <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text-dim)" }}>
+                  <Calendar size={13} />
+                  Follow-up agendado
+                </div>
+                {!showFollowUpInput && (
+                  <button
+                    onClick={() => setShowFollowUpInput(true)}
+                    className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
+                    style={{ color: company.primary, background: company.light }}
+                    onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+                  >
+                    {lead.nextFollowUp ? "Alterar" : "Agendar"}
+                  </button>
                 )}
-                {lead.phone && <CaptureRow label="Telefone" value={lead.phone} mono />}
-                {lead.state && <CaptureRow label="Estado (UF)" value={lead.state} />}
-                {lead.city && <CaptureRow label="Cidade" value={lead.city} />}
-                {lead.sector && <CaptureRow label="Setor" value={lead.sector} />}
-                {lead.size && <CaptureRow label="Porte" value={lead.size} />}
-                {lead.value > 0 && <CaptureRow label="Valor" value={formatBRL(lead.value)} />}
-                {lead.owner && (
-                  <CaptureRow
-                    label="Responsável na criação"
-                    value={(users || []).find(u => u.id === lead.owner)?.name || "—"}
-                    hint="Somente leitura — quem edita é “Responsáveis”, ao lado."
+              </div>
+
+              {lead.nextFollowUp && !showFollowUpInput && (
+                <div className="text-sm font-semibold mt-1" style={{ color: "var(--text)" }}>
+                  {formatDateBR(lead.nextFollowUp)}
+                </div>
+              )}
+
+              {showFollowUpInput && (
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="date"
+                    value={followUpDate}
+                    onChange={e => setFollowUpDate(e.target.value)}
+                    className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors cursor-pointer"
+                    style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                    onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
                   />
-                )}
-              </dl>
-              {lead.notes && !Array.isArray(lead.notes) && (
-                <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
-                  <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Observações</div>
-                  <div className="text-sm whitespace-pre-line" style={{ color: "var(--text)" }}>{lead.notes}</div>
+                  <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveFollowUp}>
+                    Salvar
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleCancelFollowUp}>
+                    Cancelar
+                  </Button>
                 </div>
               )}
             </div>
-          )}
 
-          {/* Formulário Inicial (vindo de captura pública) */}
-          {customValues.capture_customer_name && (
-            <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
+            <div className="pt-1">
+              <Button variant="primary" size="sm" icon={Send} accent={company.primary} onClick={handleStartOutreach}>
+                Enviar e-mail de abordagem
+              </Button>
+            </div>
+
+            <div style={{ borderTop: "1px solid var(--border)", margin: "2px 0" }} />
+
+            <SideTabs activeTab={sideTab} onChange={setSideTab} />
+
+            {/* ── Tab: Form (só o Formulário Inicial — snapshot da criação) ── */}
+            {sideTab === "form" && (
+            <>
+            {/* Formulário Inicial — dados preenchidos na criação do card */}
+            {!customValues.capture_customer_name && (
+              <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                <div className="text-xs font-semibold mb-3" style={{ color: company.primary }}>
                   Formulário Inicial
                 </div>
-                {customValues.capture_source && (
-                  <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
-                    style={{ background: "var(--surface-alt)", color: "var(--text-dim)", letterSpacing: "0.08em" }}>
-                    via {customValues.capture_source}
-                  </span>
+                <dl className="space-y-2.5 text-sm">
+                  <CaptureRow label="Empresa" value={lead.company} />
+                  {lead.cnpj && <CaptureRow label="CNPJ" value={lead.cnpj} mono />}
+                  {lead.razaoSocial && <CaptureRow label="Razão Social" value={lead.razaoSocial} />}
+                  {lead.contactEmail && (
+                    <CaptureRow label="E-mail do Contato" value={lead.contactEmail}
+                      link={`mailto:${lead.contactEmail}`} />
+                  )}
+                  {lead.phone && <CaptureRow label="Telefone" value={lead.phone} mono />}
+                  {lead.state && <CaptureRow label="Estado (UF)" value={lead.state} />}
+                  {lead.city && <CaptureRow label="Cidade" value={lead.city} />}
+                  {lead.sector && <CaptureRow label="Setor" value={lead.sector} />}
+                  {lead.size && <CaptureRow label="Porte" value={lead.size} />}
+                  {lead.value > 0 && <CaptureRow label="Valor" value={formatBRL(lead.value)} />}
+                  {lead.owner && (
+                    <CaptureRow
+                      label="Responsável na criação"
+                      value={(users || []).find(u => u.id === lead.owner)?.name || "—"}
+                      hint="Somente leitura — quem edita é “Responsáveis”, ao lado."
+                    />
+                  )}
+                </dl>
+                {lead.notes && !Array.isArray(lead.notes) && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
+                    <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Observações</div>
+                    <div className="text-sm whitespace-pre-line" style={{ color: "var(--text)" }}>{lead.notes}</div>
+                  </div>
                 )}
               </div>
-              <dl className="space-y-2.5 text-sm">
-                <CaptureRow label="Nome do Cliente" value={customValues.capture_customer_name} />
-                <CaptureRow label="Contato" value={customValues.capture_contact_phone} mono />
-                <CaptureRow label="E-mail" value={customValues.capture_contact_email} link={customValues.capture_contact_email ? `mailto:${customValues.capture_contact_email}` : null} />
-                <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
-                <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
-                <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
-              </dl>
-              {customValues.capture_notes && (
-                <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
-                  <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Mensagem</div>
-                  <div className="text-sm whitespace-pre-line" style={{ color: "var(--text)" }}>{customValues.capture_notes}</div>
-                </div>
-              )}
-            </div>
-          )}
-          </>
-          )}
+            )}
 
-          {/* ── Tab: Fase atual (aberta por padrão) — tudo que é acionável
-              agora: overlap, campos da etapa, produto, mover etapa,
-              follow-up, abordagem. Form guarda só o snapshot da criação. ── */}
-          {sideTab === "fase" && (
-          <>
-          {/* Overlap (gerente) */}
-          {isManager && overlaps.length > 0 && (
-            <div
-              className="p-3.5 rounded-xl border-l-4"
-              style={{ background: "#FFFBE6", borderLeftColor: "var(--amber)", borderTop: "1px solid #FFE680", borderRight: "1px solid #FFE680", borderBottom: "1px solid #FFE680" }}
-            >
-              <div className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "#9A7A00" }}>
-                <Network size={12} />
-                Overlap detectado · visível só para gerente
-              </div>
-              <div className="text-sm mb-2" style={{ color: "var(--text)" }}>
-                Este cliente também está ativo em:
-              </div>
-              {overlaps.map(o => {
-                // FASE 5: overlap precisa considerar todo responsável do
-                // outro negócio, não só o `owner` escalar (que pode estar
-                // desatualizado se o negócio ganhou co-responsáveis depois).
-                const names = getLeadOwnerIds(o).map(id => users.find(x => x.id === id)?.name).filter(Boolean);
-                return (
-                  <div
-                    key={o.id}
-                    className="text-xs p-2 rounded-lg mb-1 flex items-center justify-between"
-                    style={{ background: "var(--surface)" }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <CompanyTag companyId={o.companyId} />
-                      <span style={{ color: "var(--text)" }}>{names.length ? names.join(", ") : "—"}</span>
-                    </div>
-                    <span className="font-mono" style={{ color: "var(--text-dim)" }}>
-                      {formatK(o.value)} · {o.stage}
-                    </span>
+            {/* Formulário Inicial (vindo de captura pública) */}
+            {customValues.capture_customer_name && (
+              <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
+                    Formulário Inicial
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  {customValues.capture_source && (
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+                      style={{ background: "var(--surface-alt)", color: "var(--text-dim)", letterSpacing: "0.08em" }}>
+                      via {customValues.capture_source}
+                    </span>
+                  )}
+                </div>
+                <dl className="space-y-2.5 text-sm">
+                  <CaptureRow label="Nome do Cliente" value={customValues.capture_customer_name} />
+                  <CaptureRow label="Contato" value={customValues.capture_contact_phone} mono />
+                  <CaptureRow label="E-mail" value={customValues.capture_contact_email} link={customValues.capture_contact_email ? `mailto:${customValues.capture_contact_email}` : null} />
+                  <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
+                  <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
+                  <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
+                </dl>
+                {customValues.capture_notes && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
+                    <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Mensagem</div>
+                    <div className="text-sm whitespace-pre-line" style={{ color: "var(--text)" }}>{customValues.capture_notes}</div>
+                  </div>
+                )}
+              </div>
+            )}
+            </>
+            )}
 
-          {/* Campos customizados da etapa — editáveis inline (save debounced) */}
-          {visibleCustomDefs.length > 0 && (
+            {/* ── Tab: Atividades ── */}
+            {sideTab === "atividades" && (
+              <ActivitiesPanel
+                stageHistory={stageHistory}
+                activities={lead.activities || []}
+                users={users}
+              />
+            )}
+
+            {/* ── Tab: Histórico ── */}
+            {sideTab === "historico" && (
+              stageHistory.length === 0 ? (
+                <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Nenhuma transição registrada.</div>
+              ) : (
+                <ol className="space-y-2.5 relative" style={{ paddingLeft: 18 }}>
+                  <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 1, background: "var(--border)" }} />
+                  {stageHistory.map((h, i) => {
+                    const toStage = DEFAULT_PIPELINE_STAGES.find(s => s.id === h.toStage);
+                    const fromStage = h.fromStage ? DEFAULT_PIPELINE_STAGES.find(s => s.id === h.fromStage) : null;
+                    return (
+                      <li key={i} className="relative">
+                        <div style={{
+                          position: "absolute", left: -16, top: 3,
+                          width: 9, height: 9, borderRadius: "50%",
+                          background: toStage?.color || "var(--text-dim)",
+                          border: "2px solid var(--surface)", boxShadow: "0 0 0 1px var(--border)",
+                        }} />
+                        <div className="text-xs" style={{ color: "var(--text)" }}>
+                          {fromStage ? (
+                            <>{fromStage.name} <span style={{ color: "var(--text-dim)" }}>→</span> <strong>{toStage?.name || h.toStage}</strong></>
+                          ) : (
+                            <strong>{toStage?.name || h.toStage}</strong>
+                          )}
+                        </div>
+                        <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                          {new Date(h.changedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )
+            )}
+
+            {/* ── Tab: IA ── */}
+            {sideTab === "ia" && (
+              <div className="space-y-4">
+                <LeadAIPanel
+                  lead={lead}
+                  currentUser={currentUser}
+                  activities={lead.activities || []}
+                  linkedEmails={lead.linkedEmails || []}
+                  onUpdate={onUpdate}
+                  onAddActivity={onAddActivity}
+                  stageName={currentStageInfo?.name}
+                  slaDays={currentStageInfo?.slaDays}
+                  stageFieldValues={visibleCustomDefs
+                    .map(f => ({ label: f.label, value: customValuesByKey[f.fieldKey] }))
+                    .filter(f => f.value !== undefined && f.value !== null && f.value !== "")}
+                />
+
+                {/* Rascunho de abordagem */}
+                <div className="p-4 rounded-xl" style={{ background: company.dark, color: "#FFFFFF" }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "#FFE9A8" }}>
+                      <Sparkles size={12} />Rascunho de abordagem
+                    </div>
+                    <button
+                      onClick={handleCopyDraft}
+                      className="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all duration-150"
+                      style={{ background: "rgba(255,255,255,0.12)", color: copied ? "#A3E6B4" : "rgba(255,255,255,0.8)", border: "none", cursor: "pointer" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
+                    >
+                      {copied ? <Check size={11} /> : <Copy size={11} />}
+                      {copied ? "Copiado!" : "Copiar"}
+                    </button>
+                  </div>
+                  <div
+                    className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-lg"
+                    style={{ background: "rgba(0,0,0,0.18)", color: "rgba(255,255,255,0.92)" }}
+                  >
+                    {emailDraft}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Tab: Anexos ── */}
+            {sideTab === "anexos" && (
+              <AttachmentsPanel
+                leadId={lead.id}
+                companyId={lead.companyId}
+                currentUser={currentUser}
+                companyColor={company.primary}
+              />
+            )}
+
+            {/* ── Tab: Checklists ── */}
+            {sideTab === "checklists" && (
+              <ChecklistsPanel
+                leadId={lead.id}
+                companyId={lead.companyId}
+                currentUser={currentUser}
+                companyColor={company.primary}
+              />
+            )}
+
+            {/* ── Tab: PDF ── */}
+            {/* Mantido montado (display:none) quando a aba não está ativa pra
+                não perder o rascunho da proposta ao trocar de aba; key={lead.id}
+                reseta ao navegar pra outro lead. Achado da 2ª auditoria. */}
+            <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
+              <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} />
+            </div>
+        </>
+      )}
+      center={(
+        <>
+          {/* Campos customizados da etapa — editáveis inline (save debounced).
+              Único conteúdo do centro (padrão platform-wide, CLAUDE.md regra
+              3/item 2) — Overlap/Produto/Follow-up/e-mail de abordagem
+              subiram pro bloco de identidade na esquerda; "Etapa do funil"
+              (select) foi removido por duplicar o "Mover para" da direita. */}
+          {visibleCustomDefs.length === 0 ? (
+            <button
+              onClick={() => onEditFields?.({ stage: lead.stage, companyId: lead.companyId })}
+              className="text-xs text-center cursor-pointer"
+              style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6, padding: "16px 0", textAlign: "center", width: "100%" }}
+            >
+              Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+            </button>
+          ) : (
             <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
@@ -1197,298 +1207,36 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               </div>
             </div>
           )}
-
-          {/* Produto — só mostra se tiver SKU */}
-          {(lead.skuName || lead.quantity > 0) && (
-            <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
-                <Package size={12} />Produto vinculado
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{lead.skuName || "—"}</div>
-                  <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
-                    {lead.quantity || 0} un × {formatBRL(lead.unitPrice)}
-                  </div>
-                </div>
-                <div className="font-bold text-lg" style={{ color: "var(--text)" }}>
-                  {formatK(lead.value, 1)}
-                </div>
-              </div>
+          {moveError && (
+            <div className="flex items-start gap-2 p-2.5 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+              <AlertCircle size={12} className="shrink-0 mt-0.5" />
+              <span>{moveError}</span>
             </div>
           )}
-
-          {/* Etapa do funil */}
-          <div>
-            <label className="text-xs font-semibold mb-1.5 block" style={{ color: "var(--text-dim)" }}>
-              Etapa do funil
-            </label>
-            <Select value={stage || ""} onChange={handleStageChange} options={stageOptions} />
-            {moveError && (
-              <div className="flex items-start gap-2 p-2.5 mt-2 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
-                <AlertCircle size={12} className="shrink-0 mt-0.5" />
-                <span>{moveError}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Follow-up inline */}
-          <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text-dim)" }}>
-                <Calendar size={13} />
-                Follow-up agendado
-              </div>
-              {!showFollowUpInput && (
-                <button
-                  onClick={() => setShowFollowUpInput(true)}
-                  className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
-                  style={{ color: company.primary, background: company.light }}
-                  onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-                >
-                  {lead.nextFollowUp ? "Alterar" : "Agendar"}
-                </button>
-              )}
-            </div>
-
-            {lead.nextFollowUp && !showFollowUpInput && (
-              <div className="text-sm font-semibold mt-1" style={{ color: "var(--text)" }}>
-                {formatDateBR(lead.nextFollowUp)}
-              </div>
-            )}
-
-            {showFollowUpInput && (
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="date"
-                  value={followUpDate}
-                  onChange={e => setFollowUpDate(e.target.value)}
-                  className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors cursor-pointer"
-                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-                  onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
-                />
-                <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveFollowUp}>
-                  Salvar
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleCancelFollowUp}>
-                  Cancelar
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Actions — e-mail/links de pesquisa moraram aqui antes; agora
-              ficam junto do bloco Cliente, na lateral. */}
-          <div className="pt-1">
-            <Button variant="primary" size="sm" icon={Send} accent={company.primary} onClick={handleStartOutreach}>
-              Enviar e-mail de abordagem
-            </Button>
-          </div>
-          </>
-          )}
-
-          {/* ── Tab: Atividades ── */}
-          {sideTab === "atividades" && (
-            <ActivitiesPanel
-              stageHistory={stageHistory}
-              activities={lead.activities || []}
-              users={users}
-            />
-          )}
-
-          {/* ── Tab: Histórico ── */}
-          {/* Antes ficava embutido dentro da aba Form; promovido a aba
-              própria pra bater com o padrão da família RH (Onboarding,
-              Recrutamento etc.), onde Histórico já é uma aba de verdade —
-              mesmo dado (lead_stage_history via useSingleLeadHistory), só
-              muda onde aparece. */}
-          {sideTab === "historico" && (
-            stageHistory.length === 0 ? (
-              <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Nenhuma transição registrada.</div>
-            ) : (
-              <ol className="space-y-2.5 relative" style={{ paddingLeft: 18 }}>
-                <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 1, background: "var(--border)" }} />
-                {stageHistory.map((h, i) => {
-                  const toStage = DEFAULT_PIPELINE_STAGES.find(s => s.id === h.toStage);
-                  const fromStage = h.fromStage ? DEFAULT_PIPELINE_STAGES.find(s => s.id === h.fromStage) : null;
-                  return (
-                    <li key={i} className="relative">
-                      <div style={{
-                        position: "absolute", left: -16, top: 3,
-                        width: 9, height: 9, borderRadius: "50%",
-                        background: toStage?.color || "var(--text-dim)",
-                        border: "2px solid var(--surface)", boxShadow: "0 0 0 1px var(--border)",
-                      }} />
-                      <div className="text-xs" style={{ color: "var(--text)" }}>
-                        {fromStage ? (
-                          <>{fromStage.name} <span style={{ color: "var(--text-dim)" }}>→</span> <strong>{toStage?.name || h.toStage}</strong></>
-                        ) : (
-                          <strong>{toStage?.name || h.toStage}</strong>
-                        )}
-                      </div>
-                      <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
-                        {new Date(h.changedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            )
-          )}
-
-          {/* ── Tab: IA ── */}
-          {sideTab === "ia" && (
-            <div className="space-y-4">
-              <LeadAIPanel
-                lead={lead}
-                currentUser={currentUser}
-                activities={lead.activities || []}
-                linkedEmails={lead.linkedEmails || []}
-                onUpdate={onUpdate}
-                onAddActivity={onAddActivity}
-                stageName={currentStageInfo?.name}
-                slaDays={currentStageInfo?.slaDays}
-                stageFieldValues={visibleCustomDefs
-                  .map(f => ({ label: f.label, value: customValuesByKey[f.fieldKey] }))
-                  .filter(f => f.value !== undefined && f.value !== null && f.value !== "")}
-              />
-
-              {/* Rascunho de abordagem */}
-              <div className="p-4 rounded-xl" style={{ background: company.dark, color: "#FFFFFF" }}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "#FFE9A8" }}>
-                    <Sparkles size={12} />Rascunho de abordagem
-                  </div>
-                  <button
-                    onClick={handleCopyDraft}
-                    className="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all duration-150"
-                    style={{ background: "rgba(255,255,255,0.12)", color: copied ? "#A3E6B4" : "rgba(255,255,255,0.8)", border: "none", cursor: "pointer" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
-                  >
-                    {copied ? <Check size={11} /> : <Copy size={11} />}
-                    {copied ? "Copiado!" : "Copiar"}
-                  </button>
-                </div>
-                <div
-                  className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-lg"
-                  style={{ background: "rgba(0,0,0,0.18)", color: "rgba(255,255,255,0.92)" }}
-                >
-                  {emailDraft}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Tab: Anexos ── */}
-          {sideTab === "anexos" && (
-            <AttachmentsPanel
-              leadId={lead.id}
-              companyId={lead.companyId}
-              currentUser={currentUser}
-              companyColor={company.primary}
-            />
-          )}
-
-          {/* ── Tab: Checklists ── */}
-          {sideTab === "checklists" && (
-            <ChecklistsPanel
-              leadId={lead.id}
-              companyId={lead.companyId}
-              currentUser={currentUser}
-              companyColor={company.primary}
-            />
-          )}
-
-          {/* ── Tab: PDF ── */}
-          {/* Mantido montado (display:none) quando a aba não está ativa pra
-              não perder o rascunho da proposta ao trocar de aba; key={lead.id}
-              reseta ao navegar pra outro lead. Achado da 2ª auditoria. */}
-          <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
-            <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} />
-          </div>
-          </main>
-
-          {/* ───── MOBILE: aba "Ações" — mesmo conteúdo da aside direita
-              (mover etapa livre + comentários), antes só existente no
-              desktop; no mobile só dava pra avançar pra próxima etapa
-              via CTA fixo no rodapé. ─────────────────────────────────── */}
-          {mobileTab === "acoes" && (
-            <div className="lg:hidden flex-1 min-h-0 overflow-y-auto p-5 pb-24" style={{ background: "var(--surface-alt)" }}>
-              <MoveAndCommentsPanel
-                moveError={moveError}
-                stageTargets={moveTargets}
-                onMove={moveToStage}
-                commentsFeed={commentsFeed}
-                currentUser={currentUser}
-                mentionableUsers={mentionableUsers}
-                onAddComment={handleAddComment}
-                onUpdateComment={onUpdateComment}
-                onRetryOfflineActivity={onRetryOfflineActivity}
-                isManager={isManager}
-                onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
-                onGoToIA={() => { setSideTab("ia"); setMobileTab("info"); }}
-                isWonStage={isWonStage}
-                alreadySentToPosvenda={alreadySentToPosvenda}
-                sendingToPosvenda={sendingToPosvenda}
-                posvendaError={posvendaError}
-                onSendToPosvenda={handleSendToPosvenda}
-              />
-            </div>
-          )}
-
-          {/* ───── RIGHT SIDEBAR (desktop) ───────────────────────────── */}
-          <aside
-            className="hidden lg:flex lg:flex-col w-full lg:w-[300px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 pb-5"
-            style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
-          >
-            <MoveAndCommentsPanel
-              moveError={moveError}
-              stageTargets={moveTargets}
-              onMove={moveToStage}
-              commentsFeed={commentsFeed}
-              currentUser={currentUser}
-              mentionableUsers={mentionableUsers}
-              onAddComment={handleAddComment}
-              onUpdateComment={onUpdateComment}
-              onRetryOfflineActivity={onRetryOfflineActivity}
-              isManager={isManager}
-              onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
-              onGoToIA={() => setSideTab("ia")}
-              isWonStage={isWonStage}
-              alreadySentToPosvenda={alreadySentToPosvenda}
-              sendingToPosvenda={sendingToPosvenda}
-              posvendaError={posvendaError}
-              onSendToPosvenda={handleSendToPosvenda}
-            />
-          </aside>
-        </div>
-
-        {/* Mobile sticky footer — Avançar CTA */}
-        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-          {stageNav.next && nextAllowed ? (
-            <button
-              onClick={() => moveToStage(stageNav.next.id)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm cursor-pointer"
-              style={{ background: stageNav.next.color || company.primary, color: "#FFFFFF", border: "none" }}
-            >
-              Avançar para {stageNav.next.name}
-              <ArrowRight size={16} />
-            </button>
-          ) : stageNav.next ? (
-            <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
-              Avanço direto para {stageNav.next.name} não permitido — use "Mover para".
-            </div>
-          ) : (
-            <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
-              {lead.stage === "ganho" ? "Negócio ganho 🎉" : lead.stage === "perdido" ? "Negócio encerrado" : "Etapa final"}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+      right={(
+        <MoveAndCommentsPanel
+          moveError={moveError}
+          stageTargets={moveTargets}
+          onMove={moveToStage}
+          commentsFeed={commentsFeed}
+          currentUser={currentUser}
+          mentionableUsers={mentionableUsers}
+          onAddComment={handleAddComment}
+          onUpdateComment={onUpdateComment}
+          onRetryOfflineActivity={onRetryOfflineActivity}
+          isManager={isManager}
+          onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
+          onGoToIA={() => setSideTab("ia")}
+          isWonStage={isWonStage}
+          alreadySentToPosvenda={alreadySentToPosvenda}
+          sendingToPosvenda={sendingToPosvenda}
+          posvendaError={posvendaError}
+          onSendToPosvenda={handleSendToPosvenda}
+        />
+      )}
+    />
   );
 }
 
@@ -1551,7 +1299,6 @@ const SIDE_TAB_HINTS = {
 };
 
 const SIDE_TABS = [
-  { id: "fase",         label: "Fase atual",  icon: Layers },
   { id: "form",         label: "Form",        icon: FileText },
   { id: "atividades",   label: "Atividades",  icon: Activity },
   { id: "historico",    label: "Histórico",   icon: History },
