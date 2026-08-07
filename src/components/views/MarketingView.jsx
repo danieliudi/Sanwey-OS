@@ -1392,6 +1392,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           currentUser={user}
           notifyMentions={notifyMentions}
           stages={kanbanStages}
+          onEditFields={(stageId) => setFieldEditorStage(kanbanStages.find(s => s.id === stageId) || null)}
         />
       )}
 

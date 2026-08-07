@@ -54,8 +54,11 @@ function humanSize(bytes) {
 
 // ── Pill SideTabs ─────────────────────────────────────────────────────────────
 
-const SIDE_TABS = [
-  { id: "fase",        label: "Fase atual",  icon: Layers },
+// "Fase atual" saiu da faixa de abas — vira o conteúdo fixo do centro do
+// drawer (padrão platform-wide, ver CLAUDE.md regra 3/item 2 da rodada de
+// 07/08/2026). As abas abaixo agora vivem na coluna esquerda, sob a linha
+// divisória, junto do bloco de identidade.
+const LEFT_TABS = [
   { id: "form",        label: "Form",        icon: FileText },
   { id: "atividades",  label: "Atividades",  icon: Activity },
   { id: "historico",   label: "Histórico",   icon: History },
@@ -1246,6 +1249,7 @@ export function CampaignDetailDrawer({
   currentUser,
   notifyMentions,
   stages,
+  onEditFields,
 }) {
   // Etapas dinâmicas (rh_pipeline_stages, já buscadas pelo pai) — cai pro
   // MARKETING_STAGES fixo só se a lista do banco vier vazia. Antes este
@@ -1255,7 +1259,7 @@ export function CampaignDetailDrawer({
   // dessas 6 — enquanto o Kanban ao lado já mostrava a etapa nova certinho.
   // Achado da auditoria de fricção de 18/07.
   const effectiveStages = stages?.length ? stages : MARKETING_STAGES;
-  const [sideTab, setSideTab]           = useState("fase");
+  const [sideTab, setSideTab]           = useState("form");
   const [draft, setDraft]               = useState({});
   const [attemptedMove, setAttemptedMove] = useState(false);
   const saveTimeout  = useRef(null);
@@ -1286,7 +1290,7 @@ export function CampaignDetailDrawer({
 
   useEffect(() => {
     setDraft({});
-    setSideTab("fase");
+    setSideTab("form");
     setAttemptedMove(false);
     pendingPatch.current = {};
   }, [campaign?.id]);
@@ -1415,8 +1419,96 @@ export function CampaignDetailDrawer({
 
   if (!campaign) return null;
 
-  // ── Render center tab content ───────────────────────────────────────────────
-  function CenterTabContent() {
+  // ── Centro: "Fase atual" fixo (não é mais aba — padrão platform-wide,
+  // ver CLAUDE.md regra 3/item 2, rodada de 07/08/2026) ─────────────────────
+  function FaseAtualContent() {
+    const hasFixedStageFields = ["briefing", "aprovacao", "producao", "revisao"].includes(stage?.id);
+    if (!hasFixedStageFields && visibleCustomDefs.length === 0) {
+      return (
+        <button
+          onClick={() => onEditFields?.(stage?.id)}
+          className="text-xs text-center cursor-pointer"
+          style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6, padding: "16px 0", textAlign: "center", width: "100%" }}
+        >
+          Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+        </button>
+      );
+    }
+    return (
+      <div className="space-y-3">
+        {/* Campos específicos da etapa atual */}
+        {stage?.id === "briefing" && (
+          <BriefingFields
+            getCf={getCf}
+            setCf={setCf}
+            users={users}
+            disabled={!canWrite || isAgencia}
+            onOpenAttachments={() => setSideTab("arquivos")}
+          />
+        )}
+        {stage?.id === "aprovacao" && (
+          <AprovacaoFields
+            getCf={getCf}
+            setCf={setCf}
+            users={users}
+            disabled={!canWrite || isAgencia}
+          />
+        )}
+        {stage?.id === "producao" && (
+          <ProducaoFields
+            getCf={getCf}
+            setCf={setCf}
+            users={users}
+            disabled={!canWrite || isAgencia}
+          />
+        )}
+        {stage?.id === "revisao" && (
+          <RevisaoFields
+            getCf={getCf}
+            setCf={setCf}
+            users={users}
+            disabled={!canWrite || isAgencia}
+          />
+        )}
+
+        {/* Campos adicionais configurados via "Editar campos desta
+            etapa" (rh_pipeline_stage_fields) — além dos campos fixos
+            acima, que continuam intactos. */}
+        {visibleCustomDefs.length > 0 && (
+          <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
+            <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+              Campos adicionais da etapa
+            </div>
+            {visibleCustomDefs.map(f => (
+              <div key={f.id}>
+                <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+                  {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
+                  {f.label}
+                </div>
+                {f.helpText && (
+                  <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>{f.helpText}</div>
+                )}
+                {(!canWrite || isAgencia) ? (
+                  <ReadValue value={formatCustomFieldValue(getCf(f.fieldKey))} />
+                ) : (
+                  <RHStageFieldInput
+                    field={f}
+                    value={getCf(f.fieldKey)}
+                    onChange={val => setCf(f.fieldKey, val)}
+                    users={users}
+                    touched={attemptedMove}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Coluna esquerda: abas Form/Atividades/Histórico/IA/Arquivos/Checklist/Entregas ──
+  function LeftTabContent() {
     if (sideTab === "form") {
       return (
         <div className="space-y-3">
@@ -1580,83 +1672,6 @@ export function CampaignDetailDrawer({
         </div>
       );
     }
-    if (sideTab === "fase") {
-      const hasFixedStageFields = ["briefing", "aprovacao", "producao", "revisao"].includes(stage?.id);
-      if (!hasFixedStageFields && visibleCustomDefs.length === 0) {
-        return <div className="text-xs" style={{ color: "var(--text-dim)" }}>Nenhum campo adicional para esta etapa.</div>;
-      }
-      return (
-        <div className="space-y-3">
-          {/* Campos específicos da etapa atual */}
-          {stage?.id === "briefing" && (
-            <BriefingFields
-              getCf={getCf}
-              setCf={setCf}
-              users={users}
-              disabled={!canWrite || isAgencia}
-              onOpenAttachments={() => setSideTab("arquivos")}
-            />
-          )}
-          {stage?.id === "aprovacao" && (
-            <AprovacaoFields
-              getCf={getCf}
-              setCf={setCf}
-              users={users}
-              disabled={!canWrite || isAgencia}
-            />
-          )}
-          {stage?.id === "producao" && (
-            <ProducaoFields
-              getCf={getCf}
-              setCf={setCf}
-              users={users}
-              disabled={!canWrite || isAgencia}
-            />
-          )}
-          {stage?.id === "revisao" && (
-            <RevisaoFields
-              getCf={getCf}
-              setCf={setCf}
-              users={users}
-              disabled={!canWrite || isAgencia}
-            />
-          )}
-
-          {/* Campos adicionais configurados via "Editar campos desta
-              etapa" (rh_pipeline_stage_fields) — além dos campos fixos
-              acima, que continuam intactos. */}
-          {visibleCustomDefs.length > 0 && (
-            <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
-              <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
-                Campos adicionais da etapa
-              </div>
-              {visibleCustomDefs.map(f => (
-                <div key={f.id}>
-                  <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-                    {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
-                    {f.label}
-                  </div>
-                  {f.helpText && (
-                    <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>{f.helpText}</div>
-                  )}
-                  {(!canWrite || isAgencia) ? (
-                    <ReadValue value={formatCustomFieldValue(getCf(f.fieldKey))} />
-                  ) : (
-                    <RHStageFieldInput
-                      field={f}
-                      value={getCf(f.fieldKey)}
-                      onChange={val => setCf(f.fieldKey, val)}
-                      users={users}
-                      touched={attemptedMove}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
     if (sideTab === "atividades") {
       return <ActivityLog activities={campaign.activities || []} />;
     }
@@ -1765,15 +1780,15 @@ export function CampaignDetailDrawer({
           })}
         </div>
       )}
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "2px 0" }} />
+
+      <DetailDrawerTabs tabs={LEFT_TABS} activeId={sideTab} onChange={setSideTab} />
+      {LeftTabContent()}
     </>
   );
 
-  const center = (
-    <>
-      <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
-      {CenterTabContent()}
-    </>
-  );
+  const center = FaseAtualContent();
 
   const right = (
     <>
