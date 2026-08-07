@@ -24,9 +24,11 @@ Confirmado via grep de uso real no código (não é aspiracional):
 
 | Item | Arquivo | Onde já é usado |
 |---|---|---|
-| Scrollbar de colunas nunca sai da tela | `src/hooks/use-available-height.js` | 9 boards (Pipeline, Marketing, Entregas, Compras, 5 de RH) |
-| Botão flutuante de criar card | `src/components/shared/KanbanFab.jsx` | mesmos 9 boards |
-| Menu "mover pra etapa / excluir" do card | `src/components/shared/MoveStageMenu.jsx` | Pipeline, Campanhas, Entregas, Compras, todos os boards de RH — já é o componente mais universal da plataforma |
+| Scrollbar de colunas nunca sai da tela | `src/hooks/use-available-height.js` | 13 boards (Pipeline, Campanhas, Tarefas de Marketing, Entregas, Compras, Comex, Pós-venda, Lista Pessoal, 5 de RH) |
+| Botão flutuante de criar card | `src/components/shared/KanbanFab.jsx` | mesmos boards |
+| Menu "mover pra etapa / excluir" do card | `src/components/shared/MoveStageMenu.jsx` | Pipeline, Campanhas, Entregas, Compras, Lista Pessoal, todos os boards de RH — o componente mais universal no nível do card do Kanban (ver `StageNavigator` abaixo pro equivalente dentro do drawer) |
+| Shell de drawer de detalhe (3 colunas: header/left/center/right) | `src/components/shared/SplitPanelDrawer.jsx` | Extraído durante o rollout de 07/08/2026 (modelado no `LeadDetailDrawer` original) — hoje usado por Entregas, Campanhas, Compras, Tarefas de Marketing, Lista Pessoal, Funil de Vendas e os 6 boards de RH (via `RHDetailDrawerShell` no slot `left`). `left` colapsa atrás de "+ detalhes" no mobile; um `StageNavigator` montado dentro de qualquer slot se registra sozinho (via `StageMoveRegistryContext`) no bottom-sheet "Mover para" do mobile, sem precisar de prop nova em cada chamador. Antes de montar um drawer de detalhe do zero, comece por aqui — ver correção na regra 2 abaixo, a antiga separação "CRM monta à mão / RH usa shell" não existe mais. |
+| "Mover para etapa", visual Pipefy (próximas etapas em destaque, etapas passadas discretas atrás de um divisor "Etapas anteriores") | `src/components/shared/StageNavigator.jsx` | Decidido com o Daniel 07/08/2026 (referência: Pipefy). Em uso nos 13 pontos que têm "Mover para" — Funil de Vendas, Entregas, Campanhas, Compras (×2), Tarefas de Marketing, Lista Pessoal e os 6 boards de RH. Precisa de `currentStageKey` + `allStages` pra ordenar frente/trás — sem essas duas props cai de volta pra lista plana (compatível com chamadas antigas). |
 | Campos condicionais/obrigatórios por etapa (mostrar/ocultar/exigir) | `src/utils/field-conditions.js` | 17 arquivos |
 | Validação de formato de campo (CNPJ, e-mail, telefone, valor) | `src/utils/field-validation.js` | junto com o acima |
 | Badge de comentário não lido | `src/lib/comment-badge.js` | 9 arquivos |
@@ -83,7 +85,9 @@ lado a lado — uma pra CRM/Pipeline, outra pra RH. Não é mentira dizer que
 | Input de campo customizado | `src/components/lead/StageFieldInput.jsx` | `src/components/rh-pipeline/RHStageFieldInput.jsx` (switch de tipos idêntico, copiado) |
 | Card do Kanban | `src/components/lead/LeadKanbanCard.jsx` (só Pipeline) | `src/components/rh-pipeline/RHKanbanCard.jsx` (5 boards de RH) — Marketing/Entregas/Compras têm card próprio, inline, nenhum dos dois |
 | Acordeão mobile do board | não existe pro Pipeline | `RHMobileKanbanAccordion.jsx` (só RH) |
-| Shell do drawer de detalhe (3 painéis) | `LeadDetailDrawer.jsx` monta tudo à mão | `RHDetailDrawerShell.jsx` (6 telas de RH) |
+| Abas internas do drawer de detalhe (Form/Atividades/Histórico/IA/Anexos...) | `LeadDetailDrawer.jsx` compõe as próprias abas inline, dentro do slot `left` do `SplitPanelDrawer` (ver regra 1) | `RHDetailDrawerShell.jsx` (6 telas de RH) — também montado dentro do slot `left` do mesmo `SplitPanelDrawer` |
+
+**Correção de 07/08/2026**: esta tabela chegou a listar "Shell do drawer de detalhe (3 painéis)" como duplicação CRM-vs-RH — não é mais verdade. O *shell* externo (header/left/center/right, incluindo o "Mover para" e o bottom-sheet mobile) foi unificado em `SplitPanelDrawer.jsx` (regra 1) e hoje é usado por CRM, RH e Marketing igualmente. A duplicação real que sobrou é uma camada mais interna — o conteúdo de abas dentro do slot `left` — listada na linha acima.
 
 **Regra pra quando for mexer em qualquer um desses**: decida explicitamente se
 o que você está construindo se parece mais com a família CRM ou a família RH,
@@ -240,15 +244,29 @@ uma dessas três **segue o padrão do doc, não inventa uma variante**:
 | Padrão | Referência | Quando usar |
 |---|---|---|
 | Tabela com filtro | `RHFuncionariosView.jsx` | lista de registros com muitas colunas/comparação lado a lado |
-| Kanban | ver regra 2 acima — já maduro, 9 boards | fluxo com etapas/estados que um registro atravessa |
+| Kanban | ver regra 2 acima — já maduro, 13 boards (ver contagem atualizada na regra 1) | fluxo com etapas/estados que um registro atravessa |
 | Grade de cards | novo — spec completa no doc acima | catálogo de registros (card = link) ou seletor de opções (card = checkbox) — uma variante só do mesmo componente, comportamento adaptado |
 
-Componentes que **ainda não existem** e precisam ser extraídos antes de
-migrar qualquer página pro padrão (regra 4 — já passaram do limite de 3ª
-ocorrência, diagnóstico completo no doc): `Tabs` (reescrito 4×), `FilterBar`
-(busca+filtro reescrito 4×+), `Card`/`EntityCard` (grade ad hoc em 7+ telas).
-Adotar também o `Modal.jsx` já existente (`src/components/ui/Modal.jsx`, 0
-usos confirmados hoje) em vez de overlay `position:fixed;inset:0` na mão.
+**Correção de 07/08/2026** — esta seção chegou a listar `Tabs`, `FilterBar` e
+`Card`/`EntityCard` como componentes que "ainda não existem". Todos os três já
+foram extraídos e já estão em uso; não reescreva um novo:
+
+- `Tabs` → `src/components/shared/Tabs.jsx` (6 telas: Automações, Minhas
+  Tarefas, Ajuda & Tutoriais, Fornecedores/RH, Cargos/RH, Configurações).
+- `FilterBar` → `src/components/shared/FilterBar.jsx` (7 telas: Sinais,
+  Fornecedores, Fornecedores/RH, Cargos/RH, Usuários, Lista Pessoal,
+  Relatórios/RH).
+- `Card`/`CardGrid` → `src/components/shared/Card.jsx` (9 telas — Automações,
+  Fornecedores, Minhas Tarefas, Cargos/RH, Fornecedores/RH, Relatórios/RH,
+  Sinais, Ajuda & Tutoriais, Usuários). Densidade grade/lista já embutida no
+  próprio `CardGrid` via prop `density`.
+- `Modal.jsx` (`src/components/ui/Modal.jsx`) — 13 usos confirmados hoje, não
+  mais zero. Ainda vale evitar overlay `position:fixed;inset:0` na mão pra
+  quem ainda não migrou.
+
+Nenhum dos três acima está rodando nos boards de Kanban ainda (ver regra 11
+abaixo — o filtro de Kanban continua sendo um `<select>` cru repetido por
+board); a extração cobriu as telas de tabela/admin, não o Kanban.
 
 Decisões já fechadas com o Daniel (não reabrir sem motivo novo — ver "Notas
 de decisão" no doc pra racional completo): densidade de card é toggle
@@ -347,3 +365,35 @@ não são follow-up:
 Mudança interna sem nada visível pro usuário (migration de reconciliação,
 script de teste, refactor) não precisa de changelog — o critério é "alguém
 que usa a plataforma notaria essa mudança?".
+
+## 11. Toolbar de Kanban/Tabela/Calendário/Análise: header fixo, filtro compartilhado entre views
+
+Achado de 07/08/2026 (dois bugs reais no mesmo padrão, o Daniel reportou
+ambos na mesma mensagem): todo board com múltiplas views segue — ou devia
+seguir — duas regras de layout que não estavam escritas em lugar nenhum.
+
+**Header nunca reflui entre views.** O `KanbanBoardHeader` (título + toggle
+Kanban/Tabela/Calendário/Análise + filtros + botões de ação) é uma única
+árvore JSX renderizada ANTES do bloco condicional de `viewMode` — nunca
+dentro dele. Qualquer controle que só faz sentido numa view específica (ex.:
+o `<select>` de ordenação da Lista Pessoal, que só existe na view "Lista")
+NÃO pode viver dentro do próprio header condicionado a `viewMode === "x"` —
+isso muda quantos elementos cabem na linha e empurra os botões vizinhos toda
+vez que o usuário troca de view (bug real, corrigido em `PersonalTasksView`
+07/08/2026). Controle específico de uma view vira uma linha própria, DENTRO
+do conteúdo daquela view, não dentro do header compartilhado.
+
+**Calendário/Agenda consome o mesmo dado já filtrado que o Kanban usa —
+nunca o array cru.** Levantamento nos 12 boards com view de
+Calendário/Agenda (07/08/2026) achou só 1 violação real — `PipelineCalendarView`
+(Funil de Vendas) recebia `leads` crus e reimplementava seu próprio escopo
+por dentro (empresa + `owner === user.id`), ignorando o filtro de vendedor,
+setor, consultor/subordinados e favoritos que o `CRMView` já calculava em
+`scopedLeads` — corrigido passando `scopedLeads` direto. Os outros boards já
+estavam certos (Entregas, Tarefas de Marketing, Campanhas, Férias passam o
+array já filtrado; Onboarding/Comex/Compras/Pós-venda/Feedback/Treinamentos
+não tinham filtro nenhum pra vazar). Ao criar uma view de Calendário nova (ou
+portar uma existente), ela recebe o MESMO array que a Kanban da mesma tela
+usa — nunca reimplementa o próprio escopo por dentro. Quando o board tiver
+filtro, ele já deve estar fora do bloco condicional de `viewMode` (regra
+acima) — assim aparece automaticamente em toda view, sem esforço extra.
