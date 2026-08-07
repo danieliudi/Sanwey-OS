@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bell, Check, GitBranch, Calendar, User, Trash2, X, AtSign, Megaphone } from "lucide-react";
 import { formatDateBR } from "../../utils/date";
 
@@ -91,7 +92,9 @@ export function NotificationCenter({
   // pra continuar lembrando de vez em quando sem incomodar a cada abertura
   // do painel dentro da mesma sessão.
   const [permissionBannerDismissed, setPermissionBannerDismissed] = useState(false);
+  const anchorRef = useRef(null);
   const panelRef = useRef(null);
+  const [pos, setPos] = useState(null);
 
   const filterCounts = {
     all: notifications.length,
@@ -112,13 +115,50 @@ export function NotificationCenter({
     else if (result === "default") setPermissionFeedback("Nenhuma resposta do navegador — verifique se um pedido de permissão apareceu na barra de endereço.");
   };
 
+  // Fecha ao clicar fora (botão OU painel — o painel agora é portalado pro
+  // body, então "fora" precisa considerar os dois refs, não mais um
+  // ancestral comum), ao rolar a página, ao redimensionar, ou com Esc —
+  // mesmo padrão de ComposerPopover (ChatView.jsx).
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) setOpen(false);
+    const handleOutside = (e) => {
+      if (anchorRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
+      setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const close = () => setOpen(false);
+    const handleKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", handleOutside);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  useEffect(() => { if (!open) setPos(null); }, [open]);
+
+  // Posição calculada a partir do botão (getBoundingClientRect), não de
+  // classes CSS relativo/sticky — o painel vira filho direto de <body>
+  // (createPortal logo abaixo), escapando de qualquer stacking context de
+  // ancestral que antes conseguia pintar por cima dele (TopBar sticky no
+  // topo, mesma classe de bug já corrigida assim em Modal.jsx; e no rodapé
+  // mobile, a bottom nav fixed). maxHeight é recalculado a cada abertura
+  // pra nunca passar do fim da viewport, em vez de um valor fixo (480) que
+  // podia sobrepor a barra inferior no mobile ou sumir atrás do fim da
+  // tela em janelas curtas — achado do Daniel, 05/08/2026: painel ainda se
+  // escondia atrás do header E da parte de baixo.
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current) return;
+    const btnRect = anchorRef.current.getBoundingClientRect();
+    const width = Math.min(340, window.innerWidth - 16);
+    const left = Math.max(8, Math.min(btnRect.right - width, window.innerWidth - width - 8));
+    const top = btnRect.bottom + 8;
+    const maxHeight = Math.max(200, window.innerHeight - top - 12);
+    setPos({ top, left, width, maxHeight });
   }, [open]);
 
   const handleOpen = () => {
@@ -142,7 +182,7 @@ export function NotificationCenter({
   };
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative" ref={anchorRef}>
       {/* Bell button */}
       <button
         onClick={handleOpen}
@@ -179,22 +219,26 @@ export function NotificationCenter({
         )}
       </button>
 
-      {/* Dropdown panel — fixed on mobile (avoids overflow anchoring bug), absolute on desktop.
-          top-topbar (64px, mesmo valor de --topbar-height) — usava top-14 (56px), 8px acima do
-          fim real da TopBar. TopBar é sticky/z-30 e o painel só tem z-50 sem estar num portal,
-          então aquela faixa de 8px caía dentro da área que a TopBar (sticky, camada de composição
-          própria) pode pintar por cima — mesma classe de bug já corrigida em Modal.jsx via portal,
-          aqui a correção é só alinhar a origem do offset em vez de portal (o painel usa
-          `lg:absolute` ancorado no botão do sino — portal quebraria esse anchor sem recalcular
-          posição via getBoundingClientRect, escopo maior que este bug pontual). */}
-      {open && (
+      {/* Dropdown panel — portalado pro <body>, posição calculada a partir
+          do botão (ver useLayoutEffect acima). Substitui a versão anterior
+          (fixed/absolute via classe Tailwind, ancorada só por CSS relativo)
+          que ainda ficava atrás da TopBar no topo e da bottom nav mobile
+          no rodapé, mesmo depois do fix anterior de "top-14 → top-topbar". */}
+      {open && createPortal(
         <div
-          className="fixed top-topbar left-2 right-2 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[340px] flex flex-col rounded-2xl border overflow-hidden z-50"
+          ref={panelRef}
+          className="flex flex-col rounded-2xl border overflow-hidden"
           style={{
-            maxHeight: 480,
+            position: "fixed",
+            top: pos?.top,
+            left: pos?.left ?? -9999,
+            width: pos?.width ?? 340,
+            maxHeight: pos?.maxHeight ?? 480,
+            visibility: pos ? "visible" : "hidden",
             background: "var(--surface)",
             borderColor: "var(--border)",
             boxShadow: "var(--shadow-pop)",
+            zIndex: 2000,
           }}
         >
           {/* Header */}
@@ -337,7 +381,8 @@ export function NotificationCenter({
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
