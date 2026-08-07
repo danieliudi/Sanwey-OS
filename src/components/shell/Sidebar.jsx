@@ -592,7 +592,7 @@ function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOv
               style={{
                 position: "absolute", top: -3, right: -3,
                 width: 7, height: 7, borderRadius: "50%",
-                background: "var(--warning)", border: "1.5px solid var(--surface-alt)",
+                background: "var(--accent)", border: "1.5px solid var(--surface-alt)",
               }}
             />
           )}
@@ -607,7 +607,7 @@ function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOv
             borderRadius: 999,
             display: "inline-flex", alignItems: "center", justifyContent: "center",
             fontSize: 10, fontWeight: 700, lineHeight: 1,
-            background: "var(--warning-bg)", color: "var(--warning)",
+            background: "var(--accent)", color: "var(--on-accent)",
           }}
         >
           {badge}
