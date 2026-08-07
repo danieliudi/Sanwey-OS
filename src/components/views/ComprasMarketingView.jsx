@@ -305,7 +305,6 @@ function KanbanBoard({ purchasesByStage, suppliersById, usersById, users, onCard
                   count={items.length}
                   bandHeight={4}
                   letterSpacing="normal"
-                  nameColor={color}
                   nameFontSize={14}
                   nameFontWeight={700}
                   uppercase={false}

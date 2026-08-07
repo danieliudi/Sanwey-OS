@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.26.0",
+    items: [
+      { kind: "ajuste", text: "Título das colunas do Kanban (Funil de Vendas, RH, Entregas, Compras, Lista Pessoal etc.) agora usa sempre a mesma cor de texto da página, em vez da cor da etapa — padrão novo em todos os quadros da plataforma." },
+      { kind: "ajuste", text: "No card da Lista Pessoal: Detalhes/Checklist/Anexos foram pra esquerda, e o meio do card ficou só com os campos configurados pra etapa atual." },
+    ],
+  },
+  {
     version: "4.25.0",
     items: [
       { kind: "novo", text: "A plataforma ganhou um tour guiado contextual: quando você visita uma tela com uma novidade recente, um tooltip aponta direto pro que mudou — sem precisar procurar na aba \"Novidades\"." },

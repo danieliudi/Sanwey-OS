@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   FileText, ListChecks, Paperclip, Plus, Upload, Download,
-  Trash2, Check, X, AlertCircle, File as FileIcon, Send, Settings2,
+  Trash2, Check, X, AlertCircle, File as FileIcon, Send,
 } from "lucide-react";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
@@ -126,15 +126,21 @@ function DetailsTab({ task, onFieldChange, saveStatus, tagsHook }) {
 // Mesmo motor do Editor de campos genérico (StageFieldsPanel/RHStageFieldInput/
 // field-conditions.js) — aqui só consumindo os campos configurados pra esta
 // etapa da Lista Pessoal via PersonalStageFieldsPanel.
-function StageFieldsTab({ task, stageFieldsHook, onFieldChange }) {
+function StageFieldsTab({ task, stageFieldsHook, onFieldChange, onEditFields }) {
   const defs = stageFieldsHook.getFields(task.status);
   const values = task.customFields || {};
   const visibleDefs = resolveVisibleFields(defs, values);
 
   if (visibleDefs.length === 0) {
     return (
-      <div className="text-xs text-center py-6 italic" style={{ color: "var(--text-dim)" }}>
-        Nenhum campo configurado pra esta etapa ainda. Use o ícone de engrenagem no cabeçalho da coluna, no Kanban, pra adicionar.
+      <div className="h-full flex items-center justify-center py-10">
+        <button
+          onClick={() => onEditFields(task.status)}
+          className="text-xs text-center max-w-[240px] cursor-pointer"
+          style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6 }}
+        >
+          Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+        </button>
       </div>
     );
   }
@@ -411,8 +417,8 @@ function NotesTab({ task, onUpdate }) {
 
 /* ── Shell ───────────────────────────────────────────────────── */
 
-export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stageFieldsHook, onClose, onUpdate, onDelete, onSetStatus }) {
-  const [centerTab, setCenterTab] = useState("detalhes");
+export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stageFieldsHook, onClose, onUpdate, onDelete, onSetStatus, onEditStageFields }) {
+  const [leftTab, setLeftTab] = useState("detalhes");
   const [saveStatus, setSaveStatus] = useState(null);
   const draftRef = useRef({});
   const debounceRef = useRef(null);
@@ -486,26 +492,27 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
           </div>
         </div>
       )}
-    </>
-  );
 
-  const center = (
-    <>
       <DetailDrawerTabs
         tabs={[
           { id: "detalhes",  label: "Detalhes",  icon: FileText },
-          { id: "campos",    label: "Campos",    icon: Settings2 },
           { id: "checklist", label: "Checklist", icon: ListChecks },
           { id: "anexos",    label: "Anexos",    icon: Paperclip },
         ]}
-        activeId={centerTab}
-        onChange={setCenterTab}
+        activeId={leftTab}
+        onChange={setLeftTab}
       />
-      {centerTab === "detalhes"  && <DetailsTab task={displayTask} onFieldChange={handleFieldChange} saveStatus={saveStatus} tagsHook={tagsHook} />}
-      {centerTab === "campos"    && <StageFieldsTab task={displayTask} stageFieldsHook={stageFieldsHook} onFieldChange={handleFieldChange} />}
-      {centerTab === "checklist" && <ChecklistTab taskId={task.id} userId={userId} />}
-      {centerTab === "anexos"    && <AttachmentsTab taskId={task.id} userId={userId} />}
+      {leftTab === "detalhes"  && <DetailsTab task={displayTask} onFieldChange={handleFieldChange} saveStatus={saveStatus} tagsHook={tagsHook} />}
+      {leftTab === "checklist" && <ChecklistTab taskId={task.id} userId={userId} />}
+      {leftTab === "anexos"    && <AttachmentsTab taskId={task.id} userId={userId} />}
     </>
+  );
+
+  // Centro fica só com o formulário da etapa atual (pedido do Daniel,
+  // 08/08/2026: "no meio, fique só um formulário da etapa atual") — o resto
+  // (Detalhes/Checklist/Anexos) foi pra esquerda.
+  const center = (
+    <StageFieldsTab task={displayTask} stageFieldsHook={stageFieldsHook} onFieldChange={handleFieldChange} onEditFields={onEditStageFields} />
   );
 
   // Notas fica na coluna direita, não numa aba — mesmo lugar onde os outros

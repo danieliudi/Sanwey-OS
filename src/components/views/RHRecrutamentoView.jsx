@@ -922,7 +922,6 @@ function VagaKanbanColumn({
         count={vagasList.length}
         bandHeight={4}
         letterSpacing="normal"
-        nameColor={stage.color}
         nameFontSize={14}
         nameFontWeight={700}
         uppercase={false}
@@ -2424,7 +2423,6 @@ function KanbanColumn({
         count={candidatos.length}
         bandHeight={4}
         letterSpacing="normal"
-        nameColor={stage.color}
         nameFontSize={14}
         nameFontWeight={700}
         uppercase={false}

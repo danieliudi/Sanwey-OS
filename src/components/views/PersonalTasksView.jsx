@@ -292,7 +292,7 @@ function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, o
                 >
                   <KanbanColumnHeader
                     color={col.color} name={col.name} count={items.length}
-                    bandHeight={4} letterSpacing="normal" nameColor={col.color}
+                    bandHeight={4} letterSpacing="normal"
                     nameFontSize={14} nameFontWeight={700} uppercase={false} countFontSize={12}
                     actions={
                       <div className="flex items-center gap-0.5">
@@ -537,6 +537,7 @@ export function PersonalTasksView({ currentUser }) {
           onUpdate={updateTask}
           onDelete={handleDeleteFromDrawer}
           onSetStatus={handleSetStatusFromDrawer}
+          onEditStageFields={setEditingFieldsStageKey}
         />
       )}
 

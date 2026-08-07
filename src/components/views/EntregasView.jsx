@@ -1224,7 +1224,6 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                         count={stageItems.length}
                         bandHeight={4}
                         letterSpacing="normal"
-                        nameColor={stage.color}
                         nameFontSize={14}
                         nameFontWeight={700}
                         uppercase={false}

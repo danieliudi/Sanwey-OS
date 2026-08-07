@@ -1062,7 +1062,6 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                         count={bucket.cases.length}
                         bandHeight={4}
                         letterSpacing="normal"
-                        nameColor={stage.color}
                         nameFontSize={14}
                         nameFontWeight={700}
                         uppercase={false}

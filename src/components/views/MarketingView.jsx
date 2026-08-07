@@ -1235,7 +1235,6 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                         count={count}
                         bandHeight={4}
                         letterSpacing="normal"
-                        nameColor={stage.color}
                         nameFontSize={14}
                         nameFontWeight={700}
                         uppercase={false}
