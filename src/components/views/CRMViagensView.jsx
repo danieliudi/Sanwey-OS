@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Plane, Users, BarChart3, Calculator } from "lucide-react";
+import { Plane, Users, BarChart3, Calculator, Tag } from "lucide-react";
 import { CRMViagensPlanejamentoView } from "./CRMViagensPlanejamentoView";
 import { CRMViagensGestorView } from "./CRMViagensGestorView";
 import { CRMViagensRelatoriosView } from "./CRMViagensRelatoriosView";
+import { CRMViagensCategoriasView } from "./CRMViagensCategoriasView";
 import { CRMViagensCalculadoraView } from "./CRMViagensCalculadoraView";
 import { PageHeader } from "../shared/PageHeader";
 import { COMERCIAL_ROLES } from "../../utils/viagens";
@@ -27,6 +28,7 @@ export function CRMViagensView({ currentUser, clients, onCreateClient, users, pu
   if (isGestor) {
     tabs.push({ id: "gestao", label: "Gestão", icon: Users });
     tabs.push({ id: "relatorios", label: "Relatórios", icon: BarChart3 });
+    tabs.push({ id: "categorias", label: "Categorias", icon: Tag });
   }
   tabs.push({ id: "calculadora", label: "Calculadora", icon: Calculator });
 
@@ -109,6 +111,7 @@ export function CRMViagensView({ currentUser, clients, onCreateClient, users, pu
       )}
       {activeTab === "gestao" && <CRMViagensGestorView currentUser={currentUser} users={users} />}
       {activeTab === "relatorios" && <CRMViagensRelatoriosView currentUser={currentUser} users={users} />}
+      {activeTab === "categorias" && <CRMViagensCategoriasView currentUser={currentUser} />}
       {activeTab === "calculadora" && <CRMViagensCalculadoraView />}
     </div>
   );

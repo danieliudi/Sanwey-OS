@@ -3,6 +3,7 @@ import {
   Plane,
   MapPin,
   Receipt,
+  FileText,
   Sparkles,
   Check,
   X,
@@ -13,13 +14,35 @@ import {
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
+import { useCRMViagemCategorias } from "../../hooks/use-crm-viagem-categorias";
+import { useCRMViagemPrestacoes } from "../../hooks/use-crm-viagem-prestacoes";
 import { useAI } from "../../hooks/use-ai";
 import { viagemCrossCheckPrompt } from "../../constants/ai-prompts";
 import { Badge } from "../ui/Badge";
-import { formatDateBR } from "../../utils/date";
-import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO, computeViagemDivergencias } from "../../utils/viagens";
+import { formatDateBR, daysSince } from "../../utils/date";
+import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO, computeViagemDivergencias, statusPrestacao } from "../../utils/viagens";
 
+// Fallback quando a categoria da despesa não tem `limite_alerta` configurado
+// (ou não é encontrada) — Decisão 3 do mockup de Prestação de contas em
+// lote: o limite por categoria SUBSTITUI esta constante flat, não soma a
+// ela. Ver limiteComprovanteFor abaixo.
 const COMPROVANTE_OBRIGATORIO_ACIMA_DE = 100;
+
+// Limite acima do qual comprovante é obrigatório pra aprovar esta despesa —
+// por categoria (crm_viagem_categorias.limite_alerta) quando configurado,
+// senão cai no padrão flat da plataforma. Uma despesa COM comprovante
+// aprova sem nenhum aviso, qualquer que seja o valor — isto só entra em jogo
+// quando `comprovante_path` está vazio.
+function limiteComprovanteFor(despesa, categorias) {
+  const categoria = (categorias || []).find((c) => c.nome === despesa.categoria);
+  const limite = categoria?.limite_alerta;
+  const n = limite == null ? NaN : Number(limite);
+  return Number.isFinite(n) ? n : COMPROVANTE_OBRIGATORIO_ACIMA_DE;
+}
+
+function faltaComprovante(despesa, categorias) {
+  return Number(despesa.valor) > limiteComprovanteFor(despesa, categorias) && !despesa.comprovante_path;
+}
 
 function isAtrasado(registro, today) {
   return registro.status === "planejado" && !!registro.data_planejada && registro.data_planejada < today;
@@ -186,11 +209,12 @@ function VisitasTable({ registros, showVendedorCol, nomePorId, today }) {
   );
 }
 
-function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, setRejectObs, onVerComprovante, onAprovar, onRejeitarClick, onCancelarRejeicao, onConfirmarRejeicao, onMarcarPago }) {
+function DespesaRow({ despesa, limiteComprovante, vendedorNome, deciding, isRejecting, rejectObs, setRejectObs, onVerComprovante, onAprovar, onRejeitarClick, onCancelarRejeicao, onConfirmarRejeicao, onMarcarPago }) {
   const iaValor = despesa.ia_extraido?.valor;
   const divergente = iaValor != null && Number(iaValor) !== Number(despesa.valor);
   const badge = STATUS_REEMBOLSO[despesa.status_reembolso] || STATUS_REEMBOLSO.pendente;
-  const faltaComprovanteObrigatorio = Number(despesa.valor) > COMPROVANTE_OBRIGATORIO_ACIMA_DE && !despesa.comprovante_path;
+  const limite = limiteComprovante ?? COMPROVANTE_OBRIGATORIO_ACIMA_DE;
+  const faltaComprovanteObrigatorio = Number(despesa.valor) > limite && !despesa.comprovante_path;
 
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
@@ -205,7 +229,7 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
         )}
         {faltaComprovanteObrigatorio && (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 99, padding: "2px 8px" }}>
-            <AlertTriangle size={11} /> Sem comprovante (obrigatório acima de {fmtMoney(COMPROVANTE_OBRIGATORIO_ACIMA_DE)})
+            <AlertTriangle size={11} /> Sem comprovante (obrigatório acima de {fmtMoney(limite)})
           </span>
         )}
         <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{formatDateBR(despesa.data_despesa)}</span>
@@ -259,11 +283,73 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
   );
 }
 
+// Card de grupo — uma prestação de contas enviada (ou, no caso raro de o
+// vendedor ter deixado despesas pendentes numa prestação ainda rascunho,
+// também aparece aqui, já que o agrupamento é por prestacao_id de
+// despesasParaDecidir, não por estado de envio). "Aprovar tudo" só fica
+// disponível quando NENHUMA despesa pendente do grupo exige comprovante que
+// falta — mesmo motivo que já bloqueia a aprovação individual em
+// handleAprovar, só que aplicado a todo o grupo de uma vez; nunca aprova
+// parcialmente pulando as bloqueadas em silêncio.
+function PrestacaoGroupCard({ prestacao, vendedorNome, despesas, categorias, expanded, onToggleExpand, aprovandoTudo, onAprovarTudo, renderDespesaRow }) {
+  const info = statusPrestacao(prestacao);
+  const total = despesas.reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
+  const pendentes = despesas.filter((d) => d.status_reembolso === "pendente");
+  const bloqueios = pendentes.filter((d) => faltaComprovante(d, categorias));
+  const podeAprovarTudo = pendentes.length > 0 && bloqueios.length === 0;
+  const diasEnviado = prestacao?.enviado_em ? daysSince(prestacao.enviado_em) : null;
+
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
+      <div className="flex items-center flex-wrap" style={{ gap: 10 }}>
+        <FileText size={14} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{prestacao?.titulo || "Prestação de contas"}</div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
+            {vendedorNome && <>{vendedorNome} · </>}
+            {despesas.length} {despesas.length === 1 ? "despesa" : "despesas"} · {fmtMoney(total)}
+            {diasEnviado != null && <> · enviado há {diasEnviado} {diasEnviado === 1 ? "dia" : "dias"}</>}
+          </div>
+        </div>
+        <Badge variant={info.variant}>{info.label}</Badge>
+      </div>
+
+      {bloqueios.length > 0 && (
+        <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 11, marginTop: 10, display: "flex", gap: 6, alignItems: "flex-start" }}>
+          <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>
+            <strong>Não dá pra aprovar tudo de uma vez.</strong> Sem comprovante e acima do limite da categoria: {bloqueios.map((d) => `${d.categoria} ${fmtMoney(d.valor)} (${formatDateBR(d.data_despesa)}, exige acima de ${fmtMoney(limiteComprovanteFor(d, categorias))})`).join("; ")}. Decida essa(s) individualmente em "Ver e decidir".
+          </span>
+        </div>
+      )}
+
+      <div className="flex items-center flex-wrap" style={{ gap: 8, marginTop: 10 }}>
+        <button onClick={onToggleExpand} style={btnStyle("ghost", false, true)}>
+          {expanded ? "Ocultar despesas" : "Ver e decidir"}
+        </button>
+        {pendentes.length > 0 && (
+          <button onClick={() => onAprovarTudo(pendentes)} disabled={!podeAprovarTudo || aprovandoTudo} style={btnStyle("primary", !podeAprovarTudo || aprovandoTudo, true)}>
+            {aprovandoTudo ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Aprovar tudo
+          </button>
+        )}
+      </div>
+
+      {expanded && (
+        <div className="flex flex-col" style={{ gap: 8, marginTop: 10 }}>
+          {despesas.map((d) => renderDespesaRow(d, { showVendedor: false }))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── View principal ───────────────────────────────────────────────────────────
 
 export function CRMViagensGestorView({ currentUser, users }) {
   const { registros, loading: loadingRegistros } = useCRMViagens({ userId: currentUser?.id });
   const { despesas, loading: loadingDespesas, getComprovanteUrl, decidirReembolso } = useCRMDespesas({ userId: currentUser?.id });
+  const { categorias } = useCRMViagemCategorias({ userId: currentUser?.id });
+  const { prestacoes } = useCRMViagemPrestacoes({ userId: currentUser?.id });
   const { complete, isConfigured } = useAI(currentUser);
 
   const [selectedMonth, setSelectedMonth] = useState(() => todayISO().slice(0, 7));
@@ -278,6 +364,22 @@ export function CRMViagensGestorView({ currentUser, users }) {
   const [decisaoError, setDecisaoError] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectObs, setRejectObs] = useState("");
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set());
+  const [aprovandoTudoId, setAprovandoTudoId] = useState(null);
+
+  const toggleExpandGroup = (prestacaoId) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(prestacaoId)) next.delete(prestacaoId); else next.add(prestacaoId);
+      return next;
+    });
+  };
+
+  const prestacaoPorId = useMemo(() => {
+    const map = new Map();
+    (prestacoes || []).forEach((p) => map.set(p.id, p));
+    return map;
+  }, [prestacoes]);
 
   const vendedoresComerciais = useMemo(
     () => (users || []).filter((u) => (u.roles?.length ? u.roles : [u.role]).some(r => COMERCIAL_ROLES.has(r))),
@@ -309,6 +411,11 @@ export function CRMViagensGestorView({ currentUser, users }) {
       .sort((a, b) => String(b.data_despesa || "").localeCompare(String(a.data_despesa || "")));
   }, [despesasFiltradas]);
 
+  // `today` precisa ser declarado antes de ser usado na dependency array do
+  // useMemo de divergencias logo abaixo (senão é TDZ — estava depois no
+  // main, nunca disparava porque nada testou a aba Gestão depois do merge).
+  const today = todayISO();
+
   // Ver computeViagemDivergencias em utils/viagens.js — mesma regra usada
   // em Relatórios, pra não divergir os dois lugares que cruzam planejado ×
   // realizado × despesa.
@@ -317,11 +424,27 @@ export function CRMViagensGestorView({ currentUser, users }) {
     [registrosFiltrados, despesasFiltradas, today]
   );
 
+  // Prestação de contas em lote: despesas com prestacao_id viram um card por
+  // grupo (Prestação de contas em lote); prestacao_id IS NULL continua
+  // ungrouped, exatamente como antes desta feature existir.
+  const gruposPrestacao = useMemo(() => {
+    const map = new Map();
+    for (const d of despesasParaDecidir) {
+      if (!d.prestacao_id) continue;
+      if (!map.has(d.prestacao_id)) map.set(d.prestacao_id, []);
+      map.get(d.prestacao_id).push(d);
+    }
+    return map;
+  }, [despesasParaDecidir]);
+
+  const despesasAvulsasParaDecidir = useMemo(
+    () => despesasParaDecidir.filter((d) => !d.prestacao_id),
+    [despesasParaDecidir]
+  );
+
   const vendedorSelecionado = selectedVendedorId === "todos"
     ? null
     : vendedoresComerciais.find((v) => v.id === selectedVendedorId);
-
-  const today = todayISO();
 
   async function handleAnalisar() {
     if (!vendedorSelecionado) return;
@@ -352,9 +475,12 @@ export function CRMViagensGestorView({ currentUser, users }) {
   async function handleAprovar(despesa) {
     // Comprovante obrigatório acima de um valor — prática padrão em
     // Concur/Expensify/Ramp (itemized receipt threshold), evita reembolso
-    // de valor alto sem nota fiscal anexada.
-    if (Number(despesa.valor) > COMPROVANTE_OBRIGATORIO_ACIMA_DE && !despesa.comprovante_path) {
-      alert(`Não dá pra aprovar: despesas acima de ${fmtMoney(COMPROVANTE_OBRIGATORIO_ACIMA_DE)} exigem comprovante anexado.`);
+    // de valor alto sem nota fiscal anexada. Limite é por categoria
+    // (Decisão 3 do mockup de Prestação de contas em lote) — ver
+    // limiteComprovanteFor no topo do arquivo.
+    const limite = limiteComprovanteFor(despesa, categorias);
+    if (Number(despesa.valor) > limite && !despesa.comprovante_path) {
+      alert(`Não dá pra aprovar: despesas de ${despesa.categoria} acima de ${fmtMoney(limite)} exigem comprovante anexado.`);
       return;
     }
     setDecidingId(despesa.id);
@@ -365,6 +491,26 @@ export function CRMViagensGestorView({ currentUser, users }) {
       setDecisaoError(e.message || "Não foi possível aprovar a despesa.");
     } finally {
       setDecidingId(null);
+    }
+  }
+
+  // "Aprovar tudo" de uma prestação — mesma decisão (aprovado) aplicada em
+  // sequência a cada despesa pendente do grupo. PrestacaoGroupCard já
+  // garante que só chega aqui quando nenhuma delas está bloqueada por falta
+  // de comprovante (podeAprovarTudo) — nunca aprova parcialmente pulando as
+  // bloqueadas em silêncio.
+  async function handleAprovarTudo(prestacaoId, despesasPendentes) {
+    setAprovandoTudoId(prestacaoId);
+    setDecisaoError(null);
+    try {
+      for (const d of despesasPendentes) {
+        // eslint-disable-next-line no-await-in-loop
+        await decidirReembolso(d.id, "aprovado", d.observacao_gestor || null);
+      }
+    } catch (e) {
+      setDecisaoError(e.message || "Não foi possível aprovar todas as despesas da prestação.");
+    } finally {
+      setAprovandoTudoId(null);
     }
   }
 
@@ -406,6 +552,30 @@ export function CRMViagensGestorView({ currentUser, users }) {
 
   const loading = loadingRegistros || loadingDespesas;
   const showVendedorCol = selectedVendedorId === "todos";
+
+  // Mesmo corpo de <DespesaRow> que já existia na lista plana — extraído pra
+  // função só pra ser reaproveitado tanto na lista de avulsas quanto dentro
+  // de cada PrestacaoGroupCard expandido, sem duplicar os 8 callbacks.
+  // `showVendedor` desliga a etiqueta de vendedor dentro de um grupo (o
+  // cabeçalho do card já mostra o vendedor da prestação).
+  const renderDespesaRow = (d, { showVendedor = showVendedorCol } = {}) => (
+    <DespesaRow
+      key={d.id}
+      despesa={d}
+      limiteComprovante={limiteComprovanteFor(d, categorias)}
+      vendedorNome={showVendedor ? (nomePorId.get(d.vendedor_id) || "—") : null}
+      deciding={decidingId === d.id}
+      isRejecting={rejectingId === d.id}
+      rejectObs={rejectObs}
+      setRejectObs={setRejectObs}
+      onVerComprovante={() => handleVerComprovante(d)}
+      onAprovar={() => handleAprovar(d)}
+      onRejeitarClick={() => { setRejectingId(d.id); setRejectObs(""); }}
+      onCancelarRejeicao={() => { setRejectingId(null); setRejectObs(""); }}
+      onConfirmarRejeicao={() => handleConfirmarRejeicao(d)}
+      onMarcarPago={() => handleMarcarPago(d)}
+    />
+  );
 
   return (
     <div className="flex flex-col" style={{ gap: 16 }}>
@@ -529,24 +699,23 @@ export function CRMViagensGestorView({ currentUser, users }) {
             {despesasParaDecidir.length === 0 ? (
               <EmptyState icon={Receipt} text="Nenhuma despesa pendente de decisão neste mês." />
             ) : (
-              <div className="flex flex-col" style={{ gap: 8 }}>
-                {despesasParaDecidir.map((d) => (
-                  <DespesaRow
-                    key={d.id}
-                    despesa={d}
-                    vendedorNome={showVendedorCol ? (nomePorId.get(d.vendedor_id) || "—") : null}
-                    deciding={decidingId === d.id}
-                    isRejecting={rejectingId === d.id}
-                    rejectObs={rejectObs}
-                    setRejectObs={setRejectObs}
-                    onVerComprovante={() => handleVerComprovante(d)}
-                    onAprovar={() => handleAprovar(d)}
-                    onRejeitarClick={() => { setRejectingId(d.id); setRejectObs(""); }}
-                    onCancelarRejeicao={() => { setRejectingId(null); setRejectObs(""); }}
-                    onConfirmarRejeicao={() => handleConfirmarRejeicao(d)}
-                    onMarcarPago={() => handleMarcarPago(d)}
+              <div className="flex flex-col" style={{ gap: 10 }}>
+                {[...gruposPrestacao.entries()].map(([prestacaoId, despesasGrupo]) => (
+                  <PrestacaoGroupCard
+                    key={prestacaoId}
+                    prestacao={prestacaoPorId.get(prestacaoId)}
+                    vendedorNome={showVendedorCol ? (nomePorId.get(despesasGrupo[0]?.vendedor_id) || "—") : null}
+                    despesas={despesasGrupo}
+                    categorias={categorias}
+                    expanded={expandedGroups.has(prestacaoId)}
+                    onToggleExpand={() => toggleExpandGroup(prestacaoId)}
+                    aprovandoTudo={aprovandoTudoId === prestacaoId}
+                    onAprovarTudo={(pendentes) => handleAprovarTudo(prestacaoId, pendentes)}
+                    renderDespesaRow={renderDespesaRow}
                   />
                 ))}
+
+                {despesasAvulsasParaDecidir.map((d) => renderDespesaRow(d))}
               </div>
             )}
           </section>

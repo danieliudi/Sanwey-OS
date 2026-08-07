@@ -14,15 +14,18 @@ import {
   Trash2,
   ExternalLink,
   AlertCircle,
+  FileText,
+  Send,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
 import { useCRMViagemCategorias } from "../../hooks/use-crm-viagem-categorias";
+import { useCRMViagemPrestacoes } from "../../hooks/use-crm-viagem-prestacoes";
 import { useAI } from "../../hooks/use-ai";
 import { receiptExtractionPrompt } from "../../constants/ai-prompts";
 import { formatDateBR } from "../../utils/date";
-import { STATUS_VISITA, STATUS_REEMBOLSO, fmtMoney } from "../../utils/viagens";
+import { STATUS_VISITA, STATUS_REEMBOLSO, statusPrestacao, fmtMoney } from "../../utils/viagens";
 import { Badge } from "../ui/Badge";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -542,9 +545,74 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
   );
 }
 
+// ── Nova prestação de contas ─────────────────────────────────────────────────
+// Simples de propósito (mockup aprovado: "não precisa ser elaborado") — só o
+// título, sem os campos que NovaVisitaModal/NovaDespesaModal têm.
+
+function NovaPrestacaoModal({ onSave, onClose }) {
+  useEscToClose(onClose);
+  const [titulo, setTitulo] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!titulo.trim()) { setError("Informe um título."); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({ titulo: titulo.trim() });
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao criar prestação de contas.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <FileText size={16} style={{ color: "var(--accent)" }} />
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova prestação de contas</div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          <label style={LABEL_ST}>Título *</label>
+          <input
+            type="text"
+            autoFocus
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            placeholder="Ex: Viagem São Paulo — agosto"
+            className={INPUT_CLS}
+            style={INPUT_ST}
+          />
+
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 12 }}>{error}</div>}
+
+          <div className="flex gap-2 mt-4">
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+              {saving ? "Criando…" : "Criar prestação de contas"}
+            </button>
+            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── Nova despesa ──────────────────────────────────────────────────────────────
 
-function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
+function NovaDespesaModal({ categorias, registros, prestacoesRascunho, onCreatePrestacao, initialPrestacaoId, ai, onSave, onClose }) {
   useEscToClose(onClose);
   const { complete, isConfigured, provider } = ai;
   const podeExtrairIA = isConfigured && provider === "anthropic";
@@ -554,6 +622,11 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
   const [dataDespesa, setDataDespesa] = useState("");
   const [descricao, setDescricao] = useState("");
   const [registroId, setRegistroId] = useState("");
+  const [prestacaoId, setPrestacaoId] = useState(initialPrestacaoId || "");
+  const [criandoPrestacao, setCriandoPrestacao] = useState(false);
+  const [novaPrestacaoTitulo, setNovaPrestacaoTitulo] = useState("");
+  const [criandoPrestacaoSaving, setCriandoPrestacaoSaving] = useState(false);
+  const [criandoPrestacaoError, setCriandoPrestacaoError] = useState(null);
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -561,6 +634,30 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
   const [iaExtraido, setIaExtraido] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // "+ Criar nova prestação de contas" no próprio select — não navega pra
+  // fora do formulário de despesa, só abre um mini-form inline pro título.
+  const handlePrestacaoSelect = (e) => {
+    const v = e.target.value;
+    if (v === "__nova__") { setCriandoPrestacao(true); return; }
+    setPrestacaoId(v);
+  };
+
+  const handleCriarPrestacaoInline = async () => {
+    if (!novaPrestacaoTitulo.trim()) { setCriandoPrestacaoError("Informe um título."); return; }
+    setCriandoPrestacaoSaving(true);
+    setCriandoPrestacaoError(null);
+    try {
+      const nova = await onCreatePrestacao({ titulo: novaPrestacaoTitulo.trim() });
+      setPrestacaoId(nova.id);
+      setCriandoPrestacao(false);
+      setNovaPrestacaoTitulo("");
+    } catch (err) {
+      setCriandoPrestacaoError(err?.message || "Não foi possível criar a prestação de contas.");
+    } finally {
+      setCriandoPrestacaoSaving(false);
+    }
+  };
 
   const extrairComIA = async (f) => {
     setExtracting(true);
@@ -625,6 +722,7 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
       await onSave(
         {
           registro_id: registroId || null,
+          prestacao_id: prestacaoId || null,
           categoria,
           valor: valorNum,
           data_despesa: dataDespesa,
@@ -655,6 +753,35 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
         </div>
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           <div className="flex flex-col gap-3">
+            <div>
+              <label style={LABEL_ST}>Prestação de contas</label>
+              {!criandoPrestacao ? (
+                <select value={prestacaoId} onChange={handlePrestacaoSelect} className={INPUT_CLS} style={INPUT_ST}>
+                  <option value="">Despesa avulsa</option>
+                  {prestacoesRascunho.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
+                  <option value="__nova__">+ Criar nova prestação de contas</option>
+                </select>
+              ) : (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={novaPrestacaoTitulo}
+                    onChange={(e) => setNovaPrestacaoTitulo(e.target.value)}
+                    placeholder="Título da prestação de contas"
+                    className={INPUT_CLS}
+                    style={{ ...INPUT_ST, flex: 1 }}
+                  />
+                  <button type="button" onClick={handleCriarPrestacaoInline} disabled={criandoPrestacaoSaving} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "0 14px", fontSize: 12, fontWeight: 700, cursor: criandoPrestacaoSaving ? "default" : "pointer", opacity: criandoPrestacaoSaving ? 0.6 : 1 }}>
+                    {criandoPrestacaoSaving ? <Loader2 size={13} className="animate-spin" /> : "Criar"}
+                  </button>
+                  <button type="button" onClick={() => { setCriandoPrestacao(false); setNovaPrestacaoTitulo(""); setCriandoPrestacaoError(null); }} style={{ padding: "0 12px", borderRadius: 10, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+                    Cancelar
+                  </button>
+                </div>
+              )}
+              {criandoPrestacaoError && <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>{criandoPrestacaoError}</div>}
+            </div>
             <div>
               <label style={LABEL_ST}>Comprovante</label>
               {!file ? (
@@ -814,18 +941,27 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   const { registros, loading: loadingRegistros, createRegistro, marcarRealizado, marcarNaoRealizado, deleteRegistro } = useCRMViagens({ userId });
   const { despesas, loading: loadingDespesas, createDespesa, deleteDespesa, uploadComprovante, getComprovanteUrl } = useCRMDespesas({ userId });
   const { categorias, loading: loadingCategorias } = useCRMViagemCategorias({ userId });
+  const { prestacoes, loading: loadingPrestacoes, createPrestacao, enviarPrestacao } = useCRMViagemPrestacoes({ userId });
   const ai = useAI(currentUser);
 
   const [mesRef, setMesRef] = useState(currentMonthStr());
   const [showNovaVisita, setShowNovaVisita] = useState(false);
   const [showNovaDespesa, setShowNovaDespesa] = useState(false);
+  const [novaDespesaPrestacaoId, setNovaDespesaPrestacaoId] = useState(null);
+  const [showNovaPrestacao, setShowNovaPrestacao] = useState(false);
   const [selectedRegistro, setSelectedRegistro] = useState(null);
+  const [enviandoPrestacaoId, setEnviandoPrestacaoId] = useState(null);
+  const [prestacaoError, setPrestacaoError] = useState(null);
 
   // Esta é a visão "meus dados" do vendedor — a RLS permite que gestor/admin
   // também leiam todas as linhas, então filtramos por dono aqui para não
-  // misturar visitas/despesas de outras pessoas nesta tela pessoal.
+  // misturar visitas/despesas/prestações de outras pessoas nesta tela pessoal.
   const registrosProprios = useMemo(() => registros.filter((r) => r.vendedor_id === userId), [registros, userId]);
   const despesasProprias = useMemo(() => despesas.filter((d) => d.vendedor_id === userId), [despesas, userId]);
+  const prestacoesProprias = useMemo(() => prestacoes.filter((p) => p.vendedor_id === userId), [prestacoes, userId]);
+  // Só rascunho aparece como destino ao lançar despesa nova — uma prestação
+  // já enviada fica travada pro vendedor (mesma trava da RLS).
+  const prestacoesRascunho = useMemo(() => prestacoesProprias.filter((p) => !p.enviado_em), [prestacoesProprias]);
 
   // Busca em `registros` (não `registrosProprios`) porque quem manda o id pode
   // ser o painel de Conexões do Cliente — a viagem pode ter sido registrada por
@@ -864,11 +1000,28 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
     () => registrosProprios.filter((r) => sameMonth(r.mes_referencia, mesRef)).sort((a, b) => (a.data_planejada || "").localeCompare(b.data_planejada || "")),
     [registrosProprios, mesRef]
   );
+  // Só avulsas (sem prestação) aqui — antes esta lista mostrava tudo do mês
+  // implicitamente; agora que despesa pode pertencer a uma prestação, o que
+  // tem prestacao_id aparece só dentro do card da prestação (abaixo), não
+  // duplicado aqui também.
   const despesasDoMes = useMemo(
-    () => despesasProprias.filter((d) => sameMonth(d.mes_referencia, mesRef)).sort((a, b) => (b.data_despesa || "").localeCompare(a.data_despesa || "")),
+    () => despesasProprias.filter((d) => sameMonth(d.mes_referencia, mesRef) && !d.prestacao_id).sort((a, b) => (b.data_despesa || "").localeCompare(a.data_despesa || "")),
     [despesasProprias, mesRef]
   );
   const totalDespesasDoMes = useMemo(() => despesasDoMes.reduce((sum, d) => sum + (Number(d.valor) || 0), 0), [despesasDoMes]);
+
+  // Despesas por prestação — usa despesasProprias (não despesasDoMes) porque
+  // prestação não é escopada por mês; uma prestação pode reunir despesas de
+  // datas diferentes.
+  const despesasPorPrestacao = useMemo(() => {
+    const map = new Map();
+    for (const d of despesasProprias) {
+      if (!d.prestacao_id) continue;
+      if (!map.has(d.prestacao_id)) map.set(d.prestacao_id, []);
+      map.get(d.prestacao_id).push(d);
+    }
+    return map;
+  }, [despesasProprias]);
 
   if (!isSupabaseConfigured) {
     return (
@@ -906,12 +1059,30 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   // antes o vendedor ficava sem saída, só via a etiqueta "Rejeitado".
   const handleRefazerDespesa = async (despesa) => {
     await deleteDespesa(despesa.id);
-    setShowNovaDespesa(true);
+    abrirNovaDespesa(despesa.prestacao_id || null);
   };
 
   const handleVerComprovante = async (despesa) => {
     const url = await getComprovanteUrl(despesa.comprovante_path);
     window.open(url, "_blank");
+  };
+
+  const abrirNovaDespesa = (prestacaoId = null) => {
+    setNovaDespesaPrestacaoId(prestacaoId);
+    setShowNovaDespesa(true);
+  };
+
+  const handleEnviarPrestacao = async (prestacao) => {
+    if (!window.confirm(`Enviar "${prestacao.titulo}" para o gestor? Depois de enviada, você não poderá mais editar ou adicionar despesas nela.`)) return;
+    setEnviandoPrestacaoId(prestacao.id);
+    setPrestacaoError(null);
+    try {
+      await enviarPrestacao(prestacao.id);
+    } catch (err) {
+      setPrestacaoError(err?.message || "Não foi possível enviar a prestação de contas.");
+    } finally {
+      setEnviandoPrestacaoId(null);
+    }
   };
 
   return (
@@ -953,16 +1124,96 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
         )}
       </div>
 
-      {/* Despesas */}
+      {/* Prestações de contas */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+            <FileText size={16} style={{ color: "var(--text-dim)" }} />
+            Prestações de contas
+          </div>
+          <button
+            onClick={() => setShowNovaPrestacao(true)}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent-hover)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent)"; }}
+          >
+            <Plus size={13} /> Nova prestação de contas
+          </button>
+        </div>
+
+        {prestacaoError && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 10 }}>{prestacaoError}</div>}
+
+        {loadingPrestacoes ? (
+          <div style={{ textAlign: "center", padding: "32px 8px", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
+        ) : prestacoesProprias.length === 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "32px 8px", color: "var(--text-faint)" }}>
+            <FileText size={32} strokeWidth={1} />
+            <span style={{ fontSize: 12 }}>Nenhuma prestação de contas criada ainda</span>
+          </div>
+        ) : (
+          <div className="flex flex-col" style={{ gap: 10 }}>
+            {prestacoesProprias.map((p) => {
+              const despesasP = despesasPorPrestacao.get(p.id) || [];
+              const totalP = despesasP.reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
+              const info = statusPrestacao(p);
+              const rascunho = !p.enviado_em;
+              return (
+                <div key={p.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: 12 }}>
+                  <div className="flex items-center flex-wrap" style={{ gap: 10, marginBottom: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", flex: 1, minWidth: 0 }}>{p.titulo}</div>
+                    <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{despesasP.length} {despesasP.length === 1 ? "despesa" : "despesas"} · {fmtMoney(totalP)}</span>
+                    <Badge variant={info.variant}>{info.label}</Badge>
+                  </div>
+
+                  {despesasP.length > 0 && (
+                    <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
+                      {despesasP.map((d) => (
+                        <DespesaRow
+                          key={d.id}
+                          despesa={d}
+                          onVerComprovante={handleVerComprovante}
+                          onRefazer={rascunho ? handleRefazerDespesa : undefined}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {rascunho && (
+                    <div className="flex items-center flex-wrap" style={{ gap: 8 }}>
+                      <button
+                        onClick={() => abrirNovaDespesa(p.id)}
+                        disabled={loadingCategorias}
+                        style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: loadingCategorias ? "default" : "pointer" }}
+                      >
+                        <Plus size={13} /> Adicionar despesa
+                      </button>
+                      <button
+                        onClick={() => handleEnviarPrestacao(p)}
+                        disabled={despesasP.length === 0 || enviandoPrestacaoId === p.id}
+                        title={despesasP.length === 0 ? "Adicione ao menos uma despesa antes de enviar" : undefined}
+                        style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: (despesasP.length === 0 || enviandoPrestacaoId === p.id) ? "default" : "pointer", opacity: (despesasP.length === 0 || enviandoPrestacaoId === p.id) ? 0.5 : 1 }}
+                      >
+                        {enviandoPrestacaoId === p.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar prestação de contas
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Despesas avulsas */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
             <Receipt size={16} style={{ color: "var(--text-dim)" }} />
-            Despesas do mês
+            Despesas avulsas
             {despesasDoMes.length > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-dim)" }}>· {fmtMoney(totalDespesasDoMes)}</span>}
           </div>
           <button
-            onClick={() => setShowNovaDespesa(true)}
+            onClick={() => abrirNovaDespesa()}
             disabled={loadingCategorias}
             style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: loadingCategorias ? "default" : "pointer", opacity: loadingCategorias ? 0.6 : 1 }}
             onMouseEnter={(e) => { if (!loadingCategorias) e.currentTarget.style.background = "var(--accent-hover)"; }}
@@ -977,7 +1228,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
         ) : despesasDoMes.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "32px 8px", color: "var(--text-faint)" }}>
             <Receipt size={32} strokeWidth={1} />
-            <span style={{ fontSize: 12 }}>Nenhuma despesa lançada para {monthLabel(mesRef).toLowerCase()}</span>
+            <span style={{ fontSize: 12 }}>Nenhuma despesa avulsa lançada para {monthLabel(mesRef).toLowerCase()}</span>
           </div>
         ) : (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
@@ -992,8 +1243,21 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
         <NovaVisitaModal clients={clients} onCreateClient={onCreateClient} onSave={handleCreateVisita} onClose={() => setShowNovaVisita(false)} />
       )}
 
+      {showNovaPrestacao && (
+        <NovaPrestacaoModal onSave={createPrestacao} onClose={() => setShowNovaPrestacao(false)} />
+      )}
+
       {showNovaDespesa && (
-        <NovaDespesaModal categorias={categorias} registros={registrosDoMes} ai={ai} onSave={handleCreateDespesa} onClose={() => setShowNovaDespesa(false)} />
+        <NovaDespesaModal
+          categorias={categorias}
+          registros={registrosDoMes}
+          prestacoesRascunho={prestacoesRascunho}
+          onCreatePrestacao={createPrestacao}
+          initialPrestacaoId={novaDespesaPrestacaoId}
+          ai={ai}
+          onSave={handleCreateDespesa}
+          onClose={() => { setShowNovaDespesa(false); setNovaDespesaPrestacaoId(null); }}
+        />
       )}
 
       {selectedRegistro && (

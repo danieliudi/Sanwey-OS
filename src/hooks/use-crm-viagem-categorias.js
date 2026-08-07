@@ -36,12 +36,24 @@ export function useCRMViagemCategorias({ userId } = {}) {
     };
   }, [fetchAll]);
 
-  const createCategoria = useCallback(async (nome) => {
-    const { data: nova, error } = await supabase.from("crm_viagem_categorias").insert({ nome, created_by: userId }).select().single();
+  // `opts.limite_alerta` opcional — limite de alerta específico da categoria
+  // (Decisão 3 do mockup de Prestação de contas em lote); NULL/omitido cai no
+  // padrão da constante flat (COMPROVANTE_OBRIGATORIO_ACIMA_DE) em quem lê.
+  const createCategoria = useCallback(async (nome, opts = {}) => {
+    const row = { nome, created_by: userId, limite_alerta: opts.limite_alerta ?? null };
+    const { data: nova, error } = await supabase.from("crm_viagem_categorias").insert(row).select().single();
     if (error) throw new Error(error.message);
     setCategorias(prev => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)));
     return nova;
   }, [userId]);
+
+  // Mesmo padrão update-então-estado-otimista de use-crm-despesas.js
+  // (updateDespesa) — patch pode incluir nome/limite_alerta/ativo.
+  const updateCategoria = useCallback(async (id, patch) => {
+    const { error } = await supabase.from("crm_viagem_categorias").update(patch).eq("id", id);
+    if (error) throw new Error(error.message);
+    setCategorias(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  }, []);
 
   const desativarCategoria = useCallback(async (id) => {
     const { error } = await supabase.from("crm_viagem_categorias").update({ ativo: false }).eq("id", id);
@@ -49,5 +61,5 @@ export function useCRMViagemCategorias({ userId } = {}) {
     setCategorias(prev => prev.filter(c => c.id !== id));
   }, []);
 
-  return { categorias, loading, createCategoria, desativarCategoria, refetch: fetchAll };
+  return { categorias, loading, createCategoria, updateCategoria, desativarCategoria, refetch: fetchAll };
 }

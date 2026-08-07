@@ -115,3 +115,12 @@ export function computeViagemDivergencias(registros, despesas, today) {
 
   return out.sort((a, b) => (a.severidade === b.severidade ? 0 : a.severidade === "alta" ? -1 : 1));
 }
+
+// Prestação de contas em lote — estado é só `enviado_em` (nullable, ver
+// migration 20260827_crm_viagem_prestacoes.sql), não uma coluna própria; este
+// mapa só existe pra apresentação (mesmo estilo Badge de STATUS_REEMBOLSO).
+export function statusPrestacao(prestacao) {
+  return prestacao?.enviado_em
+    ? { label: "Enviado, aguardando o gestor", variant: "urgent" }
+    : { label: "Rascunho, ainda não enviado", variant: "neutral" };
+}

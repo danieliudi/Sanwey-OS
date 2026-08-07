@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.24.0",
+    items: [
+      { kind: "novo", text: "Viagens & Despesas: agora dá pra agrupar várias despesas numa \"Prestação de contas\" e enviar tudo de uma vez pro gestor, em vez de lançar despesa por despesa avulsa. O gestor também ganhou um botão \"Aprovar tudo\" pra decidir a prestação inteira de uma só vez (quando nenhuma despesa do grupo estiver bloqueada por falta de comprovante)." },
+      { kind: "novo", text: "Nova aba \"Categorias\" em Viagens & Despesas (gestor/admin): dá pra cadastrar categorias de despesa e definir, por categoria, acima de qual valor o comprovante passa a ser obrigatório para aprovar — antes esse limite era um valor único (R$100) fixo pra qualquer tipo de despesa." },
+    ],
+  },
+  {
     version: "4.23.0",
     items: [
       { kind: "novo", text: "Lista Pessoal ganhou o mesmo nível dos outros quadros da plataforma: clicar numa tarefa abre um card completo, com checklist, anexos e um espaço pra notas — título e descrição dá pra editar a qualquer momento." },
