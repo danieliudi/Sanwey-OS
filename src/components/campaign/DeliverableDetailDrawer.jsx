@@ -36,8 +36,11 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.zip";
 
 /* ── Pill SideTabs ──────────────────────────────────────────── */
-const SIDE_TABS = [
-  { id: "fase",        label: "Fase atual",  icon: Layers },
+// "Fase atual" saiu da faixa de abas — vira o conteúdo fixo do centro do
+// drawer (padrão platform-wide, ver CLAUDE.md regra 3/item 2 da rodada de
+// 07/08/2026). As abas abaixo agora vivem na coluna esquerda, sob a linha
+// divisória, junto do bloco de identidade (badges/título/estatísticas).
+const LEFT_TABS = [
   { id: "form",        label: "Form",        icon: FileText },
   { id: "atividades",  label: "Atividades",  icon: Activity },
   { id: "historico",   label: "Histórico",   icon: History },
@@ -382,14 +385,14 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
 }
 
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], stages = [], canWrite, userId, currentUser, notifyMentions }) {
+export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], stages = [], canWrite, userId, currentUser, notifyMentions, onEditFields }) {
   // Etapas reais (rh_pipeline_stages, domain="marketing_deliverables"), com
   // fallback pro catálogo fixo só enquanto o fetch não resolveu — sem isso,
   // etapa custom criada pelo usuário (ex.: "Encaminhado à Agência") nunca
   // aparecia em "Mover entrega para fase" nem no Histórico, porque os dois
   // liam direto DELIVERABLE_STAGES (hardcoded, nunca atualizado).
   const effectiveStages = stages?.length ? stages : DELIVERABLE_STAGES;
-  const [sideTab,      setSideTab]     = useState("fase");
+  const [sideTab,      setSideTab]     = useState("form");
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,    setMoveError]   = useState(null);
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -425,7 +428,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     setAssigneeDraft(null);
     setMoveError(null);
     setSaveStatus(null);
-    setSideTab("fase");
+    setSideTab("form");
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     if (assigneeDebounceRef.current) clearTimeout(assigneeDebounceRef.current);
     return () => {
@@ -597,48 +600,57 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
   };
 
-  // ── Center tab content ────────────────────────────────────────────────────
-  function CenterTabContent() {
-    if (sideTab === "fase") {
-      return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <FieldRow label="Responsáveis">
+  // ── Centro: "Fase atual" fixo (não é mais aba — padrão platform-wide,
+  // ver CLAUDE.md regra 3/item 2, rodada de 07/08/2026) ─────────────────────
+  function FaseAtualContent() {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <FieldRow label="Responsáveis">
+          {canWrite ? (
+            <AssigneeMultiSelect
+              value={assigneeIds}
+              onChange={handleAssigneeChange}
+              options={users}
+              placeholder="Selecionar responsáveis…"
+            />
+          ) : (
+            <ReadValue value={resolvedAssignees.map(u => u.name).join(", ") || null} />
+          )}
+        </FieldRow>
+
+        {campaigns.length > 0 && (
+          <FieldRow
+            label="Campanha relacionada"
+            hint="Só era possível vincular ao criar a entrega — agora dá pra vincular/trocar depois."
+          >
             {canWrite ? (
-              <AssigneeMultiSelect
-                value={assigneeIds}
-                onChange={handleAssigneeChange}
-                options={users}
-                placeholder="Selecionar responsáveis…"
-              />
+              <select
+                value={item.campaignId || ""}
+                onChange={e => onUpdate(item.id, { campaignId: e.target.value || null })}
+                style={{ ...inputBase }}
+                onFocus={focusBorder}
+                onBlur={blurBorder}
+              >
+                <option value="">Nenhuma</option>
+                {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             ) : (
-              <ReadValue value={resolvedAssignees.map(u => u.name).join(", ") || null} />
+              <ReadValue value={campaigns.find(c => c.id === item.campaignId)?.name || null} />
             )}
           </FieldRow>
+        )}
 
-          {campaigns.length > 0 && (
-            <FieldRow
-              label="Campanha relacionada"
-              hint="Só era possível vincular ao criar a entrega — agora dá pra vincular/trocar depois."
-            >
-              {canWrite ? (
-                <select
-                  value={item.campaignId || ""}
-                  onChange={e => onUpdate(item.id, { campaignId: e.target.value || null })}
-                  style={{ ...inputBase }}
-                  onFocus={focusBorder}
-                  onBlur={blurBorder}
-                >
-                  <option value="">Nenhuma</option>
-                  {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              ) : (
-                <ReadValue value={campaigns.find(c => c.id === item.campaignId)?.name || null} />
-              )}
-            </FieldRow>
-          )}
-
-          {/* Campos configurados via "Editar campos desta etapa"
-              (rh_pipeline_stage_fields) — única fonte do formulário por etapa. */}
+        {/* Campos configurados via "Editar campos desta etapa"
+            (rh_pipeline_stage_fields) — única fonte do formulário por etapa. */}
+        {visibleCustomDefs.length === 0 ? (
+          <button
+            onClick={() => onEditFields?.(item.stage)}
+            className="text-xs text-center cursor-pointer"
+            style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6, padding: "16px 0", textAlign: "center" }}
+          >
+            Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+          </button>
+        ) : (
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <SectionLabel>Campos desta etapa</SectionLabel>
@@ -654,28 +666,29 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
                 </span>
               )}
             </div>
-            {visibleCustomDefs.length === 0
-              ? <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 8 }}>Nenhum campo para esta fase.</div>
-              : visibleCustomDefs.map(f => (
-                <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
-                  {canWrite ? (
-                    <RHStageFieldInput
-                      field={f}
-                      value={getCustomValue(f.fieldKey)}
-                      onChange={val => handleCustomChange(f.fieldKey, val)}
-                      users={users}
-                      touched={Boolean(moveError)}
-                    />
-                  ) : (
-                    <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
-                  )}
-                </FieldRow>
-              ))
-            }
+            {visibleCustomDefs.map(f => (
+              <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
+                {canWrite ? (
+                  <RHStageFieldInput
+                    field={f}
+                    value={getCustomValue(f.fieldKey)}
+                    onChange={val => handleCustomChange(f.fieldKey, val)}
+                    users={users}
+                    touched={Boolean(moveError)}
+                  />
+                ) : (
+                  <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
+                )}
+              </FieldRow>
+            ))}
           </div>
-        </div>
-      );
-    }
+        )}
+      </div>
+    );
+  }
+
+  // ── Coluna esquerda: abas Form/Atividades/Histórico/IA/Anexos/Checklists ──
+  function LeftTabContent() {
     if (sideTab === "form") {
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -784,15 +797,15 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           </div>
         )}
       </div>
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "2px 0" }} />
+
+      <DetailDrawerTabs tabs={LEFT_TABS} activeId={sideTab} onChange={setSideTab} />
+      {LeftTabContent()}
     </>
   );
 
-  const center = (
-    <>
-      <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
-      {CenterTabContent()}
-    </>
-  );
+  const center = FaseAtualContent();
 
   const right = (
     <>

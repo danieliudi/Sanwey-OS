@@ -1400,6 +1400,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         userId={user?.id}
         currentUser={user}
         notifyMentions={notifyMentions}
+        onEditFields={(stageId) => setFieldEditorStage(kanbanStages.find(s => s.id === stageId) || null)}
       />
     )}
 
