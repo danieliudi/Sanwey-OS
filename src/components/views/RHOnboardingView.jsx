@@ -521,42 +521,6 @@ function OnboardingDrawer({
     </div>
   );
 
-  const left = (
-    <>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        {[
-          { label: "Telefone", value: colaborador.phone || "—" },
-          { label: "E-mail", value: colaborador.email || "—" },
-          { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === colaborador.contractType)?.label || "—" },
-          { label: "Data de admissão", value: fmt(colaborador.admissionDate) },
-          { label: "Vaga de origem", value: vagaTitle || "—" },
-          { label: "Checklist", value: total > 0 ? `${done}/${total} concluídas` : "Sem tarefas" },
-        ].map((f) => (
-          <div key={f.label}>
-            <div style={labelSt}>{f.label}</div>
-            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />
-
-      <RHDetailDrawerShell
-        domain="onboarding"
-        recordId={colaborador.id}
-        activities={colaborador.activities || []}
-        onAddActivity={onAddActivity}
-        currentUser={currentUser}
-        users={users}
-        stages={stages}
-        formContent={formContent}
-        record={{ ...colaborador, stage: colaborador.onboardingStage, stageChangedAt: colaborador.onboardingStageChangedAt }}
-        recordTitle={colaborador.fullName}
-        domainLabel="Onboarding"
-      />
-    </>
-  );
-
   // "Campos desta etapa" vira o centro fixo do drawer (padrão platform-wide,
   // CLAUDE.md regra 3/item 2, rodada de 07/08/2026) — não faz mais parte da
   // aba "Form" junto do checklist de integração (que é conteúdo próprio do
@@ -657,6 +621,42 @@ function OnboardingDrawer({
           </>
         )}
       </div>
+    </>
+  );
+
+  const left = (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {[
+          { label: "Telefone", value: colaborador.phone || "—" },
+          { label: "E-mail", value: colaborador.email || "—" },
+          { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === colaborador.contractType)?.label || "—" },
+          { label: "Data de admissão", value: fmt(colaborador.admissionDate) },
+          { label: "Vaga de origem", value: vagaTitle || "—" },
+          { label: "Checklist", value: total > 0 ? `${done}/${total} concluídas` : "Sem tarefas" },
+        ].map((f) => (
+          <div key={f.label}>
+            <div style={labelSt}>{f.label}</div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+      <RHDetailDrawerShell
+        domain="onboarding"
+        recordId={colaborador.id}
+        activities={colaborador.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        formContent={formContent}
+        record={{ ...colaborador, stage: colaborador.onboardingStage, stageChangedAt: colaborador.onboardingStageChangedAt }}
+        recordTitle={colaborador.fullName}
+        domainLabel="Onboarding"
+      />
     </>
   );
 
