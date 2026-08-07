@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown } from "lucide-react";
+import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown, Download } from "lucide-react";
 import { usePersonalTasks } from "../../hooks/use-personal-tasks";
+import { exportPersonalTasksToCSV } from "../../utils/export-csv";
 import { usePersonalTaskStages } from "../../hooks/use-personal-task-stages";
 import { usePersonalTaskStageFields } from "../../hooks/use-personal-task-stage-fields";
 import { usePersonalTaskTags } from "../../hooks/use-personal-task-tags";
@@ -455,6 +456,17 @@ export function PersonalTasksView({ currentUser }) {
               <ViewToggleButton active={viewMode === "list"}   onClick={() => setViewMode("list")}   icon={List}       label="Lista"  iconOnlyMobile />
               <ViewToggleButton active={viewMode === "agenda"} onClick={() => setViewMode("agenda")} icon={Calendar}   label="Agenda" iconOnlyMobile dataTour="lista-pessoal-agenda" />
             </div>
+            <button
+              onClick={() => exportPersonalTasksToCSV(filteredTasks, { columns })}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+              title="Exportar tarefas filtradas como CSV"
+            >
+              <Download size={13} />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </button>
             <button
               onClick={() => setStagesEditorOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"

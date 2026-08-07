@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   GraduationCap, Plus, X, Check, ExternalLink, ChevronDown, ChevronRight, Users, AlertTriangle, RefreshCw,
-  LayoutGrid, Settings2, AlertCircle, List, CalendarDays as CalendarIcon, ChevronLeft, TrendingUp,
+  LayoutGrid, Settings2, AlertCircle, List, CalendarDays as CalendarIcon, ChevronLeft, TrendingUp, Download,
 } from "lucide-react";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
+import { exportTreinamentoAtribuicoesToCSV } from "../../utils/export-csv";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { isSupabaseConfigured } from "../../lib/supabase";
@@ -1309,6 +1310,17 @@ function TreinamentoBoardModal({
               <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
             </div>
+            <button
+              onClick={() => exportTreinamentoAtribuicoesToCSV(atribuicoes, { colaboradoresById, stages })}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+              title="Exportar atribuições como CSV"
+            >
+              <Download size={13} />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </button>
             <button onClick={onClose} style={{ background: "transparent", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-dim)", padding: "8px 10px", borderRadius: 10, display: "flex" }}>
               <X size={16} />
             </button>

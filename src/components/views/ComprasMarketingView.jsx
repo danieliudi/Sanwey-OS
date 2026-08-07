@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ShoppingCart, Plus, LayoutGrid, List, CalendarDays as CalendarIcon, TrendingUp,
-  ChevronLeft, ChevronRight, ChevronDown, X, XCircle, MessageCircle,
+  ChevronLeft, ChevronRight, ChevronDown, X, XCircle, MessageCircle, Download,
 } from "lucide-react";
 import { useMarketingPurchaseRequests, PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-marketing-purchase-requests";
+import { exportPurchasesToCSV } from "../../utils/export-csv";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
 import { PurchaseRequestDetailDrawer } from "../campaign/PurchaseRequestDetailDrawer";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
@@ -781,6 +782,17 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
+          <button
+            onClick={() => exportPurchasesToCSV(visiblePurchases, { suppliersById, usersById })}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+            title="Exportar solicitações filtradas como CSV"
+          >
+            <Download size={13} />
+            <span className="hidden sm:inline">Exportar CSV</span>
+          </button>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 font-semibold"

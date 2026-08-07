@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MessageSquare, Plus, X, TrendingUp, Settings2, AlertCircle,
-  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, BellRing,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, BellRing, Download,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { exportFeedbackToCSV } from "../../utils/export-csv";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
@@ -1671,6 +1672,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
               <ViewToggleButton active={viewMode === "lembretes"} onClick={() => setViewMode("lembretes")} icon={BellRing} label="Lembretes" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
             </div>
+            <Button variant="secondary" size="sm" icon={Download} onClick={() => exportFeedbackToCSV(feedbacks, { colaboradoresById, stages })}>Exportar CSV</Button>
             {canWrite && (
               <Button size="sm" icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
             )}

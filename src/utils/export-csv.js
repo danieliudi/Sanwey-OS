@@ -144,4 +144,158 @@ export function exportColaboradoresToCSV(colaboradores, { filename } = {}) {
   triggerDownload(filename || `sanwey-colaboradores-${today}.csv`, csv);
 }
 
+export function exportPurchasesToCSV(purchases, { suppliersById, usersById, filename } = {}) {
+  const header = ["Item", "Nº solicitação", "Fornecedor", "Valor (R$)", "Etapa", "Responsáveis", "Prazo"];
+  const rows = (purchases || []).map(p => {
+    const responsibleIds = p.responsibleIds?.length ? p.responsibleIds : (p.responsibleId ? [p.responsibleId] : []);
+    const responsibleNames = responsibleIds.map(id => usersById?.get?.(id)?.name).filter(Boolean).join(", ");
+    return [
+      p.itemName || "",
+      p.requestNumber || "",
+      suppliersById?.get?.(p.supplierId)?.name || "",
+      formatBRNumber(p.totalValue),
+      p.stage || "",
+      responsibleNames,
+      formatDate(p.dueDate),
+    ];
+  });
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-compras-${today}.csv`, csv);
+}
+
+export function exportComexOperationsToCSV(operations, { stages, filename } = {}) {
+  const stageLabel = new Map((stages || []).map(s => [s.stageKey, s.name]));
+  const header = ["Operação", "Etapa", "País", "Valor de venda (USD)", "Criado em"];
+  const rows = (operations || []).map(o => [
+    o.title || "",
+    stageLabel.get(o.stage) || o.stage || "",
+    o.buyerCountry || "",
+    formatBRNumber(o.saleValue),
+    formatDate(o.createdAt),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-comex-${today}.csv`, csv);
+}
+
+export function exportPosVendaCasesToCSV(cases, { stages, filename } = {}) {
+  const stageLabel = new Map((stages || []).map(s => [s.stageKey, s.name]));
+  const header = ["Cliente", "Empresa", "Etapa", "Valor (R$)", "Na etapa desde"];
+  const rows = (cases || []).map(c => [
+    c.clientName || "",
+    COMPANIES[c.companyId]?.name || c.companyId || "",
+    stageLabel.get(c.stage) || c.stage || "",
+    formatBRNumber(c.value),
+    formatDate(c.stageChangedAt),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-posvenda-${today}.csv`, csv);
+}
+
+export function exportOnboardingToCSV(colaboradores, { stages, filename } = {}) {
+  const stageLabel = new Map((stages || []).map(s => [s.stageKey, s.name]));
+  const header = ["Nome", "Cargo", "Departamento", "Etapa", "Na etapa desde"];
+  const rows = (colaboradores || []).map(c => [
+    c.fullName || "",
+    c.jobTitle || "",
+    c.department || "",
+    stageLabel.get(c.onboardingStage) || c.onboardingStage || "",
+    formatDate(c.onboardingStageChangedAt),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-onboarding-${today}.csv`, csv);
+}
+
+export function exportFeriasToCSV(requests, { colaboradoresById, stages, filename } = {}) {
+  const stageLabel = new Map((stages || []).map(s => [s.stageKey, s.name]));
+  const header = ["Colaborador", "Tipo", "Início", "Fim", "Status"];
+  const rows = (requests || []).map(r => [
+    colaboradoresById?.get?.(r.user_id)?.fullName || "",
+    r.type || "",
+    formatDate(r.start_date),
+    formatDate(r.end_date),
+    stageLabel.get(r.status) || r.status || "",
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-ferias-${today}.csv`, csv);
+}
+
+export function exportFeedbackToCSV(feedbacks, { colaboradoresById, stages, filename } = {}) {
+  const stageLabel = new Map((stages || []).map(s => [s.stageKey, s.name]));
+  const header = ["Colaborador", "Etapa", "Desfecho", "Atualizado em"];
+  const rows = (feedbacks || []).map(f => [
+    colaboradoresById?.get?.(f.user_id)?.fullName || "",
+    stageLabel.get(f.status) || f.status || "",
+    f.desfecho || "",
+    formatDate(f.status_changed_at),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-feedback-${today}.csv`, csv);
+}
+
+export function exportTreinamentoAtribuicoesToCSV(atribuicoes, { colaboradoresById, stages, filename } = {}) {
+  const stageLabel = new Map((stages || []).map(s => [s.stageKey, s.name]));
+  const header = ["Colaborador", "Cargo", "Status", "Certificado", "Atualizado em"];
+  const rows = (atribuicoes || []).map(a => {
+    const colaborador = colaboradoresById?.get?.(a.colaborador_id);
+    return [
+      colaborador?.fullName || "",
+      colaborador?.jobTitle || "",
+      stageLabel.get(a.status) || a.status || "",
+      a.certificado_url ? "Sim" : "Não",
+      formatDate(a.status_changed_at),
+    ];
+  });
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-treinamento-${today}.csv`, csv);
+}
+
+export function exportVagasToCSV(vagas, { stages, filename } = {}) {
+  const stageLabel = new Map((stages || []).map(s => [s.stageKey, s.name]));
+  const header = ["Título", "Etapa", "Empresas"];
+  const rows = (vagas || []).map(v => [
+    v.title || "",
+    stageLabel.get(v.stage) || v.stage || "",
+    (v.company_ids || []).map(id => COMPANIES[id]?.short || id).join(", "),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-vagas-${today}.csv`, csv);
+}
+
+export function exportCandidatosToCSV(candidatos, { vagasById, stages, filename } = {}) {
+  const stageLabel = new Map((stages || []).map(s => [s.stageKey, s.name]));
+  const header = ["Nome", "E-mail", "Vaga", "Etapa"];
+  const rows = (candidatos || []).map(c => [
+    c.name || "",
+    c.email || "",
+    vagasById?.get?.(c.vaga_id)?.title || "",
+    stageLabel.get(c.stage) || c.stage || "",
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-candidatos-${today}.csv`, csv);
+}
+
+export function exportPersonalTasksToCSV(tasks, { columns, filename } = {}) {
+  const stageLabel = new Map((columns || []).map(c => [c.id, c.name]));
+  const header = ["Título", "Etapa", "Prioridade", "Prazo", "Etiquetas"];
+  const rows = (tasks || []).map(t => [
+    t.title || "",
+    stageLabel.get(t.status) || t.status || "",
+    t.priority || "",
+    formatDate(t.dueDate),
+    (t.tags || []).join(", "),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-lista-pessoal-${today}.csv`, csv);
+}
+
 export default exportLeadsToCSV;

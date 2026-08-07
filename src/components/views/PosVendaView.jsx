@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, AlertCircle, ExternalLink, Settings, LayoutGrid, TrendingUp, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, X, AlertCircle, ExternalLink, Settings, LayoutGrid, TrendingUp, List, CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
+import { exportPosVendaCasesToCSV } from "../../utils/export-csv";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
@@ -933,6 +934,17 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                   size="sm"
                 />
               )}
+              <button
+                onClick={() => exportPosVendaCasesToCSV(scopedCases, { stages })}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                title="Exportar casos filtrados como CSV"
+              >
+                <Download size={13} />
+                <span className="hidden sm:inline">Exportar CSV</span>
+              </button>
               {firstNonTerminalStage && (
                 <button
                   onClick={() => setCreateModalStage(firstNonTerminalStage)}

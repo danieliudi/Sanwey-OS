@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.30.0",
+    items: [
+      { kind: "novo", text: "Botão \"Exportar CSV\" adicionado em Compras, Comex, Pós-venda, Onboarding, Férias, Avaliação de Desempenho, Treinamentos, Recrutamento (Vagas e Candidatos) e Lista Pessoal — os quadros que ainda não tinham essa opção, seguindo o mesmo padrão já usado em Funil de Vendas, Entregas e Campanhas." },
+    ],
+  },
+  {
     version: "4.29.4",
     items: [
       { kind: "correcao", text: "Corrigido um deslocamento de layout que acontecia em qualquer página da plataforma: ao navegar pra uma tela com mais conteúdo (que precisa de barra de rolagem), tudo — inclusive botões do cabeçalho — pulava alguns pixels pra esquerda; ao voltar pra uma tela mais curta, pulava de volta. O espaço da barra de rolagem agora fica sempre reservado, então nada se move." },

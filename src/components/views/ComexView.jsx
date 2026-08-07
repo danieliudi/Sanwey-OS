@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Package, Globe2, Plus, X, Settings2, LayoutGrid, List, TrendingUp,
-  Calculator, AlertCircle, Check, DollarSign, CalendarDays, ChevronLeft, ChevronRight,
+  Calculator, AlertCircle, Check, DollarSign, CalendarDays, ChevronLeft, ChevronRight, Download,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
+import { exportComexOperationsToCSV } from "../../utils/export-csv";
 import { useComexImportOperations } from "../../hooks/use-comex-import-operations";
 import { useComexExportOperations } from "../../hooks/use-comex-export-operations";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
@@ -1243,6 +1244,7 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
               <ViewToggleButton active={viewMode === "calendar"}  onClick={() => setViewMode("calendar")}  icon={CalendarDays}  label="Calendário" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}    label="Análise" iconOnlyMobile />
             </div>
+            <Button size="sm" variant="secondary" icon={Download} onClick={() => exportComexOperationsToCSV(operations, { stages })}>Exportar CSV</Button>
             {canWrite && <Button size="sm" icon={Plus} onClick={() => setShowCreate(true)}>Nova operação</Button>}
           </div>
         </div>

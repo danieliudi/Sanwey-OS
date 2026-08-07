@@ -27,12 +27,14 @@ import {
   Mail,
   ShieldCheck,
   TrendingUp,
+  Download,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
   RH_CONTRACT_TYPES,
   RH_ESCALA_TYPES,
 } from "../../constants/rh-config";
+import { exportVagasToCSV, exportCandidatosToCSV } from "../../utils/export-csv";
 import { RHJornadaEditor, formatScheduleBlocks } from "../rh-pipeline/RHJornadaEditor";
 import { RHBenefitsPicker } from "../rh-pipeline/RHBenefitsPicker";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -3268,6 +3270,23 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
             <ViewToggleButton active={boardMode === "analytics"} onClick={() => setBoardMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
 
+          <button
+            onClick={() => {
+              if (viewMode === "vagas") {
+                exportVagasToCSV(vagasFrenteFiltradas, { stages: vagaStages });
+              } else {
+                const vagasById = new Map(vagas.map((v) => [v.id, v]));
+                exportCandidatosToCSV(filteredCandidatos, { vagasById, stages: candStages });
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; }}
+            title={viewMode === "vagas" ? "Exportar vagas filtradas como CSV" : "Exportar candidatos filtrados como CSV"}
+          >
+            <Download size={13} /> <span className="hidden sm:inline">Exportar CSV</span>
+          </button>
           {canWrite && (
             <button
               onClick={() => setStageEditorOpen(true)}

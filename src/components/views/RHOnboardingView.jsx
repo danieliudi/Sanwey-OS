@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ClipboardCheck, Plus, X, Check, Trash2,
   Briefcase, Settings2, AlertCircle, Users,
-  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, TrendingUp,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, TrendingUp, Download,
 } from "lucide-react";
 import { RH_CONTRACT_TYPES } from "../../constants/rh-config";
+import { exportOnboardingToCSV } from "../../utils/export-csv";
 import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { isSupabaseConfigured } from "../../lib/supabase";
@@ -1493,6 +1494,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
+          <Button variant="secondary" size="sm" icon={Download} onClick={() => exportOnboardingToCSV(colaboradoresEmOnboarding, { stages })}>Exportar CSV</Button>
           {canWrite && (
             <>
               {/* Ponto de entrada direto pro Onboarding — cadastra alguém que já

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Calendar, Check, Plus, X, Clock, CalendarCheck, AlertTriangle, AlertCircle, Settings2,
-  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, TrendingUp,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, TrendingUp, Download,
 } from "lucide-react";
 import { RH_LEAVE_TYPES } from "../../constants/rh-config";
+import { exportFeriasToCSV } from "../../utils/export-csv";
 import { parseDateInput } from "../../utils/date";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
@@ -1252,6 +1253,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
               <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
             </div>
+            <Button variant="secondary" size="sm" icon={Download} onClick={() => exportFeriasToCSV(filtered, { colaboradoresById, stages })}>Exportar CSV</Button>
             <Button size="sm" icon={Plus} onClick={() => setShowSolicitar(true)}>Solicitar</Button>
           </div>
         </div>
