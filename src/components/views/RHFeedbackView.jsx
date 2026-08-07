@@ -859,6 +859,45 @@ function FeedbackDrawer({
     </div>
   );
 
+  // "Campos desta etapa" vira o centro fixo do drawer (padrão platform-wide,
+  // CLAUDE.md regra 3/item 2, rodada de 07/08/2026) — não faz mais parte da
+  // aba "Form" junto do resumo de conclusão (que é conteúdo próprio do
+  // Feedback, não campo configurável).
+  const center = visibleCustomDefs.length === 0 ? (
+    <button
+      onClick={() => onEditFields?.(st)}
+      className="text-xs text-center cursor-pointer"
+      style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6, padding: "16px 0", textAlign: "center", width: "100%" }}
+    >
+      Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+    </button>
+  ) : (
+    <div>
+      <div style={labelSt}>Campos desta etapa</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {visibleCustomDefs.map((f) => (
+          <div key={f.id}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+              {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+              {f.label}
+            </label>
+            {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} touched={Boolean(moveError)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const hasConteudoResumo = feedback.status === "concluido" && (feedback.conteudo?.pontos_fortes || feedback.conteudo?.pontos_desenvolvimento);
+
+  const formContent = hasConteudoResumo ? (
+    <div>
+      {feedback.conteudo?.pontos_fortes && <div style={{ marginBottom: 6 }}><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>Pontos fortes: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_fortes}</span></div>}
+      {feedback.conteudo?.pontos_desenvolvimento && <div><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>A desenvolver: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_desenvolvimento}</span></div>}
+    </div>
+  ) : null;
+
   const left = (
     <>
       {/* Avaliadores (FASE 5) — múltiplos responsáveis pela avaliação */}
@@ -902,55 +941,23 @@ function FeedbackDrawer({
           </div>
         </div>
       </div>
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+      <RHDetailDrawerShell
+        domain="feedback"
+        recordId={feedback.id}
+        activities={feedback.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        formContent={formContent}
+        record={{ ...feedback, stage: feedback.status, stageChangedAt: feedback.status_changed_at }}
+        recordTitle={colaborador?.fullName}
+        domainLabel="Avaliação de Desempenho"
+      />
     </>
-  );
-
-  const hasCustomFields = visibleCustomDefs.length > 0;
-  const hasConteudoResumo = feedback.status === "concluido" && (feedback.conteudo?.pontos_fortes || feedback.conteudo?.pontos_desenvolvimento);
-
-  const formContent = (hasCustomFields || hasConteudoResumo) ? (
-    <>
-      {hasCustomFields && (
-        <div>
-          <div style={labelSt}>Campos desta etapa</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {visibleCustomDefs.map((f) => (
-              <div key={f.id}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                  {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
-                  {f.label}
-                </label>
-                {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
-                <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} touched={Boolean(moveError)} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {hasConteudoResumo && (
-        <div>
-          {feedback.conteudo?.pontos_fortes && <div style={{ marginBottom: 6 }}><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>Pontos fortes: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_fortes}</span></div>}
-          {feedback.conteudo?.pontos_desenvolvimento && <div><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>A desenvolver: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_desenvolvimento}</span></div>}
-        </div>
-      )}
-    </>
-  ) : null;
-
-  const center = (
-    <RHDetailDrawerShell
-      domain="feedback"
-      recordId={feedback.id}
-      activities={feedback.activities || []}
-      onAddActivity={onAddActivity}
-      currentUser={currentUser}
-      users={users}
-      stages={stages}
-      formContent={formContent}
-      record={{ ...feedback, stage: feedback.status, stageChangedAt: feedback.status_changed_at }}
-      recordTitle={colaborador?.fullName}
-      domainLabel="Avaliação de Desempenho"
-    />
   );
 
   const right = (
