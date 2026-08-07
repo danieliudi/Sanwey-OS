@@ -1043,88 +1043,45 @@ function VagaDrawer({
     </div>
   );
 
-  const left = (
-    <>
-      <div>
-        <div style={labelSt}>Responsáveis</div>
-        {canWrite ? (
-          <AssigneeMultiSelect
-            value={responsibleIds}
-            onChange={(ids) => onUpdateResponsibles(ids)}
-            options={users}
-            placeholder="Selecionar responsáveis…"
-          />
-        ) : resolvedResponsibles.length > 0 ? (
-          <AvatarStack users={resolvedResponsibles} size={22} max={4} />
-        ) : (
-          <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum responsável definido</div>
-        )}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        {[
-          { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === vaga.contract_type)?.label || "—" },
-          { label: "Jornada", value: formatScheduleBlocks(vaga.schedule_blocks) || vaga.schedule || "—" },
-          { label: "Escala", value: RH_ESCALA_TYPES.find((e) => e.id === vaga.escala)?.label || vaga.shift || "—" },
-          { label: "Prazo para contratação", value: fmt(vaga.hiring_deadline) },
-          { label: "Faixa salarial", value: fmtSalaryRange(vaga.salary_min, vaga.salary_max) },
-          { label: "Candidatos", value: String(candidatosCount) },
-        ].map((f) => (
-          <div key={f.label}>
-            <div style={labelSt}>{f.label}</div>
-            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+  // "Campos desta etapa" vira o centro fixo do drawer (padrão platform-wide,
+  // CLAUDE.md regra 3/item 2, rodada de 07/08/2026) — não faz mais parte da
+  // aba "Form" junto do resto do conteúdo específico de Vaga (link público,
+  // encaminhamento pro gestor).
+  const center = visibleCustomFields.length === 0 ? (
+    <button
+      onClick={() => onEditFields?.(stageInfo)}
+      className="text-xs text-center cursor-pointer"
+      style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6, padding: "16px 0", textAlign: "center", width: "100%" }}
+    >
+      Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+    </button>
+  ) : (
+    <div>
+      <div style={labelSt}>Campos desta etapa</div>
+      <div className="flex flex-col gap-3">
+        {visibleCustomFields.map((field) => (
+          <div key={field.id}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+              {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
+            </div>
+            {field.helpText && (
+              <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{field.helpText}</div>
+            )}
+            <RHStageFieldInput
+              field={field}
+              value={vaga.custom_fields?.[field.fieldKey]}
+              onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
+              users={users}
+              touched={Boolean(moveError)}
+            />
           </div>
         ))}
       </div>
-
-      {vaga.benefits?.length > 0 && (
-        <div>
-          <div style={labelSt}>Benefícios</div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {vaga.benefits.map((b, i) => (
-              <span key={i} style={{ fontSize: 11, color: "var(--text)", background: "var(--surface-alt)", borderRadius: 99, padding: "3px 10px" }}>{b}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {vaga.description && (
-        <div>
-          <div style={labelSt}>Descrição</div>
-          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{vaga.description}</div>
-        </div>
-      )}
-    </>
+    </div>
   );
 
   const formContent = (
     <>
-      {/* Campos customizados desta etapa (RHStageListManager → RHStageFieldsPanel) */}
-      {visibleCustomFields.length > 0 && (
-        <div>
-          <div style={labelSt}>Campos desta etapa</div>
-          <div className="flex flex-col gap-3">
-            {visibleCustomFields.map((field) => (
-              <div key={field.id}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                  {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
-                </div>
-                {field.helpText && (
-                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{field.helpText}</div>
-                )}
-                <RHStageFieldInput
-                  field={field}
-                  value={vaga.custom_fields?.[field.fieldKey]}
-                  onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
-                  users={users}
-                  touched={Boolean(moveError)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {canWrite && (
         <>
           {vaga.stage === "publicada" && (
@@ -1214,20 +1171,74 @@ function VagaDrawer({
     </>
   );
 
-  const center = (
-    <RHDetailDrawerShell
-      domain="vagas"
-      recordId={vaga.id}
-      activities={vaga.activities || []}
-      onAddActivity={onAddActivity}
-      currentUser={currentUser}
-      users={users}
-      stages={stages}
-      formContent={formContent}
-      record={{ ...vaga, stageChangedAt: vaga.stage_changed_at }}
-      recordTitle={vaga.title}
-      domainLabel="Recrutamento"
-    />
+  const left = (
+    <>
+      <div>
+        <div style={labelSt}>Responsáveis</div>
+        {canWrite ? (
+          <AssigneeMultiSelect
+            value={responsibleIds}
+            onChange={(ids) => onUpdateResponsibles(ids)}
+            options={users}
+            placeholder="Selecionar responsáveis…"
+          />
+        ) : resolvedResponsibles.length > 0 ? (
+          <AvatarStack users={resolvedResponsibles} size={22} max={4} />
+        ) : (
+          <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum responsável definido</div>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {[
+          { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === vaga.contract_type)?.label || "—" },
+          { label: "Jornada", value: formatScheduleBlocks(vaga.schedule_blocks) || vaga.schedule || "—" },
+          { label: "Escala", value: RH_ESCALA_TYPES.find((e) => e.id === vaga.escala)?.label || vaga.shift || "—" },
+          { label: "Prazo para contratação", value: fmt(vaga.hiring_deadline) },
+          { label: "Faixa salarial", value: fmtSalaryRange(vaga.salary_min, vaga.salary_max) },
+          { label: "Candidatos", value: String(candidatosCount) },
+        ].map((f) => (
+          <div key={f.label}>
+            <div style={labelSt}>{f.label}</div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {vaga.benefits?.length > 0 && (
+        <div>
+          <div style={labelSt}>Benefícios</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {vaga.benefits.map((b, i) => (
+              <span key={i} style={{ fontSize: 11, color: "var(--text)", background: "var(--surface-alt)", borderRadius: 99, padding: "3px 10px" }}>{b}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {vaga.description && (
+        <div>
+          <div style={labelSt}>Descrição</div>
+          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{vaga.description}</div>
+        </div>
+      )}
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+      <RHDetailDrawerShell
+        domain="vagas"
+        recordId={vaga.id}
+        activities={vaga.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        formContent={formContent}
+        record={{ ...vaga, stageChangedAt: vaga.stage_changed_at }}
+        recordTitle={vaga.title}
+        domainLabel="Recrutamento"
+      />
+    </>
   );
 
   const right = (
@@ -1857,86 +1868,45 @@ function CandidatoDrawer({
     </div>
   );
 
-  const left = (
-    <>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        {[
-          { label: "Vaga",    value: vagaTitle },
-          { label: "Origem",  value: candidato.source || "—" },
-          { label: "Telefone", value: candidato.phone || "—" },
-          { label: "Aplicado em", value: fmt(candidato.created_at) },
-        ].map((f) => (
-          <div key={f.label}>
-            <div style={labelSt}>{f.label}</div>
-            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+  // "Campos desta etapa" vira o centro fixo do drawer (padrão platform-wide,
+  // CLAUDE.md regra 3/item 2, rodada de 07/08/2026) — não faz mais parte da
+  // aba "Form" junto do resto do conteúdo específico de Candidato (motivo de
+  // reprovação, contratação, notas).
+  const center = visibleCustomFields.length === 0 ? (
+    <button
+      onClick={() => onEditFields?.(stageInfo)}
+      className="text-xs text-center cursor-pointer"
+      style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6, padding: "16px 0", textAlign: "center", width: "100%" }}
+    >
+      Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+    </button>
+  ) : (
+    <div>
+      <div style={labelSt}>Campos desta etapa</div>
+      <div className="flex flex-col gap-3">
+        {visibleCustomFields.map((field) => (
+          <div key={field.id}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+              {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
+            </div>
+            {field.helpText && (
+              <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{field.helpText}</div>
+            )}
+            <RHStageFieldInput
+              field={field}
+              value={candidato.customFields?.[field.fieldKey]}
+              onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
+              users={users}
+              touched={Boolean(moveError)}
+            />
           </div>
         ))}
-        <div>
-          <div style={labelSt}>Avaliação</div>
-          <StarRating
-            value={candidato.rating || 0}
-            onChange={canWrite ? (v) => onRatingChange(candidato.id, v) : undefined}
-          />
-        </div>
       </div>
-
-      {candidato.resume_ext && (
-        <button
-          onClick={async () => {
-            const { data, error: err } = await supabase.storage
-              .from("rh-curriculos")
-              .createSignedUrl(`${candidato.candidateId}/curriculo.${candidato.resume_ext}`, 3600);
-            if (!err && data?.signedUrl) window.open(data.signedUrl, "_blank", "noreferrer");
-          }}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-        >
-          Ver currículo ({candidato.resume_ext.toUpperCase()})
-        </button>
-      )}
-
-      {/* Fit score / justificativa da triagem por IA */}
-      {typeof candidato.fit_score === "number" && (
-        <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <span style={{ fontWeight: 800, fontSize: 16, color: "#6D28D9" }}>{Math.round(candidato.fit_score)}</span>
-            <span style={{ fontSize: 11, color: "#6D28D9", fontWeight: 600 }}>fit score (IA)</span>
-          </div>
-          {candidato.justificativa && (
-            <div style={{ fontSize: 12, color: "#5B21B6", lineHeight: 1.5 }}>{candidato.justificativa}</div>
-          )}
-        </div>
-      )}
-    </>
+    </div>
   );
 
   const formContent = (
     <>
-      {/* Campos customizados desta etapa (RHStageListManager → RHStageFieldsPanel) */}
-      {visibleCustomFields.length > 0 && (
-        <div>
-          <div style={labelSt}>Campos desta etapa</div>
-          <div className="flex flex-col gap-3">
-            {visibleCustomFields.map((field) => (
-              <div key={field.id}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                  {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
-                </div>
-                {field.helpText && (
-                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{field.helpText}</div>
-                )}
-                <RHStageFieldInput
-                  field={field}
-                  value={candidato.customFields?.[field.fieldKey]}
-                  onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
-                  users={users}
-                  touched={Boolean(moveError)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Motivo de reprovação já registrado */}
       {candidato.stage === "reprovado" && candidato.motivo_reprovacao && (
         <div style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
@@ -2067,20 +2037,72 @@ function CandidatoDrawer({
     </>
   );
 
-  const center = (
-    <RHDetailDrawerShell
-      domain="candidatos"
-      recordId={candidato.id}
-      activities={candidato.activities || []}
-      onAddActivity={onAddActivity}
-      currentUser={currentUser}
-      users={users}
-      stages={stages}
-      formContent={formContent}
-      record={{ ...candidato, stageChangedAt: candidato.stage_changed_at }}
-      recordTitle={candidato.name}
-      domainLabel="Recrutamento"
-    />
+  const left = (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {[
+          { label: "Vaga",    value: vagaTitle },
+          { label: "Origem",  value: candidato.source || "—" },
+          { label: "Telefone", value: candidato.phone || "—" },
+          { label: "Aplicado em", value: fmt(candidato.created_at) },
+        ].map((f) => (
+          <div key={f.label}>
+            <div style={labelSt}>{f.label}</div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+          </div>
+        ))}
+        <div>
+          <div style={labelSt}>Avaliação</div>
+          <StarRating
+            value={candidato.rating || 0}
+            onChange={canWrite ? (v) => onRatingChange(candidato.id, v) : undefined}
+          />
+        </div>
+      </div>
+
+      {candidato.resume_ext && (
+        <button
+          onClick={async () => {
+            const { data, error: err } = await supabase.storage
+              .from("rh-curriculos")
+              .createSignedUrl(`${candidato.candidateId}/curriculo.${candidato.resume_ext}`, 3600);
+            if (!err && data?.signedUrl) window.open(data.signedUrl, "_blank", "noreferrer");
+          }}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+        >
+          Ver currículo ({candidato.resume_ext.toUpperCase()})
+        </button>
+      )}
+
+      {/* Fit score / justificativa da triagem por IA */}
+      {typeof candidato.fit_score === "number" && (
+        <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontWeight: 800, fontSize: 16, color: "#6D28D9" }}>{Math.round(candidato.fit_score)}</span>
+            <span style={{ fontSize: 11, color: "#6D28D9", fontWeight: 600 }}>fit score (IA)</span>
+          </div>
+          {candidato.justificativa && (
+            <div style={{ fontSize: 12, color: "#5B21B6", lineHeight: 1.5 }}>{candidato.justificativa}</div>
+          )}
+        </div>
+      )}
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+      <RHDetailDrawerShell
+        domain="candidatos"
+        recordId={candidato.id}
+        activities={candidato.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        formContent={formContent}
+        record={{ ...candidato, stageChangedAt: candidato.stage_changed_at }}
+        recordTitle={candidato.name}
+        domainLabel="Recrutamento"
+      />
+    </>
   );
 
   const right = (
