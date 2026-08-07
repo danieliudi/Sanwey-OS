@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.29.4",
+    items: [
+      { kind: "correcao", text: "Corrigido um deslocamento de layout que acontecia em qualquer página da plataforma: ao navegar pra uma tela com mais conteúdo (que precisa de barra de rolagem), tudo — inclusive botões do cabeçalho — pulava alguns pixels pra esquerda; ao voltar pra uma tela mais curta, pulava de volta. O espaço da barra de rolagem agora fica sempre reservado, então nada se move." },
+    ],
+  },
+  {
     version: "4.29.3",
     items: [
       { kind: "correcao", text: "Minhas Tarefas: quando não há nada pendente, a página não fica mais em branco — continua mostrando os cartões de resumo e as abas (tudo zerado), só a lista fica vazia, como já acontecia em Viagens & Despesas." },

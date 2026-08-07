@@ -397,3 +397,21 @@ portar uma existente), ela recebe o MESMO array que a Kanban da mesma tela
 usa — nunca reimplementa o próprio escopo por dentro. Quando o board tiver
 filtro, ele já deve estar fora do bloco condicional de `viewMode` (regra
 acima) — assim aparece automaticamente em toda view, sem esforço extra.
+
+**Correção de 07/08/2026 — causa raiz real do "header desloca ao trocar de
+view".** O fix acima (header fora do condicional) não era a causa inteira: o
+Daniel reportou que mesmo com o header idêntico, trocar pra uma view com
+mais conteúdo (ex.: Kanban populado) ainda empurrava os botões alguns
+pixels — a página inteira, não só um board. Causa real: `body` não tinha
+`scrollbar-gutter: stable` (`src/index.css`), então a barra de rolagem
+vertical nativa só ocupava espaço quando o conteúdo da página passava da
+altura da viewport — toda vez que ela aparecia/sumia (o que acontece a
+qualquer troca de tela cujo conteúdo mude de altura, não só Kanban↔Lista),
+o `body.clientWidth` mudava e tudo dentro dele, incluindo o header, deslizava
+horizontalmente. Corrigido com `scrollbar-gutter: stable` no seletor `html`
+(reserva o espaço sempre, mesmo sem precisar rolar) — efeito colateral
+positivo: corrige esse deslocamento em QUALQUER página da plataforma, não só
+boards com múltiplas views. Verificado (Playwright): `document.body.clientWidth`
+idêntico entre uma tela sem scroll e uma com >1000px de conteúdo extra.
+Degrada normalmente em navegadores sem suporte (ex. Safari < 18.2) — sem essa
+propriedade, volta ao comportamento de antes, não quebra nada.
