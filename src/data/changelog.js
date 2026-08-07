@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.31.0",
+    items: [
+      { kind: "novo", text: "Novo módulo ESG & Carbono (menu Inteligência): calcula a pegada de carbono (Escopos 1, 2 e 3) a partir de dados já cadastrados na plataforma, com fatores de emissão versionados e relatório exportável — primeira fase, foco em rastreabilidade auditável.", roles: ["admin", "gerente", "diretoria"] },
+    ],
+  },
+  {
     version: "4.30.0",
     items: [
       { kind: "novo", text: "Botão \"Exportar CSV\" adicionado em Compras, Comex, Pós-venda, Onboarding, Férias, Avaliação de Desempenho, Treinamentos, Recrutamento (Vagas e Candidatos) e Lista Pessoal — os quadros que ainda não tinham essa opção, seguindo o mesmo padrão já usado em Funil de Vendas, Entregas e Campanhas." },

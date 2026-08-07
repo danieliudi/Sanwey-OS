@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks,
+  FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -69,6 +69,7 @@ import { CRMView } from "./components/views/CRMView";
 import { PosVendaView } from "./components/views/PosVendaView";
 import { CRMViagensView } from "./components/views/CRMViagensView";
 import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
+import { ESGCarbonoView } from "./components/views/ESGCarbonoView";
 import { InsightsView } from "./components/views/InsightsView";
 import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { ComexView } from "./components/views/ComexView";
@@ -1462,6 +1463,11 @@ export default function App() {
     // entre empresas do grupo) — mudou pra dentro do grupo "Comercial".
     const intelItems = [];
     if (canSeeExecutive) intelItems.push({ id: "executive", label: "Executivo",  icon: BarChart3 });
+    // ESG & Carbono (Fase 1, mockup aprovado 07/08/2026) — mesmo gate de RLS
+    // das 3 tabelas esg_* (admin/gerente/diretoria), não canSeeExecutive
+    // (que também inclui gerente_marketing/rh/comex, sem RLS pra essas
+    // tabelas).
+    if (isManager || isDiretoria) intelItems.push({ id: "esg-carbono", label: "ESG & Carbono", icon: Leaf });
     if (isInsightsUser) intelItems.push({ id: "insights", label: "Insights", icon: TrendingUp });
     // Agent Builder (PRD docs/prd-agent-builder.md): gerente_rh também cria e
     // aprova agentes de IA (piloto Fornecedores RH), não só o gerente
@@ -1938,6 +1944,11 @@ export default function App() {
           <Route path={ROUTES.executive} element={
             canSeeExecutive
               ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager || isDiretoria} isRHManager={isRHManager || isDiretoria} isComercialManager={isManager || isDiretoria} isComexManager={isComex || isDiretoria} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["esg-carbono"]} element={
+            (isManager || isDiretoria)
+              ? <ESGCarbonoView currentUser={currentUser} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.insights} element={

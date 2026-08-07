@@ -21,6 +21,7 @@ export const ROUTES = {
   comex:             "/comex",
   agents:            "/agentes",
   executive:         "/executivo",
+  "esg-carbono":     "/esg-carbono",
   insights:          "/insights",
   presidency:        "/presidencia",
   "funnel-history":  "/historico-funil",

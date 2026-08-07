@@ -244,6 +244,10 @@ export const FAQ_ITEMS = [
     question: "Posso importar minha planilha de leads?",
     answer: "Sim. No Explorador de leads, clique em 'Importar planilha'. São aceitos arquivos CSV e Excel (.xlsx). O sistema mapeia as colunas automaticamente e deduplica por CNPJ.",
   },
+  {
+    question: "Como funciona o módulo ESG & Carbono?",
+    answer: "Em Inteligência → ESG & Carbono (visível para gerentes, admins e diretoria), a aba \"Fatores de Emissão\" cadastra os fatores usados no cálculo (cada atualização abre uma nova vigência, nunca sobrescreve a anterior — garante que um relatório já gerado não mude de valor depois). A aba \"Lançamentos\" registra o consumo mensal de combustível/energia (Escopo 1 e 2). O Escopo 3 é calculado automaticamente a partir das Compras já pagas na plataforma. Em \"Visão Geral\", o botão \"Gerar relatório\" congela um snapshot do período — útil para entregar a um cliente ou auditor sem risco do número mudar depois.",
+  },
 ];
 
 export const AUTOMATION_GUIDE = {
