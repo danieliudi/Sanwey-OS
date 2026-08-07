@@ -636,6 +636,41 @@ function FeriasDrawer({
     </div>
   );
 
+  // "Campos desta etapa" vira o centro fixo do drawer (padrão platform-wide,
+  // CLAUDE.md regra 3/item 2, rodada de 07/08/2026) — não faz mais parte da
+  // aba "Form" (que em Férias não tinha mais nenhum conteúdo próprio além
+  // disso, então formContent abaixo fica null).
+  const center = visibleCustomDefs.length === 0 ? (
+    <button
+      onClick={() => onEditFields?.(st)}
+      className="text-xs text-center cursor-pointer"
+      style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6, padding: "16px 0", textAlign: "center", width: "100%" }}
+    >
+      Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+    </button>
+  ) : (
+    <div>
+      <div style={labelSt}>Campos desta etapa</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {visibleCustomDefs.map((f) => (
+          <div key={f.id}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+              {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+              {f.label}
+            </label>
+            {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} touched={Boolean(moveError)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Nada de Férias-específico sobrava fora do bloco de campos customizados
+  // (extraído acima pro `center`) — Form tab não renderiza com formContent
+  // falsy (RHDetailDrawerShell.jsx:676/705), comportamento já esperado.
+  const formContent = null;
+
   const left = (
     <>
       {req.notes && (
@@ -656,41 +691,23 @@ function FeriasDrawer({
           Documento exigido pra aprovar: <b style={{ color: "var(--text)" }}>{docExigido}</b> (anexar na aba Anexos).
         </div>
       )}
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+      <RHDetailDrawerShell
+        domain="ferias"
+        recordId={req.id}
+        activities={req.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        formContent={formContent}
+        record={{ ...req, stage: req.status, stageChangedAt: req.status_changed_at }}
+        recordTitle={colaborador?.fullName}
+        domainLabel="Férias"
+      />
     </>
-  );
-
-  const formContent = visibleCustomDefs.length > 0 ? (
-    <div>
-      <div style={labelSt}>Campos desta etapa</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {visibleCustomDefs.map((f) => (
-          <div key={f.id}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-              {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
-              {f.label}
-            </label>
-            {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
-            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} touched={Boolean(moveError)} />
-          </div>
-        ))}
-      </div>
-    </div>
-  ) : null;
-
-  const center = (
-    <RHDetailDrawerShell
-      domain="ferias"
-      recordId={req.id}
-      activities={req.activities || []}
-      onAddActivity={onAddActivity}
-      currentUser={currentUser}
-      users={users}
-      stages={stages}
-      formContent={formContent}
-      record={{ ...req, stage: req.status, stageChangedAt: req.status_changed_at }}
-      recordTitle={colaborador?.fullName}
-      domainLabel="Férias"
-    />
   );
 
   const right = (
