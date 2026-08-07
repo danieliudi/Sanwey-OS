@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.29.3",
+    items: [
+      { kind: "correcao", text: "Minhas Tarefas: quando não há nada pendente, a página não fica mais em branco — continua mostrando os cartões de resumo e as abas (tudo zerado), só a lista fica vazia, como já acontecia em Viagens & Despesas." },
+    ],
+  },
+  {
     version: "4.29.2",
     items: [
       { kind: "correcao", text: "Na Lista Pessoal, o seletor de ordenação (\"Mais recente\") não empurra mais o resto do cabeçalho ao trocar entre Kanban/Lista/Agenda — agora tem lugar fixo, só na view Lista." },

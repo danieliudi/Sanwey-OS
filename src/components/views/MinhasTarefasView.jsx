@@ -29,9 +29,17 @@ const BUCKET_META = {
 const FILTER_ICON = { responsibility: CheckSquare, approval: Inbox, alert: AlertTriangle };
 
 const FILTER_EMPTY_TEXT = {
+  all: "Nenhuma responsabilidade, aprovação ou alerta pendente no momento.",
   responsibility: "Nenhuma responsabilidade atribuída a você no momento.",
   approval: "Nada esperando sua aprovação agora.",
   alert: "Nenhum alerta ativo — tudo dentro do prazo.",
+};
+
+const FILTER_EMPTY_TITLE = {
+  all: "Tudo em dia!",
+  responsibility: "Nada por aqui",
+  approval: "Nada por aqui",
+  alert: "Nada por aqui",
 };
 
 // 3 grupos visíveis (rótulo vira UI, não só critério de desempate como
@@ -131,12 +139,6 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
             <CardSkeleton key={i} density="list" />
           ))}
         </div>
-      ) : totalTasks === 0 ? (
-        <EmptyState
-          icon={CheckSquare}
-          title="Tudo em dia!"
-          description="Nenhuma responsabilidade, aprovação ou alerta pendente no momento."
-        />
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -177,9 +179,9 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
           {filtered.length === 0 ? (
             <EmptyState
               icon={FILTER_ICON[filter] || CheckSquare}
-              title="Nada por aqui"
+              title={FILTER_EMPTY_TITLE[filter] || "Nada por aqui"}
               description={FILTER_EMPTY_TEXT[filter]}
-              action={<Button variant="ghost" size="sm" onClick={() => setFilter("all")}>Ver tudo</Button>}
+              action={filter !== "all" ? <Button variant="ghost" size="sm" onClick={() => setFilter("all")}>Ver tudo</Button> : undefined}
             />
           ) : (
             <div>
