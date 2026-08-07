@@ -803,7 +803,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
       </div>
       </KanbanBoardHeader>
 
-      {viewMode === "kanban" && <KanbanFab label="Nova solicitação" onClick={() => setShowCreate(true)} />}
+      <KanbanFab label="Nova solicitação" onClick={() => setShowCreate(true)} />
 
       {/* Rejected strip — tira fina, não uma coluna do kanban */}
       {rejectedPurchases.length > 0 && (

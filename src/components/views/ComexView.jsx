@@ -1362,8 +1362,11 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
               </div>
             </KanbanBoardScrollArea>
           </div>
-          <KanbanFab label="Nova operação" onClick={canWrite ? () => setShowCreate(true) : undefined} />
         </>
+      )}
+
+      {!loading && isSupabaseConfigured && (
+        <KanbanFab label="Nova operação" onClick={canWrite ? () => setShowCreate(true) : undefined} />
       )}
 
       {showCreate && (

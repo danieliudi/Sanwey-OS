@@ -681,7 +681,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               )}
             </div>
           )}
-          {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
+          {onAddLead && stages.filter(s => !s.terminal).length > 0 && (
             <button
               onClick={() => {
                 const firstStage = stages.find(s => !s.terminal);
@@ -709,7 +709,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         </div>
       </KanbanBoardHeader>
 
-      {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
+      {onAddLead && stages.filter(s => !s.terminal).length > 0 && (
         <KanbanFab
           label="Nova oportunidade"
           flush

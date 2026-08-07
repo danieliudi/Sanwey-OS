@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.27.0",
+    items: [
+      { kind: "correcao", text: "O botão de criar card (no topo e o flutuante) não sumia mais ao trocar do Kanban para Tabela/Calendário/Análise, em todos os quadros da plataforma." },
+      { kind: "ajuste", text: "Em Entregas e Tarefas de Marketing, quem cria o card agora já entra como responsável — só muda se for outra pessoa." },
+    ],
+  },
+  {
     version: "4.26.0",
     items: [
       { kind: "ajuste", text: "Título das colunas do Kanban (Funil de Vendas, RH, Entregas, Compras, Lista Pessoal etc.) agora usa sempre a mesma cor de texto da página, em vez da cor da etapa — padrão novo em todos os quadros da plataforma." },

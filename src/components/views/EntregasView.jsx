@@ -167,6 +167,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
         notes:          [],
         activities:     [{ type: "created", description: "Entregável criado", at: new Date().toISOString() }],
         createdBy:      currentUser?.id || null,
+        assigneeIds:    currentUser?.id ? [currentUser.id] : [],
         customFields:   customValues,
       });
       onClose();
@@ -1012,7 +1013,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             Exportar CSV
           </button>
           {/* Nova entrega */}
-          {canManage && viewMode === "kanban" && (
+          {canManage && (
             <button
               onClick={() => setQuickAddStage("solicitacao")}
               className="flex items-center gap-1.5 font-semibold"
@@ -1087,7 +1088,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       )}
       </KanbanBoardHeader>
 
-      {canManage && viewMode === "kanban" && (
+      {canManage && (
         <KanbanFab label="Nova entrega" flush onClick={() => setQuickAddStage("solicitacao")} />
       )}
 

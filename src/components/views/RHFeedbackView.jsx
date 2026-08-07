@@ -1788,8 +1788,11 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
               </div>
             </KanbanBoardScrollArea>
           </div>
-          {canWrite && <KanbanFab label="Novo feedback" onClick={() => setNovoOpen(true)} />}
         </>
+      )}
+
+      {!loading && canWrite && (
+        <KanbanFab label="Novo feedback" onClick={() => setNovoOpen(true)} />
       )}
 
       {drawerFeedback && (

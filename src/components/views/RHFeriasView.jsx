@@ -1381,11 +1381,14 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
               </div>
             </KanbanBoardScrollArea>
           </div>
-          <KanbanFab label="Solicitar" onClick={() => setShowSolicitar(true)} />
         </>
       )}
 
-      {showSolicitar && <SolicitarFeriasModal currentUser={currentUser} colaboradorId={meuColaborador?.id} onSave={createRequest} onClose={() => setShowSolicitar(false)} />}
+      {!loading && isSupabaseConfigured && (
+        <KanbanFab label="Solicitar" onClick={() => setShowSolicitar(true)} />
+      )}
+
+      {showSolicitar &&<SolicitarFeriasModal currentUser={currentUser} colaboradorId={meuColaborador?.id} onSave={createRequest} onClose={() => setShowSolicitar(false)} />}
 
       {recusaModal && (
         <RecusarFeriasModal

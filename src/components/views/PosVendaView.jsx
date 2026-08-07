@@ -933,7 +933,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                   size="sm"
                 />
               )}
-              {viewMode === "kanban" && firstNonTerminalStage && (
+              {firstNonTerminalStage && (
                 <button
                   onClick={() => setCreateModalStage(firstNonTerminalStage)}
                   className="flex items-center gap-1.5 font-semibold"
@@ -947,7 +947,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           </div>
         </KanbanBoardHeader>
 
-        {viewMode === "kanban" && firstNonTerminalStage && (
+        {firstNonTerminalStage && (
           <KanbanFab label="Novo caso" flush onClick={() => setCreateModalStage(firstNonTerminalStage)} />
         )}
 

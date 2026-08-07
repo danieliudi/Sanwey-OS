@@ -990,7 +990,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               className="w-full sm:w-48"
             />
           )}
-          {viewMode === "kanban" && canWrite && (
+          {canWrite && (
             <button
               onClick={() => setQuickAddStage("briefing")}
               className="flex items-center gap-1.5 font-semibold"
@@ -1052,7 +1052,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       </div>
       </KanbanBoardHeader>
 
-      {viewMode === "kanban" && canWrite && (
+      {canWrite && (
         <KanbanFab label="Nova campanha" onClick={() => setQuickAddStage("briefing")} />
       )}
 

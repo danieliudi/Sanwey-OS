@@ -1616,8 +1616,11 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
               </div>
             </KanbanBoardScrollArea>
           </div>
-          {canWrite && <KanbanFab label="Novo colaborador" onClick={() => setAddColaboradorStage(stages[0]?.stageKey || null)} />}
         </>
+      )}
+
+      {!loading && canWrite && (
+        <KanbanFab label="Novo colaborador" onClick={() => setAddColaboradorStage(stages[0]?.stageKey || null)} />
       )}
 
       {drawerColaborador && (

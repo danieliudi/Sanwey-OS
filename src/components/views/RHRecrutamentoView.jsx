@@ -3279,8 +3279,9 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
       ) : loading || (viewMode === "vagas" ? vagaStagesLoading : candStagesLoading) ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : viewMode === "vagas" ? (
-        /* ═══ VAGAS ═══ */
-        boardMode === "table" ? (
+        <>
+        {/* ═══ VAGAS ═══ */}
+        {boardMode === "table" ? (
           <VagaTableView
             vagas={vagasFrenteFiltradas}
             stages={vagaStages}
@@ -3368,9 +3369,10 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                 </div>
               </KanbanBoardScrollArea>
             </div>
-            {canWrite && <KanbanFab label="Nova vaga" onClick={() => setQuickAddVaga(true)} />}
           </>
-        )
+        )}
+        {canWrite && <KanbanFab label="Nova vaga" onClick={() => setQuickAddVaga(true)} />}
+        </>
       ) : (
         /* ═══ Kanban de CANDIDATOS (existente) ═══ */
         <>
@@ -3564,9 +3566,9 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                   </div>
                 </KanbanBoardScrollArea>
               </div>
-              {canWrite && <KanbanFab label="Novo candidato" onClick={() => setAddCandidatoStage(candStages[0]?.stageKey || null)} />}
             </>
           )}
+          {canWrite && <KanbanFab label="Novo candidato" onClick={() => setAddCandidatoStage(candStages[0]?.stageKey || null)} />}
         </>
       )}
 

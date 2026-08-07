@@ -320,7 +320,7 @@ function TaskCreateModal({ stageId, stages, currentUser, users, campaigns, onAdd
     currentUser?.companies?.length > 0 ? [currentUser.companies[0]] : []
   );
   const [campaignId,  setCampaignId]  = useState("");
-  const [assigneeIds, setAssigneeIds] = useState([]);
+  const [assigneeIds, setAssigneeIds] = useState(currentUser?.id ? [currentUser.id] : []);
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState(null);
   const [customValues, setCustomValues] = useState({});
@@ -834,7 +834,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" iconOnlyMobile />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
-          {canWrite && viewMode === "kanban" && (
+          {canWrite && (
             <button
               onClick={() => setQuickAddStage(kanbanStages[0]?.id)}
               className="flex items-center gap-1.5 font-semibold"
@@ -926,7 +926,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
       </div>
       </KanbanBoardHeader>
 
-      {canWrite && viewMode === "kanban" && (
+      {canWrite && (
         <KanbanFab label="Nova tarefa" flush onClick={() => setQuickAddStage(kanbanStages[0]?.id)} />
       )}
 
