@@ -24,6 +24,14 @@
 
 export const CHANGELOG = [
   {
+    version: "4.28.0",
+    items: [
+      { kind: "novo", text: "Nos cards de Entregas, Campanhas, Compras e todos os boards de RH (Onboarding, Férias, Feedback, Vagas, Candidatos, Comex), a coluna da esquerda agora reúne prazo/etapa/departamento seguidos das abas (Form, Atividades, Histórico, IA, Anexos, Checklist) — o centro do card ficou só com os campos daquela etapa, sempre visíveis." },
+      { kind: "novo", text: "O histórico de etapas agora mostra, em cada passagem (\"Mostrar mais\"), os campos preenchidos NAQUELA passagem — inclusive se o card voltou pra mesma etapa mais de uma vez, cada visita guarda o próprio valor." },
+      { kind: "correcao", text: "@ nos comentários de Entregas e Campanhas volta a mostrar usuários de agência (ex.: Beehave) na lista de marcação." },
+    ],
+  },
+  {
     version: "4.27.0",
     items: [
       { kind: "correcao", text: "O botão de criar card (no topo e o flutuante) não sumia mais ao trocar do Kanban para Tabela/Calendário/Análise, em todos os quadros da plataforma." },
