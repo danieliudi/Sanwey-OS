@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.29.1",
+    items: [
+      { kind: "correcao", text: "Na Lista Pessoal, a ordem dos botões Kanban/Lista/Agenda agora segue o mesmo padrão do resto da plataforma (Kanban primeiro)." },
+    ],
+  },
+  {
     version: "4.29.0",
     items: [
       { kind: "novo", text: "Ao mover um card de etapa, as próximas etapas agora aparecem em destaque (preenchidas, com seta pra frente) e as etapas já passadas ficam discretas, separadas por \"Etapas anteriores\" — em todos os quadros da plataforma, facilitando entender o que é avançar e o que é voltar." },
