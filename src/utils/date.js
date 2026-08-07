@@ -61,6 +61,15 @@ export function relativeTime(iso) {
   return `${Math.floor(h / 24)}d atrás`;
 }
 
+// Inverso de parseDateInput: formata um Date local como "AAAA-MM-DD" sem
+// passar por UTC (.toISOString() "voltaria" um dia em fuso negativo/BRT).
+// 3ª ocorrência deste exato helper (quick-add-date-parser.js e
+// use-personal-tasks.js tinham cada um a própria cópia) — extraído aqui
+// pela regra 4 do CLAUDE.md.
+export function toLocalISODate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // Grava um "AAAA-MM-DD" de <input type=date> numa coluna timestamptz sem
 // "voltar" um dia quando reexibido em fuso negativo (BRT). new Date(str)
 // interpretaria a string pura como meia-noite UTC — constrói meia-noite

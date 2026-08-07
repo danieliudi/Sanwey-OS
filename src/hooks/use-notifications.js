@@ -32,7 +32,7 @@ function createNotification({ type, title, body, leadId, companyId, link }) {
   };
 }
 
-export function useNotifications({ currentUser, leads = [], notificationPrefs } = {}) {
+export function useNotifications({ currentUser, leads = [], personalTasks = [], notificationPrefs } = {}) {
   const [notifications, setNotifications] = usePersistentState(
     STORAGE_KEYS.notifications || "crm_notifications",
     []
@@ -42,6 +42,7 @@ export function useNotifications({ currentUser, leads = [], notificationPrefs } 
   );
 
   const seenLeadIds = useRef(new Set());
+  const seenTaskIds = useRef(new Set());
 
   // Retorna o resultado pro componente poder dar feedback visível — antes o
   // clique em "Ativar" não mostrava nada quando a API não existe (Notification
@@ -124,6 +125,37 @@ export function useNotifications({ currentUser, leads = [], notificationPrefs } 
       }
     }
   }, [leads, currentUser, setNotifications, notificationPrefs]);
+
+  // Lembrete de Lista Pessoal vencendo hoje — mesmo mecanismo do follow-up
+  // de Lead acima (checagem client-side a cada render com `leads`/
+  // `personalTasks` novos, dedupe via ref pra não reinserir a cada
+  // re-render, link genérico {module,id} pro sino navegar até a Lista
+  // Pessoal — ver App.jsx NOTIFICATION_LINK_SECTIONS.personal_tasks).
+  useEffect(() => {
+    if (!currentUser || !personalTasks.length) return;
+    if (!isTypeEnabled(notificationPrefs, "task_due")) return;
+    const today = new Date().toDateString();
+    for (const task of personalTasks) {
+      if (task.status === "feito" || !task.dueDate) continue;
+      if (new Date(task.dueDate).toDateString() !== today) continue;
+      const key = `task_due-${task.id}-${today}`;
+      if (seenTaskIds.current.has(key)) continue;
+      seenTaskIds.current.add(key);
+      setNotifications(prev => {
+        const alreadyExists = prev.some(n => n.type === "task_due" && n.link?.id === task.id && new Date(n.createdAt).toDateString() === today);
+        if (alreadyExists) return prev;
+        const body = task.dueTime ? `Vence hoje às ${task.dueTime} — "${task.title}".` : `Vence hoje — "${task.title}".`;
+        const notif = createNotification({
+          type: "task_due",
+          title: "Tarefa pessoal vencendo hoje",
+          body,
+          link: { module: "personal_tasks", id: task.id },
+        });
+        return [notif, ...prev].slice(0, MAX_NOTIFICATIONS);
+      });
+      sendDesktopNotification("Tarefa pessoal vencendo hoje", `"${task.title}"`, {});
+    }
+  }, [personalTasks, currentUser, setNotifications, notificationPrefs]);
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 

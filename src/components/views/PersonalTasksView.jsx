@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { List, LayoutGrid, Plus, Check, ListChecks } from "lucide-react";
+import { List, LayoutGrid, Calendar, Plus, Check, ListChecks } from "lucide-react";
 import { usePersonalTasks } from "../../hooks/use-personal-tasks";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
@@ -10,19 +10,23 @@ import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { Badge } from "../ui/Badge";
 import { formatDateBR, daysSince } from "../../utils/date";
+import { STATUS_COLUMNS } from "../../constants/personal-tasks";
 import { PersonalTaskCreateModal } from "../personal/PersonalTaskCreateModal";
+import { PersonalTaskDetailDrawer } from "../personal/PersonalTaskDetailDrawer";
+import { PersonalTaskAgendaView } from "../personal/PersonalTaskAgendaView";
 
 const VIEW_STORAGE_KEY = "personal-tasks-view";
 
-// Persistência do modo Lista/Kanban por usuário via localStorage — mesmo
-// mecanismo de src/hooks/use-table-density.js (useState com init lido do
-// storage + setter que também grava). Não virou um hook compartilhado em
+// Persistência do modo Lista/Kanban/Agenda por usuário via localStorage —
+// mesmo mecanismo de src/hooks/use-table-density.js (useState com init lido
+// do storage + setter que também grava). Não virou um hook compartilhado em
 // hooks/ porque esta é só a 2ª ocorrência desse padrão exato — regra 4 do
 // CLAUDE.md só manda extrair na 3ª.
 function useViewMode() {
   const [mode, setModeState] = useState(() => {
     try {
-      return window.localStorage.getItem(VIEW_STORAGE_KEY) === "kanban" ? "kanban" : "list";
+      const v = window.localStorage.getItem(VIEW_STORAGE_KEY);
+      return v === "kanban" || v === "agenda" ? v : "list";
     } catch {
       return "list";
     }
@@ -33,12 +37,6 @@ function useViewMode() {
   }, []);
   return [mode, setMode];
 }
-
-const STATUS_COLUMNS = [
-  { id: "a_fazer", name: "A Fazer", color: "#64748B" },
-  { id: "fazendo", name: "Fazendo", color: "#D97706" },
-  { id: "feito",   name: "Feito",   color: "#16A34A" },
-];
 
 // Pill de prioridade via Badge compartilhado (src/components/ui/Badge.jsx) —
 // nunca hand-roll de pílula nova (regra 1 do CLAUDE.md). Alta usa a mesma
@@ -80,7 +78,7 @@ function DueDateLabel({ task }) {
   const overdue = isOverdueUndone(task);
   return (
     <span style={{ fontSize: 11, fontWeight: overdue ? 700 : 500, color: overdue ? "var(--danger)" : "var(--text-dim)", flexShrink: 0, whiteSpace: "nowrap" }}>
-      {formatDateBR(task.dueDate)}
+      {formatDateBR(task.dueDate)}{task.dueTime ? ` · ${task.dueTime}` : ""}
     </span>
   );
 }
@@ -90,8 +88,50 @@ function PriorityPill({ priority }) {
   return <Badge variant={p.variant} size="sm">{p.label}</Badge>;
 }
 
+function TagChips({ tags }) {
+  if (!tags?.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tags.map(t => (
+        <span key={t} className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--surface-alt)", color: "var(--accent)" }}>
+          {t}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function taskMoveTargets(task) {
   return STATUS_COLUMNS.filter(c => c.id !== task.status).map(c => ({ key: c.id, name: c.name, color: c.color }));
+}
+
+/* ── Filtro de etiquetas ─────────────────────────────────────── */
+
+function TagFilterBar({ allTags, activeTags, onToggle }) {
+  if (allTags.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 mb-4">
+      <span className="text-[10px] font-bold uppercase tracking-wide mr-0.5" style={{ color: "var(--text-dim)" }}>Etiquetas</span>
+      {allTags.map(tag => {
+        const active = activeTags.includes(tag);
+        return (
+          <button
+            key={tag}
+            onClick={() => onToggle(tag)}
+            className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
+            style={{
+              background: active ? "var(--accent)" : "var(--surface)",
+              color: active ? "var(--on-accent)" : "var(--text-dim)",
+              border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+              cursor: "pointer",
+            }}
+          >
+            {tag}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 /* ── List mode ───────────────────────────────────────────────── */
@@ -99,15 +139,18 @@ function taskMoveTargets(task) {
 // Checkbox quadrado com check — mesmo padrão visual do item de checklist de
 // Entregas (ChecklistsTab em DeliverableDetailDrawer.jsx): borda/fundo
 // var(--success) quando marcado, título com line-through.
-function TaskRow({ task, onToggle, onMove, onDelete }) {
+function TaskRow({ task, onToggle, onMove, onDelete, onOpen }) {
   const done = task.status === "feito";
   return (
     <div
-      className="flex items-center gap-3 py-2.5 px-3 rounded-lg"
+      onClick={() => onOpen(task)}
+      className="flex items-center gap-3 py-2.5 px-3 rounded-lg cursor-pointer transition-colors"
       style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
     >
       <button
-        onClick={() => onToggle(task.id)}
+        onClick={e => { e.stopPropagation(); onToggle(task.id); }}
         title={done ? "Reabrir tarefa" : "Marcar como feita"}
         style={{
           width: 18, height: 18, borderRadius: 5, flexShrink: 0,
@@ -119,12 +162,15 @@ function TaskRow({ task, onToggle, onMove, onDelete }) {
       >
         {done && <Check size={11} color="#FFF" strokeWidth={3} />}
       </button>
-      <span
-        className="flex-1 min-w-0 truncate text-sm"
-        style={{ color: done ? "var(--text-dim)" : "var(--text)", textDecoration: done ? "line-through" : "none" }}
-      >
-        {task.title}
-      </span>
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        <span
+          className="truncate text-sm"
+          style={{ color: done ? "var(--text-dim)" : "var(--text)", textDecoration: done ? "line-through" : "none" }}
+        >
+          {task.title}
+        </span>
+        <TagChips tags={task.tags} />
+      </div>
       <PriorityPill priority={task.priority} />
       <DueDateLabel task={task} />
       <div onClick={e => e.stopPropagation()}>
@@ -140,7 +186,7 @@ function TaskRow({ task, onToggle, onMove, onDelete }) {
   );
 }
 
-function TaskSection({ title, tasks, onToggle, onMove, onDelete }) {
+function TaskSection({ title, tasks, onToggle, onMove, onDelete, onOpen }) {
   if (tasks.length === 0) return null;
   return (
     <div className="mb-5">
@@ -149,7 +195,7 @@ function TaskSection({ title, tasks, onToggle, onMove, onDelete }) {
       </div>
       <div className="flex flex-col gap-2">
         {tasks.map(t => (
-          <TaskRow key={t.id} task={t} onToggle={onToggle} onMove={onMove} onDelete={onDelete} />
+          <TaskRow key={t.id} task={t} onToggle={onToggle} onMove={onMove} onDelete={onDelete} onOpen={onOpen} />
         ))}
       </div>
     </div>
@@ -158,10 +204,14 @@ function TaskSection({ title, tasks, onToggle, onMove, onDelete }) {
 
 /* ── Kanban mode ─────────────────────────────────────────────── */
 
-function TaskKanbanCard({ task, onMove, onDelete }) {
+function TaskKanbanCard({ task, onMove, onDelete, onOpen, onDragStart, onDragEnd }) {
   return (
     <div
-      className="p-3 rounded-lg"
+      draggable
+      onDragStart={() => onDragStart(task)}
+      onDragEnd={onDragEnd}
+      onClick={() => onOpen(task)}
+      className="p-3 rounded-lg cursor-pointer transition-shadow"
       style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" }}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -178,6 +228,7 @@ function TaskKanbanCard({ task, onMove, onDelete }) {
           />
         </div>
       </div>
+      {task.tags?.length > 0 && <div className="mb-2"><TagChips tags={task.tags} /></div>}
       <div className="flex items-center justify-between gap-2">
         <PriorityPill priority={task.priority} />
         <DueDateLabel task={task} />
@@ -186,15 +237,29 @@ function TaskKanbanCard({ task, onMove, onDelete }) {
   );
 }
 
-function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate }) {
+function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate, onOpen }) {
   const trailingRef = useRef(null);
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  const [draggedTask, setDraggedTask] = useState(null);
+  const [dragOverStatus, setDragOverStatus] = useState(null);
 
   const byStatus = useMemo(() => {
     const bucket = { a_fazer: [], fazendo: [], feito: [] };
     for (const t of tasks) { if (bucket[t.status]) bucket[t.status].push(t); }
     return bucket;
   }, [tasks]);
+
+  // Mesmo padrão nativo HTML5 de drag-and-drop do Pipeline/Campanhas/Entregas
+  // (ver CRMView.jsx handleDrop/handleDragOver) — nenhum board da plataforma
+  // usa lib de DnD, só draggable+onDragStart/onDragOver/onDrop/onDragEnd.
+  const handleDrop = useCallback((statusId) => {
+    if (draggedTask && draggedTask.status !== statusId) onMove(draggedTask.id, statusId);
+    setDraggedTask(null);
+    setDragOverStatus(null);
+  }, [draggedTask, onMove]);
+  const handleDragOver  = useCallback((e, statusId) => { e.preventDefault(); setDragOverStatus(statusId); }, []);
+  const handleDragLeave = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStatus(null); }, []);
+  const handleDragEnd   = useCallback(() => { setDraggedTask(null); setDragOverStatus(null); }, []);
 
   return (
     <>
@@ -206,14 +271,19 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate }) {
           <div className="flex gap-2 h-full" style={{ minWidth: `${STATUS_COLUMNS.length * 280}px` }}>
             {STATUS_COLUMNS.map((col, idx) => {
               const items = byStatus[col.id] || [];
+              const isOver = dragOverStatus === col.id;
               return (
                 <div
                   key={col.id}
-                  className="flex flex-col rounded-lg"
+                  onDragOver={e => handleDragOver(e, col.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={() => handleDrop(col.id)}
+                  className="flex flex-col rounded-lg transition-all duration-150"
                   style={{
                     width: 280, minWidth: 280, overflow: "hidden", height: "100%", flexShrink: 0,
                     borderRight: idx < STATUS_COLUMNS.length - 1 ? "1px solid var(--border)" : "none",
-                    background: "var(--surface-alt)",
+                    background: isOver ? col.color + "14" : "var(--surface-alt)",
+                    boxShadow: isOver ? `0 0 0 2px ${col.color}40` : "none",
                   }}
                 >
                   <KanbanColumnHeader
@@ -230,7 +300,8 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate }) {
                         Nenhuma tarefa
                       </div>
                     ) : items.map(t => (
-                      <TaskKanbanCard key={t.id} task={t} onMove={onMove} onDelete={onDelete} />
+                      <TaskKanbanCard key={t.id} task={t} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
+                        onDragStart={setDraggedTask} onDragEnd={handleDragEnd} />
                     ))}
                   </div>
                 </div>
@@ -242,7 +313,7 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate }) {
 
       {/* Mobile: sem acordeão dedicado (RHMobileKanbanAccordion é só-RH, ver
           CLAUDE.md regra 2) — as 3 colunas empilham como seções verticais,
-          mesmo dado, sem scroll horizontal. */}
+          mesmo dado, sem scroll horizontal nem drag (touch usa o menu). */}
       <div className="lg:hidden flex flex-col gap-4">
         {STATUS_COLUMNS.map(col => {
           const items = byStatus[col.id] || [];
@@ -254,7 +325,8 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate }) {
               </div>
               <div className="flex flex-col gap-2">
                 {items.map(t => (
-                  <TaskKanbanCard key={t.id} task={t} onMove={onMove} onDelete={onDelete} />
+                  <TaskKanbanCard key={t.id} task={t} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
+                    onDragStart={() => {}} onDragEnd={() => {}} />
                 ))}
                 {items.length === 0 && (
                   <div className="text-xs" style={{ color: "var(--text-dim)", opacity: 0.6 }}>Nenhuma tarefa</div>
@@ -277,31 +349,53 @@ export function PersonalTasksView({ currentUser }) {
   // item aparece no menu (App.jsx), não se a ROTA funciona. Ver nota em
   // App.jsx: acessar a URL direto com o opt-in desligado não expõe nada,
   // RLS já garante que só o dono vê as próprias linhas.
-  const { tasks, loading, createTask, updateTask, deleteTask, toggleDone } =
+  const { tasks, loading, createTask, updateTask, deleteTask, toggleDone, setTaskStatus } =
     usePersonalTasks({ userId: currentUser?.id, enabled: true });
 
   const [viewMode, setViewMode] = useViewMode();
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [activeTags, setActiveTags] = useState([]);
+
+  const allTags = useMemo(() => {
+    const set = new Set();
+    for (const t of tasks) for (const tag of (t.tags || [])) set.add(tag);
+    return [...set].sort();
+  }, [tasks]);
+
+  const toggleTagFilter = useCallback((tag) => {
+    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  }, []);
+
+  const filteredTasks = useMemo(() => {
+    if (activeTags.length === 0) return tasks;
+    return tasks.filter(t => activeTags.every(tag => (t.tags || []).includes(tag)));
+  }, [tasks, activeTags]);
 
   const buckets = useMemo(() => {
     const hoje = [], semana = [], semData = [];
-    for (const t of tasks) {
+    for (const t of filteredTasks) {
       const b = bucketFor(t);
       if (b === "hoje") hoje.push(t);
       else if (b === "semana") semana.push(t);
       else semData.push(t);
     }
     return { hoje, semana, semData };
-  }, [tasks]);
+  }, [filteredTasks]);
 
-  // Mover pra "feito" seta completed_at; mover pra qualquer outro status
-  // limpa — mesmo par de efeitos que toggleDone já faz pro checkbox, só que
-  // aqui cobre os 3 destinos (o checkbox só alterna feito ⇄ a_fazer).
-  const handleMove = useCallback((id, status) => {
-    updateTask(id, { status, completedAt: status === "feito" ? new Date().toISOString() : null });
-  }, [updateTask]);
+  // Único ponto de mudança de status usado por checkbox/menu/drag-and-drop —
+  // ver setTaskStatus em use-personal-tasks.js (cobre o par completed_at +
+  // disparo de recorrência num só lugar).
+  const handleMove = useCallback((id, status) => { setTaskStatus(id, status); }, [setTaskStatus]);
 
   const handleCreate = useCallback(async (data) => { await createTask(data); }, [createTask]);
+
+  const handleOpen = useCallback((task) => setSelectedTaskId(task.id), []);
+  const handleCloseDrawer = useCallback(() => setSelectedTaskId(null), []);
+  const handleDeleteFromDrawer = useCallback(async (id) => { await deleteTask(id); setSelectedTaskId(null); }, [deleteTask]);
+  const handleSetStatusFromDrawer = useCallback(async (id, status) => { await setTaskStatus(id, status); setSelectedTaskId(null); }, [setTaskStatus]);
+
+  const selectedTask = useMemo(() => tasks.find(t => t.id === selectedTaskId) || null, [tasks, selectedTaskId]);
 
   const hasAnyTask = tasks.length > 0;
 
@@ -324,6 +418,7 @@ export function PersonalTasksView({ currentUser }) {
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
               <ViewToggleButton active={viewMode === "list"}   onClick={() => setViewMode("list")}   icon={List}       label="Lista"  iconOnlyMobile />
               <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "agenda"} onClick={() => setViewMode("agenda")} icon={Calendar}   label="Agenda" iconOnlyMobile />
             </div>
             <button
               onClick={() => setShowCreate(true)}
@@ -353,18 +448,36 @@ export function PersonalTasksView({ currentUser }) {
             Nova tarefa
           </button>
         </div>
-      ) : viewMode === "list" ? (
-        <div>
-          <TaskSection title="Hoje"        tasks={buckets.hoje}   onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} />
-          <TaskSection title="Esta semana" tasks={buckets.semana} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} />
-          <TaskSection title="Sem data"    tasks={buckets.semData} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} />
-        </div>
       ) : (
-        <TaskKanbanBoard tasks={tasks} onMove={handleMove} onDelete={deleteTask} onCreate={() => setShowCreate(true)} />
+        <>
+          <TagFilterBar allTags={allTags} activeTags={activeTags} onToggle={toggleTagFilter} />
+          {viewMode === "list" ? (
+            <div>
+              <TaskSection title="Hoje"        tasks={buckets.hoje}   onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
+              <TaskSection title="Esta semana" tasks={buckets.semana} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
+              <TaskSection title="Sem data"    tasks={buckets.semData} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
+            </div>
+          ) : viewMode === "kanban" ? (
+            <TaskKanbanBoard tasks={filteredTasks} onMove={handleMove} onDelete={deleteTask} onCreate={() => setShowCreate(true)} onOpen={handleOpen} />
+          ) : (
+            <PersonalTaskAgendaView tasks={filteredTasks} onOpen={handleOpen} />
+          )}
+        </>
       )}
 
       {showCreate && (
         <PersonalTaskCreateModal onAdd={handleCreate} onClose={() => setShowCreate(false)} />
+      )}
+
+      {selectedTask && (
+        <PersonalTaskDetailDrawer
+          task={selectedTask}
+          userId={currentUser?.id}
+          onClose={handleCloseDrawer}
+          onUpdate={updateTask}
+          onDelete={handleDeleteFromDrawer}
+          onSetStatus={handleSetStatusFromDrawer}
+        />
       )}
     </>
   );

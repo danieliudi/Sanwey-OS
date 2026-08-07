@@ -24,6 +24,17 @@
 
 export const CHANGELOG = [
   {
+    version: "4.23.0",
+    items: [
+      { kind: "novo", text: "Lista Pessoal ganhou o mesmo nível dos outros quadros da plataforma: clicar numa tarefa abre um card completo, com checklist, anexos e um espaço pra notas — título e descrição dá pra editar a qualquer momento." },
+      { kind: "novo", text: "Lista Pessoal agora aceita arrastar o card entre colunas (igual aos outros Kanban), etiquetas pra organizar por assunto, tarefas recorrentes (diária, semanal ou mensal) e uma 3ª visualização em Agenda, além de Lista e Kanban." },
+      { kind: "novo", text: "Ao criar uma tarefa pessoal, escrever o prazo direto no título (\"amanhã 15h\", \"sexta\", \"dia 15\") preenche a data e a hora sozinho." },
+      { kind: "novo", text: "Tarefa pessoal com prazo pra hoje agora avisa pelo sino de notificações — dá pra desligar em Configurações → Notificações." },
+      { kind: "correcao", text: "O painel de notificações (sino) ficava escondido atrás do cabeçalho ou cortado embaixo em telas menores. Corrigido." },
+      { kind: "ajuste", text: "O aviso de mensagem não lida ao lado de \"Chat\" no menu lateral ganhou a cor vermelha da marca — o amarelo claro anterior quase não chamava atenção." },
+    ],
+  },
+  {
     version: "4.22.0",
     items: [
       { kind: "novo", text: "Em Comercial → Viagens & Reembolsos, ao planejar uma visita agora dá pra declarar \"Valor previsto\" — quanto você estima gastar. Gestor e Relatórios passam a cruzar automaticamente esse valor com o que foi de fato lançado como despesa." },

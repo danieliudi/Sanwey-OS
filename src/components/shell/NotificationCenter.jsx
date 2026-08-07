@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bell, Check, GitBranch, Calendar, User, Trash2, X, AtSign, Megaphone } from "lucide-react";
+import { Bell, Check, GitBranch, Calendar, User, Trash2, X, AtSign, Megaphone, ListChecks } from "lucide-react";
 import { formatDateBR } from "../../utils/date";
 
 const TYPE_ICON = {
@@ -10,6 +10,7 @@ const TYPE_ICON = {
   mention: AtSign,
   comunicado: Megaphone,
   comunicado_importante: Megaphone,
+  task_due: ListChecks,
   default: Bell,
 };
 
@@ -20,6 +21,7 @@ const TYPE_COLOR = {
   mention: "var(--accent)",
   comunicado: "var(--accent)",
   comunicado_importante: "var(--danger)",
+  task_due: "#F59E0B",
   default: "var(--text-dim)",
 };
 

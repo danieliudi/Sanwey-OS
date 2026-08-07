@@ -142,6 +142,19 @@ export const NOTIFICATION_GROUPS = [
       { id: "new_user_joined",   label: "Novo usuário na plataforma", defaultOn: false },
     ],
   },
+  {
+    id: "lista_pessoal",
+    label: "Lista Pessoal",
+    area: "sistema",
+    // Lista Pessoal é universal (todo usuário autenticado tem a própria,
+    // ver rota "personal-tasks" em App.jsx) — união de todos os papéis da
+    // plataforma (mesma lista de ROLE_OPTIONS_ADMIN em UserManagementView.jsx),
+    // não só um departamento.
+    roles: ["consultor", "vendedor", "gerente", "marketing", "gerente_marketing", "agencia", "rh", "gerente_rh", "diretoria", "comex", "admin"],
+    items: [
+      { id: "task_due_reminder", label: "Tarefa pessoal vencendo hoje", defaultOn: true },
+    ],
+  },
 ];
 
 // Keep NOTIFICATION_PREFS as a flat list for backward compat
@@ -165,6 +178,7 @@ export const NOTIFICATION_TYPE_TO_PREF = {
   cross_sell:             "cross_sell",
   weekly_digest:          "weekly_digest",
   new_candidato:          "new_candidato",
+  task_due:               "task_due_reminder",
 };
 
 // Toggles que realmente silenciam alguma coisa. O gate em use-notifications.js

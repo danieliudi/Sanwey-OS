@@ -320,7 +320,8 @@ export default function App() {
   // default true) e é desligável em Configurações → Preferências → Recursos.
   // `enabled` deixa o hook inerte (sem fetch/subscribe) pra quem desligou.
   // `openCount` alimenta o badge do item no menu, igual ao chatUnread acima.
-  const { openCount: personalTasksOpenCount } = usePersonalTasks({
+  // `tasks` alimenta o lembrete de prazo do sino (useNotifications abaixo).
+  const { tasks: personalTasks, openCount: personalTasksOpenCount } = usePersonalTasks({
     userId: currentUser?.id,
     enabled: Boolean(settings.personalTasksEnabled),
   });
@@ -369,7 +370,7 @@ export default function App() {
     clearAll: clearAllNotifications,
     desktopPermission,
     requestDesktopPermission,
-  } = useNotifications({ currentUser, leads, notificationPrefs: settings.notifications });
+  } = useNotifications({ currentUser, leads, personalTasks, notificationPrefs: settings.notifications });
 
   // Notificações de @menção (FASE 4) — ao contrário das acima (só
   // localStorage do próprio navegador), estas são persistidas no banco e
@@ -936,6 +937,10 @@ export default function App() {
     crm_despesas: "crm-viagens",
     crm_cross_sell: "crossref",
     pipeline_summary: "crm",
+    // Sem estado "selecionado" hoisted aqui (mesma situação de crm_cross_sell/
+    // pipeline_summary acima) — a tarefa exata é aberta pelo usuário na tela,
+    // o sino só leva até a Lista Pessoal.
+    personal_tasks: "personal-tasks",
   };
   // Módulos com abertura do card específico, não só a troca de seção — mesmo
   // mecanismo de deep-link do Cmd-K (initialSelectedXId/onInitialXConsumed já

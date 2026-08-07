@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
+import { toLocalISODate } from "../utils/date";
 
 const TABLE = "personal_tasks";
 
@@ -19,6 +20,10 @@ function rowToTask(r) {
     priority:    r.priority ?? "media",
     status:      r.status ?? "a_fazer",
     dueDate:     r.due_date ?? null,
+    dueTime:     r.due_time ?? null,
+    tags:        r.tags ?? [],
+    recurrence:  r.recurrence ?? "none",
+    notes:       r.notes ?? [],
     completedAt: r.completed_at ?? null,
     createdAt:   r.created_at,
     updatedAt:   r.updated_at,
@@ -32,8 +37,24 @@ function taskToRow(data) {
   if (data.priority    !== undefined) row.priority     = data.priority;
   if (data.status      !== undefined) row.status       = data.status;
   if (data.dueDate      !== undefined) row.due_date     = data.dueDate;
+  if (data.dueTime      !== undefined) row.due_time     = data.dueTime;
+  if (data.tags         !== undefined) row.tags         = data.tags;
+  if (data.recurrence   !== undefined) row.recurrence   = data.recurrence;
+  if (data.notes        !== undefined) row.notes        = data.notes;
   if (data.completedAt !== undefined) row.completed_at = data.completedAt;
   return row;
+}
+
+// Base pra recorrência: dia do prazo atual, ou hoje se a tarefa nunca teve
+// prazo (não dá pra "repetir" uma data que não existe).
+function nextOccurrenceDate(dueDate, recurrence) {
+  const base = dueDate ? new Date(`${dueDate}T00:00:00`) : new Date();
+  const next = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  if (recurrence === "daily") next.setDate(next.getDate() + 1);
+  else if (recurrence === "weekly") next.setDate(next.getDate() + 7);
+  else if (recurrence === "monthly") next.setMonth(next.getMonth() + 1);
+  else return null;
+  return toLocalISODate(next);
 }
 
 // Lista Pessoal (ex-"Tarefas Pessoais") — privada por usuário: personal_tasks
@@ -126,20 +147,43 @@ export function usePersonalTasks({ userId, enabled = true } = {}) {
     setTasks(prev => prev.filter(t => t.id !== id));
   }, [active]);
 
-  // Conveniência do checkbox (List) e do atalho "Feito"/"Reabrir" (Kanban):
-  // alterna entre status:'feito' e status:'a_fazer', setando/limpando
-  // completed_at junto — reabrir uma tarefa feita volta pra 'a_fazer' (não
-  // pra 'fazendo'), decisão simples: "desmarcar" é o oposto direto de
-  // "marcar", sem tentar adivinhar em qual etapa intermediária ela estava.
+  // Único lugar que muda status: usado pelo checkbox (List), atalho
+  // "Feito"/"Reabrir" (Kanban), drag-and-drop e MoveStageMenu — setando/
+  // limpando completed_at junto (reabrir volta pra 'a_fazer', não pra
+  // 'fazendo': "desmarcar" é o oposto direto de "marcar", sem adivinhar em
+  // qual etapa intermediária ela estava). Concluir uma tarefa recorrente
+  // ("Todo dia"/"Toda semana"/"Todo mês") gera a próxima ocorrência na hora
+  // — mesmo título/descrição/prioridade/tags, status voltando pra 'a_fazer'.
+  // Só dispara ao chegar em 'feito' vindo de outro status (não ao reabrir,
+  // nem ao mover entre 'a_fazer'/'fazendo'), senão reabrir uma tarefa
+  // recorrente ficaria duplicando linha.
+  const setTaskStatus = useCallback(async (id, status) => {
+    const current = tasks.find(t => t.id === id);
+    if (!current) return;
+    const becomingDone = status === "feito" && current.status !== "feito";
+    await updateTask(id, {
+      status,
+      completedAt: status === "feito" ? new Date().toISOString() : null,
+    });
+    if (becomingDone && current.recurrence && current.recurrence !== "none") {
+      await createTask({
+        title:       current.title,
+        description: current.description,
+        priority:    current.priority,
+        status:      "a_fazer",
+        dueDate:     nextOccurrenceDate(current.dueDate, current.recurrence),
+        dueTime:     current.dueTime,
+        tags:        current.tags,
+        recurrence:  current.recurrence,
+      });
+    }
+  }, [tasks, updateTask, createTask]);
+
   const toggleDone = useCallback(async (id) => {
     const current = tasks.find(t => t.id === id);
     if (!current) return;
-    const done = current.status === "feito";
-    await updateTask(id, {
-      status:      done ? "a_fazer" : "feito",
-      completedAt: done ? null : new Date().toISOString(),
-    });
-  }, [tasks, updateTask]);
+    await setTaskStatus(id, current.status === "feito" ? "a_fazer" : "feito");
+  }, [tasks, setTaskStatus]);
 
   const openCount = useMemo(() => tasks.filter(t => t.status !== "feito").length, [tasks]);
 
@@ -151,6 +195,7 @@ export function usePersonalTasks({ userId, enabled = true } = {}) {
     updateTask,
     deleteTask,
     toggleDone,
+    setTaskStatus,
     openCount,
     refetch: fetchTasks,
   };
