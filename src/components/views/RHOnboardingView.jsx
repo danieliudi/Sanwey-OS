@@ -427,7 +427,7 @@ function OnboardingKanbanColumn({
 function OnboardingDrawer({
   colaborador, tarefas, templates, vagaTitle, canWrite, stages, users, currentUser,
   onStageChange, moveError, onStatusChange, onDeleteTarefa, onApplyTemplate, onAddTask, onClose,
-  onUpdateCustomFields, onAddActivity, onUpdateActivity, notifyMentions,
+  onUpdateCustomFields, onAddActivity, onUpdateActivity, notifyMentions, onEditFields,
 }) {
   const [templateId, setTemplateId] = useState("");
   const [novaTarefa, setNovaTarefa] = useState("");
@@ -522,51 +522,81 @@ function OnboardingDrawer({
   );
 
   const left = (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-      {[
-        { label: "Telefone", value: colaborador.phone || "—" },
-        { label: "E-mail", value: colaborador.email || "—" },
-        { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === colaborador.contractType)?.label || "—" },
-        { label: "Data de admissão", value: fmt(colaborador.admissionDate) },
-        { label: "Vaga de origem", value: vagaTitle || "—" },
-        { label: "Checklist", value: total > 0 ? `${done}/${total} concluídas` : "Sem tarefas" },
-      ].map((f) => (
-        <div key={f.label}>
-          <div style={labelSt}>{f.label}</div>
-          <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
-        </div>
-      ))}
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {[
+          { label: "Telefone", value: colaborador.phone || "—" },
+          { label: "E-mail", value: colaborador.email || "—" },
+          { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === colaborador.contractType)?.label || "—" },
+          { label: "Data de admissão", value: fmt(colaborador.admissionDate) },
+          { label: "Vaga de origem", value: vagaTitle || "—" },
+          { label: "Checklist", value: total > 0 ? `${done}/${total} concluídas` : "Sem tarefas" },
+        ].map((f) => (
+          <div key={f.label}>
+            <div style={labelSt}>{f.label}</div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+      <RHDetailDrawerShell
+        domain="onboarding"
+        recordId={colaborador.id}
+        activities={colaborador.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        formContent={formContent}
+        record={{ ...colaborador, stage: colaborador.onboardingStage, stageChangedAt: colaborador.onboardingStageChangedAt }}
+        recordTitle={colaborador.fullName}
+        domainLabel="Onboarding"
+      />
+    </>
+  );
+
+  // "Campos desta etapa" vira o centro fixo do drawer (padrão platform-wide,
+  // CLAUDE.md regra 3/item 2, rodada de 07/08/2026) — não faz mais parte da
+  // aba "Form" junto do checklist de integração (que é conteúdo próprio do
+  // Onboarding, não campo configurável).
+  const center = visibleCustomDefs.length === 0 ? (
+    <button
+      onClick={() => onEditFields?.(st)}
+      className="text-xs text-center cursor-pointer"
+      style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6, padding: "16px 0", textAlign: "center", width: "100%" }}
+    >
+      Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+    </button>
+  ) : (
+    <div>
+      <div style={labelSt}>Campos desta etapa</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {visibleCustomDefs.map((f) => (
+          <div key={f.id}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+              {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+              {f.label}
+            </label>
+            {f.helpText && (
+              <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>
+            )}
+            <RHStageFieldInput
+              field={f}
+              value={getCustomValue(f.fieldKey)}
+              onChange={(val) => handleCustomChange(f.fieldKey, val)}
+              users={users}
+              touched={Boolean(moveError)}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 
   const formContent = (
     <>
-      {visibleCustomDefs.length > 0 && (
-        <div>
-          <div style={labelSt}>Campos desta etapa</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {visibleCustomDefs.map((f) => (
-              <div key={f.id}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                  {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
-                  {f.label}
-                </label>
-                {f.helpText && (
-                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>
-                )}
-                <RHStageFieldInput
-                  field={f}
-                  value={getCustomValue(f.fieldKey)}
-                  onChange={(val) => handleCustomChange(f.fieldKey, val)}
-                  users={users}
-                  touched={Boolean(moveError)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div>
         <div style={{ marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={labelSt}>Checklist de integração</div>
@@ -628,22 +658,6 @@ function OnboardingDrawer({
         )}
       </div>
     </>
-  );
-
-  const center = (
-    <RHDetailDrawerShell
-      domain="onboarding"
-      recordId={colaborador.id}
-      activities={colaborador.activities || []}
-      onAddActivity={onAddActivity}
-      currentUser={currentUser}
-      users={users}
-      stages={stages}
-      formContent={formContent}
-      record={{ ...colaborador, stage: colaborador.onboardingStage, stageChangedAt: colaborador.onboardingStageChangedAt }}
-      recordTitle={colaborador.fullName}
-      domainLabel="Onboarding"
-    />
   );
 
   const right = (
@@ -1644,6 +1658,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           onUpdateCustomFields={(merged) => updateColaborador(drawerColaborador.id, { customFields: merged })}
           onAddActivity={(entry) => handleAddActivity(drawerColaborador.id, entry)}
           onUpdateActivity={handleUpdateActivity}
+          onEditFields={setFieldEditorStage}
         />
       )}
 
