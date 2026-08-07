@@ -114,6 +114,8 @@ import { useChangelogNotice } from "./hooks/use-changelog-notice";
 import { useScreenTips } from "./hooks/use-screen-tips";
 import { useAgentsCoachmark } from "./hooks/use-agents-coachmark";
 import { AgentsSidebarCoachmark } from "./components/shell/AgentsSidebarCoachmark";
+import { useFeatureSpotlight } from "./hooks/use-feature-spotlight";
+import { FeatureSpotlight } from "./components/shared/FeatureSpotlight";
 
 // Onboarding contextual por tela: reaproveita o quickStart que já existe em
 // VIDEO_TUTORIALS (src/data/tutorials.js), hoje só visível na tela separada
@@ -911,6 +913,15 @@ export default function App() {
     currentUser,
     SECTION_SCREEN_TIP_KEYS[section],
     { skip: showOnboarding || needRefresh || agentsCoachmarkVisible || changelogItems.length > 0 }
+  );
+
+  // Tour guiado contextual (ver src/data/feature-spotlights.js) — aponta pra
+  // um elemento real da tela quando o usuário naturalmente visita a rota
+  // onde aquela novidade mora, em vez de forçar um tour tela-por-tela.
+  const { spotlight: featureSpotlight, dismiss: dismissFeatureSpotlight } = useFeatureSpotlight(
+    currentUser,
+    section,
+    { skip: showOnboarding }
   );
 
   // Destino genérico de uma notificação (@menção OU gerador local via
@@ -2262,6 +2273,8 @@ export default function App() {
           </ol>
         </AppToast>
       )}
+
+      <FeatureSpotlight spotlight={featureSpotlight} onDismiss={dismissFeatureSpotlight} />
 
       {chatToast && !needRefresh && !agentsCoachmarkVisible && !screenTip && (
         <AppToast

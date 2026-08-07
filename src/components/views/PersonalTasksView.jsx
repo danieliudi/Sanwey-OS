@@ -453,7 +453,7 @@ export function PersonalTasksView({ currentUser }) {
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
               <ViewToggleButton active={viewMode === "list"}   onClick={() => setViewMode("list")}   icon={List}       label="Lista"  iconOnlyMobile />
               <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
-              <ViewToggleButton active={viewMode === "agenda"} onClick={() => setViewMode("agenda")} icon={Calendar}   label="Agenda" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "agenda"} onClick={() => setViewMode("agenda")} icon={Calendar}   label="Agenda" iconOnlyMobile dataTour="lista-pessoal-agenda" />
             </div>
             {viewMode === "list" && (
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs" style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text-dim)" }}>

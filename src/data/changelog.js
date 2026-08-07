@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.25.0",
+    items: [
+      { kind: "novo", text: "A plataforma ganhou um tour guiado contextual: quando você visita uma tela com uma novidade recente, um tooltip aponta direto pro que mudou — sem precisar procurar na aba \"Novidades\"." },
+    ],
+  },
+  {
     version: "4.24.0",
     items: [
       { kind: "novo", text: "Lista Pessoal ganhou etapas configuráveis — clique em \"Editar etapas\" pra renomear, recolorir, reordenar ou criar colunas novas além de A Fazer/Fazendo/Feito." },

@@ -7,7 +7,10 @@ import React from "react";
 // passado por quem já escondia o label em telas pequenas (CRM/Marketing, que
 // já tinham 4 botões no grupo); os outros 6 board mantêm o default e
 // continuam mostrando o label sempre, igual hoje.
-export function ViewToggleButton({ active, onClick, icon: Icon, label, iconOnlyMobile = false }) {
+// `dataTour` (opcional): id de ancoragem do tour guiado contextual (ver
+// src/data/feature-spotlights.js) — só presente em quem foi explicitamente
+// marcado como alvo de um spotlight, nunca automático.
+export function ViewToggleButton({ active, onClick, icon: Icon, label, iconOnlyMobile = false, dataTour }) {
   return (
     <button
       onClick={onClick}
@@ -15,6 +18,7 @@ export function ViewToggleButton({ active, onClick, icon: Icon, label, iconOnlyM
       aria-selected={active}
       title={label}
       aria-label={label}
+      data-tour={dataTour}
       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
       style={{
         background: active ? "var(--accent)" : "var(--surface)",

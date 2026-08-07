@@ -18,6 +18,7 @@ export const STORAGE_KEYS = {
   changelogSeen: `gs_${V}_changelog_seen`,
   screenTipsSeen: `gs_${V}_screen_tips_seen`,
   agentsCoachmarkSeen: `gs_${V}_agents_coachmark_seen`,
+  featureSpotlightsSeen: `gs_${V}_feature_spotlights_seen`,
   weeklyDigestLastSent: `gs_${V}_weekly_digest_last_sent`,
   dashboardWidgetPrefs: `gs_${V}_dashboard_widget_prefs`,
   bottomNavPrefs: `gs_${V}_bottom_nav_prefs`,
