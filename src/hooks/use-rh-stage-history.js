@@ -19,7 +19,7 @@ export function useRHStageHistory(domain, recordId) {
     try {
       const { data, error } = await supabase
         .from("rh_stage_history")
-        .select("from_stage, to_stage, changed_at, changed_by")
+        .select("from_stage, to_stage, changed_at, changed_by, custom_fields_snapshot")
         .eq("domain", domain)
         .eq("record_id", recordId)
         .order("changed_at", { ascending: false });
@@ -30,6 +30,7 @@ export function useRHStageHistory(domain, recordId) {
         toStage: r.to_stage,
         changedAt: r.changed_at,
         changedBy: r.changed_by,
+        customFieldsSnapshot: r.custom_fields_snapshot || null,
       })));
     } catch {
       if (mountedRef.current) setEntries([]);

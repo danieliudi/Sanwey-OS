@@ -466,7 +466,7 @@ export function MarketingTaskDetailDrawer({
       {centerTab === "form" && formTabContent}
       {centerTab === "atividades" && <ActivityLog activities={item.activities || []} />}
       {centerTab === "historico" && (
-        <RHStageHistoryPanel domain="marketing_tasks" recordId={item.id} stages={stages} currentUser={currentUser} users={users} />
+        <RHStageHistoryPanel domain="marketing_tasks" recordId={item.id} stages={stages} currentUser={currentUser} users={users} stageFieldsHook={stageFieldsHook} />
       )}
       {centerTab === "ia" && (
         <RecordAIPanel

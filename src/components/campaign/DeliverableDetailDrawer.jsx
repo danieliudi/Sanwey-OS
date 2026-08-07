@@ -728,7 +728,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
     if (sideTab === "atividades")  return <AtividadesTab activities={item.activities} />;
     if (sideTab === "historico")   return (
-      <RHStageHistoryPanel domain="marketing_deliverables" recordId={item.id} stages={effectiveStages} currentUser={currentUser} users={users} />
+      <RHStageHistoryPanel domain="marketing_deliverables" recordId={item.id} stages={effectiveStages} currentUser={currentUser} users={users} stageFieldsHook={stageFieldsHook} />
     );
     if (sideTab === "ia")          return (
       <DeliverableAIPanel

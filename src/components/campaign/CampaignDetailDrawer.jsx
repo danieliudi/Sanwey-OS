@@ -1668,6 +1668,7 @@ export function CampaignDetailDrawer({
           stages={effectiveStages}
           currentUser={currentUser}
           users={users}
+          stageFieldsHook={stageFieldsHook}
         />
       );
     }

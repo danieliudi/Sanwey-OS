@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, Paperclip, ListChecks, History, ArrowRight, Sparkles,
-  Plus, Upload, Download, Trash2, Check, X,
+  Plus, Upload, Download, Trash2, Check, X, ChevronDown,
   File, FileImage, FileSpreadsheet, FileText, AlertCircle,
 } from "lucide-react";
 import { useRHAttachments } from "../../hooks/use-rh-attachments";
@@ -466,8 +466,49 @@ function stageLabel(key, stages) {
   return found?.name || key;
 }
 
-export function RHStageHistoryPanel({ domain, recordId, stages, currentUser, users }) {
+function formatSnapshotValue(v) {
+  if (v === null || v === undefined || v === "") return null;
+  if (Array.isArray(v)) return v.length ? v.join(", ") : null;
+  if (typeof v === "boolean") return v ? "Sim" : "Não";
+  return String(v);
+}
+
+// "Mostrar mais" por entrada: os campos configurados da etapa de DESTINO
+// dessa passagem específica, com o valor congelado no momento da transição
+// (custom_fields_snapshot, ver migration pendente 20260807_rh_stage_history_
+// custom_fields_snapshot.sql) — não o valor atual do registro. É o que
+// resolve reprovações repetidas mostrarem cada passagem com seu próprio
+// motivo, em vez de todas mostrarem só o mais recente (pedido do Daniel,
+// referência: histórico de etapa do Pipefy).
+function StageHistoryEntryFields({ entry, stageFieldsHook }) {
+  const defs = stageFieldsHook ? stageFieldsHook.getFields(entry.toStage) : [];
+  const snapshot = entry.customFieldsSnapshot || {};
+  const rows = defs
+    .map(f => ({ label: f.label, value: formatSnapshotValue(snapshot[f.fieldKey]) }))
+    .filter(f => f.value !== null);
+
+  if (rows.length === 0) {
+    return (
+      <div className="text-[11px] italic mt-1.5" style={{ color: "var(--text-dim)" }}>
+        Nenhum campo preenchido nessa etapa.
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 flex flex-col gap-1.5">
+      {rows.map(r => (
+        <div key={r.label}>
+          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>{r.label}</div>
+          <div className="text-xs" style={{ color: "var(--text)" }}>{r.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function RHStageHistoryPanel({ domain, recordId, stages, currentUser, users, stageFieldsHook }) {
   const { entries, loading } = useRHStageHistory(domain, recordId);
+  const [expandedIdx, setExpandedIdx] = useState(null);
 
   if (loading) {
     return <div className="text-xs text-center py-6" style={{ color: "var(--text-dim)" }}>Carregando…</div>;
@@ -484,30 +525,44 @@ export function RHStageHistoryPanel({ domain, recordId, stages, currentUser, use
 
   return (
     <div className="flex flex-col gap-3">
-      {entries.map((e, i) => (
-        <div key={i} className="flex items-start gap-2.5">
-          <div className="flex flex-col items-center flex-shrink-0" style={{ paddingTop: 3 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)" }} />
-            {i < entries.length - 1 && <span style={{ width: 1, flex: 1, minHeight: 16, background: "var(--border)", marginTop: 2 }} />}
-          </div>
-          <div className="flex-1 min-w-0 pb-1">
-            <div className="text-xs font-semibold flex items-center gap-1 flex-wrap" style={{ color: "var(--text)" }}>
-              {e.fromStage ? (
-                <>
-                  {stageLabel(e.fromStage, stages)}
-                  <ArrowRight size={10} style={{ color: "var(--text-dim)" }} />
-                  {stageLabel(e.toStage, stages)}
-                </>
-              ) : (
-                <>Criado em {stageLabel(e.toStage, stages)}</>
+      {entries.map((e, i) => {
+        const isOpen = expandedIdx === i;
+        return (
+          <div key={i} className="flex items-start gap-2.5">
+            <div className="flex flex-col items-center flex-shrink-0" style={{ paddingTop: 3 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)" }} />
+              {i < entries.length - 1 && <span style={{ width: 1, flex: 1, minHeight: 16, background: "var(--border)", marginTop: 2 }} />}
+            </div>
+            <div className="flex-1 min-w-0 pb-1">
+              <div className="text-xs font-semibold flex items-center gap-1 flex-wrap" style={{ color: "var(--text)" }}>
+                {e.fromStage ? (
+                  <>
+                    {stageLabel(e.fromStage, stages)}
+                    <ArrowRight size={10} style={{ color: "var(--text-dim)" }} />
+                    {stageLabel(e.toStage, stages)}
+                  </>
+                ) : (
+                  <>Criado em {stageLabel(e.toStage, stages)}</>
+                )}
+              </div>
+              <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                {authorLabel(e.changedBy, currentUser, users)} · {formatTimestamp(e.changedAt)}
+              </div>
+              {stageFieldsHook && (
+                <button
+                  onClick={() => setExpandedIdx(isOpen ? null : i)}
+                  className="flex items-center gap-1 text-[11px] mt-1 cursor-pointer"
+                  style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0 }}
+                >
+                  <ChevronDown size={11} style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+                  {isOpen ? "Mostrar menos" : "Mostrar mais"}
+                </button>
               )}
-            </div>
-            <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
-              {authorLabel(e.changedBy, currentUser, users)} · {formatTimestamp(e.changedAt)}
+              {isOpen && <StageHistoryEntryFields entry={e} stageFieldsHook={stageFieldsHook} />}
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -654,7 +709,7 @@ export function RHDetailDrawerShell({
       )}
 
       {tab === "historico" && (
-        <RHStageHistoryPanel domain={domain} recordId={recordId} stages={stages} currentUser={currentUser} users={users} />
+        <RHStageHistoryPanel domain={domain} recordId={recordId} stages={stages} currentUser={currentUser} users={users} stageFieldsHook={stageFieldsHook} />
       )}
 
       {tab === "ia" && record && (
