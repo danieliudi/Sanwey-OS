@@ -16,6 +16,13 @@ import { Sparkles } from "lucide-react";
 // mockup: elemento ausente (feature atrás de permissão, módulo desligado)
 // não é erro, só não se aplica a este usuário.
 const ORPHAN_TIMEOUT_MS = 4000;
+// Depois de achar o elemento, recalcula a posição a cada frame por um
+// tempinho — cobre reflow tardio que NÃO muda o tamanho do próprio alvo
+// (ResizeObserver não pega), só a posição dele: fonte carregando, irmão no
+// mesmo flex row mudando de largura, dado assíncrono entrando no cabeçalho.
+// Achado ao vivo: sem isso o spotlight media a posição cedo demais e ficava
+// "torto" — meio pixel de folga não bastava, o layout ainda se mexia depois.
+const SETTLE_MS = 900;
 
 export function FeatureSpotlight({ spotlight, onDismiss }) {
   const [rect, setRect] = useState(null);
@@ -28,9 +35,9 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
     let disposed = false;
     let ro = null;
     let mo = null;
-    let scrollParent = null;
     let orphanTimer = null;
     let attachedTarget = null;
+    let settleRaf = null;
 
     const recalc = () => {
       const el = document.querySelector(spotlight.target);
@@ -51,6 +58,13 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
       ro.observe(target);
       window.addEventListener("resize", recalc);
       window.addEventListener("scroll", recalc, true);
+
+      const settleUntil = performance.now() + SETTLE_MS;
+      const tick = (now) => {
+        recalc();
+        if (!disposed && now < settleUntil) settleRaf = requestAnimationFrame(tick);
+      };
+      settleRaf = requestAnimationFrame(tick);
     };
 
     const existing = document.querySelector(spotlight.target);
@@ -74,6 +88,7 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
     return () => {
       disposed = true;
       if (orphanTimer) clearTimeout(orphanTimer);
+      if (settleRaf) cancelAnimationFrame(settleRaf);
       mo?.disconnect();
       ro?.disconnect();
       window.removeEventListener("resize", recalc);

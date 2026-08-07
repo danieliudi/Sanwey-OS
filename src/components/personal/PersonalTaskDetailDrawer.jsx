@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  FileText, ListChecks, Paperclip, StickyNote, Plus, Upload, Download,
+  FileText, ListChecks, Paperclip, Plus, Upload, Download,
   Trash2, Check, X, AlertCircle, File as FileIcon, Send, Settings2,
 } from "lucide-react";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
@@ -497,7 +497,6 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
           { id: "campos",    label: "Campos",    icon: Settings2 },
           { id: "checklist", label: "Checklist", icon: ListChecks },
           { id: "anexos",    label: "Anexos",    icon: Paperclip },
-          { id: "notas",     label: "Notas",      icon: StickyNote },
         ]}
         activeId={centerTab}
         onChange={setCenterTab}
@@ -506,21 +505,33 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
       {centerTab === "campos"    && <StageFieldsTab task={displayTask} stageFieldsHook={stageFieldsHook} onFieldChange={handleFieldChange} />}
       {centerTab === "checklist" && <ChecklistTab taskId={task.id} userId={userId} />}
       {centerTab === "anexos"    && <AttachmentsTab taskId={task.id} userId={userId} />}
-      {centerTab === "notas"     && <NotesTab task={task} onUpdate={onUpdate} />}
     </>
   );
 
+  // Notas fica na coluna direita, não numa aba — mesmo lugar onde os outros
+  // boards da plataforma colocam CommentsPanel (pedido do Daniel: "similar
+  // aos comentários de outros boards"). Conteúdo/comportamento continua o
+  // da decisão A do mockup (log com carimbo de data/hora, sem @menção),
+  // só a POSIÇÃO muda pra bater com o padrão visual do resto da plataforma.
   const right = (
-    <div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
-        Mover para
+    <>
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
+          Mover para
+        </div>
+        <StageNavigator
+          targets={moveTargets}
+          onMove={(statusId) => onSetStatus(task.id, statusId)}
+          getKey={(s) => s.id}
+        />
       </div>
-      <StageNavigator
-        targets={moveTargets}
-        onMove={(statusId) => onSetStatus(task.id, statusId)}
-        getKey={(s) => s.id}
-      />
-    </div>
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+          Notas
+        </div>
+        <NotesTab task={task} onUpdate={onUpdate} />
+      </div>
+    </>
   );
 
   return (
