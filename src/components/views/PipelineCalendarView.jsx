@@ -28,26 +28,17 @@ function sameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }) {
-  const isGroupView = activeCompany === "all";
-  // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
-  // user.role sozinho (cargo principal) fica só de fallback.
-  const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
-  const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
-
+export function PipelineCalendarView({ leads, onLeadClick }) {
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState(null);
 
-  // Aplica o mesmo escopo do kanban (empresa + responsável).
-  const scopedLeads = useMemo(() => {
-    let s = leads;
-    if (!isGroupView) s = s.filter(l => l.companyId === activeCompany);
-    if (!isManager) s = s.filter(l => l.owner === user.id);
-    return s;
-  }, [leads, activeCompany, user.id, isGroupView, isManager]);
+  // leads já vem com o escopo completo aplicado pelo CRMView (empresa,
+  // consultor/vendedor/subordinados, setor, filtro de responsável e
+  // favoritos) — ver scopedLeads em CRMView.jsx. Reimplementar escopo aqui
+  // já causou um bug real: ignorava o filtro de "vendedor" e o de setor.
 
   // Indexa eventos por dia (YYYY-MM-DD) → array de { lead, type, when }.
   const eventsByDay = useMemo(() => {
@@ -59,7 +50,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
       if (!map.has(k)) map.set(k, []);
       map.get(k).push(ev);
     };
-    for (const lead of scopedLeads) {
+    for (const lead of leads) {
       if (TERMINAL.has(lead.stage)) continue;
       if (lead.nextFollowUp) {
         const d = new Date(lead.nextFollowUp);
@@ -75,7 +66,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
     }
     for (const list of map.values()) list.sort((a, b) => a.when - b.when);
     return map;
-  }, [scopedLeads]);
+  }, [leads]);
 
   // Constrói grid 6x7 do mês começando no domingo (padrão unificado da
   // plataforma, decisão 5A).

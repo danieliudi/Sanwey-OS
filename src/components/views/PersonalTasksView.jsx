@@ -455,14 +455,6 @@ export function PersonalTasksView({ currentUser }) {
               <ViewToggleButton active={viewMode === "list"}   onClick={() => setViewMode("list")}   icon={List}       label="Lista"  iconOnlyMobile />
               <ViewToggleButton active={viewMode === "agenda"} onClick={() => setViewMode("agenda")} icon={Calendar}   label="Agenda" iconOnlyMobile dataTour="lista-pessoal-agenda" />
             </div>
-            {viewMode === "list" && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs" style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text-dim)" }}>
-                <ArrowUpDown size={12} />
-                <select value={listSort} onChange={e => setListSort(e.target.value)} style={{ border: "none", background: "transparent", color: "var(--text)", fontSize: 12, outline: "none" }}>
-                  {SORT_OPTIONS.filter(o => PERSONAL_SORT_OPTIONS.includes(o.value)).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
-            )}
             <button
               onClick={() => setStagesEditorOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
@@ -506,6 +498,14 @@ export function PersonalTasksView({ currentUser }) {
           <TagFilterBar allTags={allTags} activeTags={activeTags} onToggle={toggleTagFilter} />
           {viewMode === "list" ? (
             <div>
+              <div className="flex justify-end mb-3">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs" style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text-dim)" }}>
+                  <ArrowUpDown size={12} />
+                  <select value={listSort} onChange={e => setListSort(e.target.value)} style={{ border: "none", background: "transparent", color: "var(--text)", fontSize: 12, outline: "none" }}>
+                    {SORT_OPTIONS.filter(o => PERSONAL_SORT_OPTIONS.includes(o.value)).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
               <TaskSection title="Hoje"        tasks={buckets.hoje}    columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
               <TaskSection title="Esta semana" tasks={buckets.semana}  columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
               <TaskSection title="Sem data"    tasks={buckets.semData} columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />

@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.29.2",
+    items: [
+      { kind: "correcao", text: "Na Lista Pessoal, o seletor de ordenação (\"Mais recente\") não empurra mais o resto do cabeçalho ao trocar entre Kanban/Lista/Agenda — agora tem lugar fixo, só na view Lista." },
+      { kind: "correcao", text: "No Funil de Vendas, a Calendário respeitava o filtro de \"Só favoritos\" mas ignorava o filtro de vendedor e de setor — agora mostra exatamente os mesmos negócios que o Kanban filtrado." },
+    ],
+  },
+  {
     version: "4.29.1",
     items: [
       { kind: "correcao", text: "Na Lista Pessoal, a ordem dos botões Kanban/Lista/Agenda agora segue o mesmo padrão do resto da plataforma (Kanban primeiro)." },
