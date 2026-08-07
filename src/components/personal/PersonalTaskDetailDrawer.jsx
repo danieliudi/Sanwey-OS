@@ -1,16 +1,20 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   FileText, ListChecks, Paperclip, StickyNote, Plus, Upload, Download,
-  Trash2, Check, X, AlertCircle, File as FileIcon, Send,
+  Trash2, Check, X, AlertCircle, File as FileIcon, Send, Settings2,
 } from "lucide-react";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
 import { StageNavigator } from "../shared/StageNavigator";
 import { EditableTitle } from "../shared/EditableTitle";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { resolveVisibleFields } from "../../utils/field-conditions";
 import { usePersonalTaskChecklists } from "../../hooks/use-personal-task-checklists";
 import { usePersonalTaskAttachments } from "../../hooks/use-personal-task-attachments";
 import { formatDateBR } from "../../utils/date";
-import { STATUS_COLUMNS, PERSONAL_TASK_PRIORITIES, RECURRENCE_OPTIONS } from "../../constants/personal-tasks";
+import { PERSONAL_TASK_PRIORITIES, RECURRENCE_OPTIONS } from "../../constants/personal-tasks";
+import { RecurrencePicker } from "./RecurrencePicker";
+import { PersonalTagsPicker } from "./PersonalTagsPicker";
 
 const inputBase = {
   width: "100%", fontSize: 13, borderRadius: 6,
@@ -48,15 +52,7 @@ function formatBytes(bytes) {
 
 /* ── Detalhes ────────────────────────────────────────────────── */
 
-function DetailsTab({ task, onFieldChange, saveStatus }) {
-  const tagsText = (task.tags || []).join(", ");
-  const [tagsDraft, setTagsDraft] = useState(tagsText);
-
-  const commitTags = () => {
-    const tags = tagsDraft.split(",").map(t => t.trim()).filter(Boolean);
-    onFieldChange("tags", tags);
-  };
-
+function DetailsTab({ task, onFieldChange, saveStatus, tagsHook }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
@@ -106,23 +102,54 @@ function DetailsTab({ task, onFieldChange, saveStatus }) {
       </div>
 
       <FieldRow label="Repetir">
-        <select value={task.recurrence || "none"} onChange={e => onFieldChange("recurrence", e.target.value)}
-          style={inputBase}>
-          {RECURRENCE_OPTIONS.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-        </select>
-      </FieldRow>
-
-      <FieldRow label="Etiquetas (separadas por vírgula)">
-        <input
-          type="text"
-          value={tagsDraft}
-          placeholder="ex: financeiro, cliente-x"
-          onChange={e => setTagsDraft(e.target.value)}
-          onBlur={commitTags}
-          onKeyDown={e => { if (e.key === "Enter") { e.currentTarget.blur(); } }}
-          style={inputBase} onFocus={focusBorder}
+        <RecurrencePicker
+          recurrence={task.recurrence || "none"}
+          recurrenceConfig={task.recurrenceConfig}
+          onRecurrenceChange={(v) => onFieldChange("recurrence", v)}
+          onConfigChange={(v) => onFieldChange("recurrenceConfig", v)}
         />
       </FieldRow>
+
+      <FieldRow label="Etiquetas">
+        <PersonalTagsPicker
+          value={task.tags || []}
+          onChange={(tags) => onFieldChange("tags", tags)}
+          tagsHook={tagsHook}
+        />
+      </FieldRow>
+    </div>
+  );
+}
+
+/* ── Campos desta etapa ──────────────────────────────────────── */
+
+// Mesmo motor do Editor de campos genérico (StageFieldsPanel/RHStageFieldInput/
+// field-conditions.js) — aqui só consumindo os campos configurados pra esta
+// etapa da Lista Pessoal via PersonalStageFieldsPanel.
+function StageFieldsTab({ task, stageFieldsHook, onFieldChange }) {
+  const defs = stageFieldsHook.getFields(task.status);
+  const values = task.customFields || {};
+  const visibleDefs = resolveVisibleFields(defs, values);
+
+  if (visibleDefs.length === 0) {
+    return (
+      <div className="text-xs text-center py-6 italic" style={{ color: "var(--text-dim)" }}>
+        Nenhum campo configurado pra esta etapa ainda. Use o ícone de engrenagem no cabeçalho da coluna, no Kanban, pra adicionar.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {visibleDefs.map(f => (
+        <FieldRow key={f.id} label={f.label}>
+          <RHStageFieldInput
+            field={f}
+            value={values[f.fieldKey] ?? ""}
+            onChange={(val) => onFieldChange("customFields", { ...values, [f.fieldKey]: val })}
+          />
+        </FieldRow>
+      ))}
     </div>
   );
 }
@@ -384,7 +411,7 @@ function NotesTab({ task, onUpdate }) {
 
 /* ── Shell ───────────────────────────────────────────────────── */
 
-export function PersonalTaskDetailDrawer({ task, userId, onClose, onUpdate, onDelete, onSetStatus }) {
+export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stageFieldsHook, onClose, onUpdate, onDelete, onSetStatus }) {
   const [centerTab, setCenterTab] = useState("detalhes");
   const [saveStatus, setSaveStatus] = useState(null);
   const draftRef = useRef({});
@@ -408,8 +435,8 @@ export function PersonalTaskDetailDrawer({ task, userId, onClose, onUpdate, onDe
   const displayTask = { ...task, ...draftRef.current };
 
   const priorityInfo = PERSONAL_TASK_PRIORITIES.find(p => p.id === task.priority);
-  const statusInfo = STATUS_COLUMNS.find(s => s.id === task.status);
-  const moveTargets = STATUS_COLUMNS.filter(s => s.id !== task.status);
+  const statusInfo = columns.find(s => s.id === task.status);
+  const moveTargets = columns.filter(s => s.id !== task.status);
 
   const header = (
     <div className="min-w-0">
@@ -467,6 +494,7 @@ export function PersonalTaskDetailDrawer({ task, userId, onClose, onUpdate, onDe
       <DetailDrawerTabs
         tabs={[
           { id: "detalhes",  label: "Detalhes",  icon: FileText },
+          { id: "campos",    label: "Campos",    icon: Settings2 },
           { id: "checklist", label: "Checklist", icon: ListChecks },
           { id: "anexos",    label: "Anexos",    icon: Paperclip },
           { id: "notas",     label: "Notas",      icon: StickyNote },
@@ -474,7 +502,8 @@ export function PersonalTaskDetailDrawer({ task, userId, onClose, onUpdate, onDe
         activeId={centerTab}
         onChange={setCenterTab}
       />
-      {centerTab === "detalhes"  && <DetailsTab task={displayTask} onFieldChange={handleFieldChange} saveStatus={saveStatus} />}
+      {centerTab === "detalhes"  && <DetailsTab task={displayTask} onFieldChange={handleFieldChange} saveStatus={saveStatus} tagsHook={tagsHook} />}
+      {centerTab === "campos"    && <StageFieldsTab task={displayTask} stageFieldsHook={stageFieldsHook} onFieldChange={handleFieldChange} />}
       {centerTab === "checklist" && <ChecklistTab taskId={task.id} userId={userId} />}
       {centerTab === "anexos"    && <AttachmentsTab taskId={task.id} userId={userId} />}
       {centerTab === "notas"     && <NotesTab task={task} onUpdate={onUpdate} />}

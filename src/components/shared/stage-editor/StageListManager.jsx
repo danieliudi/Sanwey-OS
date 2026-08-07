@@ -26,7 +26,7 @@ function slugifyStageKey(label) {
 
 // ── Core visual (draft + linhas) ─────────────────────────────────────────────
 
-function StageListCore({
+export function StageListCore({
   open,
   onClose,
   title,

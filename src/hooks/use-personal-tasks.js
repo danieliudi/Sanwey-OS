@@ -23,6 +23,8 @@ function rowToTask(r) {
     dueTime:     r.due_time ?? null,
     tags:        r.tags ?? [],
     recurrence:  r.recurrence ?? "none",
+    recurrenceConfig: r.recurrence_config ?? {},
+    customFields: r.custom_fields ?? {},
     notes:       r.notes ?? [],
     completedAt: r.completed_at ?? null,
     createdAt:   r.created_at,
@@ -40,15 +42,57 @@ function taskToRow(data) {
   if (data.dueTime      !== undefined) row.due_time     = data.dueTime;
   if (data.tags         !== undefined) row.tags         = data.tags;
   if (data.recurrence   !== undefined) row.recurrence   = data.recurrence;
+  if (data.recurrenceConfig !== undefined) row.recurrence_config = data.recurrenceConfig;
+  if (data.customFields !== undefined) row.custom_fields = data.customFields;
   if (data.notes        !== undefined) row.notes        = data.notes;
   if (data.completedAt !== undefined) row.completed_at = data.completedAt;
   return row;
 }
 
+// Dia do mês "clampado" pro último dia real do mês (decisão do mockup: dia
+// 31 recorrente cai no último dia de fevereiro, não pula o mês).
+function clampedMonthDay(year, month, day) {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, lastDay));
+}
+
+// Próxima data cujo dia-da-semana esteja em `daysOfWeek` (0=domingo..6=sábado),
+// estritamente depois de `base`.
+function nextWeekdayOccurrence(base, daysOfWeek) {
+  for (let i = 1; i <= 7; i++) {
+    const candidate = new Date(base);
+    candidate.setDate(candidate.getDate() + i);
+    if (daysOfWeek.includes(candidate.getDay())) return candidate;
+  }
+  return null;
+}
+
+// Próxima ocorrência no `dayOfMonth`, estritamente depois de `base`.
+function nextMonthDayOccurrence(base, dayOfMonth) {
+  let year = base.getFullYear(), month = base.getMonth();
+  let candidate = clampedMonthDay(year, month, dayOfMonth);
+  if (candidate <= base) candidate = clampedMonthDay(year, month + 1, dayOfMonth);
+  return candidate;
+}
+
 // Base pra recorrência: dia do prazo atual, ou hoje se a tarefa nunca teve
-// prazo (não dá pra "repetir" uma data que não existe).
-function nextOccurrenceDate(dueDate, recurrence) {
+// prazo (não dá pra "repetir" uma data que não existe). `recurrenceConfig`
+// ({ daysOfWeek: [...] } ou { dayOfMonth: N }) refina o padrão quando
+// presente — ausente/vazio cai no comportamento antigo (+1 dia/+7 dias/+1 mês
+// a partir do prazo atual), pra não quebrar tarefa recorrente criada antes
+// desta rodada.
+function nextOccurrenceDate(dueDate, recurrence, recurrenceConfig) {
   const base = dueDate ? new Date(`${dueDate}T00:00:00`) : new Date();
+  const cfg = recurrenceConfig || {};
+
+  if (recurrence === "weekly" && Array.isArray(cfg.daysOfWeek) && cfg.daysOfWeek.length > 0) {
+    const next = nextWeekdayOccurrence(base, cfg.daysOfWeek);
+    return next ? toLocalISODate(next) : null;
+  }
+  if (recurrence === "monthly" && Number.isInteger(cfg.dayOfMonth)) {
+    return toLocalISODate(nextMonthDayOccurrence(base, cfg.dayOfMonth));
+  }
+
   const next = new Date(base.getFullYear(), base.getMonth(), base.getDate());
   if (recurrence === "daily") next.setDate(next.getDate() + 1);
   else if (recurrence === "weekly") next.setDate(next.getDate() + 7);
@@ -171,10 +215,11 @@ export function usePersonalTasks({ userId, enabled = true } = {}) {
         description: current.description,
         priority:    current.priority,
         status:      "a_fazer",
-        dueDate:     nextOccurrenceDate(current.dueDate, current.recurrence),
+        dueDate:     nextOccurrenceDate(current.dueDate, current.recurrence, current.recurrenceConfig),
         dueTime:     current.dueTime,
         tags:        current.tags,
         recurrence:  current.recurrence,
+        recurrenceConfig: current.recurrenceConfig,
       });
     }
   }, [tasks, updateTask, createTask]);

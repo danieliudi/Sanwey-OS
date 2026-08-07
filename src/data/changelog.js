@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.24.0",
+    items: [
+      { kind: "novo", text: "Lista Pessoal ganhou etapas configuráveis — clique em \"Editar etapas\" pra renomear, recolorir, reordenar ou criar colunas novas além de A Fazer/Fazendo/Feito." },
+      { kind: "novo", text: "Cada etapa da Lista Pessoal agora aceita campos extras configuráveis (aba \"Campos\" no card, ícone de engrenagem no cabeçalho da coluna) — o mesmo editor usado no Funil de Vendas e nos quadros de RH." },
+      { kind: "novo", text: "Lista Pessoal ganhou ordenação por coluna (Prazo, Prioridade, Alfabética) no Kanban, igual aos outros quadros da plataforma, e um controle de ordenação na visão Lista." },
+      { kind: "novo", text: "Etiquetas da Lista Pessoal deixaram de ser texto livre: agora é um catálogo com múltipla escolha, já sugerido com termos de fábrica/indústria e de uso pessoal — dá pra criar as suas." },
+      { kind: "novo", text: "Recorrência da Lista Pessoal ficou mais precisa: \"Toda semana\" aceita escolher os dias exatos, e \"Todo mês\" aceita escolher o dia do mês." },
+    ],
+  },
+  {
     version: "4.23.0",
     items: [
       { kind: "novo", text: "Lista Pessoal ganhou o mesmo nível dos outros quadros da plataforma: clicar numa tarefa abre um card completo, com checklist, anexos e um espaço pra notas — título e descrição dá pra editar a qualquer momento." },

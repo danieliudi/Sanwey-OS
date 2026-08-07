@@ -1,8 +1,10 @@
 import React, { useCallback, useRef, useState } from "react";
 import { X, Sparkles } from "lucide-react";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
-import { PERSONAL_TASK_PRIORITIES, RECURRENCE_OPTIONS } from "../../constants/personal-tasks";
+import { PERSONAL_TASK_PRIORITIES } from "../../constants/personal-tasks";
 import { parseQuickAddText } from "../../utils/quick-add-date-parser";
+import { RecurrencePicker } from "./RecurrencePicker";
+import { PersonalTagsPicker } from "./PersonalTagsPicker";
 
 // Mirror de TaskCreateModal (src/components/views/MarketingTarefasView.jsx,
 // ~linha 306) pra chrome/estrutura — mesmo overlay, header com título + X,
@@ -14,7 +16,7 @@ import { parseQuickAddText } from "../../utils/quick-add-date-parser";
 // quick-add — "Ligar fornecedor amanhã 15h" detecta prazo+hora sozinho ao
 // sair do campo, só quando Prazo/Hora ainda estão vazios (nunca sobrescreve
 // o que o usuário já preencheu manualmente).
-export function PersonalTaskCreateModal({ onAdd, onClose }) {
+export function PersonalTaskCreateModal({ onAdd, onClose, tagsHook }) {
   const [title,       setTitle]       = useState("");
   const [description, setDescription] = useState("");
   // Prazo começa VAZIO de propósito — é um alvo que o usuário escolhe (ou
@@ -22,8 +24,9 @@ export function PersonalTaskCreateModal({ onAdd, onClose }) {
   const [dueDate,     setDueDate]     = useState("");
   const [dueTime,     setDueTime]     = useState("");
   const [priority,    setPriority]    = useState("media");
-  const [tagsText,    setTagsText]    = useState("");
+  const [tags,        setTags]        = useState([]);
   const [recurrence,  setRecurrence]  = useState("none");
+  const [recurrenceConfig, setRecurrenceConfig] = useState({});
   const [detected,    setDetected]    = useState(null); // { dueDate, dueTime } | null — só pra feedback visual
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState(null);
@@ -32,7 +35,7 @@ export function PersonalTaskCreateModal({ onAdd, onClose }) {
   // formulário sujo pede confirmação antes de descartar.
   const initialSnapshotRef = useRef(null);
   const stateRef = useRef(null);
-  stateRef.current = JSON.stringify({ title, description, dueDate, dueTime, priority, tagsText, recurrence });
+  stateRef.current = JSON.stringify({ title, description, dueDate, dueTime, priority, tags, recurrence, recurrenceConfig });
   if (initialSnapshotRef.current === null) initialSnapshotRef.current = stateRef.current;
   const guardedClose = useCallback(() => {
     if (stateRef.current !== initialSnapshotRef.current
@@ -64,8 +67,9 @@ export function PersonalTaskCreateModal({ onAdd, onClose }) {
         // input direto, sem conversão de fuso (ver personal_tasks migration).
         dueDate:     dueDate || null,
         dueTime:     dueTime || null,
-        tags:        tagsText.split(",").map(t => t.trim()).filter(Boolean),
+        tags,
         recurrence,
+        recurrenceConfig,
       });
       onClose();
     } catch (err) {
@@ -150,20 +154,18 @@ export function PersonalTaskCreateModal({ onAdd, onClose }) {
             </div>
             <div>
               <label style={labelSt}>Repetir</label>
-              <select value={recurrence} onChange={e => setRecurrence(e.target.value)}
-                className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-                style={inputSt}>
-                {RECURRENCE_OPTIONS.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-              </select>
+              <RecurrencePicker
+                recurrence={recurrence}
+                recurrenceConfig={recurrenceConfig}
+                onRecurrenceChange={setRecurrence}
+                onConfigChange={setRecurrenceConfig}
+              />
             </div>
           </div>
 
           <div style={{ marginBottom: 20 }}>
-            <label style={labelSt}>Etiquetas (separadas por vírgula)</label>
-            <input type="text" placeholder="ex: financeiro, cliente-x"
-              value={tagsText} onChange={e => setTagsText(e.target.value)}
-              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+            <label style={labelSt}>Etiquetas</label>
+            <PersonalTagsPicker value={tags} onChange={setTags} tagsHook={tagsHook} />
           </div>
 
           {error && (

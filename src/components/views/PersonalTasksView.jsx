@@ -1,11 +1,17 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { List, LayoutGrid, Calendar, Plus, Check, ListChecks } from "lucide-react";
+import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown } from "lucide-react";
 import { usePersonalTasks } from "../../hooks/use-personal-tasks";
+import { usePersonalTaskStages } from "../../hooks/use-personal-task-stages";
+import { usePersonalTaskStageFields } from "../../hooks/use-personal-task-stage-fields";
+import { usePersonalTaskTags } from "../../hooks/use-personal-task-tags";
 import { useAvailableHeight } from "../../hooks/use-available-height";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems, SORT_OPTIONS } from "../../utils/kanban-sort";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { Badge } from "../ui/Badge";
@@ -14,8 +20,12 @@ import { STATUS_COLUMNS } from "../../constants/personal-tasks";
 import { PersonalTaskCreateModal } from "../personal/PersonalTaskCreateModal";
 import { PersonalTaskDetailDrawer } from "../personal/PersonalTaskDetailDrawer";
 import { PersonalTaskAgendaView } from "../personal/PersonalTaskAgendaView";
+import { PersonalStageListManager } from "../personal/PersonalStageListManager";
+import { PersonalStageFieldsPanel } from "../personal/PersonalStageFieldsPanel";
 
 const VIEW_STORAGE_KEY = "personal-tasks-view";
+const PERSONAL_SORT_OPTIONS = ["recent", "deadline", "priority", "alpha"];
+const personalSortGetters = { deadline: t => t.dueDate, priority: t => t.priority, name: t => t.title, createdAt: t => t.createdAt };
 
 // Persistência do modo Lista/Kanban/Agenda por usuário via localStorage —
 // mesmo mecanismo de src/hooks/use-table-density.js (useState com init lido
@@ -53,21 +63,12 @@ const PRIORITY_BADGE = {
 // Agrupamento por due_date (spec da view): "Hoje" cobre hoje E atrasadas —
 // uma tarefa vencida não some da tela, ela fica em evidência até ser
 // concluída ou adiada. "Sem data" é due_date nulo. "Esta semana" é o balde
-// dos próximos 7 dias — decisão documentada aqui (não fazia parte da spec
-// original, que só cobria os 3 baldes): tarefa com prazo MAIS distante que
-// 7 dias também cai em "Esta semana" (não em um 4º balde não especificado),
-// só que mais pra baixo na lista — a ordenação por due_date ascendente (já
-// aplicada pela query do hook) garante que ela apareça depois das
-// realmente-desta-semana, sem inventar rótulo/seção nova fora do mockup
-// aprovado.
+// dos próximos 7 dias.
 function bucketFor(task) {
   if (!task.dueDate) return "sem_data";
   return daysSince(task.dueDate) >= 0 ? "hoje" : "semana";
 }
 
-// "Atrasada" só conta visualmente enquanto a tarefa não foi concluída — uma
-// tarefa feita ontem não precisa continuar sinalizada em vermelho pra
-// sempre, o alerta é sobre o que ainda precisa de ação.
 function isOverdueUndone(task) {
   if (!task.dueDate || task.status === "feito") return false;
   return daysSince(task.dueDate) > 0;
@@ -101,8 +102,8 @@ function TagChips({ tags }) {
   );
 }
 
-function taskMoveTargets(task) {
-  return STATUS_COLUMNS.filter(c => c.id !== task.status).map(c => ({ key: c.id, name: c.name, color: c.color }));
+function taskMoveTargets(task, columns) {
+  return columns.filter(c => c.id !== task.status).map(c => ({ key: c.id, name: c.name, color: c.color }));
 }
 
 /* ── Filtro de etiquetas ─────────────────────────────────────── */
@@ -139,7 +140,7 @@ function TagFilterBar({ allTags, activeTags, onToggle }) {
 // Checkbox quadrado com check — mesmo padrão visual do item de checklist de
 // Entregas (ChecklistsTab em DeliverableDetailDrawer.jsx): borda/fundo
 // var(--success) quando marcado, título com line-through.
-function TaskRow({ task, onToggle, onMove, onDelete, onOpen }) {
+function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen }) {
   const done = task.status === "feito";
   return (
     <div
@@ -175,7 +176,7 @@ function TaskRow({ task, onToggle, onMove, onDelete, onOpen }) {
       <DueDateLabel task={task} />
       <div onClick={e => e.stopPropagation()}>
         <MoveStageMenu
-          targets={taskMoveTargets(task)}
+          targets={taskMoveTargets(task, columns)}
           onMove={key => onMove(task.id, key)}
           onDelete={() => onDelete(task.id)}
           deleteLabel="Excluir tarefa"
@@ -186,7 +187,7 @@ function TaskRow({ task, onToggle, onMove, onDelete, onOpen }) {
   );
 }
 
-function TaskSection({ title, tasks, onToggle, onMove, onDelete, onOpen }) {
+function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen }) {
   if (tasks.length === 0) return null;
   return (
     <div className="mb-5">
@@ -195,7 +196,7 @@ function TaskSection({ title, tasks, onToggle, onMove, onDelete, onOpen }) {
       </div>
       <div className="flex flex-col gap-2">
         {tasks.map(t => (
-          <TaskRow key={t.id} task={t} onToggle={onToggle} onMove={onMove} onDelete={onDelete} onOpen={onOpen} />
+          <TaskRow key={t.id} task={t} columns={columns} onToggle={onToggle} onMove={onMove} onDelete={onDelete} onOpen={onOpen} />
         ))}
       </div>
     </div>
@@ -204,7 +205,7 @@ function TaskSection({ title, tasks, onToggle, onMove, onDelete, onOpen }) {
 
 /* ── Kanban mode ─────────────────────────────────────────────── */
 
-function TaskKanbanCard({ task, onMove, onDelete, onOpen, onDragStart, onDragEnd }) {
+function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, onDragEnd }) {
   return (
     <div
       draggable
@@ -220,7 +221,7 @@ function TaskKanbanCard({ task, onMove, onDelete, onOpen, onDragStart, onDragEnd
         </div>
         <div onClick={e => e.stopPropagation()} className="shrink-0">
           <MoveStageMenu
-            targets={taskMoveTargets(task)}
+            targets={taskMoveTargets(task, columns)}
             onMove={key => onMove(task.id, key)}
             onDelete={() => onDelete(task.id)}
             deleteLabel="Excluir tarefa"
@@ -237,17 +238,19 @@ function TaskKanbanCard({ task, onMove, onDelete, onOpen, onDragStart, onDragEnd
   );
 }
 
-function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate, onOpen }) {
+function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, onEditStageFields }) {
   const trailingRef = useRef(null);
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState(null);
+  const { getCriteria, setCriteria } = useKanbanColumnSort("personal-tasks");
 
   const byStatus = useMemo(() => {
-    const bucket = { a_fazer: [], fazendo: [], feito: [] };
+    const bucket = {};
+    for (const c of columns) bucket[c.id] = [];
     for (const t of tasks) { if (bucket[t.status]) bucket[t.status].push(t); }
     return bucket;
-  }, [tasks]);
+  }, [tasks, columns]);
 
   // Mesmo padrão nativo HTML5 de drag-and-drop do Pipeline/Campanhas/Entregas
   // (ver CRMView.jsx handleDrop/handleDragOver) — nenhum board da plataforma
@@ -268,9 +271,10 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate, onOpen }) {
           (useAvailableHeight/KanbanBoardScrollArea/KanbanColumnHeader). */}
       <div className="hidden lg:block">
         <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
-          <div className="flex gap-2 h-full" style={{ minWidth: `${STATUS_COLUMNS.length * 280}px` }}>
-            {STATUS_COLUMNS.map((col, idx) => {
-              const items = byStatus[col.id] || [];
+          <div className="flex gap-2 h-full" style={{ minWidth: `${columns.length * 280}px` }}>
+            {columns.map((col, idx) => {
+              const rawItems = byStatus[col.id] || [];
+              const items = sortKanbanItems(rawItems, getCriteria(col.id), personalSortGetters);
               const isOver = dragOverStatus === col.id;
               return (
                 <div
@@ -281,7 +285,7 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate, onOpen }) {
                   className="flex flex-col rounded-lg transition-all duration-150"
                   style={{
                     width: 280, minWidth: 280, overflow: "hidden", height: "100%", flexShrink: 0,
-                    borderRight: idx < STATUS_COLUMNS.length - 1 ? "1px solid var(--border)" : "none",
+                    borderRight: idx < columns.length - 1 ? "1px solid var(--border)" : "none",
                     background: isOver ? col.color + "14" : "var(--surface-alt)",
                     boxShadow: isOver ? `0 0 0 2px ${col.color}40` : "none",
                   }}
@@ -290,6 +294,20 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate, onOpen }) {
                     color={col.color} name={col.name} count={items.length}
                     bandHeight={4} letterSpacing="normal" nameColor={col.color}
                     nameFontSize={14} nameFontWeight={700} uppercase={false} countFontSize={12}
+                    actions={
+                      <div className="flex items-center gap-0.5">
+                        <KanbanColumnSortMenu criteria={getCriteria(col.id)} onChange={(c) => setCriteria(col.id, c)} options={PERSONAL_SORT_OPTIONS} />
+                        <button
+                          onClick={() => onEditStageFields(col.id)}
+                          title="Campos desta etapa"
+                          style={{ background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer", padding: 4, borderRadius: 6, display: "flex" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <Settings2 size={13} />
+                        </button>
+                      </div>
+                    }
                   />
                   <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                     {items.length === 0 ? (
@@ -300,7 +318,7 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate, onOpen }) {
                         Nenhuma tarefa
                       </div>
                     ) : items.map(t => (
-                      <TaskKanbanCard key={t.id} task={t} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
+                      <TaskKanbanCard key={t.id} task={t} columns={columns} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
                         onDragStart={setDraggedTask} onDragEnd={handleDragEnd} />
                     ))}
                   </div>
@@ -312,11 +330,11 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate, onOpen }) {
       </div>
 
       {/* Mobile: sem acordeão dedicado (RHMobileKanbanAccordion é só-RH, ver
-          CLAUDE.md regra 2) — as 3 colunas empilham como seções verticais,
+          CLAUDE.md regra 2) — as colunas empilham como seções verticais,
           mesmo dado, sem scroll horizontal nem drag (touch usa o menu). */}
       <div className="lg:hidden flex flex-col gap-4">
-        {STATUS_COLUMNS.map(col => {
-          const items = byStatus[col.id] || [];
+        {columns.map(col => {
+          const items = sortKanbanItems(byStatus[col.id] || [], getCriteria(col.id), personalSortGetters);
           return (
             <div key={col.id}>
               <div className="text-xs font-bold uppercase tracking-wide mb-2 flex items-center gap-2" style={{ color: "var(--text-dim)" }}>
@@ -325,7 +343,7 @@ function TaskKanbanBoard({ tasks, onMove, onDelete, onCreate, onOpen }) {
               </div>
               <div className="flex flex-col gap-2">
                 {items.map(t => (
-                  <TaskKanbanCard key={t.id} task={t} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
+                  <TaskKanbanCard key={t.id} task={t} columns={columns} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
                     onDragStart={() => {}} onDragEnd={() => {}} />
                 ))}
                 {items.length === 0 && (
@@ -352,10 +370,22 @@ export function PersonalTasksView({ currentUser }) {
   const { tasks, loading, createTask, updateTask, deleteTask, toggleDone, setTaskStatus } =
     usePersonalTasks({ userId: currentUser?.id, enabled: true });
 
+  const stagesHook = usePersonalTaskStages(currentUser?.id);
+  const stageFieldsHook = usePersonalTaskStageFields(currentUser?.id);
+  const tagsHook = usePersonalTaskTags(currentUser?.id);
+
+  // Quem nunca customizou etapas continua vendo as 3 de sempre — as linhas
+  // em personal_task_stages só nascem quando o usuário salva o editor pela
+  // 1ª vez (ver PersonalStageListManager), não semeadas de antemão.
+  const columns = stagesHook.stages.length > 0 ? stagesHook.stages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, terminal: s.terminal })) : STATUS_COLUMNS;
+
   const [viewMode, setViewMode] = useViewMode();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [activeTags, setActiveTags] = useState([]);
+  const [listSort, setListSort] = useState("recent");
+  const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
+  const [editingFieldsStageKey, setEditingFieldsStageKey] = useState(null);
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -372,16 +402,21 @@ export function PersonalTasksView({ currentUser }) {
     return tasks.filter(t => activeTags.every(tag => (t.tags || []).includes(tag)));
   }, [tasks, activeTags]);
 
+  const sortedFilteredTasks = useMemo(
+    () => sortKanbanItems(filteredTasks, listSort, personalSortGetters),
+    [filteredTasks, listSort]
+  );
+
   const buckets = useMemo(() => {
     const hoje = [], semana = [], semData = [];
-    for (const t of filteredTasks) {
+    for (const t of sortedFilteredTasks) {
       const b = bucketFor(t);
       if (b === "hoje") hoje.push(t);
       else if (b === "semana") semana.push(t);
       else semData.push(t);
     }
     return { hoje, semana, semData };
-  }, [filteredTasks]);
+  }, [sortedFilteredTasks]);
 
   // Único ponto de mudança de status usado por checkbox/menu/drag-and-drop —
   // ver setTaskStatus em use-personal-tasks.js (cobre o par completed_at +
@@ -420,6 +455,24 @@ export function PersonalTasksView({ currentUser }) {
               <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "agenda"} onClick={() => setViewMode("agenda")} icon={Calendar}   label="Agenda" iconOnlyMobile />
             </div>
+            {viewMode === "list" && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs" style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text-dim)" }}>
+                <ArrowUpDown size={12} />
+                <select value={listSort} onChange={e => setListSort(e.target.value)} style={{ border: "none", background: "transparent", color: "var(--text)", fontSize: 12, outline: "none" }}>
+                  {SORT_OPTIONS.filter(o => PERSONAL_SORT_OPTIONS.includes(o.value)).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            )}
+            <button
+              onClick={() => setStagesEditorOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+            >
+              <Pencil size={13} />
+              <span className="hidden sm:inline">Editar etapas</span>
+            </button>
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
@@ -453,12 +506,16 @@ export function PersonalTasksView({ currentUser }) {
           <TagFilterBar allTags={allTags} activeTags={activeTags} onToggle={toggleTagFilter} />
           {viewMode === "list" ? (
             <div>
-              <TaskSection title="Hoje"        tasks={buckets.hoje}   onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
-              <TaskSection title="Esta semana" tasks={buckets.semana} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
-              <TaskSection title="Sem data"    tasks={buckets.semData} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
+              <TaskSection title="Hoje"        tasks={buckets.hoje}    columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
+              <TaskSection title="Esta semana" tasks={buckets.semana}  columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
+              <TaskSection title="Sem data"    tasks={buckets.semData} columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
             </div>
           ) : viewMode === "kanban" ? (
-            <TaskKanbanBoard tasks={filteredTasks} onMove={handleMove} onDelete={deleteTask} onCreate={() => setShowCreate(true)} onOpen={handleOpen} />
+            <TaskKanbanBoard
+              tasks={filteredTasks} columns={columns} onMove={handleMove} onDelete={deleteTask}
+              onCreate={() => setShowCreate(true)} onOpen={handleOpen}
+              onEditStageFields={setEditingFieldsStageKey}
+            />
           ) : (
             <PersonalTaskAgendaView tasks={filteredTasks} onOpen={handleOpen} />
           )}
@@ -466,19 +523,40 @@ export function PersonalTasksView({ currentUser }) {
       )}
 
       {showCreate && (
-        <PersonalTaskCreateModal onAdd={handleCreate} onClose={() => setShowCreate(false)} />
+        <PersonalTaskCreateModal onAdd={handleCreate} onClose={() => setShowCreate(false)} tagsHook={tagsHook} />
       )}
 
       {selectedTask && (
         <PersonalTaskDetailDrawer
           task={selectedTask}
           userId={currentUser?.id}
+          columns={columns}
+          tagsHook={tagsHook}
+          stageFieldsHook={stageFieldsHook}
           onClose={handleCloseDrawer}
           onUpdate={updateTask}
           onDelete={handleDeleteFromDrawer}
           onSetStatus={handleSetStatusFromDrawer}
         />
       )}
+
+      <PersonalStageListManager
+        open={stagesEditorOpen}
+        onClose={() => setStagesEditorOpen(false)}
+        stages={stagesHook.stages.length > 0
+          ? stagesHook.stages
+          : STATUS_COLUMNS.map(c => ({ id: c.id, stageKey: c.id, name: c.name, color: c.color, terminal: c.id === "feito", isFallback: true }))}
+        stagesHook={stagesHook}
+        tasks={tasks}
+      />
+
+      <PersonalStageFieldsPanel
+        open={Boolean(editingFieldsStageKey)}
+        onClose={() => setEditingFieldsStageKey(null)}
+        stageKey={editingFieldsStageKey}
+        stages={columns.map(c => ({ stageKey: c.id, name: c.name, color: c.color }))}
+        stageFieldsHook={stageFieldsHook}
+      />
     </>
   );
 }
