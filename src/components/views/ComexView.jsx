@@ -844,6 +844,42 @@ function ComexDrawer({
     </div>
   );
 
+  // "Campos desta etapa" vira o centro fixo do drawer (padrão platform-wide,
+  // CLAUDE.md regra 3/item 2, rodada de 07/08/2026) — não faz mais parte do
+  // formContent junto do conteúdo específico de Comex (LandedCostCalculator/
+  // ExportSaleFields, que continuam em renderFormExtra).
+  const center = visibleCustomDefs.length === 0 ? (
+    <button
+      onClick={() => onEditFields?.(st)}
+      className="text-xs text-center cursor-pointer"
+      style={{ background: "none", border: "none", color: "var(--text-dim)", lineHeight: 1.6, padding: "16px 0", textAlign: "center", width: "100%" }}
+    >
+      Nenhum campo nessa fase. <span style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline" }}>Clique aqui para editar essa etapa.</span>
+    </button>
+  ) : (
+    <div>
+      <div style={labelSt}>Campos desta etapa</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {visibleCustomDefs.map((f) => (
+          <div key={f.id}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+              {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+              {f.label}
+            </label>
+            {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} touched={Boolean(moveError)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const formContent = renderFormExtra ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {renderFormExtra(op, (patch) => onUpdateOperation(patch), !canWrite)}
+    </div>
+  ) : null;
+
   const left = (
     <>
       <div>
@@ -855,51 +891,24 @@ function ComexDrawer({
         <AssigneeMultiSelect value={op.ownerIds || []} onChange={(ids) => onUpdateOperation({ ownerIds: ids })} options={users} disabled={!canWrite} placeholder="Selecionar responsáveis…" />
       </div>
       {renderLeftFields && renderLeftFields(op, (patch) => onUpdateOperation(patch), !canWrite)}
+
+      <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />
+
+      <RHDetailDrawerShell
+        domain="comex"
+        recordId={op.id}
+        activities={op.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        formContent={formContent}
+        record={op}
+        recordTitle={op.title}
+        domainLabel="Comex"
+        fieldsDomain={fieldsDomain}
+      />
     </>
-  );
-
-  const formContent = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {renderFormExtra && renderFormExtra(op, (patch) => onUpdateOperation(patch), !canWrite)}
-      {visibleCustomDefs.length > 0 ? (
-        <div>
-          <div style={labelSt}>Campos desta etapa</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {visibleCustomDefs.map((f) => (
-              <div key={f.id}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                  {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
-                  {f.label}
-                </label>
-                {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
-                <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} touched={Boolean(moveError)} />
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : !renderFormExtra ? (
-        <div style={{ fontSize: 12, color: "var(--text-dim)", fontStyle: "italic" }}>
-          Nenhum campo configurado para esta etapa ainda.
-        </div>
-      ) : null}
-    </div>
-  );
-
-  const center = (
-    <RHDetailDrawerShell
-      domain="comex"
-      recordId={op.id}
-      activities={op.activities || []}
-      onAddActivity={onAddActivity}
-      currentUser={currentUser}
-      users={users}
-      stages={stages}
-      formContent={formContent}
-      record={op}
-      recordTitle={op.title}
-      domainLabel="Comex"
-      fieldsDomain={fieldsDomain}
-    />
   );
 
   const right = (
