@@ -10,6 +10,8 @@
 //      sobrescrevendo a "Previsão de fechamento" da negociação, que compartilha
 //      o mesmo field_key e vazava para "Data de Fechamento".
 
+import { toLocalISODate } from "./date";
+
 const isEmpty = (v) =>
   v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
 
@@ -27,7 +29,9 @@ export function ganhoCustomFieldDefaults(lead, nowISO) {
 
   // data_fechamento ← hoje (yyyy-mm-dd, formato do input date). Sempre, pra
   // refletir a data real do fechamento e não a previsão herdada.
-  patch.data_fechamento = (nowISO || new Date().toISOString()).slice(0, 10);
+  // toLocalISODate (não .toISOString().slice(0,10), que grava o dia UTC —
+  // "amanhã" pra quem fecha depois de ~21h no fuso do Brasil).
+  patch.data_fechamento = toLocalISODate(new Date());
 
   return patch;
 }

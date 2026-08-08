@@ -404,8 +404,8 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
             title={field.required ? "Tornar opcional" : "Tornar obrigatório"}
             className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold transition-colors"
             style={{
-              background: field.required ? "#FBE9EB" : "var(--surface-alt)",
-              color: field.required ? "var(--accent)" : "var(--text-dim)",
+              background: field.required ? "var(--danger-bg)" : "var(--surface-alt)",
+              color: field.required ? "var(--danger)" : "var(--text-dim)",
               border: "none",
               cursor: "pointer",
             }}

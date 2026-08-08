@@ -152,7 +152,7 @@ Deno.serve(async (req: Request) => {
     parents: [folderId],
   });
 
-  const boundary = `boundary_${Date.now()}`;
+  const boundary = `boundary_${crypto.randomUUID()}`;
   const parts = [
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n`,
     `--${boundary}\r\nContent-Type: ${effectiveMime}\r\n\r\n`,

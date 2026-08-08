@@ -14,6 +14,7 @@
 // dado, e inconsistente com o padrão já estabelecido).
 
 import { resolveVisibleFields } from "./field-conditions";
+import { parseDateInput } from "./date";
 
 export const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
 const PHONE_PATTERN = "^\\+?[0-9]{10,13}$";
@@ -80,12 +81,13 @@ export function validateFieldFormat(rule, value) {
       return null;
     }
     case "not_future": {
-      const d = new Date(str);
+      const d = parseDateInput(str);
       if (Number.isNaN(d.getTime())) return null;
-      return d.getTime() > Date.now() ? "Não pode ser uma data futura" : null;
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      return d.getTime() > today.getTime() ? "Não pode ser uma data futura" : null;
     }
     case "not_past": {
-      const d = new Date(str);
+      const d = parseDateInput(str);
       if (Number.isNaN(d.getTime())) return null;
       const today = new Date(); today.setHours(0, 0, 0, 0);
       return d.getTime() < today.getTime() ? "Não pode ser uma data passada" : null;

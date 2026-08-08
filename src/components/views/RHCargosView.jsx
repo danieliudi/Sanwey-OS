@@ -21,6 +21,7 @@ import { FilterBar } from "../shared/FilterBar";
 import { Card, CardGrid, CardSkeleton, GridListToggle } from "../shared/Card";
 import { RHJornadaEditor, formatScheduleBlocks } from "../rh-pipeline/RHJornadaEditor";
 import { RHBenefitsPicker } from "../rh-pipeline/RHBenefitsPicker";
+import { formatDateBR } from "../../utils/date";
 
 const TIPO_MOV = [
   { id: "promocao", label: "Promoção" },
@@ -36,11 +37,6 @@ const STATUS_INFO = {
   aprovado: { label: "Aprovado", color: "var(--success)", bg: "var(--success-bg)", icon: Check },
   recusado: { label: "Recusado", color: "var(--danger)", bg: "var(--danger-bg)", icon: XCircle },
 };
-
-function fmt(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("pt-BR");
-}
 
 function fmtBanda(min, max) {
   if (min == null && max == null) return "—";
@@ -417,7 +413,7 @@ function MovimentacaoCard({ mov, colaborador, isDirector, onAprovar, onRecusar, 
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
-          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>{tipoMovLabel(mov.tipo)} · {fmt(mov.created_at)}{mov.effective_date ? ` · vigência ${fmt(mov.effective_date)}` : ""}</div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>{tipoMovLabel(mov.tipo)} · {formatDateBR(mov.created_at)}{mov.effective_date ? ` · vigência ${formatDateBR(mov.effective_date)}` : ""}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 99, padding: "2px 10px" }}>
@@ -515,7 +511,7 @@ function MovimentacoesTableView({ movimentacoes, colaboradoresById, onDelete }) 
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{m.cargo_novo || "—"}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{m.department_novo || "—"}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{m.salario_novo != null ? formatBRL(m.salario_novo) : "—"}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(m.effective_date || m.created_at)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(m.effective_date || m.created_at)}</td>
                 <td className="px-4 py-3">
                   <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 99, padding: "2px 10px" }}>
                     {st.label}

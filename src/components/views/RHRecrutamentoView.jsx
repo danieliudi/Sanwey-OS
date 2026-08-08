@@ -35,6 +35,7 @@ import {
   RH_ESCALA_TYPES,
 } from "../../constants/rh-config";
 import { exportVagasToCSV, exportCandidatosToCSV } from "../../utils/export-csv";
+import { formatDateBR, daysSince } from "../../utils/date";
 import { RHJornadaEditor, formatScheduleBlocks } from "../rh-pipeline/RHJornadaEditor";
 import { RHBenefitsPicker } from "../rh-pipeline/RHBenefitsPicker";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -375,17 +376,6 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-
-function daysInStage(dateStr) {
-  if (!dateStr) return 0;
-  const diff = Date.now() - new Date(dateStr).getTime();
-  return Math.floor(diff / 86400000);
-}
-
-function fmt(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("pt-BR");
-}
 
 // Achado da 2ª auditoria: valores brutos concatenados com "—" ("R$ 3000 – R$ —")
 // quando só um dos limites era preenchido. Agora usa formatBRL e frases naturais.
@@ -889,7 +879,7 @@ function VagaCard({ vaga, candidatosCount, usersById }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
         {vaga.hiring_deadline ? (
           <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--text-dim)" }}>
-            <CalendarClock size={10} /> {fmt(vaga.hiring_deadline)}
+            <CalendarClock size={10} /> {formatDateBR(vaga.hiring_deadline)}
           </div>
         ) : <span />}
         {resolvedResponsibles.length > 0 && <AvatarStack users={resolvedResponsibles} size={16} max={3} />}
@@ -981,7 +971,7 @@ function VagaKanbanColumn({
               onDeleteCard={canWrite ? onDeleteVaga : undefined}
               onDuplicateCard={canWrite ? onDuplicateVaga : undefined}
               showMoveOptions={false}
-              agingDays={daysInStage(v.stage_changed_at)}
+              agingDays={daysSince(v.stage_changed_at)}
               completeness={getCompleteness?.(v)}
               unread={getUnread?.(v)}
             >
@@ -1196,7 +1186,7 @@ function VagaDrawer({
           { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === vaga.contract_type)?.label || "—" },
           { label: "Jornada", value: formatScheduleBlocks(vaga.schedule_blocks) || vaga.schedule || "—" },
           { label: "Escala", value: RH_ESCALA_TYPES.find((e) => e.id === vaga.escala)?.label || vaga.shift || "—" },
-          { label: "Prazo para contratação", value: fmt(vaga.hiring_deadline) },
+          { label: "Prazo para contratação", value: formatDateBR(vaga.hiring_deadline) },
           { label: "Faixa salarial", value: fmtSalaryRange(vaga.salary_min, vaga.salary_max) },
           { label: "Candidatos", value: String(candidatosCount) },
         ].map((f) => (
@@ -1446,7 +1436,7 @@ function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
         );
       }}
       meta={(vaga) => [vaga.job_title, vaga.department].filter(Boolean).join(" · ") || "—"}
-      metaRight={(vaga) => <span>{fmt(vaga.hiring_deadline)}</span>}
+      metaRight={(vaga) => <span>{formatDateBR(vaga.hiring_deadline)}</span>}
     />
     <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full min-w-[720px] border-collapse">
@@ -1483,7 +1473,7 @@ function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{candidatosByVaga[vaga.id] || 0}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(vaga.hiring_deadline)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(vaga.hiring_deadline)}</td>
               </tr>
             );
           })}
@@ -1833,7 +1823,7 @@ function CandidatoDrawer({
   }, [candidato.vaga_id, vagas]);
 
   const stageInfo = findStage(stages, candidato.stage);
-  const days = daysInStage(candidato.stage_changed_at);
+  const days = daysSince(candidato.stage_changed_at);
 
   // Campos condicionais: reavalia visibilidade/obrigatoriedade a cada
   // keystroke a partir do valor atual de candidato.customFields (mesmo
@@ -1926,7 +1916,7 @@ function CandidatoDrawer({
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>Contratado</div>
             <div style={{ fontSize: 12, color: "var(--success)", marginTop: 2 }}>
-              Convertido em funcionário em {fmt(candidato.hired_at)}.
+              Convertido em funcionário em {formatDateBR(candidato.hired_at)}.
             </div>
           </div>
         </div>
@@ -2030,7 +2020,7 @@ function CandidatoDrawer({
               >
                 <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{note.text}</div>
                 <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
-                  {note.created_at ? fmt(note.created_at) : "—"}
+                  {note.created_at ? formatDateBR(note.created_at) : "—"}
                 </div>
               </div>
             ))}
@@ -2048,7 +2038,7 @@ function CandidatoDrawer({
           { label: "Vaga",    value: vagaTitle },
           { label: "Origem",  value: candidato.source || "—" },
           { label: "Telefone", value: candidato.phone || "—" },
-          { label: "Aplicado em", value: fmt(candidato.created_at) },
+          { label: "Aplicado em", value: formatDateBR(candidato.created_at) },
         ].map((f) => (
           <div key={f.label}>
             <div style={labelSt}>{f.label}</div>
@@ -2509,7 +2499,7 @@ function KanbanColumn({
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteCandidato : undefined}
               showMoveOptions={false}
-              agingDays={daysInStage(c.stage_changed_at)}
+              agingDays={daysSince(c.stage_changed_at)}
               completeness={getCompleteness?.(c)}
               unread={getUnread?.(c)}
             >
@@ -2563,7 +2553,7 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
           </>
         );
       }}
-      metaRight={(c) => <span>{fmt(c.created_at)}</span>}
+      metaRight={(c) => <span>{formatDateBR(c.created_at)}</span>}
     />
     <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full min-w-[720px] border-collapse">
@@ -2626,7 +2616,7 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.source || "—"}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(c.created_at)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(c.created_at)}</td>
                 <td className="px-4 py-3"><StarRating value={c.rating || 0} /></td>
               </tr>
             );
@@ -3369,7 +3359,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                   onMoveToStage={canWrite ? attemptVagaStageChange : undefined}
                   onDeleteCard={canWrite ? (id) => deleteVaga(id) : undefined}
                   onDuplicateCard={canWrite ? handleDuplicateVaga : undefined}
-                  agingDays={daysInStage(v.stage_changed_at)}
+                  agingDays={daysSince(v.stage_changed_at)}
                   completeness={getVagaCompleteness?.(v)}
                   unread={hasUnreadRHComment(v, vagaViewedAt, user?.id)}
                 >
@@ -3568,7 +3558,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                     onDragEnd={canWrite ? handleCandDragEnd : undefined}
                     onMoveToStage={canWrite ? attemptCandStageChange : undefined}
                     onDeleteCard={canWrite ? (id) => deleteAplicacao(id) : undefined}
-                    agingDays={daysInStage(c.stage_changed_at)}
+                    agingDays={daysSince(c.stage_changed_at)}
                     completeness={getCandCompleteness?.(c)}
                     unread={hasUnreadRHComment(c, candViewedAt, user?.id)}
                   >

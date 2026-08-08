@@ -81,7 +81,11 @@ export function ESGCarbonoView({ currentUser }) {
     setCalculating(true);
     try {
       const toCreate = eligible.map(p => ({
-        companyId: (p.companyIds || [])[0] || activeCompany,
+        // Empresa gravada tem que bater com o escopo usado na checagem de
+        // duplicata acima (alreadyCovered) -- senão a mesma compra volta a
+        // aparecer como "não coberta" da próxima vez que essa empresa for
+        // selecionada e é reinserida a cada clique.
+        companyId: activeCompany !== "all" ? activeCompany : ((p.companyIds || [])[0] || activeCompany),
         scope: 3,
         sourceType: "compras",
         sourceId: p.id,
@@ -120,18 +124,29 @@ export function ESGCarbonoView({ currentUser }) {
       const now = new Date();
       const periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
       const periodEnd = now.toISOString().slice(0, 10);
+      // O snapshot tem que refletir só o período do relatório -- `records` é
+      // a lista inteira já carregada (todo o histórico da empresa
+      // selecionada), não o recorte do mês. Sem esse filtro, o relatório
+      // "congelado" nascia com o total errado (histórico completo em vez do
+      // período declarado em period_start/period_end).
+      const periodRecords = records.filter(r => {
+        const day = (r.createdAt || "").slice(0, 10);
+        return day >= periodStart && day <= periodEnd;
+      });
+      const periodTotals = { 1: 0, 2: 0, 3: 0 };
+      for (const r of periodRecords) periodTotals[r.scope] = (periodTotals[r.scope] || 0) + (r.co2eCalculated || 0);
       await generateReport({
         companyId: activeCompany,
         periodStart,
         periodEnd,
-        totalsByScope: { 1: totalsByScope[1], 2: totalsByScope[2], 3: totalsByScope[3] },
-        recordIds: records.map(r => r.id),
+        totalsByScope: periodTotals,
+        recordIds: periodRecords.map(r => r.id),
         generatedBy: currentUser?.id,
       });
     } finally {
       setGenerating(false);
     }
-  }, [generateReport, activeCompany, totalsByScope, records, currentUser]);
+  }, [generateReport, activeCompany, records, currentUser]);
 
   return (
     <div className="space-y-6">
@@ -463,6 +478,7 @@ function FatoresTab({ factors, loading, createFactor, currentUser }) {
                 <th className="text-left px-3 py-2 font-semibold" style={{ color: "var(--text-faint)" }}>Escopo</th>
                 <th className="text-left px-3 py-2 font-semibold" style={{ color: "var(--text-faint)" }}>Unidade</th>
                 <th className="text-right px-3 py-2 font-semibold" style={{ color: "var(--text-faint)" }}>Fator</th>
+                <th className="text-right px-3 py-2 font-semibold" style={{ color: "var(--text-faint)" }}>GWP</th>
                 <th className="text-left px-3 py-2 font-semibold" style={{ color: "var(--text-faint)" }}>Fonte</th>
                 <th className="text-left px-3 py-2 font-semibold" style={{ color: "var(--text-faint)" }}>Vigência</th>
               </tr>
@@ -474,6 +490,7 @@ function FatoresTab({ factors, loading, createFactor, currentUser }) {
                   <td className="px-3 py-2"><ScopePill scope={f.scope} /></td>
                   <td className="px-3 py-2" style={{ color: "var(--text-dim)" }}>{f.unit}</td>
                   <td className="px-3 py-2 text-right tabular-nums" style={{ color: "var(--text)" }}>{f.factorValue}</td>
+                  <td className="px-3 py-2 text-right tabular-nums" style={{ color: f.gwp !== 1 ? "var(--text)" : "var(--text-faint)", fontWeight: f.gwp !== 1 ? 700 : 400 }}>{f.gwp}</td>
                   <td className="px-3 py-2" style={{ color: "var(--text-dim)" }}>{f.source}</td>
                   <td className="px-3 py-2">
                     {f.validTo ? (

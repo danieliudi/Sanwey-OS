@@ -15,13 +15,13 @@ const TYPE_ICON = {
 };
 
 const TYPE_COLOR = {
-  followup: "#F59E0B",
+  followup: "var(--amber)",
   stage_changed: "var(--text-dim)",
   lead_assigned: "var(--accent)",
   mention: "var(--accent)",
   comunicado: "var(--accent)",
   comunicado_importante: "var(--danger)",
-  task_due: "#F59E0B",
+  task_due: "var(--amber)",
   default: "var(--text-dim)",
 };
 

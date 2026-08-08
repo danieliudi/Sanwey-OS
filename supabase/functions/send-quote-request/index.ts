@@ -27,10 +27,26 @@ const COMPANY_NAMES: Record<string, string> = {
   resibag: "Resibag",
 };
 
+function escapeHtml(s: string): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function applyVars(text: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce(
     (acc, [key, value]) => acc.replaceAll(`{{${key}}}`, value ?? ""),
     text,
+  );
+}
+
+function applyVarsHtml(html: string, vars: Record<string, string>): string {
+  return Object.entries(vars).reduce(
+    (acc, [key, value]) => acc.replaceAll(`{{${key}}}`, escapeHtml(value ?? "")),
+    html,
   );
 }
 
@@ -112,7 +128,7 @@ Deno.serve(async (req: Request) => {
   };
 
   const subject = applyVars(tpl.subject, vars);
-  const html = applyVars(tpl.body_html, vars);
+  const html = applyVarsHtml(tpl.body_html, vars);
 
   const resendKey = Deno.env.get("RESEND_API_KEY");
   if (!resendKey) {

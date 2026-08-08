@@ -21,7 +21,7 @@ import { useProfiles } from "../../hooks/use-profiles";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { nextPendingCycle } from "../../utils/rh-feedback-cycles";
-import { parseDateInput } from "../../utils/date";
+import { parseDateInput, formatDateBR, daysSince } from "../../utils/date";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
@@ -62,10 +62,6 @@ function findStage(stages, stageKey) {
   return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
 }
 
-function fmt(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("pt-BR");
-}
 
 function addDays(base, days) {
   const d = new Date(base);
@@ -108,11 +104,6 @@ function addDaysLocalISO(baseISO, days) {
   if (Number.isNaN(d.getTime())) return null;
   const r = new Date(d.getFullYear(), d.getMonth(), d.getDate() + Number(days || 0));
   return `${r.getFullYear()}-${String(r.getMonth() + 1).padStart(2, "0")}-${String(r.getDate()).padStart(2, "0")}`;
-}
-
-function daysInStage(dateStr) {
-  if (!dateStr) return 0;
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
 }
 
 // ── Nova etapa (local ao arquivo — mesmo molde de EntregasView.jsx/
@@ -249,7 +240,7 @@ function TaskRow({ tarefa, canWrite, canToggle, onStatusChange, onDelete }) {
         <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500, textDecoration: tarefa.status === "concluida" ? "line-through" : "none", opacity: tarefa.status === "concluida" ? 0.6 : 1 }}>
           {tarefa.titulo}
         </div>
-        <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>Prazo: {fmt(tarefa.data_limite)}</div>
+        <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>Prazo: {formatDateBR(tarefa.data_limite)}</div>
       </div>
       <span style={{ background: s.bg, color: s.color, borderRadius: 99, padding: "2px 9px", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>{s.label}</span>
       {canToggle && tarefa.status !== "concluida" && tarefa.status !== "em_andamento" && (
@@ -406,7 +397,7 @@ function OnboardingKanbanColumn({
               showMoveOptions={false}
               deleteLabel={deleteLabel}
               deleteConfirmMessage={deleteConfirmMessage}
-              agingDays={daysInStage(c.onboardingStageChangedAt)}
+              agingDays={daysSince(c.onboardingStageChangedAt)}
               completeness={getCompleteness?.(c)}
               unread={getUnread?.(c)}
             >
@@ -632,7 +623,7 @@ function OnboardingDrawer({
           { label: "Telefone", value: colaborador.phone || "—" },
           { label: "E-mail", value: colaborador.email || "—" },
           { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === colaborador.contractType)?.label || "—" },
-          { label: "Data de admissão", value: fmt(colaborador.admissionDate) },
+          { label: "Data de admissão", value: formatDateBR(colaborador.admissionDate) },
           { label: "Vaga de origem", value: vagaTitle || "—" },
           { label: "Checklist", value: total > 0 ? `${done}/${total} concluídas` : "Sem tarefas" },
         ].map((f) => (
@@ -998,7 +989,7 @@ function OnboardingTableView({ colaboradores, stages, tarefasByColaborador, onRo
         );
       }}
       meta={(c) => [c.jobTitle, c.department].filter(Boolean).join(" · ") || "—"}
-      metaRight={(c) => <span>{fmt(c.admissionDate)}</span>}
+      metaRight={(c) => <span>{formatDateBR(c.admissionDate)}</span>}
     />
     <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
@@ -1036,7 +1027,7 @@ function OnboardingTableView({ colaboradores, stages, tarefasByColaborador, onRo
                     {st.name}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(c.admissionDate)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(c.admissionDate)}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{tarefas.length > 0 ? `${done}/${tarefas.length}` : "—"}</td>
               </tr>
             );
@@ -1557,7 +1548,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
                 onDeleteCard={canWrite && onboardingRemovedStageKey ? handleRemoveFromOnboarding : undefined}
                 deleteLabel="Remover do onboarding"
                 deleteConfirmMessage={REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE}
-                agingDays={daysInStage(c.onboardingStageChangedAt)}
+                agingDays={daysSince(c.onboardingStageChangedAt)}
                 completeness={getColaboradorCompleteness?.(c)}
                 unread={hasUnreadRHComment(c, viewedAt, currentUser?.id)}
               >

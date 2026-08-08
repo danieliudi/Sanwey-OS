@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { exportFeedbackToCSV } from "../../utils/export-csv";
+import { formatDateBR, daysSince } from "../../utils/date";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
@@ -74,11 +75,6 @@ function findStage(stages, stageKey) {
   return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
 }
 
-function daysInStage(dateStr) {
-  if (!dateStr) return 0;
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-}
-
 // ── Kanban/Tabela/Calendário — mesmo padrão de ComprasMarketingView/CRMView ──
 
 const MONTHS = [
@@ -96,11 +92,6 @@ function sameDay(a, b) {
 
 function tipoLabel(id) {
   return TIPOS.find(t => t.id === id)?.label || id;
-}
-
-function fmt(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("pt-BR");
 }
 
 function ratingColor(r) {
@@ -323,7 +314,7 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Concluir avaliação</div>
           <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
-            {colaborador?.fullName || "—"} · {tipoLabel(feedback.tipo)} · {fmt(feedback.period_start)} – {fmt(feedback.period_end)}
+            {colaborador?.fullName || "—"} · {tipoLabel(feedback.tipo)} · {formatDateBR(feedback.period_start)} – {formatDateBR(feedback.period_end)}
           </div>
         </div>
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
@@ -453,7 +444,7 @@ function AutoavaliacaoModal({ feedback, onSubmit, onClose }) {
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Sua autoavaliação</div>
           <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
-            {tipoLabel(feedback.tipo)} · até {fmt(feedback.period_end)}
+            {tipoLabel(feedback.tipo)} · até {formatDateBR(feedback.period_end)}
           </div>
         </div>
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
@@ -496,7 +487,7 @@ function HistoricoDrawer({ colaborador, feedbacksDoColaborador, onClose }) {
 
   const chartData = concluidos
     .filter(f => f.final_rating != null)
-    .map(f => ({ data: fmt(f.period_end), nota: Number(f.final_rating), tipo: tipoLabel(f.tipo) }));
+    .map(f => ({ data: formatDateBR(f.period_end), nota: Number(f.final_rating), tipo: tipoLabel(f.tipo) }));
 
   return (
     <>
@@ -545,7 +536,7 @@ function HistoricoDrawer({ colaborador, feedbacksDoColaborador, onClose }) {
                       <span style={{ fontWeight: 800, fontSize: 14, color: ratingColor(f.final_rating) }}>{Number(f.final_rating).toFixed(1)}/10</span>
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>{fmt(f.period_end)}</div>
+                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>{formatDateBR(f.period_end)}</div>
                   {f.conteudo?.pontos_fortes && <div style={{ fontSize: 12, color: "var(--text)", marginTop: 4 }}><b>Pontos fortes:</b> {f.conteudo.pontos_fortes}</div>}
                   {f.conteudo?.pontos_desenvolvimento && <div style={{ fontSize: 12, color: "var(--text)", marginTop: 2 }}><b>A desenvolver:</b> {f.conteudo.pontos_desenvolvimento}</div>}
                 </div>
@@ -641,7 +632,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 // ── Card do Kanban ────────────────────────────────────────────────────────────
 
 function isAtrasado(feedback) {
-  return feedback.status !== "concluido" && feedback.period_end && new Date(feedback.period_end) < new Date();
+  return feedback.status !== "concluido" && feedback.period_end && daysSince(feedback.period_end) > 0;
 }
 
 function FeedbackCardBody({ feedback, colaborador }) {
@@ -655,7 +646,7 @@ function FeedbackCardBody({ feedback, colaborador }) {
             {colaborador?.fullName || "—"}
           </div>
           <div style={{ fontSize: 10, color: atrasado ? "var(--danger)" : "var(--text-dim)", fontWeight: atrasado ? 700 : 400 }}>
-            {tipoLabel(feedback.tipo)} · até {fmt(feedback.period_end)}
+            {tipoLabel(feedback.tipo)} · até {formatDateBR(feedback.period_end)}
           </div>
         </div>
       </div>
@@ -767,7 +758,7 @@ function FeedbackKanbanColumn({
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteFeedback : undefined}
               showMoveOptions={false}
-              agingDays={daysInStage(f.status_changed_at)}
+              agingDays={daysSince(f.status_changed_at)}
               completeness={getCompleteness?.(f)}
               unread={getUnread?.(f)}
             >
@@ -850,7 +841,7 @@ function FeedbackDrawer({
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", textDecoration: "underline" }}>{colaborador?.fullName || "—"}</div>
           <TrendingUp size={12} color="var(--text-dim)" />
         </button>
-        <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{tipoLabel(feedback.tipo)} · {fmt(feedback.period_start)} – {fmt(feedback.period_end)}</div>
+        <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{tipoLabel(feedback.tipo)} · {formatDateBR(feedback.period_start)} – {formatDateBR(feedback.period_end)}</div>
         <div style={{ marginTop: 8 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: stageTextColor(st.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
@@ -1053,7 +1044,7 @@ function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, on
         return (
           <>
             {resolvedEvaluators.length > 0 && <AvatarStack users={resolvedEvaluators} size={18} max={2} />}
-            <span style={{ color: isAtrasado(f) ? "var(--danger)" : "var(--text-dim)", fontWeight: isAtrasado(f) ? 700 : 400 }}>{fmt(f.period_end)}</span>
+            <span style={{ color: isAtrasado(f) ? "var(--danger)" : "var(--text-dim)", fontWeight: isAtrasado(f) ? 700 : 400 }}>{formatDateBR(f.period_end)}</span>
           </>
         );
       }}
@@ -1094,7 +1085,7 @@ function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, on
                     {st.name}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs" style={{ color: isAtrasado(f) ? "var(--danger)" : "var(--text-dim)", fontWeight: isAtrasado(f) ? 700 : 400 }}>{fmt(f.period_end)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: isAtrasado(f) ? "var(--danger)" : "var(--text-dim)", fontWeight: isAtrasado(f) ? 700 : 400 }}>{formatDateBR(f.period_end)}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
                   {resolvedEvaluators.length > 0 ? (
                     <div className="flex items-center gap-1.5">
@@ -1190,7 +1181,7 @@ function FeedbackRemindersView({ colaboradores, feedbacks, onRowClick }) {
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.department || "—"}</td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{cicloTipoLabel(info.tipo)}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(info.periodEnd)}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(info.periodEnd)}</td>
                   <td className="px-4 py-3 text-xs font-semibold" style={{ color: cor }}>{situacao}</td>
                 </tr>
               );
@@ -1603,7 +1594,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                       <div key={f.id} style={{ border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", background: "var(--warning-bg)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                         <div style={{ flex: 1, minWidth: 180 }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--channel-email-text)", background: "var(--channel-email-bg)", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
-                          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>Prazo {fmt(f.period_end)} · {autoavaliacaoLabel(f, meuColaborador)}</div>
+                          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>Prazo {formatDateBR(f.period_end)} · {autoavaliacaoLabel(f, meuColaborador)}</div>
                         </div>
                         {isMine && f.self_rating == null && (
                           <button onClick={() => setAutoavaliandoId(f.id)} style={{ background: "var(--surface)", color: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
@@ -1625,7 +1616,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                   <div key={f.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                       <span style={{ fontSize: 10, fontWeight: 700, color: "var(--channel-email-text)", background: "var(--channel-email-bg)", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
-                      <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{fmt(f.period_end)}</span>
+                      <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{formatDateBR(f.period_end)}</span>
                     </div>
                     {(f.self_rating != null || f.manager_rating != null) && (
                       <div style={{ display: "flex", gap: 12, marginBottom: 6, fontSize: 11, color: "var(--text-dim)" }}>
@@ -1732,7 +1723,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                 onDragEnd={canWrite ? handleCardDragEnd : undefined}
                 onMoveToStage={canWrite ? handleStageChange : undefined}
                 onDeleteCard={canWrite ? deleteFeedback : undefined}
-                agingDays={daysInStage(f.status_changed_at)}
+                agingDays={daysSince(f.status_changed_at)}
                 completeness={getFeedbackCompleteness?.(f)}
                 unread={hasUnreadRHComment(f, viewedAt, currentUser?.id)}
               >

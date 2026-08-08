@@ -57,6 +57,12 @@ export function useRHManagerLinks(vagaId) {
       body: {
         type: "vaga_manager_link",
         to: managerEmail,
+        // A edge function IGNORA to/variables abaixo e re-deriva tudo
+        // (e-mail/nome do gestor, título da vaga, LINK_URL a partir do
+        // token real) de `rh_vaga_manager_links` via managerLinkId — achado
+        // de segurança de 08/08/2026. `to`/`variables` ficam só por
+        // compatibilidade de payload.
+        managerLinkId: link.id,
         variables: {
           MANAGER_NAME: managerName,
           VAGA_TITLE: vagaTitle || "",

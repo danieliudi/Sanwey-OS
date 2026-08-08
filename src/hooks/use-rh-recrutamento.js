@@ -247,14 +247,20 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
       setAplicacoes(prev => prev.map(a => ids.includes(a.id) ? { ...a, ...patch } : a));
     }
 
-    // 2) Coleta e-mails únicos dos candidatos selecionados (filtra sem e-mail).
+    // 2) Coleta e-mails únicos dos candidatos selecionados (filtra sem e-mail)
+    // — usado só pra UI (contagem/aviso de "sem e-mail"); o BCC que de fato
+    // sai é re-derivado no servidor a partir de `aplicacaoIds` (ver abaixo).
     const emailById = new Map(candidatosPool.map(c => [c.id, c.email]));
     const idSet = new Set(ids);
     const selected = aplicacoes.filter(a => idSet.has(a.id));
     const emails = [...new Set(selected.map(a => emailById.get(a.candidate_id)).filter(Boolean))];
     const semEmail = selected.filter(a => !emailById.get(a.candidate_id)).length;
 
-    // 3) Um único disparo em BCC (não-bloqueante).
+    // 3) Um único disparo em BCC (não-bloqueante). A edge function IGNORA
+    // `to`/`bcc` abaixo e re-deriva o lote de e-mails a partir de
+    // `aplicacaoIds` direto em rh_aplicacoes/rh_candidatos — achado de
+    // segurança de 08/08/2026 (antes, `bcc` ia pro Resend sem checagem
+    // nenhuma contra o banco).
     let emailOk = false;
     if (enviarEmail && emails.length) {
       try {
@@ -263,6 +269,7 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
             type: "candidato_reprovado",
             to: "noreply@sanwey.com.br",
             bcc: emails,
+            aplicacaoIds: ids,
             variables: { VAGA_TITLE: vagaTitle || "—" },
           },
         });

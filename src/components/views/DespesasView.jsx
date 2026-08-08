@@ -652,16 +652,19 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
   const [modalExpense, setModalExpense]      = useState(null);
   const [modalOpen, setModalOpen]           = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleteError, setDeleteError]       = useState(null);
 
   // Todos os itens de todas as despesas, carregados uma vez — alimenta o
   // filtro "Item" (busca por descrição de linha, ex.: "Seguro", não pela
   // Categoria da despesa inteira). Ver DespesasView:653-680 pro cálculo.
   const [allItems, setAllItems] = useState([]);
   const [allItemsLoading, setAllItemsLoading] = useState(true);
+  const [allItemsLoadError, setAllItemsLoadError] = useState(null);
   useEffect(() => {
     let alive = true;
     fetchAllItems()
       .then(data => { if (alive) setAllItems(data); })
+      .catch(err => { if (alive) setAllItemsLoadError(err?.message || "Erro ao carregar itens das despesas."); })
       .finally(() => { if (alive) setAllItemsLoading(false); });
     return () => { alive = false; };
   }, [fetchAllItems]);
@@ -730,6 +733,16 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
       await updateExpense(form.id, form);
     } else {
       await createExpense(form);
+    }
+  };
+
+  const handleDelete = async (expenseId) => {
+    setDeleteError(null);
+    try {
+      await deleteExpense(expenseId);
+      setConfirmDeleteId(null);
+    } catch (err) {
+      setDeleteError(err?.message || "Erro ao excluir despesa.");
     }
   };
 
@@ -854,6 +867,12 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
         </div>
       </div>
 
+      {(allItemsLoadError || deleteError) && (
+        <div className="text-[12px] rounded-lg px-3 py-2 mb-4" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+          {deleteError || allItemsLoadError}
+        </div>
+      )}
+
       {loading && (
         <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>
           Carregando despesas…
@@ -964,7 +983,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                         <div className="flex items-center gap-1.5 whitespace-nowrap">
                           <span className="text-[11px]" style={{ color: "var(--text)" }}>Excluir?</span>
                           <button
-                            onClick={() => { deleteExpense(expense.id); setConfirmDeleteId(null); }}
+                            onClick={() => handleDelete(expense.id)}
                             style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
                           >
                             Excluir

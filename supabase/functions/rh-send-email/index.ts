@@ -30,12 +30,25 @@ interface SendEmailBody {
   bcc?: string[];
   variables?: Record<string, string>;
   // Usados só por "candidatura_recebida" (disparado pelo próprio formulário
-  // público, sem login) — ver handlePublicCandidaturaRecebida.
+  // público, sem login) — ver handlePublicCandidaturaRecebida. `candidateId`
+  // também é reaproveitado por "candidato_aprovado" (autenticado) — ver
+  // hardenCandidatoAprovado.
   vagaSlug?: string;
   candidateId?: string;
-  // Usado só por "bemestar_confirmado" (disparado pelo próprio formulário
-  // público de agendamento, sem login) — ver handlePublicBemEstarConfirmado.
+  // Usado por "bemestar_confirmado" (público, sem login — ver
+  // handlePublicBemEstarConfirmado) E por "bemestar_lembrete" (autenticado —
+  // ver hardenBemEstarLembrete): mesma tabela (rh_bemestar_fila), mesmo id.
   agendamentoId?: string;
+  // Auditoria de segurança de 08/08/2026: os campos abaixo re-derivam
+  // destinatário/identidade do banco pros tipos que antes confiavam 100% em
+  // `to`/`variables` do client — ver hardenX() logo acima do handler
+  // principal. Cada um é obrigatório apenas para o tipo correspondente.
+  feriasRequestId?: string;   // ferias_aprovadas / ferias_rejeitadas → rh_ferias.id
+  profileId?: string;         // welcome → profiles.id
+  aplicacaoIds?: string[];    // candidato_reprovado (lote) → rh_aplicacoes.id[]
+  managerLinkId?: string;     // vaga_manager_link → rh_vaga_manager_links.id
+  colaboradorId?: string;     // avaliacao_proxima → rh_colaboradores.id
+  contratoId?: string;        // contrato_fornecedor_vencendo → rh_fornecedor_contratos.id
 }
 
 // ── Subjects ──────────────────────────────────────────────────────────────────
@@ -378,6 +391,340 @@ async function handlePublicBemEstarConfirmado(
   return new Response(JSON.stringify({ success: true, sent: 1 }), { headers: jsonHeaders });
 }
 
+// ── Derivação obrigatória de destinatário/identidade a partir do banco ────────
+// Achado de segurança (08/08/2026): os 9 tipos abaixo passavam `to`/
+// `variables` do client direto pro Resend sem checar contra o registro real
+// — qualquer rh/gerente_rh/admin conseguia mandar e-mail com a cara oficial
+// do Grupo Sanwey pra QUALQUER endereço, com conteúdo arbitrário. Cada
+// hardenX() aqui resolve o `to` (e o máximo praticável de `variables`) a
+// partir de um id de registro, nunca do valor cru do body — ver
+// handlePublicCandidaturaRecebida/handlePublicBemEstarConfirmado acima pro
+// mesmo princípio já aplicado às rotas públicas.
+
+const DEFAULT_APP_URL = "https://sanwey-crm.netlify.app";
+
+const LEAVE_TYPE_LABELS: Record<string, string> = {
+  ferias: "Férias",
+  licenca_medica: "Licença Médica",
+  licenca_maternidade: "Licença Maternidade",
+  licenca_paternidade: "Licença Paternidade",
+  folga: "Folga Compensatória",
+  luto: "Licença Luto",
+  outros: "Outros",
+};
+
+function fmtDateBR(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("pt-BR");
+}
+
+type HardenResult =
+  | { to: string; bcc?: string[]; variables: Record<string, string> }
+  | { error: string };
+
+async function hardenFerias(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+  expectStatus: "aprovado" | "recusado",
+  callerName: string,
+): Promise<HardenResult> {
+  const feriasRequestId = typeof body.feriasRequestId === "string" ? body.feriasRequestId.trim() : "";
+  if (!feriasRequestId) return { error: "feriasRequestId é obrigatório para este tipo de e-mail." };
+
+  const { data: req } = await supabase
+    .from("rh_ferias")
+    .select("user_id, type, start_date, end_date, status, approved_by")
+    .eq("id", feriasRequestId)
+    .maybeSingle();
+  if (!req) return { error: "Solicitação de férias não encontrada." };
+  if (req.status !== expectStatus) {
+    return { error: `Solicitação não está no status esperado ("${expectStatus}") — e-mail não enviado.` };
+  }
+
+  const { data: colaborador } = await supabase
+    .from("rh_colaboradores")
+    .select("full_name, email, profile_id")
+    .eq("id", req.user_id)
+    .maybeSingle();
+  let toEmail: string | null = colaborador?.email || null;
+  if (!toEmail && colaborador?.profile_id) {
+    const { data: profile } = await supabase.from("profiles").select("email").eq("id", colaborador.profile_id).maybeSingle();
+    toEmail = profile?.email || null;
+  }
+  if (!toEmail) return { error: "Colaborador não encontrado ou sem e-mail cadastrado." };
+
+  const days = req.start_date && req.end_date
+    ? Math.max(0, Math.round((new Date(req.end_date).getTime() - new Date(req.start_date).getTime()) / 86400000) + 1)
+    : 0;
+
+  const variables: Record<string, string> = {
+    EMPLOYEE_NAME: colaborador?.full_name || "",
+    LEAVE_TYPE: LEAVE_TYPE_LABELS[req.type as string] || req.type || "—",
+    START_DATE: fmtDateBR(req.start_date),
+    END_DATE: fmtDateBR(req.end_date),
+    DAYS_COUNT: String(days),
+    APP_URL: typeof body.variables?.APP_URL === "string" ? body.variables.APP_URL : DEFAULT_APP_URL,
+  };
+
+  if (expectStatus === "aprovado") {
+    let approvedByName = callerName;
+    if (req.approved_by) {
+      const { data: approver } = await supabase.from("profiles").select("name, email").eq("id", req.approved_by).maybeSingle();
+      approvedByName = approver?.name || approver?.email || callerName;
+    }
+    variables.APPROVED_BY = approvedByName;
+  } else {
+    // MOTIVO é texto livre digitado pelo próprio gestor autenticado nesta
+    // ação (não é identidade de terceiro) — segue confiável do client.
+    // MANAGER_NAME, por sinalizar QUEM recusou, vem de quem está logado.
+    variables.MANAGER_NAME = callerName;
+    variables.REASON = typeof body.variables?.REASON === "string" ? body.variables.REASON : "";
+  }
+
+  return { to: toEmail, variables };
+}
+
+async function hardenWelcome(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+): Promise<HardenResult> {
+  const profileId = typeof body.profileId === "string" ? body.profileId.trim() : "";
+  if (!profileId) return { error: "profileId é obrigatório para este tipo de e-mail." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name, email, job_title, department, admission_date")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!profile?.email) return { error: "Colaborador não encontrado ou sem e-mail cadastrado." };
+
+  return {
+    to: profile.email,
+    variables: {
+      EMPLOYEE_NAME: profile.name || profile.email,
+      JOB_TITLE: profile.job_title || "—",
+      DEPARTMENT: profile.department || "—",
+      MANAGER_NAME: "RH Grupo Sanwey",
+      START_DATE: fmtDateBR(profile.admission_date),
+      APP_URL: typeof body.variables?.APP_URL === "string" ? body.variables.APP_URL : DEFAULT_APP_URL,
+    },
+  };
+}
+
+async function hardenCandidatoAprovado(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+  callerName: string,
+  callerEmail: string,
+): Promise<HardenResult> {
+  const candidateId = typeof body.candidateId === "string" ? body.candidateId.trim() : "";
+  if (!candidateId) return { error: "candidateId é obrigatório para este tipo de e-mail." };
+
+  const { data: candidato } = await supabase
+    .from("rh_candidatos")
+    .select("name, email, vaga_id")
+    .eq("id", candidateId)
+    .maybeSingle();
+  if (!candidato?.email) return { error: "Candidato não encontrado ou sem e-mail cadastrado." };
+
+  let vagaTitle = "—";
+  let vagaDept = "—";
+  if (candidato.vaga_id) {
+    const { data: vaga } = await supabase.from("rh_vagas").select("title, department").eq("id", candidato.vaga_id).maybeSingle();
+    vagaTitle = vaga?.title || "—";
+    vagaDept = vaga?.department || "—";
+  }
+
+  return {
+    to: candidato.email,
+    variables: {
+      CANDIDATE_NAME: candidato.name || "",
+      JOB_TITLE: vagaTitle,
+      DEPARTMENT: vagaDept,
+      // Texto livre não identifica terceiro — confiável do client.
+      NEXT_STEPS: typeof body.variables?.NEXT_STEPS === "string" ? body.variables.NEXT_STEPS : "",
+      // Quem contatar é sempre quem está logado disparando o e-mail, nunca
+      // um nome/e-mail arbitrário do body.
+      CONTACT_NAME: callerName,
+      CONTACT_EMAIL: callerEmail,
+    },
+  };
+}
+
+async function hardenCandidatoReprovado(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+): Promise<HardenResult> {
+  const ids = Array.isArray(body.aplicacaoIds)
+    ? [...new Set(body.aplicacaoIds.filter((x) => typeof x === "string" && x))]
+    : [];
+  if (!ids.length) return { error: "aplicacaoIds é obrigatório (lista não vazia) para este tipo de e-mail." };
+
+  const { data: aplicacoes } = await supabase.from("rh_aplicacoes").select("candidate_id").in("id", ids);
+  const candidateIds = [...new Set((aplicacoes || []).map((a) => a.candidate_id).filter(Boolean))];
+  if (!candidateIds.length) return { error: "Nenhuma aplicação válida encontrada pra esses ids." };
+
+  const { data: candidatos } = await supabase.from("rh_candidatos").select("email").in("id", candidateIds);
+  const bcc = [...new Set((candidatos || []).map((c) => c.email).filter(Boolean))] as string[];
+  if (!bcc.length) return { error: "Nenhum candidato com e-mail cadastrado nesse lote." };
+
+  // `to` sempre o próprio remetente (mesmo padrão de antes) — nunca vindo do
+  // client; o BCC real é 100% derivado das aplicações, não do array que o
+  // client mandar.
+  return { to: "noreply@sanwey.com.br", bcc, variables: {} };
+}
+
+async function hardenVagaManagerLink(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+): Promise<HardenResult> {
+  const managerLinkId = typeof body.managerLinkId === "string" ? body.managerLinkId.trim() : "";
+  if (!managerLinkId) return { error: "managerLinkId é obrigatório para este tipo de e-mail." };
+
+  const { data: link } = await supabase
+    .from("rh_vaga_manager_links")
+    .select("vaga_id, manager_name, manager_email, token, expires_at, revoked_at")
+    .eq("id", managerLinkId)
+    .maybeSingle();
+  if (!link?.manager_email) return { error: "Link de gestor não encontrado." };
+  if (link.revoked_at) return { error: "Link de gestor já foi revogado." };
+
+  let vagaTitle = "—";
+  if (link.vaga_id) {
+    const { data: vaga } = await supabase.from("rh_vagas").select("title").eq("id", link.vaga_id).maybeSingle();
+    vagaTitle = vaga?.title || "—";
+  }
+
+  const expiresDays = link.expires_at
+    ? Math.max(0, Math.ceil((new Date(link.expires_at).getTime() - Date.now()) / 86400000))
+    : 7;
+
+  return {
+    to: link.manager_email,
+    variables: {
+      MANAGER_NAME: link.manager_name || "",
+      VAGA_TITLE: vagaTitle,
+      // LINK_URL é o "bearer token" de acesso sem login — NUNCA aceito do
+      // client (seria o vetor de phishing mais óbvio pra esse tipo). Sempre
+      // reconstruído a partir do token real na tabela.
+      LINK_URL: `${DEFAULT_APP_URL}/gestor-vaga/${link.token}`,
+      EXPIRES_DAYS: String(expiresDays),
+    },
+  };
+}
+
+async function hardenAvaliacaoProxima(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+): Promise<HardenResult> {
+  const colaboradorId = typeof body.colaboradorId === "string" ? body.colaboradorId.trim() : "";
+  if (!colaboradorId) return { error: "colaboradorId é obrigatório para este tipo de e-mail." };
+
+  const { data: colaborador } = await supabase
+    .from("rh_colaboradores")
+    .select("full_name, job_title, department")
+    .eq("id", colaboradorId)
+    .maybeSingle();
+  if (!colaborador) return { error: "Colaborador não encontrado." };
+
+  // Diferente dos outros tipos, o destinatário aqui não é UM registro — é
+  // escolhido entre N gerente_rh/admin elegíveis a receber o lembrete (ver
+  // App.jsx, loop sobre `destinatarios`). Sem um id de registro único pra
+  // amarrar o `to`, a mitigação é validar-e-rejeitar: `to` só passa se for
+  // o e-mail de um profile com papel gerente_rh/admin — fecha a via de
+  // mandar pra endereço externo arbitrário, mesmo sem eliminar 100% a
+  // liberdade de "pra qual desses admins".
+  const to = typeof body.to === "string" ? body.to.trim() : "";
+  if (!to) return { error: "'to' é obrigatório." };
+  const { data: destProfile } = await supabase.from("profiles").select("roles").eq("email", to).maybeSingle();
+  const destRoles: string[] = Array.isArray(destProfile?.roles) ? destProfile.roles : [];
+  if (!destProfile || !destRoles.some((r) => ["gerente_rh", "admin"].includes(r))) {
+    return { error: "'to' precisa ser o e-mail de um usuário com papel gerente_rh/admin." };
+  }
+
+  return {
+    to,
+    variables: {
+      EMPLOYEE_NAME: colaborador.full_name || "",
+      JOB_TITLE: colaborador.job_title || "—",
+      DEPARTMENT: colaborador.department || "—",
+      // TIPO_CICLO/DUE_DATE/DUE_LABEL continuam vindo do client: são uma
+      // PROJEÇÃO calculada em App.jsx (avaliacaoDiasParaProxima) — nesse
+      // momento não existe linha em rh_feedback pra re-derivar server-side
+      // sem duplicar essa lógica de negócio aqui. Risco residual (deixado
+      // documentado, não corrigido por completo — ver relatório).
+      TIPO_CICLO: typeof body.variables?.TIPO_CICLO === "string" ? body.variables.TIPO_CICLO : "",
+      DUE_DATE: typeof body.variables?.DUE_DATE === "string" ? body.variables.DUE_DATE : "",
+      DUE_LABEL: typeof body.variables?.DUE_LABEL === "string" ? body.variables.DUE_LABEL : "",
+    },
+  };
+}
+
+async function hardenContratoVencendo(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+): Promise<HardenResult> {
+  const contratoId = typeof body.contratoId === "string" ? body.contratoId.trim() : "";
+  if (!contratoId) return { error: "contratoId é obrigatório para este tipo de e-mail." };
+
+  const { data: contrato } = await supabase
+    .from("rh_fornecedor_contratos")
+    .select("titulo, vigencia_fim, responsavel_id")
+    .eq("id", contratoId)
+    .maybeSingle();
+  if (!contrato) return { error: "Contrato não encontrado." };
+  if (!contrato.responsavel_id) return { error: "Contrato sem responsável cadastrado." };
+
+  const { data: responsavel } = await supabase.from("profiles").select("email").eq("id", contrato.responsavel_id).maybeSingle();
+  if (!responsavel?.email) return { error: "Responsável pelo contrato sem e-mail cadastrado." };
+
+  const dias = contrato.vigencia_fim
+    ? Math.round((new Date(`${contrato.vigencia_fim}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000)
+    : null;
+  const dueLabel = dias == null ? "" : dias < 0 ? `venceu há ${Math.abs(dias)} dia(s)` : dias === 0 ? "vence hoje" : `vence em ${dias} dia(s)`;
+
+  return {
+    to: responsavel.email,
+    variables: {
+      CONTRATO_TITULO: contrato.titulo || "",
+      DUE_DATE: fmtDateBR(contrato.vigencia_fim),
+      DUE_LABEL: dueLabel,
+    },
+  };
+}
+
+async function hardenBemEstarLembrete(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+): Promise<HardenResult> {
+  const agendamentoId = typeof body.agendamentoId === "string" ? body.agendamentoId.trim() : "";
+  if (!agendamentoId) return { error: "agendamentoId é obrigatório para este tipo de e-mail." };
+
+  const { data: agendamento } = await supabase
+    .from("rh_bemestar_fila")
+    .select("nome, email, horario, sessao_id")
+    .eq("id", agendamentoId)
+    .maybeSingle();
+  if (!agendamento?.email) return { error: "Agendamento não encontrado ou sem e-mail cadastrado." };
+
+  let sessaoTitulo = "—";
+  if (agendamento.sessao_id) {
+    const { data: sessao } = await supabase.from("rh_bemestar_sessoes").select("titulo").eq("id", agendamento.sessao_id).maybeSingle();
+    sessaoTitulo = sessao?.titulo || "—";
+  }
+
+  return {
+    to: agendamento.email,
+    variables: {
+      NOME: agendamento.nome || "",
+      SESSAO_TITULO: sessaoTitulo,
+      HORARIO: (agendamento.horario || "").slice(0, 5),
+    },
+  };
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -446,7 +793,7 @@ Deno.serve(async (req) => {
     // partir do domínio da empresa). roles é array. Achado da 2ª auditoria.
     const { data: callerProfile } = await supabase
       .from("profiles")
-      .select("roles")
+      .select("roles, name, email")
       .eq("id", userData.user.id)
       .maybeSingle();
     const callerRoles: string[] = Array.isArray(callerProfile?.roles) ? callerProfile.roles : [];
@@ -454,6 +801,48 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Sem permissão para enviar e-mails de RH." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Os 9 tipos "genéricos" (tudo que não é candidatura_recebida/
+    // bemestar_confirmado, tratados acima como público) tinham `to`/
+    // `variables` confiados 100% do client — achado de segurança de
+    // 08/08/2026. Cada um agora resolve `to`/`variables`/`bcc` a partir de
+    // um id de registro (ver hardenX() acima), sobrescrevendo o que veio no
+    // body antes de seguir pro envio genérico abaixo. `avaliacao_proxima` é
+    // o único sem 100% de amarração no destinatário — ver comentário em
+    // hardenAvaliacaoProxima.
+    const HARDENED_TYPES: EmailType[] = [
+      "ferias_aprovadas", "ferias_rejeitadas", "welcome", "candidato_aprovado",
+      "candidato_reprovado", "vaga_manager_link", "avaliacao_proxima",
+      "contrato_fornecedor_vencendo", "bemestar_lembrete",
+    ];
+    if (HARDENED_TYPES.includes(body.type)) {
+      const callerName = callerProfile?.name || callerProfile?.email || userData.user.email || "";
+      const callerEmail = callerProfile?.email || userData.user.email || "";
+      let hardened: HardenResult;
+      switch (body.type) {
+        case "ferias_aprovadas":  hardened = await hardenFerias(supabase, body, "aprovado", callerName); break;
+        case "ferias_rejeitadas": hardened = await hardenFerias(supabase, body, "recusado", callerName); break;
+        case "welcome":           hardened = await hardenWelcome(supabase, body); break;
+        case "candidato_aprovado":  hardened = await hardenCandidatoAprovado(supabase, body, callerName, callerEmail); break;
+        case "candidato_reprovado": hardened = await hardenCandidatoReprovado(supabase, body); break;
+        case "vaga_manager_link":   hardened = await hardenVagaManagerLink(supabase, body); break;
+        case "avaliacao_proxima":   hardened = await hardenAvaliacaoProxima(supabase, body); break;
+        case "contrato_fornecedor_vencendo": hardened = await hardenContratoVencendo(supabase, body); break;
+        case "bemestar_lembrete":   hardened = await hardenBemEstarLembrete(supabase, body); break;
+        default: hardened = { error: "Tipo não suportado." };
+      }
+      if ("error" in hardened) {
+        return new Response(JSON.stringify({ error: hardened.error }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      body.to = hardened.to;
+      body.variables = hardened.variables;
+      // Zera qualquer bcc que o client tenha mandado pra um tipo que não é
+      // de lote — só candidato_reprovado (via hardenCandidatoReprovado)
+      // devolve um bcc, e é 100% derivado do banco, nunca do client.
+      body.bcc = hardened.bcc;
     }
 
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

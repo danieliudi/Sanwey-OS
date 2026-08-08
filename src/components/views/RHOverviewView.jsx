@@ -16,7 +16,7 @@ import {
   RH_DESLIGAMENTO_TIPOS,
 } from "../../constants/rh-config";
 import { VISAO_GERAL_WIDGETS } from "../../constants/visao-geral-widgets";
-import { parseDateInput } from "../../utils/date";
+import { parseDateInput, formatDateBR } from "../../utils/date";
 import { monthBounds, within, pctChange } from "../../utils/trend";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
@@ -42,11 +42,6 @@ const DEPT_COLORS = [
   "#6366F1", "#F59E0B", "#10B981", "#EC4899",
   "#3B82F6", "#8B5CF6", "#14B8A6", "#F97316",
 ];
-
-function fmt(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("pt-BR");
-}
 
 function calcDias(startDate, endDate) {
   if (!startDate || !endDate) return 0;
@@ -227,7 +222,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
         const dias = calcDias(req.start_date, req.end_date);
         return {
           key: req.id, primary: req.profiles?.name || "—",
-          secondary: `${leaveTypeLabel(req.type)} · ${fmt(req.start_date)} → ${fmt(req.end_date)}`,
+          secondary: `${leaveTypeLabel(req.type)} · ${formatDateBR(req.start_date)} → ${formatDateBR(req.end_date)}`,
           badge: dias > 0 ? `${dias}d` : "—", badgeTone: "var(--amber)",
           onClick: () => onNavigate?.("rh-ferias"),
         };
@@ -252,7 +247,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
       fullCount: semEntrevistaList.length,
       items: semEntrevistaList.slice(0, 4).map((c) => ({
         key: c.id, primary: c.fullName || "—",
-        secondary: `${c.department || "—"} · desligado em ${fmt(c.desligamentoDate)}`,
+        secondary: `${c.department || "—"} · desligado em ${formatDateBR(c.desligamentoDate)}`,
         badge: "sem entrevista",
         onClick: () => onNavigate?.("rh-funcionarios"),
       })),
@@ -519,7 +514,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
                           flexShrink: 0,
                         }}
                       >
-                        {fmt(c.admissionDate)}
+                        {formatDateBR(c.admissionDate)}
                       </div>
                     </div>
                   ))}

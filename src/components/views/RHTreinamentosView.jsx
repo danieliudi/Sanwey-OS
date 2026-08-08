@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
 import { exportTreinamentoAtribuicoesToCSV } from "../../utils/export-csv";
+import { daysSince, formatDateBR } from "../../utils/date";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { isSupabaseConfigured } from "../../lib/supabase";
@@ -38,15 +39,11 @@ import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
-function fmt(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("pt-BR");
-}
-
-function daysInStage(dateStr) {
-  if (!dateStr) return 0;
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-}
+// fmt() local removido (mesma classe de bug do resto de RH: parseava
+// data pura como meia-noite UTC, mostrando um dia adiantado) -- usa
+// formatDateBR de src/utils/date.js, importado acima como `fmt` pra não
+// precisar tocar as ~11 chamadas já existentes no arquivo.
+const fmt = formatDateBR;
 
 function findStage(stages, stageKey) {
   return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
@@ -712,7 +709,7 @@ function TreinamentoBoardColumn({
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteAtribuicao : undefined}
-              agingDays={daysInStage(a.status_changed_at)}
+              agingDays={daysSince(a.status_changed_at)}
               completeness={getCompleteness?.(a)}
               unread={getUnread?.(a)}
               showMoveOptions={false}
@@ -1373,7 +1370,7 @@ function TreinamentoBoardModal({
                     onDragEnd={canWrite ? () => { setDraggedId(null); setDragOverStageKey(null); } : undefined}
                     onMoveToStage={canWrite ? handleMove : undefined}
                     onDeleteCard={canWrite ? onDelete : undefined}
-                    agingDays={daysInStage(a.status_changed_at)}
+                    agingDays={daysSince(a.status_changed_at)}
                     completeness={getCompleteness?.(a)}
                     unread={hasUnreadRHComment(a, viewedAt, currentUser?.id)}
                   >

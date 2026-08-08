@@ -652,7 +652,7 @@ export default function App() {
           TIPO_CICLO: cicloTipoLabel(info.tipo),
           DUE_DATE: new Date(info.periodEnd).toLocaleDateString("pt-BR"),
           DUE_LABEL: dueLabel,
-        });
+        }, { colaboradorId: c.id });
       }
     }
   }, [colaboradoresParaLembretes, meusCiclosFeedback, isRHManager, users, pushNotification]);
@@ -703,7 +703,7 @@ export default function App() {
           CONTRATO_TITULO: c.titulo || "",
           DUE_DATE: c.vigenciaFim ? new Date(c.vigenciaFim).toLocaleDateString("pt-BR") : "—",
           DUE_LABEL: dueLabel,
-        });
+        }, { contratoId: c.id });
       }
     }
   }, [contratosParaLembretes, isRHManager, users, pushNotification, notifications]);
@@ -729,7 +729,7 @@ export default function App() {
         NOME: f.nome || "",
         SESSAO_TITULO: sessao.titulo || "",
         HORARIO: (f.horario || "").slice(0, 5),
-      });
+      }, { agendamentoId: f.id });
     }
   }, [bemEstarSessoes, bemEstarFila, isRHManager, marcarLembreteEnviado]);
 

@@ -1,16 +1,12 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useBodyScrollLock } from "../../hooks/use-body-scroll-lock";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 
 export function Modal({ open, onClose, title, children, width = 560 }) {
   useBodyScrollLock(open);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  useEscToClose(onClose, open);
 
   if (!open) return null;
   // Portal pra document.body — sem isso o modal fica aninhado dentro de

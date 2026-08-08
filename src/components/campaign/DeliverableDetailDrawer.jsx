@@ -450,8 +450,9 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     setCustomDraft(next);
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     customDebounceRef.current = setTimeout(() => {
-      const merged = { ...(item.customFields || {}), ...customDraftRef.current };
-      onUpdate(item.id, { customFields: merged });
+      const it = itemRef.current;
+      const merged = { ...(it.customFields || {}), ...customDraftRef.current };
+      onUpdate(it.id, { customFields: merged });
       customDebounceRef.current = null;
     }, 600);
   };

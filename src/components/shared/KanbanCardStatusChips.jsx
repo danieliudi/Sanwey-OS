@@ -49,7 +49,7 @@ export function KanbanCardStatusChips({
   agingDays,
   slaDays,
   agingTitle,
-  dangerColor = "#DC2626",
+  dangerColor = "var(--danger)",
   tightTracking = false,
   completeness,
   completenessSize = 26,

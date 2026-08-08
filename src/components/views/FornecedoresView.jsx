@@ -128,17 +128,36 @@ function SupplierModal({ supplier, onSave, onClose }) {
 
 /* ── Delete confirmation modal ───────────────────────────────────── */
 function ConfirmDeleteModal({ supplier, onConfirm, onClose }) {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleConfirm = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      await onConfirm();
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao excluir fornecedor.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <Modal open onClose={onClose} title="Excluir fornecedor?" width={400}>
       <div className="p-6">
         <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>
           "{supplier.name}" será removido. Cotações já enviadas continuam no histórico.
         </p>
+        {error && <div className="mb-3 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{error}</div>}
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
-            style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
-          <button onClick={onConfirm}
-            className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--danger)", color: "var(--on-danger)" }}>Excluir</button>
+          <button onClick={onClose} disabled={deleting} className="px-4 py-2 rounded-lg text-sm font-semibold border"
+            style={{ borderColor: "var(--border)", color: "var(--text)", opacity: deleting ? 0.6 : 1 }}>Cancelar</button>
+          <button onClick={handleConfirm} disabled={deleting}
+            className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--danger)", color: "var(--on-danger)", opacity: deleting ? 0.6 : 1 }}>
+            {deleting ? "Excluindo…" : "Excluir"}
+          </button>
         </div>
       </div>
     </Modal>
@@ -269,7 +288,7 @@ export function FornecedoresView({ user }) {
       {confirmDelete && (
         <ConfirmDeleteModal
           supplier={confirmDelete}
-          onConfirm={async () => { await deleteSupplier(confirmDelete.id); setConfirmDelete(null); }}
+          onConfirm={() => deleteSupplier(confirmDelete.id)}
           onClose={() => setConfirmDelete(null)}
         />
       )}

@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { RH_LEAVE_TYPES } from "../../constants/rh-config";
 import { exportFeriasToCSV } from "../../utils/export-csv";
-import { parseDateInput } from "../../utils/date";
+import { parseDateInput, formatDateBR, daysSince } from "../../utils/date";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
@@ -63,11 +63,6 @@ const AVISO_MINIMO_DIAS_FERIAS = 30;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function fmt(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("pt-BR");
-}
-
 function calcDias(startDate, endDate) {
   if (!startDate || !endDate) return 0;
   const diff = new Date(endDate).getTime() - new Date(startDate).getTime();
@@ -80,7 +75,7 @@ function leaveTypeLabel(typeId) {
 
 function avisoAntecedenciaCurto(req) {
   if (req.type !== "ferias" || !req.created_at || !req.start_date) return false;
-  const diasAntecedencia = Math.floor((new Date(req.start_date).getTime() - new Date(req.created_at).getTime()) / 86400000);
+  const diasAntecedencia = Math.floor((parseDateInput(req.start_date).getTime() - parseDateInput(req.created_at).getTime()) / 86400000);
   return diasAntecedencia < AVISO_MINIMO_DIAS_FERIAS;
 }
 
@@ -97,11 +92,6 @@ function isThisMonth(dateStr) {
   const d = new Date(dateStr);
   const now = new Date();
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-}
-
-function daysInStage(dateStr) {
-  if (!dateStr) return 0;
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
 }
 
 function findStage(stages, stageKey) {
@@ -220,6 +210,11 @@ async function contarAnexos(recordId) {
 // (changeStatus) já está persistida quando isso roda, então uma falha aqui
 // não deve travar o fluxo, só avisar quem aprovou/recusou que o e-mail não
 // saiu.
+// `to`/`variables` seguem no body por compatibilidade, mas a edge function
+// (achado de segurança de 08/08/2026) re-deriva destinatário/identidade a
+// partir de `feriasRequestId` — o `to`/EMPLOYEE_NAME/LEAVE_TYPE/etc. calculados
+// aqui viram só um "melhor palpite" pra UI otimista, nunca o valor que
+// efetivamente sai no e-mail.
 async function sendRhEmail(type, req, colaborador, extraVars = {}) {
   try {
     let toEmail = colaborador?.email || null;
@@ -232,11 +227,12 @@ async function sendRhEmail(type, req, colaborador, extraVars = {}) {
       body: {
         type,
         to: toEmail,
+        feriasRequestId: req.id,
         variables: {
           EMPLOYEE_NAME: colaborador?.fullName || "",
           LEAVE_TYPE:    leaveTypeLabel(req.type),
-          START_DATE:    fmt(req.start_date),
-          END_DATE:      fmt(req.end_date),
+          START_DATE:    formatDateBR(req.start_date),
+          END_DATE:      formatDateBR(req.end_date),
           DAYS_COUNT:    String(calcDias(req.start_date, req.end_date)),
           APP_URL:       window.location.origin,
           ...extraVars,
@@ -276,7 +272,7 @@ function RecusarFeriasModal({ req, colaborador, busy, onConfirm, onClose }) {
     <Modal open onClose={onClose} title="Recusar solicitação" width={440}>
       <div style={{ padding: "16px 24px 24px" }}>
         <p style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5, marginBottom: 12 }}>
-          {leaveTypeLabel(req.type)} de <b style={{ color: "var(--text)" }}>{colaborador?.fullName || "colaborador"}</b> · {fmt(req.start_date)} – {fmt(req.end_date)}. O motivo será enviado ao colaborador por e-mail e registrado no histórico do card.
+          {leaveTypeLabel(req.type)} de <b style={{ color: "var(--text)" }}>{colaborador?.fullName || "colaborador"}</b> · {formatDateBR(req.start_date)} – {formatDateBR(req.end_date)}. O motivo será enviado ao colaborador por e-mail e registrado no histórico do card.
         </p>
         <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
           Motivo da recusa *
@@ -448,7 +444,7 @@ function FeriasCardBody({ req, colaborador, canWrite, onAprovar, onRecusar, busy
           <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{leaveTypeLabel(req.type)} · {dias}d</div>
         </div>
       </div>
-      <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{fmt(req.start_date)} – {fmt(req.end_date)}</div>
+      <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{formatDateBR(req.start_date)} – {formatDateBR(req.end_date)}</div>
       {avisoAntecedenciaCurto(req) && (
         <div style={{ marginTop: 4, fontSize: 10, color: "var(--warning)", display: "flex", alignItems: "center", gap: 3 }}>
           <AlertTriangle size={10} /> Aviso curto (&lt;30d)
@@ -554,7 +550,7 @@ function FeriasKanbanColumn({
               onDeleteCard={canWrite ? onDeleteRequest : undefined}
               onDuplicateCard={canWrite ? onDuplicateRequest : undefined}
               showMoveOptions={false}
-              agingDays={daysInStage(req.status_changed_at)}
+              agingDays={daysSince(req.status_changed_at)}
               completeness={getCompleteness?.(req)}
               unread={getUnread?.(req)}
             >
@@ -627,7 +623,7 @@ function FeriasDrawer({
       <UserAvatar user={{ name: colaborador?.fullName }} size={40} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "Desconhecido"}</div>
-        <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{leaveTypeLabel(req.type)} · {fmt(req.start_date)} – {fmt(req.end_date)} · {dias}d</div>
+        <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{leaveTypeLabel(req.type)} · {formatDateBR(req.start_date)} – {formatDateBR(req.end_date)} · {dias}d</div>
         <div style={{ marginTop: 8 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: stageTextColor(st.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
@@ -806,7 +802,7 @@ function FeriasTableView({ requests, stages, colaboradoresById, onRowClick }) {
       right={(req) => (
         <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>{calcDias(req.start_date, req.end_date)}d</span>
       )}
-      meta={(req) => `${leaveTypeLabel(req.type)} · ${fmt(req.start_date)} → ${fmt(req.end_date)}`}
+      meta={(req) => `${leaveTypeLabel(req.type)} · ${formatDateBR(req.start_date)} → ${formatDateBR(req.end_date)}`}
     />
     <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
@@ -838,8 +834,8 @@ function FeriasTableView({ requests, stages, colaboradoresById, onRowClick }) {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{leaveTypeLabel(req.type)}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(req.start_date)}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(req.end_date)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(req.start_date)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(req.end_date)}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{dias}d</td>
                 <td className="px-4 py-3">
                   <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
@@ -1332,7 +1328,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                 onMoveToStage={canWrite ? handleMoveToStage : undefined}
                 onDeleteCard={canWrite ? deleteRequest : undefined}
                 onDuplicateCard={canWrite ? handleDuplicateRequest : undefined}
-                agingDays={daysInStage(req.status_changed_at)}
+                agingDays={daysSince(req.status_changed_at)}
                 completeness={getReqCompleteness?.(req)}
                 unread={hasUnreadRHComment(req, viewedAt, currentUser?.id)}
               >

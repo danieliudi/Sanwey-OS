@@ -8,11 +8,7 @@ import { RH_FRENTE_LABELS } from "../../constants/rh-frentes";
 import { QRCodeButton } from "../shared/QRCodeButton";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
-
-function fmt(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("pt-BR");
-}
+import { formatDateBR } from "../../utils/date";
 
 function fmtHorario(t) {
   return (t || "").slice(0, 5);
@@ -208,7 +204,7 @@ export function RHBemEstarView({ currentUser, canWrite }) {
                   <button onClick={() => toggle(s.id)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>{s.titulo}</div>
                     <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
-                      {s.data ? `${fmt(s.data)} · ` : ""}
+                      {s.data ? `${formatDateBR(s.data)} · ` : ""}
                       {s.horario_inicio && s.horario_fim ? `${fmtHorario(s.horario_inicio)}–${fmtHorario(s.horario_fim)} · ` : ""}
                       {reservados} reserva{reservados !== 1 ? "s" : ""}
                     </div>

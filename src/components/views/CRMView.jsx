@@ -638,9 +638,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           </div>
           <button
             onClick={() => setStarredOnly(v => !v)}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "var(--border)"}`, background: starredOnly ? "var(--warning-bg)" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "var(--warning)" : "var(--border)"}`, background: starredOnly ? "var(--warning-bg)" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
           >
-            <Star size={11} fill={starredOnly ? "#F59E0B" : "none"} />
+            <Star size={11} fill={starredOnly ? "var(--warning)" : "none"} />
             Só favoritos
           </button>
           {isManager && !isGroupView && (

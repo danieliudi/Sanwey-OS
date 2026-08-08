@@ -100,6 +100,9 @@ export function useEsgEmissionFactors() {
   const createFactor = useCallback(async (factor) => {
     if (!isSupabaseConfigured) return null;
     const current = factors.find(f => f.category === factor.category && f.scope === factor.scope && !f.validTo);
+    if (current && factor.validFrom < current.validFrom) {
+      throw new Error(`A vigência a partir de ${factor.validFrom} é anterior à vigência atual (${current.validFrom}) -- um fator não pode retroagir antes da vigência aberta.`);
+    }
     if (current) {
       const { error: closeErr } = await supabase
         .from(FACTORS_TABLE)

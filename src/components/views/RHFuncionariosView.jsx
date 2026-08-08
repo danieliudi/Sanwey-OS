@@ -1070,6 +1070,11 @@ function EmployeeDetailModal({
             body: {
               type: "welcome",
               to: user.email,
+              // A edge function IGNORA to/variables abaixo e re-deriva tudo
+              // (e-mail, nome, cargo, depto, admissão) de `profiles` via
+              // profileId — achado de segurança de 08/08/2026. `to`/
+              // `variables` ficam só por compatibilidade de payload.
+              profileId: user.id,
               variables: {
                 EMPLOYEE_NAME: user.name || user.email,
                 JOB_TITLE:     form.job_title     || "—",

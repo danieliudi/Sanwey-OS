@@ -23,7 +23,7 @@ const URGENCY_FILTERS = [
 const URGENCY_STATUS_COLOR = {
   critico: "var(--danger)",
   alto: "var(--warning)",
-  medio: "#9A7A00",
+  medio: "var(--amber)",
   informativo: "var(--text-faint)",
 };
 

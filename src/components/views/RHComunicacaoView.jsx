@@ -11,11 +11,7 @@ import { QRCodeButton } from "../shared/QRCodeButton";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
-
-function fmt(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("pt-BR");
-}
+import { formatDateBR } from "../../utils/date";
 
 const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
@@ -469,7 +465,7 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>{p.titulo}</div>
                     <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
-                      {(p.perguntas?.length || 0)} pergunta(s) · {fmt(p.created_at)}{p.fecha_em ? ` · encerra ${fmt(p.fecha_em)}` : ""}
+                      {(p.perguntas?.length || 0)} pergunta(s) · {formatDateBR(p.created_at)}{p.fecha_em ? ` · encerra ${formatDateBR(p.fecha_em)}` : ""}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">

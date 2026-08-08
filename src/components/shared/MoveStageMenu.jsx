@@ -56,6 +56,8 @@ export function MoveStageMenu({
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const [pos, setPos] = useState(null); // { top | bottom, left } em coordenadas de viewport
   const wrapRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -84,7 +86,7 @@ export function MoveStageMenu({
   }, [menuOpen]);
 
   useEffect(() => { if (!menuOpen) setPos(null); }, [menuOpen]);
-  useEffect(() => { if (!menuOpen) setConfirmingDelete(false); }, [menuOpen]);
+  useEffect(() => { if (!menuOpen) { setConfirmingDelete(false); setDeleteError(null); } }, [menuOpen]);
 
   useLayoutEffect(() => {
     if (!menuOpen || !wrapRef.current || !dropdownRef.current) return;
@@ -120,6 +122,21 @@ export function MoveStageMenu({
       setMenuOpen(false);
     } finally {
       setDuplicating(false);
+    }
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDelete();
+      setMenuOpen(false);
+    } catch (err) {
+      setDeleteError(err?.message || "Erro ao excluir. Tente novamente.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -164,16 +181,23 @@ export function MoveStageMenu({
               <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 8, lineHeight: 1.4 }}>
                 {confirmMessage}
               </div>
+              {deleteError && (
+                <div style={{ fontSize: 11, color: "var(--danger)", background: "var(--danger-bg)", borderRadius: 6, padding: "6px 8px", marginBottom: 8, lineHeight: 1.4 }}>
+                  {deleteError}
+                </div>
+              )}
               <div style={{ display: "flex", gap: 6 }}>
                 <button
-                  onClick={e => { e.stopPropagation(); onDelete(); setMenuOpen(false); }}
-                  style={{ flex: 1, background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  style={{ flex: 1, background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.6 : 1 }}
                 >
-                  Excluir
+                  {deleting ? "Excluindo…" : "Excluir"}
                 </button>
                 <button
-                  onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }}
-                  style={{ flex: 1, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                  onClick={e => { e.stopPropagation(); setConfirmingDelete(false); setDeleteError(null); }}
+                  disabled={deleting}
+                  style={{ flex: 1, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.6 : 1 }}
                 >
                   Cancelar
                 </button>

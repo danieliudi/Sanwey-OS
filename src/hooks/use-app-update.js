@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
 // Toast "nova versão disponível" (spec: specautoupdatechangelogtoast.md,
@@ -11,6 +11,11 @@ import { useRegisterSW } from "virtual:pwa-register/react";
 // deploys futuros.
 export function useAppUpdate() {
   const [dismissed, setDismissed] = useState(false);
+  // Guarda o id do interval de checagem de update pra nunca empilhar mais de
+  // um (StrictMode dobra a invocação de onRegisteredSW em dev, e o hook
+  // poderia em tese ser montado mais de uma vez) — sem isso cada invocação
+  // extra criava um poll de 10min novo que nunca era limpo.
+  const updateIntervalIdRef = useRef(null);
 
   const {
     needRefresh: [needRefresh],
@@ -26,7 +31,10 @@ export function useAppUpdate() {
       // Checa por update a cada 10min — pega deploy mesmo com a aba aberta
       // o dia todo, sem depender do usuário navegar/recarregar. Default
       // ajustável, não é uma decisão fechada da spec.
-      setInterval(() => { registration.update(); }, 10 * 60 * 1000);
+      if (updateIntervalIdRef.current != null) {
+        clearInterval(updateIntervalIdRef.current);
+      }
+      updateIntervalIdRef.current = setInterval(() => { registration.update(); }, 10 * 60 * 1000);
     },
   });
 

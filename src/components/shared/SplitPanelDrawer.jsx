@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { X, Trash2, ArrowRight, ChevronDown } from "lucide-react";
 import { useBodyScrollLock } from "../../hooks/use-body-scroll-lock";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { StageNavigator, StageMoveRegistryContext } from "./StageNavigator";
 
 // Chrome estrutural do drawer de detalhe no padrão do CRM (LeadDetailDrawer):
@@ -22,6 +23,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
   // renderiza condicionalmente) — trava o scroll do body enquanto estiver
   // montado, destrava no unmount. Achado da auditoria de fricção de 18/07.
   useBodyScrollLock(true);
+  useEscToClose(onClose);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [leftOpen, setLeftOpen] = useState(false);
@@ -34,12 +36,6 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
       return () => setMoveSources(prev => prev.filter(s => s.id !== id));
     },
   }), []);
-
-  useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
 
   const handleDeleteConfirmed = async () => {
     if (!onDelete) return;

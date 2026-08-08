@@ -298,4 +298,26 @@ export function exportPersonalTasksToCSV(tasks, { columns, filename } = {}) {
   triggerDownload(filename || `sanwey-lista-pessoal-${today}.csv`, csv);
 }
 
+// Exporta as entregas de Marketing do escopo atual (já filtrado pelo board).
+// PRIORITY_LABELS espelha o mapa em EntregasView.jsx — mantido aqui pra não
+// criar dependência circular de import entre view e util.
+const DELIVERABLE_PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
+
+export function exportDeliverablesToCSV(deliverables, { stages, filename } = {}) {
+  const header = ["Título", "Solicitante", "Departamento", "Prioridade", "Prazo", "Etapa", "Empresas", "Criado em"];
+  const rows = (deliverables || []).map(d => [
+    d.title || "",
+    d.requesterName || "",
+    d.department || "",
+    DELIVERABLE_PRIORITY_LABELS[d.priority] || d.priority || "",
+    formatDate(d.deadline),
+    (stages || []).find(s => s.id === d.stage)?.name || d.stage || "",
+    (d.companyIds || []).map(id => COMPANIES[id]?.short || id).join(", "),
+    formatDate(d.createdAt),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-entregas-${today}.csv`, csv);
+}
+
 export default exportLeadsToCSV;

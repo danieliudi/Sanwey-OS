@@ -69,6 +69,12 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   // gravava só B (o timer de A era cancelado) — perda silenciosa de dados.
   const customDraftRef = useRef({});
   const savedTimerRef = useRef(null);
+  // Espelha `lead` pra leitura dentro do corpo do setTimeout do autosave —
+  // sem isso o closure capturava o `lead` de quando a tecla foi digitada, não
+  // o mais recente, e um customFields atualizado em paralelo (ex.: realtime)
+  // entre a tecla e os 600ms do debounce era sobrescrito com dado velho.
+  const leadRef = useRef(lead);
+  useEffect(() => { leadRef.current = lead; }, [lead]);
 
   useEffect(() => {
     setCustomDraft({});
@@ -95,15 +101,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     setCustomSaveState("saving");
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     customDebounceRef.current = setTimeout(() => {
-      if (!lead) return;
-      const merged = { ...(lead.customFields || {}), ...customDraftRef.current };
-      onUpdate(lead.id, { customFields: merged });
+      const current = leadRef.current;
+      if (!current) return;
+      const merged = { ...(current.customFields || {}), ...customDraftRef.current };
+      onUpdate(current.id, { customFields: merged });
       customDebounceRef.current = null;
       setCustomSaveState("saved");
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setCustomSaveState(null), 2000);
     }, 600);
-  }, [lead, onUpdate]);
+  }, [onUpdate]);
 
   const getCustomValue = useCallback((fieldKey) => {
     return fieldKey in customDraft ? customDraft[fieldKey] : (customValues[fieldKey] ?? "");
@@ -123,7 +130,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   // cor/ordem de etapa que aparece no board.
   const companyStages = (lead?.companyId && pipelines?.[lead.companyId]) || DEFAULT_PIPELINE_STAGES;
 
-  const moveToStage = useCallback((toStage) => {
+  const moveToStage = useCallback(async (toStage) => {
     if (!lead || !toStage) return;
     // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
     // (estático ou condicional) vazio — antes disso "required" era só o
@@ -151,9 +158,17 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
       const mergedCF = mergeGanhoDefaults(lead.customFields, lead, nowISO);
       if (mergedCF) patch.customFields = mergedCF;
     }
-    onUpdate(lead.id, patch);
+    try {
+      await onUpdate(lead.id, patch);
+    } catch (err) {
+      setStage(lead.stage);
+      setMoveError(err?.message || "Não foi possível mover o card. Tente de novo.");
+      return;
+    }
     // Fecha o drawer agora (sinal visual de que moveu) e reabre já na etapa
-    // nova — em vez de só trocar o conteúdo por baixo do drawer aberto.
+    // nova — em vez de só trocar o conteúdo por baixo do drawer aberto. Só
+    // depois do onUpdate confirmar sucesso — antes disso fechava mesmo se a
+    // gravação tivesse falhado, escondendo o erro.
     if (onStageMoved) {
       onClose();
       onStageMoved(lead.id);
@@ -1188,7 +1203,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 {visibleCustomDefs.map(f => (
                   <div key={f.id}>
                     <label className="block" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>
-                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                      {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 4 }}>*</span>}
                       {f.label}
                     </label>
                     {f.helpText && (

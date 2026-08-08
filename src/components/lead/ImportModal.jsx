@@ -139,7 +139,7 @@ const BTN_PRIMARY = {
 const BTN_SECONDARY = {
   background: "var(--surface)",
   color: "var(--text)",
-  border: `1px solid #E5E7EB`,
+  border: `1px solid var(--border)`,
   borderRadius: 8,
   padding: "10px 20px",
   fontWeight: 600,
@@ -177,7 +177,7 @@ const LABEL_STYLE = {
 const SELECT_STYLE = {
   width: "100%",
   padding: "8px 12px",
-  border: `1px solid #E5E7EB`,
+  border: `1px solid var(--border)`,
   borderRadius: 8,
   fontSize: 13,
   color: "var(--text)",
@@ -426,7 +426,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
         <div
           style={{
             padding: "20px 24px",
-            borderBottom: `1px solid #E5E7EB`,
+            borderBottom: `1px solid var(--border)`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -483,7 +483,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 style={{
-                  border: `2px dashed ${isDragging ? "var(--color-industria)" : "#E5E7EB"}`,
+                  border: `2px dashed ${isDragging ? "var(--color-industria)" : "var(--border)"}`,
                   borderRadius: 10,
                   padding: "40px 24px",
                   textAlign: "center",
@@ -576,7 +576,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
               {/* Column mapping table */}
               <div>
                 <label style={LABEL_STYLE}>Mapear colunas</label>
-                <div style={{ border: `1px solid #E5E7EB`, borderRadius: 8, overflow: "hidden" }}>
+                <div style={{ border: `1px solid var(--border)`, borderRadius: 8, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: "var(--surface-alt)" }}>
@@ -709,7 +709,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                     <div style={{ ...LABEL_STYLE, marginBottom: 8 }}>
                       Prévia (primeiras {Math.min(5, rows.length)} linhas)
                     </div>
-                    <div style={{ overflowX: "auto", border: `1px solid #E5E7EB`, borderRadius: 8 }}>
+                    <div style={{ overflowX: "auto", border: `1px solid var(--border)`, borderRadius: 8 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 480 }}>
                         <thead>
                           <tr style={{ background: "var(--surface-alt)" }}>
@@ -757,7 +757,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
         <div
           style={{
             padding: "16px 24px",
-            borderTop: `1px solid #E5E7EB`,
+            borderTop: `1px solid var(--border)`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",

@@ -139,13 +139,9 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
 
-  let body: Record<string, unknown>;
-  try { body = await req.json(); } catch { return jsonResponse({ error: "Invalid JSON body" }, 400); }
-
-  const cnpj = normalizeCnpj(String(body?.cnpj || ""));
-  if (cnpj.length !== 14) {
-    return jsonResponse({ error: "CNPJ inválido", hint: "Informe 14 dígitos." }, 400);
-  }
+  const authHeader = req.headers.get("Authorization") || "";
+  const jwt = authHeader.replace(/^Bearer\s+/i, "");
+  if (!jwt) return jsonResponse({ error: "Autenticação necessária" }, 401);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -153,6 +149,17 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Edge function misconfigured" }, 500);
   }
   const admin = createClient(supabaseUrl, serviceRole);
+
+  const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+  if (userErr || !userData?.user) return jsonResponse({ error: "Sessão inválida" }, 401);
+
+  let body: Record<string, unknown>;
+  try { body = await req.json(); } catch { return jsonResponse({ error: "Invalid JSON body" }, 400); }
+
+  const cnpj = normalizeCnpj(String(body?.cnpj || ""));
+  if (cnpj.length !== 14) {
+    return jsonResponse({ error: "CNPJ inválido", hint: "Informe 14 dígitos." }, 400);
+  }
 
   const cacheKey = `cnpj:${cnpj}`;
   if (!body.refresh) {

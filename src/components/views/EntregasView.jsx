@@ -40,6 +40,7 @@ import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
+import { exportDeliverablesToCSV } from "../../utils/export-csv";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -70,27 +71,6 @@ function isDueSoon(d) {
   if (!d.deadline) return false;
   const diffMs = new Date(d.deadline).getTime() - Date.now();
   return diffMs >= 0 && diffMs <= 7 * 86400000;
-}
-
-/* ── CSV export ─────────────────────────────────────────────── */
-function exportCSV(deliverables, stages) {
-  const headers = ["Título","Solicitante","Departamento","Prioridade","Prazo","Etapa","Empresas","Criado em"];
-  const rows = deliverables.map(d => [
-    d.title,
-    d.requesterName || "",
-    d.department    || "",
-    PRIORITY_LABELS[d.priority] || d.priority || "",
-    d.deadline ? formatDateBR(d.deadline) : "",
-    (stages || DELIVERABLE_STAGES).find(s => s.id === d.stage)?.name || d.stage,
-    (d.companyIds || []).map(id => COMPANIES[id]?.short || id).join(";"),
-    d.createdAt ? new Date(d.createdAt).toLocaleDateString("pt-BR") : "",
-  ]);
-  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href = url; a.download = "entregas.csv"; a.click();
-  URL.revokeObjectURL(url);
 }
 
 /* ── Create modal ────────────────────────────────────────────── */
@@ -1003,7 +983,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           </div>
           {/* Export CSV */}
           <button
-            onClick={() => exportCSV(filtered, kanbanStages)}
+            onClick={() => exportDeliverablesToCSV(filtered, { stages: kanbanStages })}
             title="Exportar CSV"
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
