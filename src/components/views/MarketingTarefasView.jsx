@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
-  Plus, X, ListTodo, ChevronDown, Star, Filter, Settings2, AlertCircle, LayoutGrid, TrendingUp,
+  Plus, X, ListTodo, Star, Filter, Settings2, AlertCircle, LayoutGrid, TrendingUp,
   List, CalendarDays, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
+import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { MarketingTaskDetailDrawer } from "../campaign/MarketingTaskDetailDrawer";
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
@@ -646,12 +647,6 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const [selected,      setSelected]      = useState(null);
   const [viewMode,      setViewMode]      = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("marketing-tarefas");
-  const [expandedMobileStages, setExpandedMobileStages] = useState(() => {
-    const s = new Set(["a_fazer"]);
-    if (location.state?.filterStage) s.add(location.state.filterStage);
-    return s;
-  });
-  const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   /* Filters */
   const [ownerFilter,    setOwnerFilter]    = useState("");
@@ -959,89 +954,52 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
       )}
 
       {!loading && !loadingStages && viewMode === "kanban" && (<>
-        {/* Mobile kanban: vertical collapsible stages */}
-        <div className="lg:hidden space-y-1.5 pb-24">
-          {kanbanStages.map(stage => {
-            const stageItems = tasksByStage[stage.id] || [];
-            const expanded = expandedMobileStages.has(stage.id);
-            return (
-              <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
-                <button
-                  className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer"
-                  style={{ background: stage.color + "12", border: "none" }}
-                  onClick={() => toggleMobileStage(stage.id)}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
-                    {stage.sla && <span className="text-xs" style={{ color: stageTextColorStrong(stage.color) }}>SLA {stage.sla}d</span>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stageItems.length}</span>
-                    <div onClick={e => e.stopPropagation()}>
-                      <KanbanColumnSortMenu
-                        criteria={getSortCriteria(stage.id)}
-                        onChange={(v) => setSortCriteria(stage.id, v)}
-                        options={["recent", "deadline", "priority", "alpha"]}
-                        accentColor={stage.color}
-                      />
-                    </div>
-                    {canWrite && (
-                      <span
-                        role="button"
-                        title="Editar campos desta etapa"
-                        onClick={e => { e.stopPropagation(); setFieldEditorStage(stage); }}
-                        style={{ color: stage.color, display: "flex", cursor: "pointer" }}
-                      >
-                        <Settings2 size={13} />
-                      </span>
-                    )}
-                    <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-                      <ChevronDown size={13} />
-                    </div>
-                  </div>
-                </button>
-                {expanded && (
-                  <div className="p-2.5 space-y-2" style={{ background: "var(--surface-alt)" }}>
-                    {stageItems.length === 0 ? (
-                      <div className="text-center py-4 text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma tarefa nesta etapa</div>
-                    ) : (
-                      stageItems.map(item => (
-                        <DeliverableKanbanCard
-                          key={item.id}
-                          item={item}
-                          users={users}
-                          onDragStart={handleDragStart}
-                          onDragEnd={handleDragEnd}
-                          canWrite={canWrite}
-                          onClick={setSelected}
-                          stages={kanbanStages}
-                          onMoveToStage={canWrite ? attemptStageChange : null}
-                          onDeleteCard={canWrite ? handleDelete : null}
-                          onDuplicateCard={canWrite ? handleDuplicate : null}
-                          onToggleStar={canWrite ? toggleStar : null}
-                          completeness={getItemCompleteness(item)}
-                          unread={getItemUnread(item)}
-                          campaignsById={campaignsById}
-                        />
-                      ))
-                    )}
-                    {canWrite && !stage.terminal && (
-                      <button
-                        onClick={() => setQuickAddStage(stage.id)}
-                        className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                        style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
-                      >
-                        <Plus size={12} />
-                        Nova tarefa
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {canWrite && (
+        {/* Mobile kanban: vertical collapsible stages — via RHMobileKanbanAccordion
+            (shared/rh-pipeline), consolidação de 08/08/2026. */}
+        <RHMobileKanbanAccordion
+          stages={kanbanStages}
+          itemsByStage={tasksByStage}
+          getSortCriteria={getSortCriteria}
+          setSortCriteria={setSortCriteria}
+          sortOptions={["recent", "deadline", "priority", "alpha"]}
+          initialExpandedKey="a_fazer"
+          initialExpandedKeys={location.state?.filterStage ? [location.state.filterStage] : undefined}
+          addLabel="Nova tarefa"
+          emptyLabel="Nenhuma tarefa nesta etapa"
+          onAdd={canWrite ? (stageKey) => setQuickAddStage(stageKey) : undefined}
+          renderStageBadge={(stage) => stage.sla ? (
+            <span className="text-xs" style={{ color: stageTextColorStrong(stage.color) }}>SLA {stage.sla}d</span>
+          ) : null}
+          renderStageExtra={canWrite ? (stage) => (
+            <span
+              role="button"
+              title="Editar campos desta etapa"
+              onClick={() => setFieldEditorStage(stage)}
+              style={{ color: stage.color, display: "flex", cursor: "pointer" }}
+            >
+              <Settings2 size={13} />
+            </span>
+          ) : undefined}
+          renderCard={(item) => (
+            <DeliverableKanbanCard
+              key={item.id}
+              item={item}
+              users={users}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              canWrite={canWrite}
+              onClick={setSelected}
+              stages={kanbanStages}
+              onMoveToStage={canWrite ? attemptStageChange : null}
+              onDeleteCard={canWrite ? handleDelete : null}
+              onDuplicateCard={canWrite ? handleDuplicate : null}
+              onToggleStar={canWrite ? toggleStar : null}
+              completeness={getItemCompleteness(item)}
+              unread={getItemUnread(item)}
+              campaignsById={campaignsById}
+            />
+          )}
+          footer={canWrite ? (
             <button
               onClick={() => setAddingStage(true)}
               className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
@@ -1050,8 +1008,8 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
               <Plus size={13} />
               Nova etapa
             </button>
-          )}
-        </div>
+          ) : undefined}
+        />
 
         {/* Desktop kanban: horizontal scroll */}
         <div className="hidden lg:block">

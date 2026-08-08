@@ -353,6 +353,27 @@ function KanbanBoard({ purchasesByStage, suppliersById, usersById, users, onCard
   );
 }
 
+// Não migrado pro RHMobileKanbanAccordion compartilhado (consolidação de
+// 08/08/2026, ver CLAUDE.md item 1) — deliberado, não esquecido. Esse
+// acordeão diverge do padrão dos outros 4 boards migrados em pontos que
+// não são meros "extras" plugáveis via renderStageExtra/renderStageBadge,
+// e sim escolhas estruturais diferentes:
+//   - Sem o indicador redondo (dot) ao lado do nome da etapa — o
+//     componente compartilhado sempre renderiza esse dot; adicioná-lo
+//     aqui seria uma mudança visual real, que a CLAUDE.md (regra 3) exige
+//     mostrar como mockup antes de implementar.
+//   - Cor vem de STAGE_COLORS (mapa fixo por stage.id), não de um campo
+//     `color` no próprio objeto de etapa — PURCHASE_STAGES é hardcoded
+//     (exceção documentada na CLAUDE.md item 2, não usa
+//     rh_pipeline_stages), então não há stage.color pra passar direto.
+//   - Padding/espaçamento menor (py-3 em vez de py-3.5, pb-8 em vez de
+//     pb-24) e sem botão "+ Adicionar" por etapa dentro do acordeão — a
+//     criação de solicitação é só via KanbanFab global ("Nova
+//     solicitação"), não por etapa.
+// Migrar mudaria a aparência real desta tela sem aprovação prévia — mais
+// seguro deixar esta cópia como está do que adivinhar. Se decidirem
+// padronizar o visual deste board com os outros, é mudança de mockup
+// primeiro (regra 3), não puro reaproveitamento de componente.
 function MobileKanban({ purchasesByStage, suppliersById, usersById, users, onCardClick, onMoveToStage, onDeleteCard, onDuplicateCard, getUnread, getSortCriteria, setSortCriteria }) {
   const [expanded, setExpanded] = useState(() => new Set(["solicitado"]));
   const toggle = (id) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });

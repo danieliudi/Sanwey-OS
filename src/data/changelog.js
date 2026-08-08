@@ -24,6 +24,17 @@
 
 export const CHANGELOG = [
   {
+    version: "4.32.0",
+    items: [
+      { kind: "correcao", text: "Datas em Férias, Feedback, Onboarding, Recrutamento, Visão Geral de RH, Bem-Estar, Comunicação, Cargos e Treinamentos apareciam um dia antes do real — corrigido." },
+      { kind: "correcao", text: "Botões de excluir em Despesas, Fornecedores e no menu \"...\" do Kanban agora avisam quando a exclusão falha, em vez de simplesmente não acontecer nada." },
+      { kind: "correcao", text: "Exportar CSV de Entregas corrigido — o arquivo abria com as colunas embaralhadas no Excel." },
+      { kind: "correcao", text: "ESG & Carbono: o relatório gerado agora usa só os lançamentos do período selecionado, e o cálculo automático de Escopo 3 a partir de Compras não duplica mais registro em cliques repetidos.", roles: ["admin", "gerente", "diretoria"] },
+      { kind: "correcao", text: "Corrigido um caso em que editar dois campos rapidamente no Funil de Vendas ou em Entregas podia perder a primeira edição." },
+      { kind: "ajuste", text: "Isolamento por empresa reforçado em Marketing e em outros pontos da plataforma — cada empresa do grupo só enxerga o próprio dado." },
+    ],
+  },
+  {
     version: "4.31.0",
     items: [
       { kind: "novo", text: "Novo módulo ESG & Carbono (menu Inteligência): calcula a pegada de carbono (Escopos 1, 2 e 3) a partir de dados já cadastrados na plataforma, com fatores de emissão versionados e relatório exportável — primeira fase, foco em rastreabilidade auditável.", roles: ["admin", "gerente", "diretoria"] },

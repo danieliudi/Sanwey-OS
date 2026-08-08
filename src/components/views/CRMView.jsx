@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Upload, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star, AlertCircle } from "lucide-react";
+import { Plus, X, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Upload, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star, AlertCircle } from "lucide-react";
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
+import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { exportLeadsToCSV } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -358,8 +359,6 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
   const [stageError, setStageError] = useState(null);
-  const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["prospeccao"]));
-  const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const usersById = useUsersById(users);
   const { formConfig, updateFormConfig } = useLeadFormConfig();
@@ -744,79 +743,48 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           usersById={usersById}
         />
       ) : (<>
-      {/* Mobile kanban: vertical collapsible stages */}
-      <div className="lg:hidden space-y-1.5 pb-24">
-        {stages.map(stage => {
-          const bucket = byStage[stage.id] || { leads: [], total: 0 };
-          const expanded = expandedMobileStages.has(stage.id);
-          return (
-            <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
-              <button
-                className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer"
-                style={{ background: stage.color + "12", border: "none" }}
-                onClick={() => toggleMobileStage(stage.id)}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                  <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
-                  {bucket.total > 0 && <span className="text-xs font-semibold" style={{ color: stageTextColorStrong(stage.color) }}>{formatK(bucket.total)}</span>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{bucket.leads.length}</span>
-                  <div onClick={e => e.stopPropagation()}>
-                    <KanbanColumnSortMenu
-                      criteria={getSortCriteria(stage.id)}
-                      onChange={(v) => setSortCriteria(stage.id, v)}
-                      options={["recent", "deadline", "value", "alpha"]}
-                      accentColor={stage.color}
-                    />
-                  </div>
-                  <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-                    <ChevronDown size={13} />
-                  </div>
-                </div>
-              </button>
-              {expanded && (
-                <div className="p-2.5 space-y-2" style={{ background: "var(--surface-alt)" }}>
-                  {bucket.leads.length === 0 ? (
-                    <div className="text-center py-4 text-xs" style={{ color: "var(--text-dim)" }}>Nenhum negócio nesta etapa</div>
-                  ) : (
-                    bucket.leads.map(lead => (
-                      <LeadKanbanCard
-                        key={lead.id}
-                        lead={lead}
-                        users={users}
-                        showOwnerFooter={isGroupView || isManager}
-                        isGroupView={isGroupView}
-                        onClick={onLeadClick}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
-                        stages={stages}
-                        onMoveToStage={attemptStageChange}
-                        onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
-                        onDuplicateCard={onDuplicateLead ? () => onDuplicateLead(lead.id) : undefined}
-                        completeness={getLeadCompleteness(lead)}
-                        unread={getLeadUnread(lead)}
-                        pipelineTransitions={pipelineTransitions}
-                      />
-                    ))
-                  )}
-                  {onAddLead && !stage.terminal && (
-                    <button
-                      onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: isGroupView ? firstValidCompany : activeCompany })}
-                      className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                      style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
-                    >
-                      <Plus size={12} />
-                      Nova oportunidade
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {/* Mobile kanban: vertical collapsible stages — via RHMobileKanbanAccordion
+          (shared/rh-pipeline), consolidação de 08/08/2026. Este arquivo é a
+          "cópia original" citada no topo do componente compartilhado — a
+          instância aqui só passa a chave da etapa como `stage.id` em vez de
+          `stage.stageKey`, o componente aceita as duas (ver comentário lá). */}
+      <RHMobileKanbanAccordion
+        stages={stages}
+        itemsByStage={Object.fromEntries(stages.map(s => [s.id, (byStage[s.id]?.leads) || []]))}
+        getSortCriteria={getSortCriteria}
+        setSortCriteria={setSortCriteria}
+        sortOptions={["recent", "deadline", "value", "alpha"]}
+        initialExpandedKey="prospeccao"
+        addLabel="Nova oportunidade"
+        emptyLabel="Nenhum negócio nesta etapa"
+        onAdd={onAddLead ? (stageKey) => {
+          const stage = stages.find(s => s.id === stageKey);
+          if (stage) setCreateModalStage({ stageId: stage.id, stage, companyId: isGroupView ? firstValidCompany : activeCompany });
+        } : undefined}
+        renderStageBadge={(stage) => {
+          const total = byStage[stage.id]?.total || 0;
+          return total > 0 ? <span className="text-xs font-semibold" style={{ color: stageTextColorStrong(stage.color) }}>{formatK(total)}</span> : null;
+        }}
+        renderCard={(lead) => (
+          <LeadKanbanCard
+            key={lead.id}
+            lead={lead}
+            users={users}
+            showOwnerFooter={isGroupView || isManager}
+            isGroupView={isGroupView}
+            onClick={onLeadClick}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            stages={stages}
+            onMoveToStage={attemptStageChange}
+            onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
+            onDuplicateCard={onDuplicateLead ? () => onDuplicateLead(lead.id) : undefined}
+            completeness={getLeadCompleteness(lead)}
+            unread={getLeadUnread(lead)}
+            pipelineTransitions={pipelineTransitions}
+          />
+        )}
+      />
 
       {/* Desktop kanban: horizontal scroll */}
       <div className="hidden lg:block">
