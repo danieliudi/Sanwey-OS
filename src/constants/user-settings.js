@@ -19,6 +19,10 @@ export const EXECUTIVE_WIDGETS = [
   { id: "tab_historico",     label: "Aba Histórico",      dept: "comercial" },
   { id: "tab_comex",         label: "Aba Comex",          dept: "comex" },
   { id: "tab_posvenda",      label: "Aba Pós-venda",      dept: "comercial" },
+  // ESG & Carbono segue o mesmo público de quem já vê a tela (isManager ||
+  // isDiretoria) — dept "comercial" pra herdar o mesmo filtro de
+  // Configurações que os outros widgets dessa mesma população já usam.
+  { id: "tab_esg",           label: "Aba ESG & Carbono",  dept: "comercial" },
 ];
 
 // Abas da tela de Notificações (auditoria de 05/08/2026): eram 9 blocos

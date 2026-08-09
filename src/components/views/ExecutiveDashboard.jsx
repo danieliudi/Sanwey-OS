@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight, Ship, Handshake } from "lucide-react";
+import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight, Ship, Handshake, Leaf } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { ROUTES } from "../../constants/routes";
 import { useAI } from "../../hooks/use-ai";
@@ -18,12 +18,14 @@ import { useComexImportOperations } from "../../hooks/use-comex-import-operation
 import { useComexExportOperations } from "../../hooks/use-comex-export-operations";
 import { usePosvenda } from "../../hooks/use-posvenda";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
+import { useEsgEmissionRecords, useEsgEmissionFactors, useEsgReports } from "../../hooks/use-esg-carbon";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
 import { EmptyState } from "../ui/EmptyState";
 import { formatK } from "../../utils/currency";
+import { formatDateBR } from "../../utils/date";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
 import { AnalyticsTab } from "./AnalyticsTab";
@@ -64,7 +66,12 @@ const AREA_TABS = [
   { id: "rh",        label: "RH" },
   { id: "comex",     label: "Comex" },
   { id: "posvenda",  label: "Pós-venda" },
+  { id: "esg",       label: "ESG & Carbono" },
 ];
+
+function fmtT(kg) {
+  return `${((kg || 0) / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t`;
+}
 
 function filterByPeriod(leads, period) {
   if (period === "all") return leads;
@@ -103,7 +110,7 @@ function countOpen(items, stages, stageKey = "stage") {
 export function ExecutiveDashboard({
   leads, crossReferrals, pipelines, users, currentUser, activeCompany, visibleWidgets,
   isAdmin = false, isComercialManager = false, isMarketingManager = false, isRHManager = false,
-  isComexManager = false,
+  isComexManager = false, isEsgViewer = false,
 }) {
   const navigate = useNavigate();
   const [period, setPeriod] = useState("all");
@@ -120,7 +127,11 @@ export function ExecutiveDashboard({
   // Pós-venda navega junto de Comercial na plataforma toda (mesmo escopo de
   // gerente) — não é um departamento à parte com gerente próprio.
   const showPosVendaArea  = (isAdmin || isComercialManager) && widgetVisible("tab_posvenda");
-  const anyAreaVisible = showComercialArea || showMarketingArea || showRHArea || showComexArea || showPosVendaArea;
+  // ESG & Carbono: gate igual ao da própria tela (isManager || isDiretoria,
+  // passado de App.jsx como isEsgViewer) — não isAdmin isolado, porque admin
+  // já cai em isComercialManager/isEsgViewer via essa mesma prop no chamador.
+  const showEsgArea = isEsgViewer && widgetVisible("tab_esg");
+  const anyAreaVisible = showComercialArea || showMarketingArea || showRHArea || showComexArea || showPosVendaArea || showEsgArea;
 
   const visibleAreaTabs = useMemo(() => AREA_TABS.filter(t => {
     if (t.id === "overview")  return true;
@@ -129,8 +140,9 @@ export function ExecutiveDashboard({
     if (t.id === "rh")        return showRHArea;
     if (t.id === "comex")     return showComexArea;
     if (t.id === "posvenda")  return showPosVendaArea;
+    if (t.id === "esg")       return showEsgArea;
     return false;
-  }), [showComercialArea, showMarketingArea, showRHArea, showComexArea, showPosVendaArea]);
+  }), [showComercialArea, showMarketingArea, showRHArea, showComexArea, showPosVendaArea, showEsgArea]);
 
   const visibleComercialSubtabs = useMemo(
     () => COMERCIAL_SUBTABS.filter(t => t.id === "overview" || widgetVisible(`tab_${t.id}`)),
@@ -255,6 +267,9 @@ export function ExecutiveDashboard({
   const { operations: comexExports, loading: loadingComexExports } = useComexExportOperations({});
   const { cases: posvendaCases, loading: loadingPosvenda } = usePosvenda({});
   const { registros: viagens, loading: loadingViagens } = useCRMViagens({});
+  const { records: esgRecords, loading: loadingEsgRecords } = useEsgEmissionRecords({});
+  const { factors: esgFactors, loading: loadingEsgFactors } = useEsgEmissionFactors();
+  const { reports: esgReports, loading: loadingEsgReports } = useEsgReports({});
 
   const { stages: deliverableStages } = useRHPipelineStages("marketing_deliverables");
   const { stages: taskStages }        = useRHPipelineStages("marketing_tasks");
@@ -293,6 +308,12 @@ export function ExecutiveDashboard({
   // vendedor/gerente, não um departamento à parte)
   const viagensEmAndamento = loadingViagens ? dash : viagens.filter(v => v.status !== "realizado" && v.status !== "cancelado").length;
 
+  // ESG & Carbono
+  const esgTotalKg = loadingEsgRecords ? 0 : esgRecords.reduce((sum, r) => sum + (r.co2eCalculated || 0), 0);
+  const esgTotalLabel = loadingEsgRecords ? dash : fmtT(esgTotalKg);
+  const esgFatoresVigentes = loadingEsgFactors ? dash : esgFactors.filter(f => !f.validTo).length;
+  const esgUltimoRelatorio = loadingEsgReports ? dash : (esgReports[0] ? formatDateBR(esgReports[0].generatedAt) : "—");
+
   const healthCards = [
     showComercialArea && {
       id: "comercial", label: "Comercial", color: "var(--text)",
@@ -313,6 +334,10 @@ export function ExecutiveDashboard({
     showPosVendaArea && {
       id: "posvenda", label: "Pós-venda", color: "#DB2777",
       value: posvendaAbertos, sub: "casos abertos",
+    },
+    showEsgArea && {
+      id: "esg", label: "ESG & Carbono", color: "#16A34A",
+      value: esgTotalLabel, sub: "CO2e no período",
     },
   ].filter(Boolean);
 
@@ -387,7 +412,7 @@ export function ExecutiveDashboard({
           <div className="print:hidden">
             <div
               className="grid gap-2.5"
-              style={{ gridTemplateColumns: `repeat(${Math.min(healthCards.length, 5) || 1}, 1fr)` }}
+              style={{ gridTemplateColumns: `repeat(${Math.min(healthCards.length, 6) || 1}, 1fr)` }}
             >
               {healthCards.map(h => (
                 <button
@@ -544,6 +569,21 @@ export function ExecutiveDashboard({
               stats={[
                 { v: posvendaAbertos, l: "Casos abertos" },
                 { v: posvendaValor,   l: "Valor em carteira" },
+              ]}
+            />
+          )}
+
+          {areaTab === "esg" && showEsgArea && (
+            <AreaDetail
+              title="ESG & Carbono"
+              color="#16A34A"
+              icon={Leaf}
+              ctaLabel="Ver ESG & Carbono"
+              onNavigate={() => navigate(ROUTES["esg-carbono"])}
+              stats={[
+                { v: esgTotalLabel,       l: "CO2e no período" },
+                { v: esgFatoresVigentes,  l: "Fatores vigentes" },
+                { v: esgUltimoRelatorio,  l: "Último relatório" },
               ]}
             />
           )}

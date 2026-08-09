@@ -1943,7 +1943,7 @@ export default function App() {
           } />
           <Route path={ROUTES.executive} element={
             canSeeExecutive
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager || isDiretoria} isRHManager={isRHManager || isDiretoria} isComercialManager={isManager || isDiretoria} isComexManager={isComex || isDiretoria} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager || isDiretoria} isRHManager={isRHManager || isDiretoria} isComercialManager={isManager || isDiretoria} isComexManager={isComex || isDiretoria} isEsgViewer={isManager || isDiretoria} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["esg-carbono"]} element={

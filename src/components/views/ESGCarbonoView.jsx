@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Leaf, Plus, Download, Sparkles } from "lucide-react";
+import { Leaf, Plus, Download, Sparkles, FileText } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useEsgEmissionFactors, useEsgEmissionRecords, useEsgReports } from "../../hooks/use-esg-carbon";
@@ -36,6 +36,120 @@ function ScopePill({ scope }) {
     >
       {SCOPE_LABEL[scope]}
     </span>
+  );
+}
+
+const REPORT_PERIODS = [
+  { id: "current_month", label: "Mês atual" },
+  { id: "last_month",    label: "Mês anterior" },
+  { id: "last_3_months", label: "Últimos 3 meses" },
+  { id: "custom",        label: "Personalizado" },
+];
+
+// Fase 2: período do relatório deixou de ser fixo em "início do mês →
+// hoje" -- vira uma escolha explícita, sempre em dias fechados (YYYY-MM-DD),
+// nunca hora corrente.
+function computeReportPeriod(choice, customStart, customEnd) {
+  const now = new Date();
+  const iso = d => d.toISOString().slice(0, 10);
+  if (choice === "last_month") {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { periodStart: iso(start), periodEnd: iso(end) };
+  }
+  if (choice === "last_3_months") {
+    const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    return { periodStart: iso(start), periodEnd: iso(now) };
+  }
+  if (choice === "custom") {
+    return { periodStart: customStart || iso(now), periodEnd: customEnd || iso(now) };
+  }
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  return { periodStart: iso(start), periodEnd: iso(now) };
+}
+
+// Fase 2: gráfico de tendência mensal (últimos 12 meses), empilhado por
+// escopo -- usa só os `records` já carregados, sem tabela nova. Meses sem
+// nenhum registro ainda aparecem na régua (barra vazia), pra não distorcer
+// o intervalo de 12 meses.
+function monthlyTotals(records) {
+  const now = new Date();
+  const months = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""), totals: { 1: 0, 2: 0, 3: 0 } });
+  }
+  const byKey = new Map(months.map(m => [m.key, m]));
+  for (const r of records) {
+    const key = (r.createdAt || "").slice(0, 7);
+    const bucket = byKey.get(key);
+    if (bucket) bucket.totals[r.scope] = (bucket.totals[r.scope] || 0) + (r.co2eCalculated || 0);
+  }
+  return months;
+}
+
+// Dossiê ESG exportável (Fase 3) — mesmo mecanismo de impressão do
+// ProposalPanel.jsx (Selo ESG na proposta comercial): injeta @page A4 só na
+// hora de imprimir, marca body.printing-doc (index.css já sabe esconder
+// tudo exceto .doc-print-only), window.print(). Duplicado aqui de propósito
+// -- só a 2ª ocorrência (a 1ª é ProposalPanel.jsx); regra 4 do CLAUDE.md só
+// manda extrair pra shared/ na 3ª.
+function printDossie() {
+  const style = document.createElement("style");
+  style.id = "esg-dossie-print-page-style";
+  style.textContent = "@media print { @page { size: A4 portrait; margin: 2cm; } }";
+  document.head.appendChild(style);
+  document.body.classList.add("printing-doc");
+
+  const cleanup = () => {
+    document.body.classList.remove("printing-doc");
+    style.remove();
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  window.print();
+  setTimeout(cleanup, 3000);
+}
+
+function TrendChart({ records }) {
+  const months = useMemo(() => monthlyTotals(records), [records]);
+  const maxTotal = Math.max(1, ...months.map(m => m.totals[1] + m.totals[2] + m.totals[3]));
+  const hasAny = months.some(m => m.totals[1] + m.totals[2] + m.totals[3] > 0);
+  if (!hasAny) return null;
+  return (
+    <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>CO2e por mês</h3>
+        <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--text-dim)" }}>
+          {[1, 2, 3].map(s => (
+            <span key={s} className="inline-flex items-center gap-1">
+              <span className="inline-block rounded-sm" style={{ width: 8, height: 8, background: SCOPE_COLOR[s] }} />
+              {SCOPE_LABEL[s]}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-end gap-1.5" style={{ height: 110 }}>
+        {months.map(m => {
+          const total = m.totals[1] + m.totals[2] + m.totals[3];
+          const h = Math.max(total > 0 ? 4 : 0, (total / maxTotal) * 100);
+          return (
+            <div key={m.key} className="flex-1 flex flex-col justify-end" style={{ height: "100%" }} title={`${m.label}: ${fmtT(total)}`}>
+              <div className="w-full rounded-sm overflow-hidden flex flex-col-reverse" style={{ height: `${h}%`, minHeight: total > 0 ? 3 : 0 }}>
+                <div style={{ height: `${total > 0 ? (m.totals[1] / total) * 100 : 0}%`, background: SCOPE_COLOR[1] }} />
+                <div style={{ height: `${total > 0 ? (m.totals[2] / total) * 100 : 0}%`, background: SCOPE_COLOR[2] }} />
+                <div style={{ height: `${total > 0 ? (m.totals[3] / total) * 100 : 0}%`, background: SCOPE_COLOR[3] }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex gap-1.5 mt-1.5">
+        {months.map(m => (
+          <div key={m.key} className="flex-1 text-center text-[9px]" style={{ color: "var(--text-faint)" }}>{m.label}</div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -118,12 +232,13 @@ export function ESGCarbonoView({ currentUser }) {
   }, [records, factorLabelById]);
 
   const [generating, setGenerating] = useState(false);
+  const [reportPeriodChoice, setReportPeriodChoice] = useState("current_month");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const handleGerarRelatorio = useCallback(async () => {
     setGenerating(true);
     try {
-      const now = new Date();
-      const periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-      const periodEnd = now.toISOString().slice(0, 10);
+      const { periodStart, periodEnd } = computeReportPeriod(reportPeriodChoice, customStart, customEnd);
       // O snapshot tem que refletir só o período do relatório -- `records` é
       // a lista inteira já carregada (todo o histórico da empresa
       // selecionada), não o recorte do mês. Sem esse filtro, o relatório
@@ -146,7 +261,7 @@ export function ESGCarbonoView({ currentUser }) {
     } finally {
       setGenerating(false);
     }
-  }, [generateReport, activeCompany, records, currentUser]);
+  }, [generateReport, activeCompany, records, currentUser, reportPeriodChoice, customStart, customEnd]);
 
   return (
     <div className="space-y-6">
@@ -190,16 +305,37 @@ export function ESGCarbonoView({ currentUser }) {
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button onClick={handleExportCSV} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border" style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}>
                 <Download size={13} /> Exportar CSV
               </button>
               <button onClick={handleCalcularEscopo3} disabled={calculating} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border" style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", opacity: calculating ? 0.6 : 1 }}>
                 <Sparkles size={13} /> {calculating ? "Calculando…" : "Calcular Escopo 3 (Compras)"}
               </button>
+              <select
+                value={reportPeriodChoice}
+                onChange={e => setReportPeriodChoice(e.target.value)}
+                className="text-xs rounded-lg border px-2.5 py-1.5 outline-none"
+                style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                title="Período do relatório"
+              >
+                {REPORT_PERIODS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+              {reportPeriodChoice === "custom" && (
+                <>
+                  <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }} />
+                  <span className="text-xs" style={{ color: "var(--text-faint)" }}>até</span>
+                  <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }} />
+                </>
+              )}
               <Button size="sm" onClick={handleGerarRelatorio} disabled={generating || records.length === 0}>
                 {generating ? "Gerando…" : "Gerar relatório (snapshot)"}
               </Button>
+              {reports.length > 0 && (
+                <button onClick={printDossie} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border" style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}>
+                  <FileText size={13} /> Dossiê ESG (PDF)
+                </button>
+              )}
             </div>
           </div>
           {calcError && (
@@ -212,6 +348,8 @@ export function ESGCarbonoView({ currentUser }) {
             <StatCard icon={Leaf} value={fmtT(totalsByScope[2])} label="Escopo 2" valueColor={SCOPE_COLOR[2]} />
             <StatCard icon={Leaf} value={fmtT(totalsByScope[3])} label="Escopo 3" valueColor={SCOPE_COLOR[3]} />
           </div>
+
+          <TrendChart records={records} />
 
           {reports.length > 0 && (
             <div className="text-xs" style={{ color: "var(--text-dim)" }}>
@@ -268,6 +406,66 @@ export function ESGCarbonoView({ currentUser }) {
         <FatoresTab factors={factors} loading={loadingFactors} createFactor={createFactor} currentUser={currentUser} />
       )}
       </>}
+
+      {/* Dossiê ESG (Fase 3) — só o relatório mais recente já gerado (snapshot
+          congelado), nunca os `records` ao vivo: é o mesmo princípio de
+          auditoria da Fase 1 -- o dossiê tem que refletir exatamente o que
+          "Gerar relatório" produziu, não um número que muda se alguém lançar
+          um novo registro depois de gerado. Conteúdo só visível na impressão
+          (.doc-print-only em index.css, mesmo mecanismo do Selo ESG em
+          ProposalPanel.jsx). */}
+      {reports.length > 0 && (
+        <div className="doc-print-only">
+          <div style={{ fontFamily: "Georgia, serif", color: "#201a1a", padding: "24px 8px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "3px solid #16A34A", paddingBottom: 12, marginBottom: 24 }}>
+              <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.01em" }}>
+                {activeCompany !== "all" ? (COMPANIES[activeCompany]?.name || activeCompany) : "Grupo Sanwey"}
+              </div>
+              <div style={{ fontSize: 12, color: "#6B7280" }}>{formatDateBR(reports[0].generatedAt)}</div>
+            </div>
+            <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>Dossiê ESG &amp; Carbono</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>
+              Inventário de emissões de GEE — {formatDateBR(reports[0].periodStart)} a {formatDateBR(reports[0].periodEnd)}
+            </div>
+            <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 20 }}>
+              {reports[0].recordIds.length} registro{reports[0].recordIds.length !== 1 ? "s" : ""} · fator de emissão travado por registro na data do lançamento
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginBottom: 24 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", padding: "6px 0", borderBottom: "1px solid #E5E7EB", color: "#6B7280", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.03em" }}>Escopo</th>
+                  <th style={{ textAlign: "right", padding: "6px 0", borderBottom: "1px solid #E5E7EB", color: "#6B7280", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.03em" }}>CO2e</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3].map(s => (
+                  <tr key={s}>
+                    <td style={{ padding: "7px 0", borderBottom: "1px solid #F3F4F6" }}>{SCOPE_LABEL[s]}</td>
+                    <td style={{ padding: "7px 0", borderBottom: "1px solid #F3F4F6", textAlign: "right", fontWeight: 600 }}>{fmtT(reports[0].totalsByScope?.[s] || 0)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td style={{ padding: "9px 0", fontWeight: 700 }}>Total</td>
+                  <td style={{ padding: "9px 0", textAlign: "right", fontWeight: 700 }}>
+                    {fmtT((reports[0].totalsByScope?.[1] || 0) + (reports[0].totalsByScope?.[2] || 0) + (reports[0].totalsByScope?.[3] || 0))}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#374151" }}>
+              Metodologia: cada registro de emissão trava o fator vigente na data do lançamento — atualizações
+              posteriores no fator não alteram registros já gravados. Fatores utilizados neste dossiê:
+              {" "}{[...new Set(factors.filter(f => reports[0].recordIds?.length && factorLabelById.get(f.id)).map(f => factorLabelById.get(f.id)))].join(", ") || "—"}.
+            </div>
+
+            <div style={{ marginTop: 40, paddingTop: 12, borderTop: "1px solid #E5E7EB", fontSize: 11, color: "#9CA3AF" }}>
+              {activeCompany !== "all" ? (COMPANIES[activeCompany]?.name || activeCompany) : "Grupo Sanwey"} · Dossiê gerado a partir do relatório de {formatDateBR(reports[0].generatedAt)}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,14 @@
 
 export const CHANGELOG = [
   {
+    version: "4.33.0",
+    items: [
+      { kind: "novo", text: "ESG & Carbono ganhou uma aba própria no Painel Executivo (Total de CO2e, fatores vigentes, último relatório).", roles: ["admin", "gerente", "diretoria"] },
+      { kind: "novo", text: "ESG & Carbono: gráfico de tendência mensal por escopo, período do relatório agora escolhível (mês atual, mês anterior, últimos 3 meses ou datas personalizadas), e um novo botão \"Dossiê ESG (PDF)\" exporta o relatório mais recente formatado pra imprimir/anexar.", roles: ["admin", "gerente", "diretoria"] },
+      { kind: "novo", text: "Proposta comercial (Funil de Vendas): quando a empresa vendedora já tem um relatório ESG gerado, um \"Selo ESG Sanwey\" com o total de CO2e apurado entra automaticamente na proposta, como diferencial pra clientes B2B." },
+    ],
+  },
+  {
     version: "4.32.0",
     items: [
       { kind: "correcao", text: "Datas em Férias, Feedback, Onboarding, Recrutamento, Visão Geral de RH, Bem-Estar, Comunicação, Cargos e Treinamentos apareciam um dia antes do real — corrigido." },

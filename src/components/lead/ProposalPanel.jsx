@@ -1,12 +1,22 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, Loader2, AlertCircle, Download, RotateCcw } from "lucide-react";
+import { Bot, Loader2, AlertCircle, Download, RotateCcw, Leaf } from "lucide-react";
 import { useAI } from "../../hooks/use-ai";
 import { proposalPrompt } from "../../constants/ai-prompts";
 import { COMPANIES } from "../../constants/companies";
+import { useEsgReports } from "../../hooks/use-esg-carbon";
+import { formatDateBR } from "../../utils/date";
 
 const RED = "#b5000b";
 const BORDER = "#E5E7EB";
 const BG = "#F1EDE8";
+
+// Mesma convenção de arredondamento/formatação de toneladas do módulo
+// ESG & Carbono (ver kgToT/fmtT em ESGCarbonoView.jsx) — não reimplementar
+// diferente aqui, só com o sufixo "CO2e" pro contexto de proposta comercial.
+function fmtTonnesCO2e(kg) {
+  const t = (kg || 0) / 1000;
+  return `${t.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t CO2e`;
+}
 
 // Injeta um <style> temporário só com a orientação de página (retrato) —
 // @page não pode ser condicionado por seletor de classe, então isso não dá
@@ -59,6 +69,17 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
 
   const company = COMPANIES[lead.companyId] || COMPANIES.all;
   const today = new Date().toLocaleDateString("pt-BR");
+
+  // Selo ESG Sanwey — perfil de emissões da EMPRESA VENDEDORA (lead.companyId),
+  // não do negócio/lead em si (não há dado de carbono por produto/negócio;
+  // decisão do spec aprovado). Relatório mais recente da própria empresa;
+  // sem relatório (ex.: módulo ESG ainda não usado por essa frente, ou
+  // Supabase não configurado neste ambiente) o selo simplesmente não aparece.
+  const { reports: esgReports } = useEsgReports({ companyId: lead.companyId });
+  const latestEsgReport = esgReports.length > 0 ? esgReports[0] : null;
+  const esgTotalKg = latestEsgReport
+    ? (latestEsgReport.totalsByScope?.[1] || 0) + (latestEsgReport.totalsByScope?.[2] || 0) + (latestEsgReport.totalsByScope?.[3] || 0)
+    : 0;
 
   return (
     <div className="space-y-3">
@@ -135,6 +156,19 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
             <span>{error}</span>
           </div>
         )}
+
+        {latestEsgReport && (
+          <div
+            className="flex items-start gap-2.5 text-xs px-3 py-2.5 rounded-lg mt-3"
+            style={{ background: "var(--surface)", border: `1px solid ${company.primary}`, color: "var(--text)" }}
+          >
+            <Leaf size={14} style={{ color: company.primary, flexShrink: 0, marginTop: 1 }} />
+            <span>
+              <strong>Selo ESG Sanwey</strong> será incluído na proposta — {fmtTonnesCO2e(esgTotalKg)} apurados
+              ({formatDateBR(latestEsgReport.periodStart)}–{formatDateBR(latestEsgReport.periodEnd)}), Escopos 1+2+3.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Conteúdo só visível na impressão (ver .doc-print-only em index.css) */}
@@ -147,6 +181,35 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
           <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>Proposta comercial para</div>
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>{lead.company}</div>
           <div style={{ fontSize: 13, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{draft}</div>
+
+          {latestEsgReport && (
+            <div
+              style={{
+                marginTop: 32,
+                padding: "16px 18px",
+                border: `1.5px solid ${company.primary}`,
+                borderRadius: 6,
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, color: company.primary, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap", lineHeight: 1.3 }}>
+                Selo ESG
+                <br />
+                Sanwey
+              </div>
+              <div style={{ flex: 1, borderLeft: `1px solid ${BORDER}`, paddingLeft: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>
+                  {fmtTonnesCO2e(esgTotalKg)} apurados · {formatDateBR(latestEsgReport.periodStart)}–{formatDateBR(latestEsgReport.periodEnd)}
+                </div>
+                <div style={{ fontSize: 11.5, color: "#6B7280", lineHeight: 1.5 }}>
+                  Fornecedor com inventário de GEE auditável e rastreável, Escopos 1+2+3.
+                </div>
+              </div>
+            </div>
+          )}
+
           <div style={{ marginTop: 40, paddingTop: 12, borderTop: "1px solid #E5E7EB", fontSize: 11, color: "#9CA3AF" }}>
             {company.name} · Proposta gerada em {today}
           </div>
