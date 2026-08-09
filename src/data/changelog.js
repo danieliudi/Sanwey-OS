@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.33.1",
+    items: [
+      { kind: "correcao", text: "No modo escuro, o vermelho de erro/urgência (card \"Urgentes agora\", botões de excluir/recusar) estava clareado demais e lia como rosa-salmão. Trocado por um vermelho mais intenso — o claro não muda." },
+    ],
+  },
+  {
     version: "4.33.0",
     items: [
       { kind: "novo", text: "ESG & Carbono ganhou uma aba própria no Painel Executivo (Total de CO2e, fatores vigentes, último relatório).", roles: ["admin", "gerente", "diretoria"] },

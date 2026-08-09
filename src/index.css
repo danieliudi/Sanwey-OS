@@ -120,15 +120,25 @@
   /* Semantic colors — brighter for dark backgrounds */
   --success:       #4ADE80;
   --warning:       #FBBF24;
-  --danger:        #F87171;
+  /* Vermelho intenso — decidido com o Daniel 09/08/2026, depois de comparar
+     3 alternativas (vermelho intenso / vinho profundo / terracota) contra o
+     salmão antigo (#F87171). O salmão era claro de propósito pra funcionar
+     como TEXTO sobre fundo escuro — usado como preenchimento sólido cheio
+     (ex.: StatCard "Urgentes agora", botões de excluir) ele lia como
+     pastel/sem urgência. #C8203B resolve o preenchimento; por ser mais
+     escuro que o salmão, o --on-danger abaixo teve que inverter de volta
+     pra branco (mesmo racional do --on-accent) — sem isso, botão
+     "Excluir"/"Recusar" (background: var(--danger), color: var(--on-danger),
+     ~30 arquivos) ficaria com texto escuro sobre fundo escuro, ilegível. */
+  --danger:        #C8203B;
   --on-success:    #14251C;
-  --on-danger:     #2B1214;
+  --on-danger:     #FFFFFF;
   --amber:         #FBBF24;
   --amber-bg:      rgba(251, 191, 36, 0.12);
 
   /* Status backgrounds — dark translucent tints */
   --success-bg:    rgba(74, 222, 128, 0.12);
-  --danger-bg:     rgba(248, 113, 113, 0.12);
+  --danger-bg:     rgba(200, 32, 59, 0.16);
   --warning-bg:    rgba(251, 191, 36, 0.12);
 
   /* Canal de marketing — mesma técnica dos status acima: hue mais claro +
