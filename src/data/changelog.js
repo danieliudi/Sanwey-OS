@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.33.2",
+    items: [
+      { kind: "correcao", text: "Notificações que apontavam para um registro já excluído (ex.: solicitação de compra ou vaga removida), ou que sobraram depois de uma mudança de cargo, não desapareciam mais sozinhas — corrigido, e agora são limpas automaticamente." },
+    ],
+  },
+  {
     version: "4.33.1",
     items: [
       { kind: "correcao", text: "No modo escuro, o vermelho de erro/urgência (card \"Urgentes agora\", botões de excluir/recusar) estava clareado demais e lia como rosa-salmão. Trocado por um vermelho mais intenso — o claro não muda." },
