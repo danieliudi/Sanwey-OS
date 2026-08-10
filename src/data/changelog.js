@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.37.1",
+    items: [
+      { kind: "correcao", text: "Ajuda & Tutoriais: passo a passo do Comercial (Funil de Vendas, Pós-venda, Clientes, Cross-sell, Explorador, Sinais, Viagens & Despesas) reescrito com muito mais detalhe e revisado tela por tela contra o comportamento real do sistema — inclusive uma instrução de prestação de contas que estava invertida (dizia pra desmarcar despesas, na verdade é preciso marcar as que quer enviar).", roles: ["consultor", "vendedor", "gerente"] },
+    ],
+  },
+  {
     version: "4.37.0",
     items: [
       { kind: "novo", text: "Chat: gestores e admin agora podem criar canais por grupo — escolha departamento(s) e/ou empresa(s) do Grupo e o canal já nasce com todo mundo que bate com o filtro, e continua se ajustando sozinho conforme pessoas mudam de departamento/empresa ou são contratadas. Também dá pra criar um canal \"somente avisos\" (só quem administra posta, o resto só lê).", roles: ["gerente", "gerente_marketing", "gerente_rh", "diretoria", "admin"] },
