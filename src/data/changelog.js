@@ -24,6 +24,17 @@
 
 export const CHANGELOG = [
   {
+    version: "4.36.0",
+    items: [
+      { kind: "novo", text: "Tour guiado pela plataforma inteira: passa por cada item do menu que você usa, um de cada vez, explicando pra que serve. Disponível pra todo mundo (não só quem está entrando agora) — dá pra pular a qualquer momento, e não volta a aparecer depois de pulado ou concluído." },
+      { kind: "novo", text: "Ajuda & Tutoriais ganhou guias novos pra quase 30 telas que ainda não tinham nenhum — Pendências, Pós-venda, Clientes, Cross-sell, Explorador, Comex, Onboarding, Treinamentos, Avaliação de Desempenho, ESG & Carbono, Configurações, entre outras." },
+      { kind: "correcao", text: "Vários guias em Ajuda & Tutoriais estavam desatualizados (nome antigo de tela, passo descrevendo algo que não existe mais) — revisados e corrigidos." },
+      { kind: "novo", text: "Admin agora pode liberar ou bloquear o Chat por usuário, na tela de Usuários.", roles: ["admin"] },
+      { kind: "correcao", text: "4 telas de RH (Cargos & Salários, Comunicação, Bem-estar, Relatórios) apareciam no menu pra qualquer pessoa do RH, mas só abriam de fato pra gerente — agora o menu só mostra pra quem pode abrir." },
+      { kind: "ajuste", text: "Página \"Meu RH\": tiradas as abas de Onboarding/Treinamentos/Avaliação, que duplicavam os mesmos itens já soltos no menu lateral." },
+    ],
+  },
+  {
     version: "4.35.0",
     items: [
       { kind: "novo", text: "Ajuda & Tutoriais ganhou guias rápidos de Viagens & Despesas: planejar uma visita, lançar despesa e enviar prestação de contas em lote (gestor tem um guia próprio de aprovação)." },

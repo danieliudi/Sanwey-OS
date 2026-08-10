@@ -28,20 +28,46 @@ export function useOnboardingTour(currentUser, { skip = false } = {}) {
   const [stepIndex, setStepIndex] = useState(0);
   const [steps, setSteps] = useState([]);
 
+  // Fase 1 — só decide se é elegível e liga `active`. Isso já propaga
+  // `forceExpanded=true` pra Sidebar (App.jsx), mas o DOM só reflete grupo
+  // recolhido virando visível depois de um ciclo de render+commit do React
+  // — não dá pra consultar o DOM na mesma passada que liga `active`.
   useEffect(() => {
     if (skip || !userId || alreadySeen) { setActive(false); return undefined; }
     // Pequeno atraso: a sidebar (e os data-tour dela) só existe depois do
-    // primeiro render pós-login — sem isso o querySelector abaixo rodaria
-    // cedo demais e acharia a lista vazia.
-    const t = setTimeout(() => {
-      const present = ONBOARDING_TOUR_STEPS.filter(s => document.querySelector(`[data-tour="sidebar-nav-${s.id}"]`));
-      if (present.length === 0) return;
-      setSteps(present);
-      setStepIndex(0);
-      setActive(true);
-    }, 400);
+    // primeiro render pós-login — sem isso a Fase 2 rodaria cedo demais e
+    // acharia a lista vazia.
+    const t = setTimeout(() => setActive(true), 400);
     return () => clearTimeout(t);
   }, [skip, userId, alreadySeen]);
+
+  // Fase 2 — só DEPOIS que `active` vira true (Sidebar já teve a chance de
+  // re-renderizar com forceExpanded) calcula quais steps têm alvo real no
+  // DOM. Dois requestAnimationFrame em sequência, não um só — um único rAF
+  // pode disparar ainda dentro do mesmo ciclo de commit em alguns
+  // navegadores; dois garante que o paint já aconteceu. Achado em QA
+  // adversarial: sem isso, um grupo que o usuário tinha deixado recolhido
+  // perdia os steps inteiros, mesmo com forceExpanded ligado — o
+  // querySelector rodava contra o DOM de ANTES do grupo expandir.
+  useEffect(() => {
+    if (!active) { setSteps([]); return undefined; }
+    let disposed = false;
+    let raf2 = null;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (disposed) return;
+        const present = ONBOARDING_TOUR_STEPS.filter(s => document.querySelector(`[data-tour="sidebar-nav-${s.id}"]`));
+        if (present.length === 0) { setActive(false); return; }
+        setSteps(present);
+        setStepIndex(0);
+      });
+    });
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [active]);
 
   const finish = useCallback(() => {
     if (userId) setSeenMap(m => ({ ...m, [userId]: true }));

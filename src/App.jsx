@@ -943,7 +943,13 @@ export default function App() {
   // destacar. Inofensivo no desktop: mobileOpen só é lido quando isMobile
   // (ver Sidebar.jsx), então setar aqui não afeta a sidebar fixa de tela grande.
   useEffect(() => {
-    if (onboardingTour.active) setSidebarMobileOpen(true);
+    // Liga junto do tour, desliga junto do tour (pular ou concluir) — achado
+    // em QA adversarial: a versão anterior só abria, nunca fechava sozinha,
+    // deixando o drawer (e o scroll da página travado, ver overflow logo
+    // acima) preso aberto depois de "Pular tour" no mobile. Só reage à
+    // borda de transição de `active` (dependência única), então não briga
+    // com o usuário abrindo/fechando manualmente pelo hambúrguer fora do tour.
+    setSidebarMobileOpen(onboardingTour.active);
   }, [onboardingTour.active]);
 
   // Destino genérico de uma notificação (@menção OU gerador local via
