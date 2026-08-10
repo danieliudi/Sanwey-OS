@@ -865,6 +865,8 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
   const [mobileShowThread, setMobileShowThread] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [newChannelOpen, setNewChannelOpen] = useState(false);
+  const [fabMenuOpen, setFabMenuOpen] = useState(false);
+  const mobileFabRef = useRef(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
@@ -1243,9 +1245,11 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
           </h1>
           {/* Desktop mantém o botão de header — no mobile ele vira o FAB
               fixo mais abaixo (spec seção 3), pra não competir por espaço
-              com os chips de filtro logo abaixo. "Criar canal" só pra quem
-              já pode postar em canal somente-leitura hoje (mesmo gate de
-              chat_is_manager no banco) — mockup aprovado 10/08/2026. */}
+              com os chips de filtro logo abaixo (o FAB mobile abre um menu
+              de ações com as mesmas duas opções pra manager, ver bloco do
+              FAB). "Criar canal" só pra quem já pode postar em canal
+              somente-leitura hoje (mesmo gate de chat_is_manager no banco,
+              `isManager`/`manager` local) — mockup aprovado 10/08/2026. */}
           <div className="hidden lg:flex gap-1.5">
             <button
               type="button"
@@ -1334,20 +1338,52 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
       </aside>
 
       {!mobileShowThread && (
-        <button
-          type="button"
-          onClick={() => setNewOpen(true)}
-          title="Nova conversa"
-          aria-label="Nova conversa"
-          className="lg:hidden fixed flex items-center justify-center rounded-full active:scale-95 transition-transform"
-          style={{
-            bottom: 80, right: 20, width: 52, height: 52, zIndex: 40,
-            background: "var(--accent)", color: "var(--on-accent)",
-            border: "none", boxShadow: "var(--shadow-pop)", cursor: "pointer",
-          }}
-        >
-          <Plus size={22} />
-        </button>
+        <>
+          <button
+            ref={mobileFabRef}
+            type="button"
+            onClick={() => { if (manager) setFabMenuOpen(o => !o); else setNewOpen(true); }}
+            title={manager ? "Nova conversa ou canal" : "Nova conversa"}
+            aria-label={manager ? "Nova conversa ou canal" : "Nova conversa"}
+            className="lg:hidden fixed flex items-center justify-center rounded-full active:scale-95 transition-transform"
+            style={{
+              bottom: 80, right: 20, width: 52, height: 52, zIndex: 40,
+              background: "var(--accent)", color: "var(--on-accent)",
+              border: "none", boxShadow: "var(--shadow-pop)", cursor: "pointer",
+            }}
+          >
+            <Plus size={22} style={{ transform: fabMenuOpen ? "rotate(45deg)" : "none", transition: "transform 0.15s" }} />
+          </button>
+          {/* "Criar canal" no FAB mobile só pra manager (mesmo gate de
+              chat_is_manager/isManager do botão de header desktop) — o FAB
+              sozinho não tem espaço pra dois botões lado a lado como o
+              desktop, então vira um menu de ações reaproveitando o
+              ComposerPopover já usado pelo emoji/figurinha (mesmo padrão de
+              posicionamento por portal, não uma 2ª implementação). Corrige
+              paridade mobile/desktop: mockup aprovado 10/08/2026 previa as
+              duas opções no FAB, mas só "Nova conversa" tinha ponto de
+              entrada mobile. */}
+          {manager && (
+            <ComposerPopover anchorRef={mobileFabRef} open={fabMenuOpen} onClose={() => setFabMenuOpen(false)} width={168}>
+              <button
+                type="button"
+                onClick={() => { setFabMenuOpen(false); setNewOpen(true); }}
+                className="w-full flex items-center gap-2 rounded-md px-2 py-2.5 text-left transition-opacity"
+                style={{ background: "transparent", border: "none", color: "var(--text)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                <Plus size={14} /> Conversa
+              </button>
+              <button
+                type="button"
+                onClick={() => { setFabMenuOpen(false); setNewChannelOpen(true); }}
+                className="w-full flex items-center gap-2 rounded-md px-2 py-2.5 text-left transition-opacity"
+                style={{ background: "transparent", border: "none", color: "var(--text)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                <Hash size={13} /> Canal
+              </button>
+            </ComposerPopover>
+          )}
+        </>
       )}
 
       <section
