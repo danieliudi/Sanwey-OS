@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.37.2",
+    items: [
+      { kind: "correcao", text: "Viagens & Despesas: lançar (ou editar/apagar) uma despesa estava falhando com erro de permissão pra todo mundo — corrigido." },
+    ],
+  },
+  {
     version: "4.37.1",
     items: [
       { kind: "correcao", text: "Ajuda & Tutoriais: passo a passo do Comercial (Funil de Vendas, Pós-venda, Clientes, Cross-sell, Explorador, Sinais, Viagens & Despesas) reescrito com muito mais detalhe e revisado tela por tela contra o comportamento real do sistema — inclusive uma instrução de prestação de contas que estava invertida (dizia pra desmarcar despesas, na verdade é preciso marcar as que quer enviar).", roles: ["consultor", "vendedor", "gerente"] },
