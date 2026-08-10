@@ -7,6 +7,7 @@ import { Card, CardGrid } from "../shared/Card";
 import { Badge } from "../ui/Badge";
 import { StatCard } from "../ui/StatCard";
 import { EmptyState } from "../ui/EmptyState";
+import { Modal } from "../ui/Modal";
 
 const CHANGELOG_KIND_LABEL = { novo: "Novo", correcao: "Correção", ajuste: "Ajuste" };
 const CHANGELOG_KIND_VARIANT = { novo: "secondary", correcao: "success", ajuste: "neutral" };
@@ -30,44 +31,72 @@ const TABS = [
 
 function VideoCard({ video, onNavigate }) {
   const hasUrl = Boolean(video.url);
+  const [open, setOpen] = useState(false);
 
-  // Card (Padrão C) tem um slot de ícone 38×38, não um slot de mídia
-  // bleed-to-edge — hoje 100% dos tutoriais são guias rápidos (quickStart),
-  // não vídeos reais (nenhum `url` preenchido em src/data/tutorials.js), e
-  // esse formato cabe bem no ícone+corpo do Card. O branch com thumbnail/
-  // iframe abaixo é mantido funcionalmente idêntico, mas a miniatura vira
-  // `children` (encaixada dentro do padding do card, cantos próprios) em vez
-  // de ocupar a borda do card como no design anterior — ver observação no
-  // relatório da migração sobre esse trade-off.
+  // Card (Padrão C) tem um slot de ícone 38×38 — hoje 100% dos tutoriais são
+  // guias rápidos (quickStart), não vídeos reais (nenhum `url` preenchido em
+  // src/data/tutorials.js). Card virou só a "capa" (ícone + título + teaser
+  // de altura fixa) — o passo a passo completo mora no modal, aberto no
+  // clique. Achado do Daniel 10/08/2026: o card antigo renderizava todos os
+  // passos inline, então quem tinha 7 passos (Meu To-do) ficava bem mais
+  // alto que quem tinha 3, desalinhando a grade inteira.
   if (!hasUrl && video.quickStart) {
+    const stepCount = video.quickStart.steps.length;
     return (
-      <Card
-        icon={<span style={{ fontSize: 18 }}>{video.quickStart.icon}</span>}
-        title={video.title}
-        footer={video.description && onNavigate ? (
-          <button
-            onClick={() => onNavigate(video.description.toLowerCase().replace(/\s+/g, "-"))}
-            className="inline-flex items-center gap-1 font-semibold"
-            style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+      <>
+        <Card
+          icon={<span style={{ fontSize: 18 }}>{video.quickStart.icon}</span>}
+          title={video.title}
+          onClick={() => setOpen(true)}
+          footer={
+            <span className="inline-flex items-center gap-1 font-semibold" style={{ fontSize: 12, color: "var(--accent)" }}>
+              Ver passo a passo <ArrowRight size={11} />
+            </span>
+          }
+        >
+          <div
+            className="text-xs leading-relaxed"
+            style={{
+              color: "var(--text-dim)", minHeight: 32,
+              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+            }}
           >
-            Ir para {video.description} <ArrowRight size={11} />
-          </button>
-        ) : null}
-      >
-        <div className="space-y-1.5">
-          {video.quickStart.steps.map((step, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "var(--text)" }}>
-              <span
-                className="shrink-0 flex items-center justify-center rounded-full font-bold"
-                style={{ width: 18, height: 18, minWidth: 18, background: "color-mix(in srgb, var(--accent) 7%, transparent)", color: "var(--accent)", fontSize: 10 }}
-              >
-                {i + 1}
+            {stepCount} passo{stepCount !== 1 ? "s" : ""} — {video.description}
+          </div>
+        </Card>
+        <Modal open={open} onClose={() => setOpen(false)} title={video.title} width={520}>
+          <div className="p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <span style={{ fontSize: 20 }}>{video.quickStart.icon}</span>
+              <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-faint)", letterSpacing: "0.06em" }}>
+                {video.description}
               </span>
-              <span className="leading-relaxed">{step}</span>
             </div>
-          ))}
-        </div>
-      </Card>
+            <div className="space-y-4">
+              {video.quickStart.steps.map((step, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <span
+                    className="shrink-0 flex items-center justify-center rounded-full font-bold"
+                    style={{ width: 22, height: 22, minWidth: 22, background: "color-mix(in srgb, var(--accent) 10%, transparent)", color: "var(--accent)", fontSize: 11 }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>{step}</span>
+                </div>
+              ))}
+            </div>
+            {video.description && onNavigate && (
+              <button
+                onClick={() => { onNavigate(video.description.toLowerCase().replace(/\s+/g, "-")); setOpen(false); }}
+                className="inline-flex items-center gap-1.5 font-semibold"
+                style={{ fontSize: 13, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 22 }}
+              >
+                Ir para {video.description} <ArrowRight size={12} />
+              </button>
+            )}
+          </div>
+        </Modal>
+      </>
     );
   }
 
