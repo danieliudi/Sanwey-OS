@@ -195,13 +195,18 @@ export function useChat({ userId } = {}) {
     return data;
   }, [fetchChannels]);
 
-  const createChannel = useCallback(async ({ name, icon, description, memberIds, readOnly } = {}) => {
+  const createChannel = useCallback(async ({ name, icon, description, memberIds, readOnly, syncFilter } = {}) => {
     const { data, error: err } = await supabase.rpc("chat_create_channel", {
       p_name: name,
       p_icon: icon ?? null,
       p_description: description ?? null,
       p_member_ids: Array.isArray(memberIds) ? memberIds : [],
       p_read_only: Boolean(readOnly),
+      // syncFilter: {departments:[...], companies:[...]} — canal "por grupo",
+      // membros sincronizados ao vivo com profiles (ver migration
+      // 20260902_chat_channel_groups_sync.sql). undefined/null = canal
+      // manual, comportamento de sempre.
+      p_sync_filter: syncFilter ?? null,
     });
     if (err) throw err;
     await fetchChannels();

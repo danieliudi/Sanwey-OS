@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.37.0",
+    items: [
+      { kind: "novo", text: "Chat: gestores e admin agora podem criar canais por grupo — escolha departamento(s) e/ou empresa(s) do Grupo e o canal já nasce com todo mundo que bate com o filtro, e continua se ajustando sozinho conforme pessoas mudam de departamento/empresa ou são contratadas. Também dá pra criar um canal \"somente avisos\" (só quem administra posta, o resto só lê).", roles: ["gerente", "gerente_marketing", "gerente_rh", "diretoria", "admin"] },
+      { kind: "ajuste", text: "Ajuda & Tutoriais: os cards de passo a passo tinham tamanhos bem diferentes entre si — agora todos têm o mesmo tamanho, e clicar abre um modal com o passo a passo completo." },
+    ],
+  },
+  {
     version: "4.36.0",
     items: [
       { kind: "novo", text: "Tour guiado pela plataforma inteira: passa por cada item do menu que você usa, um de cada vez, explicando pra que serve. Disponível pra todo mundo (não só quem está entrando agora) — dá pra pular a qualquer momento, e não volta a aparecer depois de pulado ou concluído." },

@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Archive, ArchiveRestore, ArrowLeft, File, FileImage, FileSpreadsheet, FileText,
+  Archive, ArchiveRestore, ArrowLeft, Check, File, FileImage, FileSpreadsheet, FileText,
   Hash, Image, Lock, Mic, MessageSquare, Pause, Paperclip, Play, Plus, Search,
   Send, Smile, Users, X,
 } from "lucide-react";
@@ -15,6 +15,8 @@ import { EmptyState } from "../ui/EmptyState";
 import { Combobox } from "../shared/Combobox";
 import { CHAT_EMOJI_CATEGORIES } from "../../constants/chat-emojis";
 import { findBannedWord } from "../../utils/language-filter";
+import { RH_DEPARTMENTS } from "../../constants/rh-config";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 
 const STICKERS_BUCKET = "chat-stickers";
 
@@ -611,16 +613,258 @@ function NewConversationModal({ open, onClose, candidates, onPick }) {
   );
 }
 
+const CHANNEL_ICON_PRESETS = ["💬", "📢", "📣", "💼", "🎉", "🛠️"];
+
+// Mockup "Chat: grupos e canais de aviso", aprovado 10/08/2026 — dois modos
+// de membro: "Pessoa por pessoa" (igual ao NewConversationModal, reaproveita
+// `dmCandidates` — mesma trava de visibilidade que já rege quem pode
+// conversar no privado) e "Por grupo" (filtro por departamento/empresa,
+// sincronizado ao vivo com profiles via trigger no banco — ver migration
+// 20260902_chat_channel_groups_sync.sql). Os dois modos não são mutuamente
+// exclusivos no banco (RPC aceita os dois ao mesmo tempo), mas a UI só
+// mostra um por vez pra não confundir — trocar de aba não perde a seleção
+// já feita no outro modo.
+function CreateChannelModal({ open, onClose, candidates, onCreate }) {
+  const [name, setName] = useState("");
+  const [icon, setIcon] = useState(CHANNEL_ICON_PRESETS[0]);
+  const [description, setDescription] = useState("");
+  const [readOnly, setReadOnly] = useState(false);
+  const [memberMode, setMemberMode] = useState("pessoas"); // "pessoas" | "grupo"
+  const [query, setQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [matchCount, setMatchCount] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(""); setIcon(CHANNEL_ICON_PRESETS[0]); setDescription(""); setReadOnly(false);
+    setMemberMode("pessoas"); setQuery(""); setSelectedIds([]);
+    setDepartments([]); setCompanies([]); setMatchCount(null); setSaving(false); setError(null);
+  }, [open]);
+
+  // Preview "N pessoas correspondem" — só busca quando há pelo menos um
+  // filtro marcado (departamento vazio + empresa vazia bateria com todo
+  // mundo, e mostrar isso sem a pessoa ter escolhido nada ainda confunde
+  // mais do que ajuda).
+  useEffect(() => {
+    if (memberMode !== "grupo" || (departments.length === 0 && companies.length === 0)) {
+      setMatchCount(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const { data, error: err } = await supabase.rpc("chat_count_profiles_matching_filter", {
+        p_filter: { departments, companies },
+      });
+      if (!cancelled && !err) setMatchCount(data);
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [memberMode, departments, companies]);
+
+  const filteredCandidates = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return candidates;
+    return candidates.filter(c => (c.name || "").toLowerCase().includes(q));
+  }, [candidates, query]);
+
+  const toggleId = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleDept = (d) => setDepartments(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
+  const toggleCompany = (c) => setCompanies(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+
+  const canSave = name.trim().length > 0 && !saving;
+
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onCreate({
+        name: name.trim(),
+        icon,
+        description: description.trim() || null,
+        readOnly,
+        memberIds: memberMode === "pessoas" ? selectedIds : [],
+        syncFilter: memberMode === "grupo" && (departments.length > 0 || companies.length > 0)
+          ? { departments, companies }
+          : null,
+      });
+      onClose();
+    } catch (e) {
+      setError(e?.message || "Não foi possível criar o canal.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const segStyle = (active) => ({
+    flex: 1, textAlign: "center", padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+    background: active ? "var(--accent)" : "var(--surface)", color: active ? "var(--on-accent)" : "var(--text-dim)",
+    border: "none",
+  });
+  const chipStyle = (active) => ({
+    fontSize: 11.5, fontWeight: 600, padding: "6px 10px", borderRadius: 999, cursor: "pointer",
+    border: `1.5px solid ${active ? "var(--accent)" : "var(--border-strong)"}`,
+    background: active ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "var(--surface)",
+    color: active ? "var(--accent)" : "var(--text-dim)",
+  });
+
+  return (
+    <Modal open={open} onClose={onClose} title="Criar canal" width={460}>
+      <div className="px-6 py-4" style={{ maxHeight: "70vh", overflowY: "auto" }}>
+        <div className="flex items-center gap-2 mb-3">
+          {CHANNEL_ICON_PRESETS.map(ic => (
+            <button
+              key={ic}
+              type="button"
+              onClick={() => setIcon(ic)}
+              style={{
+                width: 32, height: 32, borderRadius: 8, fontSize: 15, cursor: "pointer",
+                border: `1.5px solid ${icon === ic ? "var(--accent)" : "var(--border)"}`,
+                background: icon === ic ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "var(--surface)",
+              }}
+            >
+              {ic}
+            </button>
+          ))}
+        </div>
+        <input
+          autoFocus
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Nome do canal"
+          className="w-full py-2 px-3 rounded-md border outline-none mb-2"
+          style={{ fontSize: 13, borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+        />
+        <input
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Descrição (opcional)"
+          className="w-full py-2 px-3 rounded-md border outline-none mb-4"
+          style={{ fontSize: 13, borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+        />
+
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 6 }}>
+          Tipo de canal
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setReadOnly(false)}
+            className="text-left rounded-lg p-2.5"
+            style={{ border: `1.5px solid ${!readOnly ? "var(--accent)" : "var(--border)"}`, background: !readOnly ? "color-mix(in srgb, var(--accent) 7%, transparent)" : "var(--surface)", cursor: "pointer" }}
+          >
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>💬 Aberto</div>
+            <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Qualquer membro posta</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setReadOnly(true)}
+            className="text-left rounded-lg p-2.5"
+            style={{ border: `1.5px solid ${readOnly ? "var(--accent)" : "var(--border)"}`, background: readOnly ? "color-mix(in srgb, var(--accent) 7%, transparent)" : "var(--surface)", cursor: "pointer" }}
+          >
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>📢 Somente avisos</div>
+            <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Só gestor/admin posta, resto só lê</div>
+          </button>
+        </div>
+
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 6 }}>
+          Membros
+        </div>
+        <div className="flex rounded-md overflow-hidden border mb-3" style={{ borderColor: "var(--border-strong)" }}>
+          <button type="button" style={segStyle(memberMode === "pessoas")} onClick={() => setMemberMode("pessoas")}>Pessoa por pessoa</button>
+          <button type="button" style={segStyle(memberMode === "grupo")} onClick={() => setMemberMode("grupo")}>Por grupo</button>
+        </div>
+
+        {memberMode === "pessoas" ? (
+          <>
+            <div className="relative mb-2">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-faint)" }} />
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Buscar por nome…"
+                className="w-full py-2 rounded-md border outline-none"
+                style={{ paddingLeft: 32, paddingRight: 10, fontSize: 12.5, borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+              />
+            </div>
+            <div className="flex flex-col" style={{ maxHeight: 200, overflowY: "auto" }}>
+              {filteredCandidates.length === 0 ? (
+                <div className="px-1 py-3 text-center" style={{ fontSize: 12, color: "var(--text-faint)" }}>Nenhum contato encontrado.</div>
+              ) : filteredCandidates.map(c => {
+                const sel = selectedIds.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleId(c.id)}
+                    className="w-full flex items-center gap-2.5 px-2 py-1.5 text-left rounded-md"
+                    style={{ background: sel ? "var(--accent-tint, var(--surface-alt))" : "transparent", border: "none", cursor: "pointer" }}
+                  >
+                    <Avatar name={c.name} initials={c.initials} bg={c.avatarBg} size={26} />
+                    <span className="flex-1 truncate" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>{c.name}</span>
+                    {sel && <Check size={14} style={{ color: "var(--accent)" }} />}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", marginBottom: 6 }}>Departamento</div>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {RH_DEPARTMENTS.map(d => (
+                <button key={d} type="button" style={chipStyle(departments.includes(d))} onClick={() => toggleDept(d)}>{d}</button>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", marginBottom: 6 }}>Empresa</div>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {COMPANY_IDS.map(id => (
+                <button key={id} type="button" style={chipStyle(companies.includes(id))} onClick={() => toggleCompany(id)}>{COMPANIES[id].name}</button>
+              ))}
+            </div>
+            {matchCount !== null && (
+              <div className="rounded-md px-3 py-2 mb-2" style={{ background: "var(--surface-alt)", fontSize: 11.5, color: "var(--text-faint)", fontFamily: "ui-monospace, monospace" }}>
+                {matchCount} pessoa{matchCount === 1 ? "" : "s"} correspondem a este filtro agora — a lista se ajusta sozinha se alguém mudar de departamento ou empresa depois.
+              </div>
+            )}
+          </>
+        )}
+
+        {error && (
+          <div className="rounded-md px-3 py-2 mt-3" style={{ background: "var(--danger-bg)", color: "var(--danger)", fontSize: 12 }}>{error}</div>
+        )}
+      </div>
+      <div className="px-6 py-3 flex items-center justify-end gap-2 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
+        <button type="button" onClick={onClose} className="rounded-md px-3 py-2" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-dim)", background: "transparent", border: "1px solid var(--border-strong)", cursor: "pointer" }}>
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={!canSave}
+          className="rounded-md px-4 py-2"
+          style={{ fontSize: 12.5, fontWeight: 700, color: "var(--on-accent)", background: "var(--accent)", border: "none", cursor: canSave ? "pointer" : "default", opacity: canSave ? 1 : 0.6 }}
+        >
+          {saving ? "Criando…" : "Criar canal"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export function ChatView({ currentUser, initialChannelId, onInitialChannelConsumed }) {
   const {
     channels, dmCandidates, loading, markRead, sendMessage, startDm,
-    archiveChannel, unarchiveChannel,
+    archiveChannel, unarchiveChannel, createChannel,
   } = useChat({ userId: currentUser?.id });
   const { uploadAttachment } = useChatAttachments();
   const { stickers, getPublicUrl: getStickerPublicUrl } = useChatStickers();
   const [selectedId, setSelectedId] = useState(null);
   const [mobileShowThread, setMobileShowThread] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
+  const [newChannelOpen, setNewChannelOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
@@ -750,6 +994,11 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
   const handleStartDm = async (targetId) => {
     const channelId = await startDm(targetId);
     setNewOpen(false);
+    if (channelId) handleSelect(channelId);
+  };
+
+  const handleCreateChannel = async (payload) => {
+    const channelId = await createChannel(payload);
     if (channelId) handleSelect(channelId);
   };
 
@@ -994,15 +1243,29 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
           </h1>
           {/* Desktop mantém o botão de header — no mobile ele vira o FAB
               fixo mais abaixo (spec seção 3), pra não competir por espaço
-              com os chips de filtro logo abaixo. */}
-          <button
-            type="button"
-            onClick={() => setNewOpen(true)}
-            className="hidden lg:flex w-full items-center justify-center gap-1.5 rounded-md py-2 transition-opacity"
-            style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-          >
-            <Plus size={14} /> Nova conversa
-          </button>
+              com os chips de filtro logo abaixo. "Criar canal" só pra quem
+              já pode postar em canal somente-leitura hoje (mesmo gate de
+              chat_is_manager no banco) — mockup aprovado 10/08/2026. */}
+          <div className="hidden lg:flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => setNewOpen(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-md py-2 transition-opacity"
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >
+              <Plus size={14} /> Conversa
+            </button>
+            {isManager(currentUser) && (
+              <button
+                type="button"
+                onClick={() => setNewChannelOpen(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-md py-2 transition-opacity"
+                style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border-strong)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              >
+                <Hash size={13} /> Canal
+              </button>
+            )}
+          </div>
         </div>
 
         {channels.length > 0 && (
@@ -1378,6 +1641,12 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
         onClose={() => setNewOpen(false)}
         candidates={dmCandidates}
         onPick={handleStartDm}
+      />
+      <CreateChannelModal
+        open={newChannelOpen}
+        onClose={() => setNewChannelOpen(false)}
+        candidates={dmCandidates}
+        onCreate={handleCreateChannel}
       />
     </div>
   );
