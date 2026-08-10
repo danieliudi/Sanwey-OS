@@ -17,6 +17,7 @@ function rowToCase(r) {
     customFields:   r.custom_fields || {},
     createdBy:      r.created_by ?? null,
     createdAt:      r.created_at ?? null,
+    negotiationStartedAt: r.negotiation_started_at ?? null,
     updatedAt:      r.updated_at ?? null,
   };
 }
@@ -32,6 +33,7 @@ function caseToRow(c) {
     stage_changed_at: c.stageChangedAt ?? new Date().toISOString(),
     notes:            c.notes ?? [],
     custom_fields:    c.customFields ?? {},
+    negotiation_started_at: c.negotiationStartedAt ?? null,
   };
 }
 

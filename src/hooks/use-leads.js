@@ -53,6 +53,7 @@ function rowToLead(r) {
     nextFollowUp: r.next_follow_up,
     clientId: r.client_id ?? null,
     createdAt: r.created_at,
+    negotiationStartedAt: r.negotiation_started_at ?? null,
     lastActivity: r.last_activity,
     stageChangedAt: r.stage_changed_at,
     isDemo: Boolean(r.is_demo),
@@ -107,6 +108,7 @@ function leadToRow(l, extras = {}) {
     next_follow_up: l.nextFollowUp ?? null,
     client_id: l.clientId ?? null,
     sent_to_posvenda_at: l.sentToPosvendaAt ?? null,
+    negotiation_started_at: l.negotiationStartedAt ?? null,
     ...extras,
   };
 }
@@ -134,6 +136,7 @@ function patchToRow(patch) {
     clientId: "client_id",
     ownerIds: "owner_ids",
     sentToPosvendaAt: "sent_to_posvenda_at",
+    negotiationStartedAt: "negotiation_started_at",
   };
   const out = {};
   for (const [k, v] of Object.entries(patch)) {

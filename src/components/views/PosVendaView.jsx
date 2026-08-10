@@ -34,10 +34,21 @@ import { formatK } from "../../utils/currency";
 import { stageTextColor } from "../../utils/stage-colors";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
+import { localDateInputToISOString } from "../../utils/date";
 
 function daysInStage(dateStr) {
   if (!dateStr) return 0;
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+// Idade do caso pra exibição (aging badge/"Nesta etapa há") — prioridade
+// stageChangedAt (igual isStale/daysIdle em pipeline-metrics.js), caindo pra
+// negotiationStartedAt (retroativo, se preenchido na criação) e por último
+// createdAt. Normalmente stageChangedAt já vem sempre preenchido (caseToRow
+// default), então isso raramente muda o resultado hoje — é o mesmo fallback
+// final pedido pro resto da plataforma, aplicado aqui defensivamente.
+function caseAgeRef(kase) {
+  return kase.stageChangedAt || kase.negotiationStartedAt || kase.createdAt;
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
@@ -83,6 +94,7 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
   const [error, setError] = useState(null);
   const [customValues, setCustomValues] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [negotiationStartedAt, setNegotiationStartedAt] = useState("");
   const inputRef = useRef(null);
 
   const stageFields = useRHStageFields("posvenda");
@@ -122,6 +134,7 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
         ownerIds: ownerIds.length ? ownerIds : (primaryOwner ? [primaryOwner] : []),
         stage: stage.stageKey,
         customFields: customValues,
+        negotiationStartedAt: negotiationStartedAt ? localDateInputToISOString(negotiationStartedAt) : null,
       });
       onClose();
     } catch (err) {
@@ -171,6 +184,34 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
               placeholder="Responsável(is)"
             />
           )}
+          {/* Campo opcional e secundário — card discreto, não é o campo
+              principal do form (spec aprovada com o Daniel). */}
+          <div className="rounded-xl p-3" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+                Já está negociando com esse cliente?
+              </span>
+              <span
+                className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+                style={{ color: "var(--text-dim)", background: "var(--surface)", border: "1px solid var(--border)", letterSpacing: "0.04em" }}
+              >
+                opcional
+              </span>
+            </div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-dim)" }}>
+              Quando começou
+            </label>
+            <input
+              type="date"
+              value={negotiationStartedAt}
+              onChange={e => setNegotiationStartedAt(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
+            />
+            <p className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+              Deixe em branco pra usar a data de hoje (padrão atual).
+            </p>
+          </div>
           {visibleFields.length > 0 && (
             <div className="pt-1 space-y-3">
               {visibleFields.map(f => (
@@ -241,7 +282,7 @@ function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, user
 
   const customValuesByKey = { ...(kase.customFields || {}), ...customDraft };
   const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
-  const days = daysInStage(kase.stageChangedAt);
+  const days = daysInStage(caseAgeRef(kase));
 
   const header = (
     <div className="min-w-0">
@@ -402,7 +443,7 @@ function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
       )}
       metaRight={(kase) => {
         const owners = (kase.ownerIds || []).map(id => usersById.get(id)).filter(Boolean);
-        const days = daysInStage(kase.stageChangedAt);
+        const days = daysInStage(caseAgeRef(kase));
         return (
           <>
             {owners.length > 0 && <AvatarStack users={owners} size={18} max={2} />}
@@ -430,7 +471,7 @@ function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
             const stage  = stages.find(s => s.stageKey === kase.stage);
             const color  = stage?.color || "var(--text-dim)";
             const owners = (kase.ownerIds || []).map(id => usersById.get(id)).filter(Boolean);
-            const days   = daysInStage(kase.stageChangedAt);
+            const days   = daysInStage(caseAgeRef(kase));
             return (
               <tr key={kase.id} onClick={() => onRowClick(kase)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
@@ -767,7 +808,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
       bucket[s.stageKey].cases = sortKanbanItems(bucket[s.stageKey].cases, getSortCriteria(s.stageKey), {
         value: c => c.value,
         name: c => c.clientName,
-        createdAt: c => c.createdAt,
+        createdAt: c => c.negotiationStartedAt || c.createdAt,
       });
     }
     return bucket;
@@ -1014,7 +1055,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
               onDeleteCard={canWrite ? deleteCase : undefined}
               deleteLabel="Excluir caso"
               deleteConfirmMessage="Excluir este caso de pós-venda? Não pode ser desfeito."
-              agingDays={daysInStage(kase.stageChangedAt)}
+              agingDays={daysInStage(caseAgeRef(kase))}
               showMoveOptions
             >
               <PosVendaCardBody kase={kase} owners={resolveOwners(kase.ownerIds)} sourceLead={leadsById.get(kase.leadId)} onOpenLead={onOpenLead} />
@@ -1135,7 +1176,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                             onDeleteCard={canWrite ? deleteCase : undefined}
                             deleteLabel="Excluir caso"
                             deleteConfirmMessage="Excluir este caso de pós-venda? Não pode ser desfeito."
-                            agingDays={daysInStage(kase.stageChangedAt)}
+                            agingDays={daysInStage(caseAgeRef(kase))}
                             showMoveOptions={false}
                           >
                             <PosVendaCardBody kase={kase} owners={resolveOwners(kase.ownerIds)} sourceLead={leadsById.get(kase.leadId)} onOpenLead={onOpenLead} />

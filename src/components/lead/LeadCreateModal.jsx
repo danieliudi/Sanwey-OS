@@ -246,6 +246,10 @@ export function LeadCreateModal({
     sector: currentUser?.sectors?.[0] || "",
     contactEmail: "",
   }));
+  // Campo opcional e secundário (spec aprovada com o Daniel) — controlado à
+  // parte de `values` porque não faz parte do `formConfig` configurável
+  // (não é um FIELD_DEFS, é fixo em todo card novo).
+  const [negotiationStartedAt, setNegotiationStartedAt] = useState("");
   // Valores dos campos customizados da ETAPA de destino (pipeline_stage_fields)
   // — mesmo mecanismo do drawer/enforcement, mas coletado já na criação, pra
   // não precisar abrir o card de novo só pra preencher o que a fase pede.
@@ -267,7 +271,7 @@ export function LeadCreateModal({
   // formulário preenchido pede confirmação. Achado da 2ª auditoria.
   const initialSnapshotRef = useRef(null);
   const stateRef = useRef(null);
-  stateRef.current = JSON.stringify({ values, customValues });
+  stateRef.current = JSON.stringify({ values, customValues, negotiationStartedAt });
   if (initialSnapshotRef.current === null) initialSnapshotRef.current = stateRef.current;
   const guardedClose = useCallback(() => {
     if (stateRef.current !== initialSnapshotRef.current
@@ -297,6 +301,7 @@ export function LeadCreateModal({
     if (open) {
       setValues({ owner: currentUser?.id ? [currentUser.id] : [], sector: currentUser?.sectors?.[0] || "", contactEmail: "" });
       setCustomValues({});
+      setNegotiationStartedAt("");
       setError(null);
       setSaving(false);
       setDuplicates([]);
@@ -398,6 +403,7 @@ export function LeadCreateModal({
         city: values.city || null,
         state: values.state || null,
         closeDate,
+        negotiationStartedAt: negotiationStartedAt ? localDateInputToISOString(negotiationStartedAt) : null,
         fitScore: 0,
         starred: false,
         notes: values.notes ? [{ text: values.notes, createdAt: now.toISOString() }] : [],
@@ -442,7 +448,7 @@ export function LeadCreateModal({
     } finally {
       setSaving(false);
     }
-  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields]);
+  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields, negotiationStartedAt]);
 
   // ESC fecha o modal via hook global (pilha LIFO) — funciona mesmo sem foco
   // dentro do modal, diferente do antigo onKeyDown na raiz.
@@ -632,6 +638,54 @@ export function LeadCreateModal({
               </React.Fragment>
             );
           })}
+
+          {/* Campo opcional e secundário — card discreto, não é o campo
+              principal do form (spec aprovada com o Daniel). */}
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "12px 14px",
+              borderRadius: 10,
+              background: "var(--surface-alt)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
+                Já está negociando com esse cliente?
+              </span>
+              <span
+                style={{
+                  fontSize: 10, fontWeight: 700, color: "var(--text-dim)",
+                  background: "var(--surface)", border: "1px solid var(--border)",
+                  borderRadius: 999, padding: "1px 7px", textTransform: "uppercase", letterSpacing: "0.04em",
+                }}
+              >
+                opcional
+              </span>
+            </div>
+            <label
+              style={{
+                display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-dim)",
+                textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5,
+              }}
+            >
+              Quando começou
+            </label>
+            <input
+              type="date"
+              value={negotiationStartedAt}
+              onChange={e => setNegotiationStartedAt(e.target.value)}
+              style={{
+                width: "100%", fontSize: 13, borderRadius: 6, border: "1px solid var(--border-strong)",
+                padding: "8px 12px", color: "var(--text)", background: "var(--surface)", outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+            <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 6 }}>
+              Deixe em branco pra usar a data de hoje (padrão atual).
+            </p>
+          </div>
 
           {/* Campos da etapa de destino (pipeline_stage_fields) — o que a
               fase pede além do formulário básico acima, igual ao Pipefy: já

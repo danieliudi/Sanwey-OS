@@ -34,7 +34,7 @@ export function isStale(lead, companyStages) {
   const stage = findStage(lead.stage, companyStages);
   if (stage?.terminal) return false;
   const sla = Number.isFinite(stage?.slaDays) ? stage.slaDays : DEFAULT_SLA_DAYS;
-  const ref = lead.lastActivity || lead.stageChangedAt || lead.createdAt;
+  const ref = lead.lastActivity || lead.stageChangedAt || lead.negotiationStartedAt || lead.createdAt;
   if (!ref) return false;
   const ts = new Date(ref).getTime();
   if (Number.isNaN(ts)) return false;
@@ -44,7 +44,7 @@ export function isStale(lead, companyStages) {
 // Dias parados na etapa atual (apenas pra exibição). Retorna 0 se não dá
 // pra calcular.
 export function daysIdle(lead) {
-  const ref = lead?.lastActivity || lead?.stageChangedAt || lead?.createdAt;
+  const ref = lead?.lastActivity || lead?.stageChangedAt || lead?.negotiationStartedAt || lead?.createdAt;
   if (!ref) return 0;
   const ts = new Date(ref).getTime();
   if (Number.isNaN(ts)) return 0;

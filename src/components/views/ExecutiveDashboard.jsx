@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight, Ship, Handshake, Leaf } from "lucide-react";
+import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight, Ship, Handshake, Leaf, Wallet } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { ROUTES } from "../../constants/routes";
 import { useAI } from "../../hooks/use-ai";
@@ -18,13 +18,16 @@ import { useComexImportOperations } from "../../hooks/use-comex-import-operation
 import { useComexExportOperations } from "../../hooks/use-comex-export-operations";
 import { usePosvenda } from "../../hooks/use-posvenda";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
+import { useCRMDespesas } from "../../hooks/use-crm-despesas";
+import { useAllLeadSamples } from "../../hooks/use-lead-samples";
+import { sumTravelExpenses, sumSampleCosts, calculateCAC, CAC_FORMULA_HINT } from "../../utils/cac";
 import { useEsgEmissionRecords, useEsgEmissionFactors, useEsgReports } from "../../hooks/use-esg-carbon";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
 import { EmptyState } from "../ui/EmptyState";
-import { formatK } from "../../utils/currency";
+import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
@@ -73,14 +76,21 @@ function fmtT(kg) {
   return `${((kg || 0) / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t`;
 }
 
-function filterByPeriod(leads, period) {
-  if (period === "all") return leads;
+// Extraído de `filterByPeriod` pra ser reaproveitado pelo CAC (regra 4 do
+// CLAUDE.md) — despesas de viagem/amostras precisam do mesmo corte de
+// período, sem serem `leads`.
+function periodCutoff(period) {
+  if (period === "all") return null;
   const now = Date.now();
-  let cutoff;
-  if (period === "30d") cutoff = now - 30 * 86400000;
-  else if (period === "60d") cutoff = now - 60 * 86400000;
-  else if (period === "90d") cutoff = now - 90 * 86400000;
-  else if (period === "ytd") cutoff = new Date(new Date().getFullYear(), 0, 1).getTime();
+  if (period === "30d") return now - 30 * 86400000;
+  if (period === "60d") return now - 60 * 86400000;
+  if (period === "90d") return now - 90 * 86400000;
+  if (period === "ytd") return new Date(new Date().getFullYear(), 0, 1).getTime();
+  return null;
+}
+function filterByPeriod(leads, period) {
+  const cutoff = periodCutoff(period);
+  if (cutoff == null) return leads;
   return leads.filter(l => {
     const ts = new Date(l.stageChangedAt || l.createdAt).getTime();
     return !Number.isNaN(ts) && ts >= cutoff;
@@ -267,6 +277,10 @@ export function ExecutiveDashboard({
   const { operations: comexExports, loading: loadingComexExports } = useComexExportOperations({});
   const { cases: posvendaCases, loading: loadingPosvenda } = usePosvenda({});
   const { registros: viagens, loading: loadingViagens } = useCRMViagens({});
+  // CAC (aba Comercial → Visão geral) — só busca despesas/amostras quando a
+  // área Comercial está visível pro usuário atual. Ver src/utils/cac.js.
+  const { despesas: viagemDespesas, loading: loadingViagemDespesas } = useCRMDespesas({ enabled: showComercialArea });
+  const { samples: leadSamplesAll, loading: loadingLeadSamples } = useAllLeadSamples({ enabled: showComercialArea });
   const { records: esgRecords, loading: loadingEsgRecords } = useEsgEmissionRecords({});
   const { factors: esgFactors, loading: loadingEsgFactors } = useEsgEmissionFactors();
   const { reports: esgReports, loading: loadingEsgReports } = useEsgReports({});

@@ -69,7 +69,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
     for (const l of scopedLeads) {
       fitSum += l.fitScore;
       if (l.fitScore >= 70) fitCount70++;
-      if (l.daysAgo <= 2) newCount++;
+      if (daysSince(l.negotiationStartedAt || l.createdAt) <= 2) newCount++;
       if (l.stage === "ganho") { wonValue += l.value; wonCount++; }
       if (!TERMINAL.has(l.stage)) { pipelineValue += l.value; openCount++; }
     }
@@ -84,8 +84,8 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
     const [cs, ce] = monthBounds(now);
     const prev = new Date(now); prev.setMonth(prev.getMonth() - 1);
     const [ps, pe] = monthBounds(prev);
-    const lc = scopedLeads.filter(l => within(l.createdAt, cs, ce)).length;
-    const lp = scopedLeads.filter(l => within(l.createdAt, ps, pe)).length;
+    const lc = scopedLeads.filter(l => within(l.negotiationStartedAt || l.createdAt, cs, ce)).length;
+    const lp = scopedLeads.filter(l => within(l.negotiationStartedAt || l.createdAt, ps, pe)).length;
     const wc = scopedLeads.filter(l => l.stage === "ganho" && within(l.stageChangedAt, cs, ce))
       .reduce((s, l) => s + l.value, 0);
     const wp = scopedLeads.filter(l => l.stage === "ganho" && within(l.stageChangedAt, ps, pe))
