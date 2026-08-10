@@ -139,23 +139,41 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
     [fairs, leads, expenses]
   );
 
-  // Comparação com a edição anterior da MESMA feira. Heurística: a feira
-  // anterior é a campanha-evento mais recente, entre as mais antigas, cujo
-  // nome compartilha a primeira palavra (ex.: "Intermodal 2026" ↔
-  // "Intermodal 2025"). É deliberadamente conservadora — sem par claro, não
-  // mostra comparação, em vez de comparar feiras diferentes entre si.
+  // Comparação com a edição anterior da MESMA feira.
+  //
+  // A primeira versão casava pela primeira palavra do nome — e "Feira
+  // Intermodal 2026" casaria com "Feira Logística 2025", porque as duas
+  // começam com "Feira". Comparar feiras diferentes entre si é pior que não
+  // comparar. Agora: tira o ano, tira acento, ignora palavras genéricas de
+  // prefixo, e exige que o resto bata inteiro. Sem par claro, não compara.
   const comparisons = useMemo(() => {
+    const GENERIC = new Set(["feira", "expo", "exposicao", "congresso", "salao", "evento", "encontro", "summit", "forum"]);
+    const norm = (n) => (n || "")
+      .toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")   // tira acento: "Logística" = "Logistica"
+      .replace(/\b(19|20)\d{2}\b/g, " ")                   // tira o ano da edição
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter(w => w && !GENERIC.has(w))
+      .join(" ")
+      .trim();
+
     const byId = {};
-    const norm = (n) => (n || "").toLowerCase().split(/\s+/)[0];
     for (const m of metrics) {
+      const key = norm(m.campaign.name);
+      if (!key) continue; // nome só com palavra genérica — não dá pra parear com segurança
       const start = fairStartTime(m.campaign);
-      const prev = metrics
+      // Candidatas: mesma feira, mais antigas, e com data (sem data não dá pra
+      // cortar na mesma idade). Pega a mais recente entre elas.
+      const candidates = metrics
         .filter(o => o.campaign.id !== m.campaign.id
-          && norm(o.campaign.name) === norm(m.campaign.name)
+          && norm(o.campaign.name) === key
+          && fairStartTime(o.campaign) != null
           && (fairStartTime(o.campaign) ?? 0) < (start ?? 0))
-        .sort((a, b) => (fairStartTime(b.campaign) ?? 0) - (fairStartTime(a.campaign) ?? 0))[0];
-      if (prev) {
-        byId[m.campaign.id] = compareAtSameAge({
+        .sort((a, b) => (fairStartTime(b.campaign) ?? 0) - (fairStartTime(a.campaign) ?? 0));
+
+      for (const prev of candidates) {
+        const cmp = compareAtSameAge({
           current: m.campaign,
           previous: prev.campaign,
           leads,
@@ -163,6 +181,7 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
           wonStages: WON_STAGES,
           lostStages: LOST_STAGES,
         });
+        if (cmp) { byId[m.campaign.id] = cmp; break; } // tenta a próxima se esta não deu
       }
     }
     return byId;
@@ -181,10 +200,27 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
   }, [metrics]);
 
   const selected = metrics.find(m => m.campaign.id === selectedId) || null;
+
+  // Leads de feira sem campanha indicada — ficam fora de todo número acima.
+  // Filtrado pela mesma empresa das feiras exibidas, senão com "Resibag" ativa
+  // o aviso somaria leads da Sanwey.
   const unlinked = useMemo(
-    () => (leads || []).filter(l => l.trigger === "feira" && !l.campaignId).length,
-    [leads]
+    () => (leads || []).filter(l =>
+      l.trigger === "feira"
+      && !l.campaignId
+      && (!activeCompany || activeCompany === "all" || l.companyId === activeCompany)
+    ).length,
+    [leads, activeCompany]
   );
+
+  // Escopo de leitura. A RLS de `leads` dá visão completa a admin, gerente e
+  // diretoria; vendedor e consultor só enxergam os próprios (ou de
+  // subordinados). Quem cai no segundo caso vê números REAIS mas PARCIAIS —
+  // e sem aviso isso é pior que ver zero, porque parece o total da empresa.
+  // Hoje todo perfil de marketing também carrega vendedor/consultor, então
+  // esse caso não é hipotético.
+  const roleList = user?.roles?.length ? user.roles : [user?.role].filter(Boolean);
+  const hasFullLeadScope = roleList.some(r => ["admin", "gerente", "diretoria"].includes(r));
 
   return (
     <div className="space-y-5">
@@ -208,6 +244,21 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
             <StatCard icon={TrendingDown} value={totals.cac == null ? "—" : formatK(totals.cac)} label="CAC médio" sublabel="custo ÷ clientes conquistados" />
             <StatCard icon={TrendingUp} value={totals.roi == null ? "—" : `${totals.roi.toFixed(1)}x`} label="Retorno" sublabel={`${formatK(totals.revenue)} sobre ${formatK(totals.cost)}`} />
           </StatCardGrid>
+
+          {!hasFullLeadScope && (
+            <div className="rounded-lg px-4 py-3 flex items-start gap-2.5"
+              style={{ background: "var(--warning-bg)", border: "1px solid var(--warning)" }}>
+              <Info size={15} style={{ color: "var(--warning)", flexShrink: 0, marginTop: 1 }} />
+              <div style={{ fontSize: 12.5, color: "var(--text)" }}>
+                <b>Você está vendo só os negócios sob sua responsabilidade.</b>{" "}
+                <span style={{ color: "var(--text-dim)" }}>
+                  Os números de leads, conversão, CAC e retorno desta tela são
+                  parciais — o custo da feira é o total, mas o resultado é só a
+                  sua parte. Peça a visão completa a um gerente ou à diretoria.
+                </span>
+              </div>
+            </div>
+          )}
 
           {unlinked > 0 && (
             <div className="rounded-lg px-4 py-3 flex items-start gap-2.5"

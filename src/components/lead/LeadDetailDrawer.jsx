@@ -519,8 +519,9 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
     onUpdate(lead.id, {
       campaignId: val || null,
       // triggerLabel segue espelhando o nome pra não quebrar export CSV e
-      // telas antigas que leem esse campo.
-      ...(campaign ? { triggerLabel: campaign.name } : {}),
+      // telas antigas que leem esse campo. Ao limpar a campanha, limpa junto:
+      // senão o CSV exportaria uma feira que o negócio não tem mais.
+      triggerLabel: campaign ? campaign.name : null,
     });
   };
 
@@ -955,6 +956,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                   <OriginCampaignRow
                     value={lead.campaignId}
                     campaigns={campaigns}
+                    lead={lead}
                     onChange={handleCampaignChange}
                   />
                 </dl>
@@ -995,6 +997,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                   <OriginCampaignRow
                     value={lead.campaignId}
                     campaigns={campaigns}
+                    lead={lead}
                     onChange={handleCampaignChange}
                   />
                 </dl>
@@ -2090,8 +2093,15 @@ function CaptureRow({ label, value, mono, link, badge, hint }) {
 // mas editável (campo comum do Formulário Inicial, não um bloco novo/
 // chamativo — spec aprovada com o Daniel). Mesmo <input type="date"> já
 // usado no drawer (follow-up).
-function OriginCampaignRow({ value, campaigns, onChange }) {
-  const list = campaigns || [];
+function OriginCampaignRow({ value, campaigns, lead, onChange }) {
+  // Só campanhas de canal "Evento" e da empresa do negócio. Sem esse filtro
+  // dava pra escolher "Newsletter de Julho" como origem: o negócio saía do
+  // aviso de "sem feira indicada" e ao mesmo tempo não entrava em feira
+  // nenhuma no relatório — sumia dos dois lados, calado.
+  const list = (campaigns || []).filter(c =>
+    c.channel === "Evento"
+    && (!lead?.companyId || !c.companyIds?.length || c.companyIds.includes(lead.companyId))
+  );
   return (
     <div>
       <dt className="text-[11px] font-semibold" style={{ color: "var(--text-dim)" }}>

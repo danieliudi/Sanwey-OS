@@ -83,27 +83,35 @@ export function computeFairMetrics({
   // Leads: agora por chave estável, não por texto livre.
   let fairLeads = leads.filter(l => (l.campaignId || l.campaign_id) === campaign.id);
 
-  // Recorte por idade — o lead precisa ter sido captado dentro da janela.
-  if (cutoff != null) {
-    fairLeads = fairLeads.filter(l => {
-      const t = toTime(l.negotiationStartedAt || l.createdAt || l.created_at);
-      return t == null ? true : t <= cutoff;
-    });
-  }
+  // A CAPTAÇÃO não é recortada pela janela, de propósito: o lead está
+  // vinculado a esta campanha, ou seja, ele veio desta feira — a data de
+  // captação é a feira, não a data em que a linha foi digitada no sistema.
+  //
+  // Recortar por `createdAt` quebraria justamente o caso de adoção: quem
+  // cadastra a feira do ano passado hoje (pra ter base de comparação) teria
+  // todos os leads com data de hoje, muito além da janela, e a edição antiga
+  // apareceria com zero leads — a comparação sumiria sem explicar por quê.
+  //
+  // O que a janela recorta é o DESFECHO (ganho), abaixo: é ali que mora a
+  // vantagem injusta da feira antiga, que teve mais tempo pra maturar.
 
   const wonSet = new Set(wonStages);
   const lostSet = new Set(lostStages);
 
-  const won = fairLeads.filter(l => {
-    if (!wonSet.has(l.stage)) return false;
+  // Dentro da janela, um desfecho que aconteceu DEPOIS do corte ainda não
+  // tinha acontecido — o registro conta como "em aberto naquela altura", não
+  // como ganho nem como perdido. Sem isso, o lead ganho tarde sumia dos três
+  // baldes (ganho+perdido+aberto dava menos que o total de leads) e as perdas
+  // tardias da edição antiga deprimiam a conversão dela.
+  const decidedInWindow = (l) => {
     if (cutoff == null) return true;
-    // Ganho precisa ter acontecido dentro da janela, senão a feira nova é
-    // comparada com o acumulado de anos da antiga.
     const t = toTime(l.stageChangedAt || l.updatedAt || l.updated_at);
     return t == null ? true : t <= cutoff;
-  });
-  const lost = fairLeads.filter(l => lostSet.has(l.stage));
-  const open = fairLeads.filter(l => !wonSet.has(l.stage) && !lostSet.has(l.stage));
+  };
+
+  const won = fairLeads.filter(l => wonSet.has(l.stage) && decidedInWindow(l));
+  const lost = fairLeads.filter(l => lostSet.has(l.stage) && decidedInWindow(l));
+  const open = fairLeads.filter(l => !won.includes(l) && !lost.includes(l));
 
   const revenue = won.reduce((s, l) => s + num(l.value), 0);
   const decided = won.length + lost.length;

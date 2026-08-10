@@ -329,6 +329,10 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
     setPhase("idle");
     setRows([]);
     setImportResult(null);
+    // Sem limpar a feira selecionada, "Importar outra lista" deixava a feira
+    // anterior escolhida e o botão já habilitado — dava pra subir a lista da
+    // feira B dentro da feira A com um clique.
+    setFairCampaignId("");
     setFairName("");
     setExpandedRow(null);
   };
