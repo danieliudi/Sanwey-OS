@@ -38,7 +38,7 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
 import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
 
-export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
+export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
   const [followUpDate, setFollowUpDate] = useState("");
@@ -510,6 +510,20 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     onUpdate(lead.id, { negotiationStartedAt: val ? localDateInputToISOString(val) : null });
   };
 
+  // Origem do negócio. A importação de feira já grava isso sozinha; aqui é o
+  // caminho manual — cobre o lead que o vendedor conheceu no estande e
+  // cadastrou à mão depois, que costuma ser o melhor da feira e que ficaria
+  // fora do relatório se o vínculo existisse só na importação.
+  const handleCampaignChange = (val) => {
+    const campaign = (campaigns || []).find(c => c.id === val) || null;
+    onUpdate(lead.id, {
+      campaignId: val || null,
+      // triggerLabel segue espelhando o nome pra não quebrar export CSV e
+      // telas antigas que leem esse campo.
+      ...(campaign ? { triggerLabel: campaign.name } : {}),
+    });
+  };
+
   const handleStartEditContactEmail = () => {
     setContactEmailDraft(lead.contactEmail || "");
     setContactEmailError(null);
@@ -938,6 +952,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                     value={lead.negotiationStartedAt ? lead.negotiationStartedAt.slice(0, 10) : ""}
                     onChange={handleNegotiationStartedAtChange}
                   />
+                  <OriginCampaignRow
+                    value={lead.campaignId}
+                    campaigns={campaigns}
+                    onChange={handleCampaignChange}
+                  />
                 </dl>
                 {lead.notes && !Array.isArray(lead.notes) && (
                   <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
@@ -972,6 +991,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   <NegotiationStartRow
                     value={lead.negotiationStartedAt ? lead.negotiationStartedAt.slice(0, 10) : ""}
                     onChange={handleNegotiationStartedAtChange}
+                  />
+                  <OriginCampaignRow
+                    value={lead.campaignId}
+                    campaigns={campaigns}
+                    onChange={handleCampaignChange}
                   />
                 </dl>
                 {customValues.capture_notes && (
@@ -2066,6 +2090,35 @@ function CaptureRow({ label, value, mono, link, badge, hint }) {
 // mas editável (campo comum do Formulário Inicial, não um bloco novo/
 // chamativo — spec aprovada com o Daniel). Mesmo <input type="date"> já
 // usado no drawer (follow-up).
+function OriginCampaignRow({ value, campaigns, onChange }) {
+  const list = campaigns || [];
+  return (
+    <div>
+      <dt className="text-[11px] font-semibold" style={{ color: "var(--text-dim)" }}>
+        Veio de qual feira/campanha?
+      </dt>
+      <dd className="text-sm" style={{ marginTop: 2 }}>
+        <select
+          value={value || ""}
+          onChange={e => onChange(e.target.value)}
+          className="text-sm rounded-lg border px-2.5 py-1.5 outline-none w-full"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+        >
+          <option value="">Não informado</option>
+          {list.map(c => (
+            <option key={c.id} value={c.id}>
+              {c.name}{c.channel ? ` · ${c.channel}` : ""}
+            </option>
+          ))}
+        </select>
+      </dd>
+      <div className="text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>
+        É isso que liga o custo da feira ao resultado deste negócio no relatório.
+      </div>
+    </div>
+  );
+}
+
 function NegotiationStartRow({ value, onChange }) {
   return (
     <div>

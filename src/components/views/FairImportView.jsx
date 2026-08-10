@@ -204,11 +204,26 @@ const COMPANY_OPTIONS = [
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function FairImportView({ addLead, leads: existingLeads, users, currentUser, state, setState }) {
+export function FairImportView({ addLead, leads: existingLeads, users, currentUser, campaigns = [], state, setState }) {
   const fileRef = useRef(null);
   // Persistent across tab switches — held in App.jsx
-  const { fairName, phase, rows, importResult, importing } = state;
+  const { fairName, fairCampaignId = "", phase, rows, importResult, importing } = state;
   const setFairName    = (v) => setState(s => ({ ...s, fairName: typeof v === "function" ? v(s.fairName) : v }));
+  const setFairCampaignId = (v) => setState(s => ({ ...s, fairCampaignId: typeof v === "function" ? v(s.fairCampaignId) : v }));
+
+  // Feira = campanha de canal "Evento" (o modelo que a plataforma já usa —
+  // é o mesmo canal que dispara o checklist de evento). Antes o nome da feira
+  // era texto livre digitado a cada importação, então "Intermodal 2026" e
+  // "intermodal 26" viravam feiras diferentes na hora de agregar. Agora a
+  // seleção grava `campaignId`, que é a chave estável do relatório de feiras.
+  const eventCampaigns = useMemo(
+    () => (campaigns || []).filter(c => c.channel === "Evento"),
+    [campaigns]
+  );
+  const selectedCampaign = eventCampaigns.find(c => c.id === fairCampaignId) || null;
+  // `triggerLabel` continua sendo gravado (o export CSV e telas antigas leem
+  // esse campo) — só que derivado do nome da campanha, não mais digitado.
+  const effectiveFairName = selectedCampaign ? selectedCampaign.name : fairName.trim();
   const setPhase       = (v) => setState(s => ({ ...s, phase: typeof v === "function" ? v(s.phase) : v }));
   const setRows        = (v) => setState(s => ({ ...s, rows: typeof v === "function" ? v(s.rows) : v }));
   const setImportResult = (v) => setState(s => ({ ...s, importResult: typeof v === "function" ? v(s.importResult) : v }));
@@ -271,7 +286,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
 
   const handleImport = async () => {
     if (!selectedRows.length) return;
-    if (!fairName.trim()) { alert("Informe o nome da feira antes de importar."); return; }
+    if (!effectiveFairName) { alert("Selecione a feira antes de importar."); return; }
 
     setImporting(true);
     setPhase("importing");
@@ -282,8 +297,9 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
       try {
         const lead = {
           ...row,
-          triggerLabel: fairName.trim(),
-          evidence: `Contato realizado na ${fairName.trim()}`,
+          triggerLabel: effectiveFairName,
+          campaignId: selectedCampaign ? selectedCampaign.id : null,
+          evidence: `Contato realizado na ${effectiveFairName}`,
           notes: row._note ? [{ text: row._note, author: "Import", ts: new Date().toISOString() }] : [],
         };
         // Remove UI-only fields
@@ -328,7 +344,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
             Import concluído
           </div>
           <div className="text-base mt-1" style={{ color: "var(--text-dim)" }}>
-            {importResult.ok} leads importados para "{fairName}"
+            {importResult.ok} leads importados para "{effectiveFairName}"
             {importResult.skipped > 0 && ` · ${importResult.skipped} erros`}
           </div>
         </div>
@@ -397,16 +413,39 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
         <div>
           <label className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
             style={{ color: "var(--text-dim)", letterSpacing: "0.15em" }}>
-            Nome da feira
+            Feira
           </label>
-          <input
-            type="text"
-            placeholder="Ex: Intermodal 2026"
-            value={fairName}
-            onChange={e => setFairName(e.target.value)}
-            className="w-full text-sm rounded-xl border px-3 py-2 outline-none focus:ring-1"
-            style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
-          />
+          {eventCampaigns.length > 0 ? (
+            <>
+              <Select
+                value={fairCampaignId}
+                onChange={e => setFairCampaignId(e.target.value)}
+                className="w-full"
+              >
+                <option value="">Selecione a feira…</option>
+                {eventCampaigns.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </Select>
+              <p className="mt-1.5" style={{ fontSize: 11, color: "var(--text-faint)" }}>
+                A feira é a campanha de canal “Evento”. É ela que amarra custo e
+                leads no relatório — não está na lista? Cadastre em Marketing →
+                Campanhas.
+              </p>
+            </>
+          ) : (
+            <div className="rounded-xl border px-3 py-2.5"
+              style={{ borderColor: "var(--warning)", background: "var(--warning-bg)" }}>
+              <p style={{ fontSize: 12, color: "var(--text)", fontWeight: 600 }}>
+                Nenhuma feira cadastrada
+              </p>
+              <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
+                Cadastre a feira como campanha de canal “Evento” em Marketing →
+                Campanhas antes de importar. Sem isso os leads entram sem
+                origem e ficam de fora do relatório de feiras.
+              </p>
+            </div>
+          )}
         </div>
 
         {phase === "idle" && (
@@ -515,7 +554,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
             <Button
               variant="primary"
               onClick={handleImport}
-              disabled={!selectedRows.length || !fairName.trim() || importing}
+              disabled={!selectedRows.length || !effectiveFairName || importing}
               icon={importing ? Loader2 : undefined}
             >
               {importing ? "Importando…" : `Importar ${selectedRows.length} leads`}
