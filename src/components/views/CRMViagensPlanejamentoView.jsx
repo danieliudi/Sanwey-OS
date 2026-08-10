@@ -14,17 +14,24 @@ import {
   Trash2,
   ExternalLink,
   AlertCircle,
+  Send,
+  FileText,
+  CheckCircle2,
+  Square,
+  CheckSquare,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
+import { useCRMViagemPrestacoes } from "../../hooks/use-crm-viagem-prestacoes";
 import { useCRMViagemCategorias } from "../../hooks/use-crm-viagem-categorias";
 import { useAI } from "../../hooks/use-ai";
 import { receiptExtractionPrompt } from "../../constants/ai-prompts";
 import { formatDateBR } from "../../utils/date";
-import { STATUS_VISITA, STATUS_REEMBOLSO, fmtMoney } from "../../utils/viagens";
+import { STATUS_VISITA, STATUS_REEMBOLSO, STATUS_PRESTACAO, fmtMoney } from "../../utils/viagens";
 import { Badge } from "../ui/Badge";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { StatCard } from "../ui/StatCard";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { usePlacesAutocomplete } from "../../hooks/use-places-autocomplete";
 import { ClientSelector } from "../client/ClientSelector";
@@ -913,20 +920,235 @@ function DespesaDetalheModal({ despesa, onVerComprovante, onRefazer, onClose }) 
   );
 }
 
+// ── Prestação de contas ──────────────────────────────────────────────────────
+// Agrupa despesas soltas pendentes num lote só, pra decisão em lote do
+// gestor (spec "Prestação de contas", aprovada com o Daniel 10/08/2026,
+// comparando com o Zoho Expense). Despesa avulsa continua podendo ser
+// decidida direto pelo gestor — nada aqui é obrigatório (decisão 1).
+
+function PrestacaoRow({ prestacao, count, valor, onClick }) {
+  const info = STATUS_PRESTACAO[prestacao.status] || STATUS_PRESTACAO.rascunho;
+  return (
+    <div
+      onClick={onClick}
+      style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{prestacao.titulo}</div>
+        <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{count} {count === 1 ? "despesa" : "despesas"}</div>
+      </div>
+      <Badge variant={info.variant}>{info.label}</Badge>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{fmtMoney(valor)}</div>
+    </div>
+  );
+}
+
+function NovaPrestacaoModal({ despesas, tituloSugerido, onSave, onClose }) {
+  useEscToClose(onClose);
+  const [titulo, setTitulo] = useState(tituloSugerido);
+  const [saving, setSaving] = useState(null); // null | "rascunho" | "enviar"
+  const [error, setError] = useState(null);
+  const total = despesas.reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
+
+  const handleSave = async (enviar) => {
+    setSaving(enviar ? "enviar" : "rascunho");
+    setError(null);
+    try {
+      await onSave({ titulo: titulo.trim() || tituloSugerido, despesaIds: despesas.map((d) => d.id), enviar });
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Não foi possível salvar a prestação.");
+      setSaving(null);
+    }
+  };
+
+  return (
+    <>
+      <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 999 }} onClick={onClose} />
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova prestação de contas</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{despesas.length} {despesas.length === 1 ? "despesa selecionada" : "despesas selecionadas"}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", flexShrink: 0 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px", flex: 1 }}>
+          <label style={LABEL_ST}>Título</label>
+          <input
+            type="text"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            className={INPUT_CLS}
+            style={{ ...INPUT_ST, marginBottom: 18 }}
+          />
+
+          <div style={LABEL_ST}>Despesas incluídas</div>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+            {despesas.map((d) => (
+              <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderBottom: "1px solid var(--border)", fontSize: 12.5 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: "var(--text)" }}>{d.categoria}</div>
+                  <div style={{ fontSize: 10.5, color: "var(--text-dim)" }}>{formatDateBR(d.data_despesa)}</div>
+                </div>
+                <div style={{ fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{fmtMoney(d.valor)}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 2px 18px", fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+            <span>Total</span>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmtMoney(total)}</span>
+          </div>
+
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>}
+
+          <div className="flex" style={{ gap: 8 }}>
+            <button onClick={() => handleSave(true)} disabled={!!saving} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+              {saving === "enviar" ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Enviar pra aprovação
+            </button>
+            <button onClick={() => handleSave(false)} disabled={!!saving} style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+              {saving === "rascunho" ? <Loader2 size={14} className="animate-spin" /> : "Salvar rascunho"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function PrestacaoResumoModal({ prestacao, despesas, onEnviar, onExcluir, onClose }) {
+  useEscToClose(onClose);
+  const info = STATUS_PRESTACAO[prestacao.status] || STATUS_PRESTACAO.rascunho;
+  const total = despesas.reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+
+  const handleEnviar = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await onEnviar(prestacao.id);
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Não foi possível enviar a prestação.");
+      setBusy(false);
+    }
+  };
+
+  const handleExcluir = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await onExcluir(prestacao.id);
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Não foi possível excluir o rascunho.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 999 }} onClick={onClose} />
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{prestacao.titulo}</div>
+            <div style={{ marginTop: 8 }}><Badge variant={info.variant}>{info.label}</Badge></div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", flexShrink: 0 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px", flex: 1 }}>
+          <div style={LABEL_ST}>Despesas ({despesas.length})</div>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+            {despesas.map((d) => {
+              const dinfo = STATUS_REEMBOLSO[d.status_reembolso] || STATUS_REEMBOLSO.pendente;
+              return (
+                <div key={d.id} style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, color: "var(--text)" }}>{d.categoria}</div>
+                      <div style={{ fontSize: 10.5, color: "var(--text-dim)" }}>{formatDateBR(d.data_despesa)}</div>
+                    </div>
+                    <Badge variant={dinfo.variant}>{dinfo.label}</Badge>
+                    <div style={{ fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{fmtMoney(d.valor)}</div>
+                  </div>
+                  {/* Antes só aparecia numa notificação efêmera — motivo some
+                      pra sempre se o vendedor não estava com o app aberto na
+                      hora. Mesmo princípio já aplicado a despesa avulsa
+                      (DespesaRow/DespesaDetalheModal), achado do QA. */}
+                  {d.status_reembolso === "rejeitado" && d.observacao_gestor && (
+                    <div style={{ fontSize: 10.5, color: "var(--danger)", background: "var(--danger-bg, rgba(220,38,38,0.08))", borderRadius: 6, padding: "5px 8px", marginTop: 6 }}>
+                      {d.observacao_gestor}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 2px 18px", fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+            <span>Total</span>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmtMoney(total)}</span>
+          </div>
+
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>}
+
+          {prestacao.status === "rascunho" && !confirmandoExclusao && (
+            <div className="flex" style={{ gap: 8 }}>
+              <button onClick={handleEnviar} disabled={busy} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+                <Send size={14} /> Enviar pra aprovação
+              </button>
+              <button onClick={() => setConfirmandoExclusao(true)} title="Excluir rascunho" style={{ background: "transparent", color: "var(--text-faint)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                <Trash2 size={14} />
+              </button>
+            </div>
+          )}
+          {prestacao.status === "rascunho" && confirmandoExclusao && (
+            <div style={{ background: "var(--danger-bg)", borderRadius: 10, padding: 12 }}>
+              <div style={{ fontSize: 12, color: "var(--danger)", marginBottom: 8 }}>Excluir este rascunho? As despesas voltam a ficar soltas.</div>
+              <div className="flex" style={{ gap: 8 }}>
+                <button onClick={handleExcluir} disabled={busy} style={{ flex: 1, background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+                  {busy ? "Excluindo…" : "Confirmar exclusão"}
+                </button>
+                <button onClick={() => setConfirmandoExclusao(false)} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── View principal ────────────────────────────────────────────────────────────
 
 export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreateClient, pushNotification, initialSelectedViagemId, onInitialViagemConsumed }) {
   const userId = currentUser?.id;
   const { registros, loading: loadingRegistros, createRegistro, marcarRealizado, marcarNaoRealizado, deleteRegistro } = useCRMViagens({ userId });
   const { despesas, loading: loadingDespesas, createDespesa, deleteDespesa, uploadComprovante, getComprovanteUrl } = useCRMDespesas({ userId });
+  const { prestacoes, loading: loadingPrestacoes, criarPrestacao, enviarRascunho, excluirRascunho } = useCRMViagemPrestacoes({ userId });
   const { categorias, loading: loadingCategorias } = useCRMViagemCategorias({ userId });
   const ai = useAI(currentUser);
 
   const [mesRef, setMesRef] = useState(currentMonthStr());
   const [showNovaVisita, setShowNovaVisita] = useState(false);
   const [showNovaDespesa, setShowNovaDespesa] = useState(false);
+  const [showNovaPrestacao, setShowNovaPrestacao] = useState(false);
   const [selectedRegistro, setSelectedRegistro] = useState(null);
   const [selectedDespesa, setSelectedDespesa] = useState(null);
+  const [selectedPrestacao, setSelectedPrestacao] = useState(null);
+  const [selectedDespesaIds, setSelectedDespesaIds] = useState(() => new Set());
 
   // Esta é a visão "meus dados" do vendedor — a RLS permite que gestor/admin
   // também leiam todas as linhas, então filtramos por dono aqui para não
@@ -977,6 +1199,74 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   );
   const totalDespesasDoMes = useMemo(() => despesasDoMes.reduce((sum, d) => sum + (Number(d.valor) || 0), 0), [despesasDoMes]);
 
+  // Despesa solta = ainda não entrou numa prestação (prestacao_id null).
+  // Continua decidível direto pelo gestor, sem passar por prestação nenhuma
+  // (decisão 1 da spec) — por isso segue aparecendo aqui, só que agora sem
+  // as que já foram agrupadas (essas aparecem dentro da prestação delas).
+  const despesasSoltasDoMes = useMemo(() => despesasDoMes.filter((d) => !d.prestacao_id), [despesasDoMes]);
+  const despesasSoltasPendentes = useMemo(() => despesasSoltasDoMes.filter((d) => d.status_reembolso === "pendente"), [despesasSoltasDoMes]);
+  const totalSoltasPendentes = useMemo(() => despesasSoltasPendentes.reduce((sum, d) => sum + (Number(d.valor) || 0), 0), [despesasSoltasPendentes]);
+
+  const despesasPorPrestacaoId = useMemo(() => {
+    const map = new Map();
+    despesasProprias.forEach((d) => {
+      if (!d.prestacao_id) return;
+      if (!map.has(d.prestacao_id)) map.set(d.prestacao_id, []);
+      map.get(d.prestacao_id).push(d);
+    });
+    return map;
+  }, [despesasProprias]);
+
+  const prestacoesProprias = useMemo(() => prestacoes.filter((p) => p.vendedor_id === userId), [prestacoes, userId]);
+  const prestacoesDoMes = useMemo(
+    () => prestacoesProprias.filter((p) => sameMonth(p.mes_referencia, mesRef)).sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""))),
+    [prestacoesProprias, mesRef]
+  );
+  const prestacoesEnviadas = useMemo(() => prestacoesDoMes.filter((p) => p.status === "enviada"), [prestacoesDoMes]);
+  const totalEnviadas = useMemo(
+    () => prestacoesEnviadas.reduce((sum, p) => sum + (despesasPorPrestacaoId.get(p.id) || []).reduce((s, d) => s + (Number(d.valor) || 0), 0), 0),
+    [prestacoesEnviadas, despesasPorPrestacaoId]
+  );
+  const prestacoesDecididas = useMemo(() => prestacoesDoMes.filter((p) => ["aprovada", "rejeitada", "parcial", "paga"].includes(p.status)), [prestacoesDoMes]);
+
+  // Sempre que a lista de soltas pendentes muda (mês trocado, despesa nova
+  // lançada, prestação enviada removendo algumas daqui), a seleção volta a
+  // marcar todas — o vendedor desmarca as que não quer incluir, não o
+  // contrário. `key` (ids ordenados) evita loop: só reseta quando a
+  // composição da lista muda de verdade, não a cada render.
+  const pendentesKey = despesasSoltasPendentes.map((d) => d.id).sort().join(",");
+  useEffect(() => {
+    setSelectedDespesaIds(new Set(despesasSoltasPendentes.map((d) => d.id)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendentesKey]);
+
+  const toggleDespesaSelecionada = (id) => {
+    setSelectedDespesaIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const despesasSelecionadas = useMemo(
+    () => despesasSoltasPendentes.filter((d) => selectedDespesaIds.has(d.id)),
+    [despesasSoltasPendentes, selectedDespesaIds]
+  );
+
+  // Sub-prestação por viagem (decisão 2 da spec): se toda a seleção
+  // pertence à mesma visita, sugere o título com o destino e já vincula
+  // `registro_id` — senão fica geral do mês (registro_id nulo).
+  const registroSugerido = useMemo(() => {
+    if (!despesasSelecionadas.length) return null;
+    const primeiro = despesasSelecionadas[0].registro_id;
+    if (!primeiro || !despesasSelecionadas.every((d) => d.registro_id === primeiro)) return null;
+    return registrosProprios.find((r) => r.id === primeiro) || null;
+  }, [despesasSelecionadas, registrosProprios]);
+
+  const tituloSugerido = registroSugerido
+    ? `Prestação de ${monthLabel(mesRef)} — Visita a ${registroSugerido.destino_planejado}`
+    : `Prestação de ${monthLabel(mesRef)}`;
+
   if (!isSupabaseConfigured) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px", color: "var(--text-dim)", fontSize: 13 }}>
@@ -1021,6 +1311,16 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
     window.open(url, "_blank");
   };
 
+  const handleCriarPrestacao = async ({ titulo, despesaIds, enviar }) => {
+    await criarPrestacao({
+      titulo,
+      mesReferencia: mesRef,
+      registroId: registroSugerido?.id || null,
+      despesaIds,
+      enviar,
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-end">
@@ -1060,12 +1360,12 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
         )}
       </div>
 
-      {/* Despesas */}
+      {/* Despesas & prestação de contas */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
             <Receipt size={16} style={{ color: "var(--text-dim)" }} />
-            Despesas do mês
+            Despesas & prestação de contas
             {despesasDoMes.length > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-dim)" }}>· {fmtMoney(totalDespesasDoMes)}</span>}
           </div>
           <button
@@ -1079,19 +1379,77 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
           </button>
         </div>
 
-        {loadingDespesas ? (
+        {(loadingDespesas || loadingPrestacoes) ? (
           <div style={{ textAlign: "center", padding: "32px 8px", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
-        ) : despesasDoMes.length === 0 ? (
+        ) : despesasDoMes.length === 0 && prestacoesDoMes.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "32px 8px", color: "var(--text-faint)" }}>
             <Receipt size={32} strokeWidth={1} />
             <span style={{ fontSize: 12 }}>Nenhuma despesa lançada para {monthLabel(mesRef).toLowerCase()}</span>
           </div>
         ) : (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-            {despesasDoMes.map((d) => (
-              <DespesaRow key={d.id} despesa={d} onVerComprovante={handleVerComprovante} onRefazer={handleRefazerDespesa} onOpenDetalhe={() => setSelectedDespesa(d)} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+              <StatCard icon={FileText} value={despesasSoltasPendentes.length} label={`Sem prestação — ${fmtMoney(totalSoltasPendentes)}`} compact />
+              <StatCard icon={Send} value={prestacoesEnviadas.length} label={`Aguardando aprovação — ${fmtMoney(totalEnviadas)}`} compact />
+              <StatCard icon={CheckCircle2} value={prestacoesDecididas.length} label="Decididas este mês" compact />
+            </div>
+
+            {despesasSoltasDoMes.length > 0 && (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+                  Despesas soltas (ainda sem prestação)
+                </div>
+                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: despesasSoltasPendentes.length > 0 ? 8 : 20 }}>
+                  {despesasSoltasDoMes.map((d) => (
+                    <div key={d.id} style={{ display: "flex", alignItems: "stretch" }}>
+                      {d.status_reembolso === "pendente" && (
+                        <button
+                          onClick={() => toggleDespesaSelecionada(d.id)}
+                          title={selectedDespesaIds.has(d.id) ? "Remover da seleção" : "Incluir na seleção"}
+                          style={{ background: "none", border: "none", borderRight: "1px solid var(--border)", padding: "0 10px", display: "flex", alignItems: "center", cursor: "pointer", color: selectedDespesaIds.has(d.id) ? "var(--accent)" : "var(--text-faint)" }}
+                        >
+                          {selectedDespesaIds.has(d.id) ? <CheckSquare size={16} /> : <Square size={16} />}
+                        </button>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <DespesaRow despesa={d} onVerComprovante={handleVerComprovante} onRefazer={handleRefazerDespesa} onOpenDetalhe={() => setSelectedDespesa(d)} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {despesasSelecionadas.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "color-mix(in srgb, var(--accent) 8%, var(--surface))", border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)", borderRadius: 10, padding: "10px 14px", marginBottom: 20 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>
+                      {despesasSelecionadas.length} {despesasSelecionadas.length === 1 ? "despesa selecionada" : "despesas selecionadas"} · <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmtMoney(despesasSelecionadas.reduce((s, d) => s + (Number(d.valor) || 0), 0))}</span>
+                    </span>
+                    <button
+                      onClick={() => setShowNovaPrestacao(true)}
+                      style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                    >
+                      <Send size={13} /> Enviar prestação
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {prestacoesDoMes.length > 0 && (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+                  Prestações de contas
+                </div>
+                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                  {prestacoesDoMes.map((p) => {
+                    const itens = despesasPorPrestacaoId.get(p.id) || [];
+                    const valor = itens.reduce((s, d) => s + (Number(d.valor) || 0), 0);
+                    return (
+                      <PrestacaoRow key={p.id} prestacao={p} count={itens.length} valor={valor} onClick={() => setSelectedPrestacao(p)} />
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </>
         )}
       </div>
 
@@ -1119,6 +1477,25 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
           onVerComprovante={handleVerComprovante}
           onRefazer={handleRefazerDespesa}
           onClose={() => setSelectedDespesa(null)}
+        />
+      )}
+
+      {showNovaPrestacao && (
+        <NovaPrestacaoModal
+          despesas={despesasSelecionadas}
+          tituloSugerido={tituloSugerido}
+          onSave={handleCriarPrestacao}
+          onClose={() => setShowNovaPrestacao(false)}
+        />
+      )}
+
+      {selectedPrestacao && (
+        <PrestacaoResumoModal
+          prestacao={prestacoes.find((p) => p.id === selectedPrestacao.id) || selectedPrestacao}
+          despesas={despesasPorPrestacaoId.get(selectedPrestacao.id) || []}
+          onEnviar={enviarRascunho}
+          onExcluir={excluirRascunho}
+          onClose={() => setSelectedPrestacao(null)}
         />
       )}
     </div>

@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.34.0",
+    items: [
+      { kind: "novo", text: "Viagens & Despesas ganhou \"Prestação de contas\": agrupe várias despesas soltas num lote e envie pra aprovação de uma vez, em vez de mandar despesa por despesa. Dá pra fazer uma prestação geral do mês ou uma por viagem específica. Despesa avulsa continua podendo ser aprovada direto, sem passar por prestação nenhuma." },
+      { kind: "novo", text: "Gestor agora decide uma prestação de contas inteira de uma vez (aprovar tudo/rejeitar tudo) ou despesa por despesa dentro dela — e marca a prestação inteira como paga com um clique, depois de aprovada.", roles: ["gerente", "admin"] },
+    ],
+  },
+  {
     version: "4.33.4",
     items: [
       { kind: "ajuste", text: "No menu \"Meu Espaço\", \"Minhas Tarefas\" virou \"Pendências\" e \"Lista Pessoal\" virou \"Meu To-do\" — nomes mais claros pro que cada item realmente é (o feed de pendências entre módulos vs. a sua lista de tarefas privada)." },

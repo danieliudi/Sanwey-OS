@@ -9,15 +9,19 @@ import {
   AlertTriangle,
   ExternalLink,
   Loader2,
+  Send,
+  Inbox,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
+import { useCRMViagemPrestacoes } from "../../hooks/use-crm-viagem-prestacoes";
 import { useAI } from "../../hooks/use-ai";
 import { viagemCrossCheckPrompt } from "../../constants/ai-prompts";
 import { Badge } from "../ui/Badge";
 import { formatDateBR } from "../../utils/date";
-import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO, computeViagemDivergencias } from "../../utils/viagens";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
+import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO, STATUS_PRESTACAO, computeViagemDivergencias } from "../../utils/viagens";
 
 const COMPROVANTE_OBRIGATORIO_ACIMA_DE = 100;
 
@@ -259,11 +263,223 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
   );
 }
 
+// ── Prestação de contas ──────────────────────────────────────────────────────
+// Fila de lotes de despesas (spec "Prestação de contas", 10/08/2026) — decide
+// o lote inteiro de uma vez, em vez de despesa por despesa. Despesa avulsa
+// (fora de prestação) continua na lista de baixo, decidida direto, sem
+// depender disso (decisão 1 da spec).
+
+function PrestacaoQueueRow({ prestacao, vendedorNome, count, valor, onClick }) {
+  const info = STATUS_PRESTACAO[prestacao.status] || STATUS_PRESTACAO.rascunho;
+  return (
+    <div
+      onClick={onClick}
+      style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+    >
+      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--accent)", color: "var(--on-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
+        {(vendedorNome || "—").split(" ").slice(0, 2).map((s) => s[0]).join("").toUpperCase()}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>{vendedorNome} — {prestacao.titulo}</div>
+        <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{count} {count === 1 ? "despesa" : "despesas"}</div>
+      </div>
+      <Badge variant={info.variant}>{info.label}</Badge>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{fmtMoney(valor)}</div>
+      <button style={btnStyle("ghost", false)}>Analisar →</button>
+    </div>
+  );
+}
+
+function PrestacaoDecisaoModal({ prestacao, despesas, vendedorNome, onVerComprovante, onDecidirItem, onDecidirLote, onMarcarPago, onClose }) {
+  useEscToClose(onClose);
+  const info = STATUS_PRESTACAO[prestacao.status] || STATUS_PRESTACAO.rascunho;
+  const total = despesas.reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [rejeitandoLote, setRejeitandoLote] = useState(false);
+  const [motivoLote, setMotivoLote] = useState("");
+  const [decidingItemId, setDecidingItemId] = useState(null);
+  const [rejeitandoItemId, setRejeitandoItemId] = useState(null);
+  const [motivoItem, setMotivoItem] = useState("");
+
+  const handleDecidirItem = async (despesa, status, motivo) => {
+    setDecidingItemId(despesa.id);
+    setError(null);
+    try {
+      await onDecidirItem(despesa, status, motivo);
+      setRejeitandoItemId(null);
+      setMotivoItem("");
+    } catch (err) {
+      setError(err?.message || "Não foi possível decidir esta despesa.");
+    } finally {
+      setDecidingItemId(null);
+    }
+  };
+
+  const handleAprovarTudo = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await onDecidirLote(prestacao.id, "aprovado", null);
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Não foi possível aprovar a prestação.");
+      setBusy(false);
+    }
+  };
+
+  const handleConfirmarRejeicaoLote = async () => {
+    if (!motivoLote.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onDecidirLote(prestacao.id, "rejeitado", motivoLote.trim());
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Não foi possível rejeitar a prestação.");
+      setBusy(false);
+    }
+  };
+
+  const handleMarcarPago = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await onMarcarPago(prestacao.id);
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Não foi possível marcar como paga.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 999 }} onClick={onClose} />
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{vendedorNome}</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{prestacao.titulo} · <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmtMoney(total)}</span></div>
+            <div style={{ marginTop: 8 }}><Badge variant={info.variant}>{info.label}</Badge></div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", flexShrink: 0 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px", flex: 1 }}>
+          <div style={labelSt}>Despesas ({despesas.length})</div>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 18 }}>
+            {despesas.map((d) => {
+              const dinfo = STATUS_REEMBOLSO[d.status_reembolso] || STATUS_REEMBOLSO.pendente;
+              const podeDecidir = prestacao.status === "enviada" && d.status_reembolso === "pendente";
+              return (
+                <div key={d.id} style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, color: "var(--text)" }}>{d.categoria}</div>
+                      <div style={{ fontSize: 10.5, color: "var(--text-dim)" }}>{formatDateBR(d.data_despesa)}</div>
+                    </div>
+                    {d.comprovante_path && (
+                      <button onClick={() => onVerComprovante(d)} title="Ver comprovante" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", display: "flex", padding: 2 }}>
+                        <ExternalLink size={13} />
+                      </button>
+                    )}
+                    <div style={{ fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{fmtMoney(d.valor)}</div>
+                    {podeDecidir && rejeitandoItemId !== d.id ? (
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button
+                          onClick={() => handleDecidirItem(d, "aprovado", null)}
+                          disabled={decidingItemId === d.id}
+                          title="Aprovar"
+                          style={{ width: 24, height: 24, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--success-bg)", color: "var(--success)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", cursor: decidingItemId === d.id ? "default" : "pointer" }}
+                        >
+                          <Check size={12} />
+                        </button>
+                        <button
+                          onClick={() => { setRejeitandoItemId(d.id); setMotivoItem(""); }}
+                          disabled={decidingItemId === d.id}
+                          title="Rejeitar"
+                          style={{ width: 24, height: 24, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", cursor: decidingItemId === d.id ? "default" : "pointer" }}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : podeDecidir ? null : (
+                      <Badge variant={dinfo.variant}>{dinfo.label}</Badge>
+                    )}
+                  </div>
+                  {podeDecidir && rejeitandoItemId === d.id && (
+                    <div style={{ marginTop: 8, padding: 8, background: "var(--surface-alt)", borderRadius: 8 }}>
+                      <label style={{ ...labelSt, marginBottom: 4 }}>Motivo da rejeição (obrigatório)</label>
+                      <textarea value={motivoItem} onChange={(e) => setMotivoItem(e.target.value)} rows={2} style={{ ...inputSt, width: "100%", resize: "vertical" }} autoFocus />
+                      <div className="flex" style={{ gap: 6, marginTop: 6 }}>
+                        <button
+                          onClick={() => handleDecidirItem(d, "rejeitado", motivoItem.trim())}
+                          disabled={!motivoItem.trim() || decidingItemId === d.id}
+                          style={{ ...btnStyle("danger", !motivoItem.trim() || decidingItemId === d.id), padding: "5px 10px" }}
+                        >
+                          Confirmar
+                        </button>
+                        <button onClick={() => { setRejeitandoItemId(null); setMotivoItem(""); }} style={{ ...btnStyle("ghost", false), padding: "5px 10px" }}>Cancelar</button>
+                      </div>
+                    </div>
+                  )}
+                  {d.status_reembolso === "rejeitado" && d.observacao_gestor && (
+                    <div style={{ fontSize: 10.5, color: "var(--danger)", background: "var(--danger-bg, rgba(220,38,38,0.08))", borderRadius: 6, padding: "5px 8px", marginTop: 6 }}>
+                      {d.observacao_gestor}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {error && <div style={errorBannerSt}>{error}</div>}
+
+          {prestacao.status === "enviada" && !rejeitandoLote && (
+            <div className="flex" style={{ gap: 8, marginTop: 4 }}>
+              <button onClick={handleAprovarTudo} disabled={busy} style={btnStyle("primary", busy, true)}>
+                <Check size={14} /> Aprovar tudo
+              </button>
+              <button onClick={() => setRejeitandoLote(true)} disabled={busy} style={btnStyle("danger", busy, true)}>
+                <X size={14} /> Rejeitar tudo
+              </button>
+            </div>
+          )}
+          {prestacao.status === "enviada" && rejeitandoLote && (
+            <div style={{ padding: 10, background: "var(--surface-alt)", borderRadius: 8 }}>
+              <label style={labelSt}>Motivo da rejeição (obrigatório)</label>
+              <textarea value={motivoLote} onChange={(e) => setMotivoLote(e.target.value)} rows={2} style={{ ...inputSt, width: "100%", resize: "vertical" }} autoFocus />
+              <div className="flex" style={{ gap: 8, marginTop: 8 }}>
+                <button onClick={handleConfirmarRejeicaoLote} disabled={!motivoLote.trim() || busy} style={btnStyle("danger", !motivoLote.trim() || busy, true)}>
+                  Confirmar rejeição
+                </button>
+                <button onClick={() => { setRejeitandoLote(false); setMotivoLote(""); }} style={btnStyle("ghost", false, true)}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          {(prestacao.status === "aprovada" || prestacao.status === "parcial") && (
+            <button onClick={handleMarcarPago} disabled={busy} style={btnStyle("primary", busy, true)}>
+              {busy ? <Loader2 size={13} className="animate-spin" /> : null} Marcar como paga
+              {prestacao.status === "parcial" ? " (só as aprovadas)" : ""}
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── View principal ───────────────────────────────────────────────────────────
 
 export function CRMViagensGestorView({ currentUser, users }) {
   const { registros, loading: loadingRegistros } = useCRMViagens({ userId: currentUser?.id });
   const { despesas, loading: loadingDespesas, getComprovanteUrl, decidirReembolso } = useCRMDespesas({ userId: currentUser?.id });
+  const { prestacoes, loading: loadingPrestacoes, decidirLote, marcarPaga } = useCRMViagemPrestacoes({ userId: currentUser?.id });
   const { complete, isConfigured } = useAI(currentUser);
 
   const [selectedMonth, setSelectedMonth] = useState(() => todayISO().slice(0, 7));
@@ -278,6 +494,8 @@ export function CRMViagensGestorView({ currentUser, users }) {
   const [decisaoError, setDecisaoError] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectObs, setRejectObs] = useState("");
+  const [selectedPrestacao, setSelectedPrestacao] = useState(null);
+  const [prestacaoError, setPrestacaoError] = useState(null);
 
   const vendedoresComerciais = useMemo(
     () => (users || []).filter((u) => (u.roles?.length ? u.roles : [u.role]).some(r => COMERCIAL_ROLES.has(r))),
@@ -303,11 +521,38 @@ export function CRMViagensGestorView({ currentUser, users }) {
       .filter((d) => selectedVendedorId === "todos" || d.vendedor_id === selectedVendedorId);
   }, [despesas, selectedMonth, selectedVendedorId]);
 
+  // Despesa que já entrou numa prestação some daqui — decidida em lote no
+  // painel de prestação, não mais uma a uma (evita decidir duas vezes a
+  // mesma despesa por dois caminhos diferentes).
   const despesasParaDecidir = useMemo(() => {
     return despesasFiltradas
-      .filter((d) => d.status_reembolso === "pendente" || d.status_reembolso === "aprovado")
+      .filter((d) => !d.prestacao_id && (d.status_reembolso === "pendente" || d.status_reembolso === "aprovado"))
       .sort((a, b) => String(b.data_despesa || "").localeCompare(String(a.data_despesa || "")));
   }, [despesasFiltradas]);
+
+  const despesasPorPrestacaoId = useMemo(() => {
+    const map = new Map();
+    (despesas || []).forEach((d) => {
+      if (!d.prestacao_id) return;
+      if (!map.has(d.prestacao_id)) map.set(d.prestacao_id, []);
+      map.get(d.prestacao_id).push(d);
+    });
+    return map;
+  }, [despesas]);
+
+  // Fila de ação do gestor: "enviada" (precisa decidir), "aprovada" e
+  // "parcial" (as duas têm despesa aprovada esperando "Marcar como paga" —
+  // achado do QA adversarial: "parcial" tinha ficado de fora, e a despesa
+  // aprovada dentro de uma prestação mista não tinha nenhum caminho de
+  // pagamento em lote); só rejeitada/paga ficam de fora de verdade (nada
+  // pendente pra fazer nelas).
+  const prestacoesParaAgir = useMemo(() => {
+    return (prestacoes || [])
+      .filter((p) => monthKeyOf(p.mes_referencia) === selectedMonth)
+      .filter((p) => selectedVendedorId === "todos" || p.vendedor_id === selectedVendedorId)
+      .filter((p) => p.status === "enviada" || p.status === "aprovada" || p.status === "parcial")
+      .sort((a, b) => (a.status === b.status ? 0 : a.status === "enviada" ? -1 : 1));
+  }, [prestacoes, selectedMonth, selectedVendedorId]);
 
   // Ver computeViagemDivergencias em utils/viagens.js — mesma regra usada
   // em Relatórios, pra não divergir os dois lugares que cruzam planejado ×
@@ -392,6 +637,34 @@ export function CRMViagensGestorView({ currentUser, users }) {
       setDecisaoError(e.message || "Não foi possível rejeitar a despesa.");
     } finally {
       setDecidingId(null);
+    }
+  }
+
+  // Decisão item a item dentro do painel de prestação reaproveita o mesmo
+  // decidirReembolso de sempre — o trigger no banco (recompute_status)
+  // recalcula sozinho o status da prestação (aprovada/rejeitada/parcial)
+  // conforme as despesas dela vão sendo decididas.
+  async function handleDecidirItemPrestacao(despesa, status, motivo) {
+    await decidirReembolso(despesa.id, status, motivo || null);
+  }
+
+  async function handleDecidirLotePrestacao(prestacaoId, status, motivo) {
+    setPrestacaoError(null);
+    try {
+      await decidirLote(prestacaoId, status, motivo);
+    } catch (e) {
+      setPrestacaoError(e.message || "Não foi possível decidir a prestação.");
+      throw e;
+    }
+  }
+
+  async function handleMarcarPagoPrestacao(prestacaoId) {
+    setPrestacaoError(null);
+    try {
+      await marcarPaga(prestacaoId);
+    } catch (e) {
+      setPrestacaoError(e.message || "Não foi possível marcar a prestação como paga.");
+      throw e;
     }
   }
 
@@ -519,8 +792,40 @@ export function CRMViagensGestorView({ currentUser, users }) {
 
           <section style={cardSt}>
             <div style={sectionHeaderSt}>
+              <Send size={16} style={{ color: "var(--text-dim)" }} />
+              Prestações a decidir — {monthLabel(selectedMonth)}
+            </div>
+
+            {prestacaoError && <div style={errorBannerSt}>{prestacaoError}</div>}
+
+            {loadingPrestacoes ? (
+              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Carregando...</div>
+            ) : prestacoesParaAgir.length === 0 ? (
+              <EmptyState icon={Inbox} text="Nenhuma prestação de contas aguardando decisão ou pagamento neste mês." />
+            ) : (
+              <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                {prestacoesParaAgir.map((p) => {
+                  const itens = despesasPorPrestacaoId.get(p.id) || [];
+                  const valor = itens.reduce((s, d) => s + (Number(d.valor) || 0), 0);
+                  return (
+                    <PrestacaoQueueRow
+                      key={p.id}
+                      prestacao={p}
+                      vendedorNome={nomePorId.get(p.vendedor_id) || "—"}
+                      count={itens.length}
+                      valor={valor}
+                      onClick={() => setSelectedPrestacao(p)}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section style={cardSt}>
+            <div style={sectionHeaderSt}>
               <Receipt size={16} style={{ color: "var(--text-dim)" }} />
-              Despesas pendentes de aprovação
+              Despesas avulsas pendentes de aprovação
             </div>
 
             {comprovanteError && <div style={errorBannerSt}>{comprovanteError}</div>}
@@ -551,6 +856,19 @@ export function CRMViagensGestorView({ currentUser, users }) {
             )}
           </section>
         </>
+      )}
+
+      {selectedPrestacao && (
+        <PrestacaoDecisaoModal
+          prestacao={prestacoes.find((p) => p.id === selectedPrestacao.id) || selectedPrestacao}
+          despesas={despesasPorPrestacaoId.get(selectedPrestacao.id) || []}
+          vendedorNome={nomePorId.get(selectedPrestacao.vendedor_id) || "—"}
+          onVerComprovante={handleVerComprovante}
+          onDecidirItem={handleDecidirItemPrestacao}
+          onDecidirLote={handleDecidirLotePrestacao}
+          onMarcarPago={handleMarcarPagoPrestacao}
+          onClose={() => setSelectedPrestacao(null)}
+        />
       )}
     </div>
   );

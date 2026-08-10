@@ -41,6 +41,19 @@ export const STATUS_REEMBOLSO = {
   pago:      { label: "Pago",      variant: "dark" },
 };
 
+// Prestação de contas — agrupa várias despesas pra decisão em lote (spec
+// aprovada 10/08/2026, inspirada no "Relatório" do Zoho Expense; nome
+// diferente de propósito pra não colidir com a aba "Relatórios" já
+// existente, que é analítica/BI). Ver crm_viagem_prestacoes.
+export const STATUS_PRESTACAO = {
+  rascunho:  { label: "Rascunho",  variant: "neutral" },
+  enviada:   { label: "Enviada",   variant: "urgent" },
+  aprovada:  { label: "Aprovada",  variant: "success" },
+  rejeitada: { label: "Rejeitada", variant: "critical" },
+  parcial:   { label: "Parcial",   variant: "gold" },
+  paga:      { label: "Paga",      variant: "dark" },
+};
+
 // Motor de divergência planejado × realizado × despesa — pedido do gerente
 // comercial via Daniel (05/08/2026): cruzar automaticamente o que o vendedor
 // disse que ia fazer com o que de fato foi lançado como despesa, sem
