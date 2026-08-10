@@ -444,6 +444,7 @@ export function ExecutiveDashboard({
               return (
                 <button
                   key={t.id}
+                  data-tour={t.id === "esg" ? "executive-esg-tab" : undefined}
                   onClick={() => setAreaTab(t.id)}
                   className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
                   style={{

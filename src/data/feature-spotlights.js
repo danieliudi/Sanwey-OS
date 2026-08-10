@@ -31,6 +31,25 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: agora dá pra ver suas tarefas num calendário mensal — clique aqui pra experimentar.",
     version: "4.23.0",
   },
+  // Achado do Daniel 10/08/2026: esta lista ficou parada em 1 entrada só
+  // desde 4.23.0 — várias features grandes (reestruturação de drawer,
+  // ESG, StageNavigator) saíram sem spotlight nenhum. As duas abaixo
+  // reabrem a prática; ver CLAUDE.md regra 12 pra isso não voltar a
+  // travar silenciosamente.
+  {
+    id: "executive-esg-tab",
+    route: "executive",
+    target: '[data-tour="executive-esg-tab"]',
+    text: "Novo: o Painel Executivo ganhou uma aba de ESG & Carbono — clique aqui pra ver o total de CO2e do Grupo.",
+    version: "4.33.0",
+  },
+  {
+    id: "prestacao-de-contas",
+    route: "crm-viagens",
+    target: '[data-tour="prestacao-de-contas"]',
+    text: "Novo: agrupe várias despesas soltas numa prestação de contas e envie de uma vez, em vez de despesa por despesa.",
+    version: "4.34.0",
+  },
 ];
 
 export default FEATURE_SPOTLIGHTS;

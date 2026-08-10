@@ -1363,7 +1363,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
       {/* Despesas & prestação de contas */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+          <div data-tour="prestacao-de-contas" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
             <Receipt size={16} style={{ color: "var(--text-dim)" }} />
             Despesas & prestação de contas
             {despesasDoMes.length > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-dim)" }}>· {fmtMoney(totalDespesasDoMes)}</span>}

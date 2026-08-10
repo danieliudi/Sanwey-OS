@@ -416,3 +416,40 @@ boards com múltiplas views. Verificado (Playwright): `document.body.clientWidth
 idêntico entre uma tela sem scroll e uma com >1000px de conteúdo extra.
 Degrada normalmente em navegadores sem suporte (ex. Safari < 18.2) — sem essa
 propriedade, volta ao comportamento de antes, não quebra nada.
+
+## 12. Tour guiado (spotlight) também é parte de "pronto" — igual ao changelog
+
+Achado do Daniel em 10/08/2026, mesmo formato do achado que originou a regra
+10: o mecanismo de tour guiado contextual (`src/data/feature-spotlights.js`,
+decidido com o Daniel 07/08/2026, proposta "B" — aponta pra um elemento real
+da tela quando a pessoa naturalmente visita a rota onde a novidade mora, em
+vez de forçar um tour tela-por-tela) foi construído, ganhou 1 entrada de
+exemplo (Agenda da Lista Pessoal, 4.23.0) — e parou aí. Várias entregas
+grandes depois (reestruturação de drawer em 7 boards, StageNavigator estilo
+Pipefy, ESG & Carbono completo, Prestação de contas) saíram sem nenhum
+spotlight novo, apesar do mecanismo continuar funcionando perfeitamente — é
+exatamente o mesmo padrão de "decidimos isso uma vez e ninguém tratou como
+parte recorrente de pronto" que a regra 10 já corrigiu pra changelog/versão.
+
+**Daqui pra frente, uma mudança de UI genuinamente nova e não-óbvia** (algo
+que quem já usa a plataforma não vai necessariamente notar sozinho — um
+botão novo, uma aba nova, um fluxo que substitui outro) **só está pronta
+quando também tiver**:
+
+1. Um `data-tour="algum-id-estável"` no elemento real que representa a
+   novidade (mesmo padrão já usado em `ViewToggleButton`/`KanbanBoardHeader`
+   — a maioria dos componentes compartilhados já repassa a prop sem
+   precisar de mudança extra).
+2. Uma entrada nova em `FEATURE_SPOTLIGHTS` (`route` = mesmo id de `section`
+   usado em App.jsx pra essa tela, `target` = o seletor do `data-tour`
+   acima, `version` = a versão em que a feature foi ao ar).
+
+Nem toda entrada de changelog vira spotlight — mesmo critério de bug fix já
+usado pra pular tutorial (regra 10): fix que não muda nada visível não
+precisa. Mas mudança estrutural/visual real (a mesma categoria que já exige
+mockup pela regra 3) **precisa** de spotlight, não só de changelog — o
+changelog exige que a pessoa leia a aba "Novidades"; o spotlight aparece
+sozinho, no lugar certo, no momento certo, e é o que realmente resolve "eu
+nem sabia que isso existia". Registrar a decisão de pular (e por quê) não
+precisa de mockup separado — só não pular a pergunta, mesmo espírito da
+regra 10 pro tutorial.

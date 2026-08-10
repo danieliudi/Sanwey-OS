@@ -24,6 +24,14 @@
 
 export const CHANGELOG = [
   {
+    version: "4.35.0",
+    items: [
+      { kind: "novo", text: "Ajuda & Tutoriais ganhou guias rápidos de Viagens & Despesas: planejar uma visita, lançar despesa e enviar prestação de contas em lote (gestor tem um guia próprio de aprovação)." },
+      { kind: "novo", text: "Painel Executivo: dica contextual mostrando a nova aba de ESG & Carbono pra quem ainda não passou por lá.", roles: ["gerente", "admin"] },
+      { kind: "novo", text: "Viagens & Despesas: dica contextual mostrando a \"Prestação de contas\" na primeira visita à tela depois do lançamento." },
+    ],
+  },
+  {
     version: "4.34.0",
     items: [
       { kind: "novo", text: "Viagens & Despesas ganhou \"Prestação de contas\": agrupe várias despesas soltas num lote e envie pra aprovação de uma vez, em vez de mandar despesa por despesa. Dá pra fazer uma prestação geral do mês ou uma por viagem específica. Despesa avulsa continua podendo ser aprovada direto, sem passar por prestação nenhuma." },
