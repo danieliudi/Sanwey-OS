@@ -20,7 +20,14 @@ import { EmptyState } from "../ui/EmptyState";
 // Reaproveita as telas "self" que RHOnboardingView/RHTreinamentosView/
 // RHFeedbackView já tinham (isRHUser=false) em vez de duplicar UI.
 
-const TABS = [
+// Onboarding/Treinamentos/Avaliação só entram aqui como aba pra quem não tem
+// outro jeito de chegar nelas (papel "portal", único item de menu é este) —
+// achado do Daniel 10/08/2026: pra todo mundo com "Meu Desenvolvimento" na
+// sidebar, essas 3 abas duplicavam exatamente os itens soltos do menu (mesmo
+// componente, isRHUser=false, reaproveitado nos dois lugares). Ver
+// `isPortalOnly` abaixo — filtra as abas condicionalmente, não remove o
+// código das telas em si (Portal ainda depende delas).
+const TABS_FULL = [
   { id: "comunicados",   label: "Comunicados",   icon: Megaphone },
   { id: "onboarding",    label: "Onboarding",     icon: ClipboardCheck },
   { id: "treinamentos",  label: "Treinamentos",   icon: GraduationCap },
@@ -29,6 +36,7 @@ const TABS = [
   { id: "documentos",    label: "Documentos",     icon: FileText },
   { id: "meus-dados",    label: "Meus Dados",     icon: User },
 ];
+const REDUNDANT_WITH_SIDEBAR = new Set(["onboarding", "treinamentos", "avaliacao"]);
 
 const STATUS_INFO = {
   pendente: { label: "Pendente", bg: "var(--warning-bg)", text: "var(--warning)" },
@@ -432,9 +440,14 @@ function MeusDadosPanel({ meuColaborador, currentUser }) {
   );
 }
 
-export function MeuRHView({ currentUser, notifyMentions, notifications, markNotificationRead }) {
+export function MeuRHView({ currentUser, notifyMentions, notifications, markNotificationRead, isPortalOnly = false }) {
   const [tab, setTab] = useState("comunicados");
   const { meuColaborador } = useMyColaborador(currentUser);
+  // Portal não tem "Meu Desenvolvimento" na sidebar — pra esse papel, as 3
+  // abas continuam sendo o único caminho até onboarding/treinamentos/
+  // avaliação. Todo mundo com os itens soltos no menu não precisa da
+  // duplicata aqui dentro.
+  const TABS = isPortalOnly ? TABS_FULL : TABS_FULL.filter(t => !REDUNDANT_WITH_SIDEBAR.has(t.id));
 
   return (
     <div>

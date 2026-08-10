@@ -37,6 +37,10 @@ function rowToUser(r) {
     // create_mention_notifications, rodando na sessão de quem MENCIONOU,
     // não na de quem seria notificado.
     mentionNotificationsEnabled: r.mention_notifications_enabled !== false,
+    // Liga/desliga Chat por usuário via painel do admin (10/08/2026) —
+    // enforcement real é na RLS (chat_is_member), isto só reflete o estado
+    // pra UI decidir se mostra o item de menu.
+    chatEnabled: r.chat_enabled !== false,
   };
 }
 
@@ -129,6 +133,7 @@ export function useProfiles({ enabled = true } = {}) {
     if (patch.contract_type !== undefined) dbPatch.contract_type = patch.contract_type;
     if (patch.admission_date !== undefined) dbPatch.admission_date = patch.admission_date;
     if (patch.employee_status !== undefined) dbPatch.employee_status = patch.employee_status;
+    if (patch.chatEnabled !== undefined) dbPatch.chat_enabled = patch.chatEnabled;
 
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...patch } : u));
     // ai_config vive em `profile_secrets` (own-only), não em `profiles` —

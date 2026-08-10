@@ -15,6 +15,7 @@ const ROLE_LABEL = {
   admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor",
   marketing: "Marketing", gerente_marketing: "Gerente de Marketing",
   agencia: "Agência", rh: "RH", gerente_rh: "Gerente de RH",
+  comex: "Comex", diretoria: "Diretoria", portal: "Portal",
 };
 
 const TABS = [
@@ -461,7 +462,7 @@ export function TutoriaisView({ currentUser, onNavigate, initialTab }) {
                   Como usar o assistente de IA
                 </p>
                 <p className="text-sm leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                  Na tela de Negócios, clique em <strong style={{ color: "var(--text)" }}>"Perguntar à IA"</strong> para abrir o chat.
+                  Na tela de Funil de Vendas, clique em <strong style={{ color: "var(--text)" }}>"Perguntar à IA"</strong> para abrir o chat.
                   O assistente lê seu pipeline em tempo real e responde em linguagem natural.
                   Copie qualquer pergunta abaixo e cole no chat para começar.
                 </p>

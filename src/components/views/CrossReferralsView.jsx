@@ -31,7 +31,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
     <div className="space-y-6">
       <div>
         <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: "var(--text)", letterSpacing: "-0.02em" }}>
-          Indicações Cruzadas
+          Cross-sell entre empresas do Grupo
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
           Visibilidade exclusiva do gerente · overlap de clientes · sugestões de cross-sell

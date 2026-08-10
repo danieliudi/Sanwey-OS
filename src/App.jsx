@@ -105,6 +105,8 @@ import { RHRelatoriosView } from "./components/views/RHRelatoriosView";
 import { MeuRHView } from "./components/views/MeuRHView";
 import { PersonalTasksView } from "./components/views/PersonalTasksView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
+import { OnboardingTour } from "./components/shared/OnboardingTour";
+import { useOnboardingTour } from "./hooks/use-onboarding-tour";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
 import { AppToast } from "./components/shared/AppToast";
@@ -927,6 +929,23 @@ export default function App() {
     { skip: showOnboarding }
   );
 
+  // Tour guiado sequencial da plataforma inteira (diferente do spotlight
+  // acima — ver comentário em use-onboarding-tour.js). Mesmo flag `skip:
+  // showOnboarding` do spotlight faz o encaixe automático com o modal de
+  // boas-vindas: usuário novo só começa o tour depois de fechar o modal
+  // (showOnboarding vira false), usuário que já tinha dispensado o
+  // onboarding antigo já tem showOnboarding=false e recebe o tour no
+  // primeiro load em que ainda não tiver visto, sem precisar de nenhum
+  // "usuário novo" — decidido com o Daniel 10/08/2026 (tour vale pra todos).
+  const onboardingTour = useOnboardingTour(currentUser, { skip: showOnboarding });
+  // No mobile a sidebar é um painel off-canvas (não reserva espaço, some da
+  // tela quando fechado) — sem abrir sozinho aqui, o tour não teria nada pra
+  // destacar. Inofensivo no desktop: mobileOpen só é lido quando isMobile
+  // (ver Sidebar.jsx), então setar aqui não afeta a sidebar fixa de tela grande.
+  useEffect(() => {
+    if (onboardingTour.active) setSidebarMobileOpen(true);
+  }, [onboardingTour.active]);
+
   // Destino genérico de uma notificação (@menção OU gerador local via
   // pushNotification/use-notifications.js) — leva pra tela certa e, pros
   // módulos com estado "selecionado" hoisted aqui (ver
@@ -1304,7 +1323,7 @@ export default function App() {
           label: null,
           items: [
             { id: "meu-rh", label: "Meu RH", icon: Home },
-            { id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined },
+            ...(currentUser?.chatEnabled === false ? [] : [{ id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined }]),
           ],
         },
       ];
@@ -1351,7 +1370,7 @@ export default function App() {
       label: "Meu Espaço",
       items: [
         { id: "dashboard", label: "Pendências", icon: CheckSquare },
-        { id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined },
+        ...(currentUser?.chatEnabled === false ? [] : [{ id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined }]),
         ...(settings.personalTasksEnabled
           ? [{ id: "personal-tasks", label: "Meu To-do", icon: ListChecks, badge: personalTasksOpenCount || undefined }]
           : []),
@@ -1419,6 +1438,13 @@ export default function App() {
     if (isRHUser || isDiretoria) {
       groups.push({
         label: "Recursos Humanos",
+        // Cargos/Comunicação/Bem-estar/Relatórios: achado do Daniel 10/08/2026
+        // — apareciam pra qualquer isRHUser mas a rota só renderiza de fato
+        // pra isRHManager||isDiretoria (ver as 4 rotas correspondentes mais
+        // abaixo), então um RH comum clicava e caía de volta no Início sem
+        // explicação. Corrigido restringindo o item de menu ao mesmo público
+        // que já podia abrir a rota — nenhum acesso novo concedido, só o menu
+        // deixando de prometer o que não entrega.
         items: [
           { id: "rh-overview",     label: "Visão Geral",      icon: LayoutDashboard },
           { id: "rh-recrutamento", label: "Recrutamento",      icon: BriefcaseBusiness },
@@ -1427,11 +1453,15 @@ export default function App() {
           { id: "rh-feedback",     label: "Avaliação de Desempenho", icon: MessageSquareText },
           { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
           { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
-          { id: "rh-cargos",       label: "Cargos & Salários", icon: Briefcase },
-          { id: "rh-comunicacao",  label: "Comunicação",       icon: Megaphone },
-          { id: "rh-bem-estar",    label: "Bem-estar",         icon: HeartHandshake },
+          ...(isRHManager || isDiretoria ? [
+            { id: "rh-cargos",       label: "Cargos & Salários", icon: Briefcase },
+            { id: "rh-comunicacao",  label: "Comunicação",       icon: Megaphone },
+            { id: "rh-bem-estar",    label: "Bem-estar",         icon: HeartHandshake },
+          ] : []),
           { id: "rh-fornecedores", label: "Fornecedores",      icon: Building2 },
-          { id: "rh-relatorios",   label: "Relatórios",        icon: FileBarChart },
+          ...(isRHManager || isDiretoria ? [
+            { id: "rh-relatorios",   label: "Relatórios",        icon: FileBarChart },
+          ] : []),
         ],
       });
     } else {
@@ -1512,7 +1542,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1708,6 +1738,7 @@ export default function App() {
         mobileOpen={sidebarMobileOpen}
         onMobileClose={() => setSidebarMobileOpen(false)}
         onNewLead={() => { setSection("crm"); navigate(ROUTES.crm); setCrmAutoCreate(true); }}
+        forceExpanded={onboardingTour.active}
       />
 
       <div className="flex flex-col min-w-0 app-content-shell" style={{ minHeight: "100vh", overflowX: "clip" }}>
@@ -1789,10 +1820,16 @@ export default function App() {
           } />
           {/* Chat é acessível a qualquer papel interno — inclusive portal-only
               (chão de fábrica). Agência fica de fora: é fornecedor externo, e
-              a própria regra de DM no banco (chat_can_dm) já a exclui. */}
+              a própria regra de DM no banco (chat_can_dm) já a exclui.
+              chatEnabled === false: usuário desativado pelo admin (10/08/2026)
+              — enforcement real já é na RLS (chat_is_member), este guard só
+              evita a tela renderizar vazia/quebrada pra quem digitar a URL
+              direto sem o item de menu visível. */}
           <Route path={ROUTES.chat} element={
             isAgencia
               ? <Navigate to={ROUTES.marketing} replace />
+              : currentUser?.chatEnabled === false
+              ? <Navigate to={ROUTES.dashboard} replace />
               : (
                 <ChatView
                   currentUser={currentUser}
@@ -2204,6 +2241,7 @@ export default function App() {
               notifyMentions={notifyMentions}
               notifications={serverNotifications}
               markNotificationRead={markServerNotificationRead}
+              isPortalOnly={isPortalOnly}
             />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
@@ -2289,6 +2327,7 @@ export default function App() {
       )}
 
       <FeatureSpotlight spotlight={featureSpotlight} onDismiss={dismissFeatureSpotlight} />
+      <OnboardingTour tour={onboardingTour} />
 
       {chatToast && !needRefresh && !agentsCoachmarkVisible && !screenTip && (
         <AppToast

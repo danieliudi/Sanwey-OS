@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
   UserPlus, User, Mail, Check, Save, Edit3, Trash2, Info, Loader2, Send, X,
-  Search, Users, Building2, MoreVertical, RotateCcw,
+  Search, Users, Building2, MoreVertical, RotateCcw, MessageCircle, MessageCircleOff,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
@@ -27,6 +27,7 @@ const EMPTY_FORM = {
   additionalRoles: [],
   companies: [], initials: "", avatarBg: "var(--accent)",
   sectors: [], supervisorId: "", supplierId: "",
+  chatEnabled: true,
 };
 
 const EMPTY_INVITE = { email: "", name: "", role: "vendedor", companies: [], sectors: [], supervisorId: "", supplierId: "" };
@@ -224,7 +225,7 @@ export function UserManagementView({
       if (form.id) {
         if (onUpdateUser) {
           const roles = [form.role, ...(form.additionalRoles || []).filter(r => r !== form.role)];
-          await onUpdateUser(form.id, { name: form.name, role: form.role, roles, companies: form.companies, initials, avatarBg: form.avatarBg, sectors: form.sectors || [], supervisorId: form.supervisorId || null, supplierId: form.supplierId || null });
+          await onUpdateUser(form.id, { name: form.name, role: form.role, roles, companies: form.companies, initials, avatarBg: form.avatarBg, sectors: form.sectors || [], supervisorId: form.supervisorId || null, supplierId: form.supplierId || null, chatEnabled: form.chatEnabled !== false });
         } else if (onUsersChange) {
           onUsersChange(prev => prev.map(u => u.id === form.id ? { ...u, ...form, initials } : u));
         }
@@ -771,6 +772,27 @@ export function UserManagementView({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+          {editingExistingUser && (
+            <div>
+              <FieldLabel>Chat interno</FieldLabel>
+              <button
+                type="button"
+                onClick={() => setForm(prev => ({ ...prev, chatEnabled: prev.chatEnabled === false }))}
+                className="w-full p-2.5 rounded-xl border flex items-center gap-2 transition-all text-left"
+                style={{
+                  background: form.chatEnabled !== false ? "var(--success-bg)" : "var(--danger-bg)",
+                  borderColor: form.chatEnabled !== false ? "var(--success)" : "var(--danger)",
+                }}
+              >
+                {form.chatEnabled !== false
+                  ? <MessageCircle size={16} color="var(--success)" />
+                  : <MessageCircleOff size={16} color="var(--danger)" />}
+                <span className="text-xs font-semibold flex-1" style={{ color: form.chatEnabled !== false ? "var(--success)" : "var(--danger)" }}>
+                  {form.chatEnabled !== false ? "Liberado — pode ler e enviar mensagens" : "Bloqueado — sem acesso a nenhum canal"}
+                </span>
+              </button>
             </div>
           )}
           {modalError && (

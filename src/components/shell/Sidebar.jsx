@@ -101,7 +101,7 @@ const ROLE_LABEL = {
   gerente_rh:        "Gerente de RH",
 };
 
-export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAdmin = false, onLogout, mobileOpen, onMobileClose, onNewLead }) {
+export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAdmin = false, onLogout, mobileOpen, onMobileClose, onNewLead, forceExpanded = false }) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(loadCollapsed);
   const [order, setOrder] = useState(loadOrder);
@@ -383,8 +383,11 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
                 )}
                 {/* No modo trilho ignora o collapse por grupo — não há rótulo
                     pra reabrir um grupo fechado, então todo item fica sempre
-                    visível quando só ícones. */}
-                {(!isCollapsed || rail) && orderedItems(group).map((item) => (
+                    visível quando só ícones. forceExpanded faz o mesmo
+                    durante o tour guiado (OnboardingTour precisa de todo
+                    item alcançável, sem depender do estado de collapse que
+                    cada usuário já tinha salvo). */}
+                {(!isCollapsed || rail || forceExpanded) && orderedItems(group).map((item) => (
                   <NavItem
                     key={item.id}
                     id={item.id}
@@ -515,6 +518,7 @@ function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOv
   return (
     <button
       data-nav-id={id}
+      data-tour={`sidebar-nav-${id}`}
       onClick={onClick}
       onMouseEnter={(e) => {
         const r = e.currentTarget.getBoundingClientRect();
