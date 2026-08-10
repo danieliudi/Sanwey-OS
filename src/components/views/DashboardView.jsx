@@ -273,7 +273,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
         {zone1VisibleCount === 0 ? (
           <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
         ) : (
-          <StatCardGrid desktopClassName="lg:grid-cols-4 lg:gap-7">
+          <StatCardGrid desktopClassName="md:grid-cols-4 lg:gap-7">
             {widgetVisible("leads_count") && (
               <StatCard icon={Target} value={scopedLeads.length}
                 label={isManager ? (isGroupView ? "Leads no grupo" : "Leads da empresa") : "Meus leads"}

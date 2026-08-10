@@ -597,7 +597,7 @@ export function MarketingDashboardView({ user }) {
         {zone1VisibleCount === 0 ? (
           <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
         ) : (
-          <StatCardGrid desktopClassName="lg:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
+          <StatCardGrid desktopClassName="md:grid-cols-3 lg:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
             {widgetVisible("kpi_active") && (
               <StatCard icon={Megaphone} value={kpi.active} label="Campanhas ativas"
                 trend={mom.campaigns.d} compact />

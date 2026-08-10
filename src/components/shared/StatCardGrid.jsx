@@ -15,11 +15,18 @@ import { ChevronDown } from "lucide-react";
 //      `maxMobile`, o excedente vai pra trás de um "+N indicadores" em vez de
 //      virar 4 linhas de scroll (que só trocaria um problema pelo outro).
 //
-// Acima de lg o layout é o de hoje: quem chama passa as colunas de desktop em
-// `desktopClassName` e o card volta ao tamanho cheio sozinho, por CSS.
+// Acima de md o layout é o de hoje: quem chama passa as colunas de desktop em
+// `desktopClassName` e o card volta ao tamanho cheio sozinho, por CSS. O corte
+// tem que ser o MESMO breakpoint que o `dense` do StatCard usa — se as duas
+// metades discordarem, existe uma faixa de largura em que a grade já está no
+// layout de desktop mas os cards ainda estão densos (e escondidos).
+//
+// Cada item do grid leva `h-full` e o StatCard denso também: sem isso o card
+// fica com height:auto dentro do wrapper e cards com sublabel ficam mais altos
+// que os sem, quebrando o alinhamento das bordas de baixo no desktop.
 export function StatCardGrid({
   children,
-  desktopClassName = "lg:grid-cols-4",
+  desktopClassName = "md:grid-cols-4",
   maxMobile = 4,
   className = "",
 }) {
@@ -31,11 +38,11 @@ export function StatCardGrid({
 
   return (
     <div className={className}>
-      <div className={`grid grid-cols-2 gap-2 lg:gap-3 ${desktopClassName}`}>
+      <div className={`grid grid-cols-2 gap-2 md:gap-3 ${desktopClassName}`}>
         {items.map((child, i) => (
           <div
             key={child.key ?? i}
-            className={!expanded && i >= maxMobile ? "hidden lg:block" : undefined}
+            className={!expanded && i >= maxMobile ? "hidden md:block h-full" : "h-full"}
           >
             {/* Só injeta `dense` em componente React. Se o filho for uma tag
                 DOM (alguém embrulhando o card num <div> pra segurar um
@@ -53,7 +60,7 @@ export function StatCardGrid({
           type="button"
           onClick={() => setExpanded(v => !v)}
           aria-expanded={expanded}
-          className="lg:hidden w-full mt-2 py-2 rounded-lg border border-dashed flex items-center justify-center gap-1.5"
+          className="md:hidden w-full mt-2 py-2 rounded-lg border border-dashed flex items-center justify-center gap-1.5"
           style={{
             borderColor: "var(--border)",
             color: "var(--text-dim)",

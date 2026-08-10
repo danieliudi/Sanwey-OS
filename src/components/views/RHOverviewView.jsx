@@ -334,7 +334,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
               Carregando...
             </div>
           ) : (
-            <StatCardGrid desktopClassName="lg:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
+            <StatCardGrid desktopClassName="md:grid-cols-3 lg:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
               {widgetVisible("stat_total") && (
                 <StatCard icon={Users} value={totalFuncionarios} label="Total de Funcionários"
                   trend={pctChange(totalFuncionarios, totalAtStartOfMonth)} compact />
