@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.38.0",
+    items: [
+      { kind: "novo", text: "Funil de Vendas e Pós-venda: ao cadastrar um negócio que já vinha sendo negociado fora da plataforma, agora dá pra informar quando a conversa realmente começou. O card para de aparecer como recém-criado nas contagens e na ordenação — deixe em branco e nada muda em relação a antes.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "novo", text: "Funil de Vendas: novo bloco de amostras dentro do negócio, pra registrar cada amostra de produto levada ao cliente com o custo dela. O painel soma o total gasto por negócio.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "novo", text: "CAC médio (custo pra conquistar cada cliente) no Funil de Vendas e no Painel Executivo, somando despesas de viagem e custo de amostras dividido pelos negócios ganhos no período.", roles: ["gerente"] },
+      { kind: "novo", text: "Viagens & Despesas: a calculadora agora monta uma rota com várias paradas e busca a distância sozinha a partir dos endereços — não precisa mais digitar o total de quilômetros. A comparação entre carro, aplicativo e avião continua igual.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "ajuste", text: "Dashboards no celular: os cards de indicadores ficaram bem menores e param de exigir rolagem lateral pra ver os que sobravam fora da tela. Vale para Pendências, Marketing, RH, Visão Geral e Painel Executivo. Onde há muitos indicadores, aparecem os principais e o resto abre num toque." },
+      { kind: "ajuste", text: "Funil de Vendas: painel do negócio mais enxuto. Saíram o bloco de unidades (que repetia o de produto logo abaixo) e o de e-mails vinculados (que prometia uma integração com Outlook que nunca existiu); o follow-up virou um botão compacto, sem perder nada do que fazia.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "ajuste", text: "Chat: o seletor de ícone do canal passou de 6 para 18 opções, cada uma com uma dica explicando pra que serve." },
+      { kind: "correcao", text: "Chat no celular: só dava pra abrir conversa direta — a opção de criar canal não aparecia no botão flutuante. Corrigido." },
+    ],
+  },
+  {
     version: "4.37.2",
     items: [
       { kind: "correcao", text: "Viagens & Despesas: lançar (ou editar/apagar) uma despesa estava falhando com erro de permissão pra todo mundo — corrigido." },
