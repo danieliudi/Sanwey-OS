@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.33.3",
+    items: [
+      { kind: "correcao", text: "Em Viagens & Despesas, uma despesa lançada agora pode ser clicada pra abrir o detalhe completo (valor, descrição, motivo de rejeição, comprovante) — antes só dava pra ver o comprovante, e só quando havia um anexado." },
+    ],
+  },
+  {
     version: "4.33.2",
     items: [
       { kind: "correcao", text: "Notificações que apontavam para um registro já excluído (ex.: solicitação de compra ou vaga removida), ou que sobraram depois de uma mudança de cargo, não desapareciam mais sozinhas — corrigido, e agora são limpas automaticamente." },

@@ -739,14 +739,15 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
 
 // ── Linha de despesa ──────────────────────────────────────────────────────────
 
-function DespesaRow({ despesa, onVerComprovante, onRefazer }) {
+function DespesaRow({ despesa, onVerComprovante, onRefazer, onOpenDetalhe }) {
   const info = STATUS_REEMBOLSO[despesa.status_reembolso] || STATUS_REEMBOLSO.pendente;
   const [opening, setOpening] = useState(false);
   const [verError, setVerError] = useState(null);
   const [refazendo, setRefazendo] = useState(false);
   const rejeitada = despesa.status_reembolso === "rejeitado";
 
-  const handleVer = async () => {
+  const handleVer = async (e) => {
+    e.stopPropagation();
     setOpening(true);
     setVerError(null);
     try {
@@ -758,7 +759,8 @@ function DespesaRow({ despesa, onVerComprovante, onRefazer }) {
     }
   };
 
-  const handleRefazer = async () => {
+  const handleRefazer = async (e) => {
+    e.stopPropagation();
     if (!onRefazer) return;
     if (!window.confirm("Refazer esta despesa? A rejeitada será removida e você poderá lançar uma nova corrigida.")) return;
     setRefazendo(true);
@@ -772,7 +774,12 @@ function DespesaRow({ despesa, onVerComprovante, onRefazer }) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>
+    <div
+      onClick={onOpenDetalhe}
+      style={{ display: "flex", flexDirection: "column", gap: 4, padding: "10px 12px", borderBottom: "1px solid var(--border)", cursor: onOpenDetalhe ? "pointer" : "default" }}
+      onMouseEnter={(e) => { if (onOpenDetalhe) e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{despesa.categoria}</div>
@@ -807,6 +814,105 @@ function DespesaRow({ despesa, onVerComprovante, onRefazer }) {
   );
 }
 
+// ── Detalhe da despesa ───────────────────────────────────────────────────────
+// Espelha o shell do VisitaDetalheModal (painel lateral direito) — mesma
+// família visual, pra consistência entre os dois tipos de registro desta
+// tela. Antes só dava pra "consultar" uma despesa pelos dados truncados na
+// linha da lista; agora clicar na linha abre o detalhe completo (reportado
+// pelo Daniel: "despesas deveria ser clicável, pra consultar").
+function DespesaDetalheModal({ despesa, onVerComprovante, onRefazer, onClose }) {
+  useEscToClose(onClose);
+  const info = STATUS_REEMBOLSO[despesa.status_reembolso] || STATUS_REEMBOLSO.pendente;
+  const rejeitada = despesa.status_reembolso === "rejeitado";
+  const [opening, setOpening] = useState(false);
+  const [refazendo, setRefazendo] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleVer = async () => {
+    setOpening(true);
+    setError(null);
+    try {
+      await onVerComprovante(despesa);
+    } catch (err) {
+      setError(err?.message || "Não foi possível abrir o comprovante.");
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  const handleRefazer = async () => {
+    if (!onRefazer) return;
+    if (!window.confirm("Refazer esta despesa? A rejeitada será removida e você poderá lançar uma nova corrigida.")) return;
+    setRefazendo(true);
+    setError(null);
+    try {
+      await onRefazer(despesa);
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Não foi possível refazer a despesa.");
+      setRefazendo(false);
+    }
+  };
+
+  return (
+    <>
+      <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 999 }} onClick={onClose} />
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{despesa.categoria}</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{formatDateBR(despesa.data_despesa)}</div>
+            <div style={{ marginTop: 8 }}><Badge variant={info.variant}>{info.label}</Badge></div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", flexShrink: 0 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px", flex: 1 }}>
+          <div style={{ marginBottom: 20 }}>
+            <div style={LABEL_ST}>Valor</div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{fmtMoney(despesa.valor)}</div>
+          </div>
+
+          {despesa.descricao && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={LABEL_ST}>Descrição</div>
+              <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{despesa.descricao}</div>
+            </div>
+          )}
+
+          {rejeitada && despesa.observacao_gestor && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={LABEL_ST}>Motivo da rejeição</div>
+              <div style={{ fontSize: 13, color: "var(--danger)", background: "var(--danger-bg, rgba(220,38,38,0.08))", borderRadius: 8, padding: "8px 12px", lineHeight: 1.5 }}>{despesa.observacao_gestor}</div>
+            </div>
+          )}
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={LABEL_ST}>Comprovante</div>
+            {despesa.comprovante_path ? (
+              <button onClick={handleVer} disabled={opening} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--surface-alt)", color: "var(--accent)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: opening ? "default" : "pointer" }}>
+                {opening ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />} Ver comprovante
+              </button>
+            ) : (
+              <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Nenhum comprovante anexado.</div>
+            )}
+          </div>
+
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>}
+
+          {rejeitada && onRefazer && (
+            <button onClick={handleRefazer} disabled={refazendo} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: refazendo ? "default" : "pointer", opacity: refazendo ? 0.6 : 1 }}>
+              {refazendo ? <Loader2 size={14} className="animate-spin" /> : null} Refazer despesa
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── View principal ────────────────────────────────────────────────────────────
 
 export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreateClient, pushNotification, initialSelectedViagemId, onInitialViagemConsumed }) {
@@ -820,6 +926,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   const [showNovaVisita, setShowNovaVisita] = useState(false);
   const [showNovaDespesa, setShowNovaDespesa] = useState(false);
   const [selectedRegistro, setSelectedRegistro] = useState(null);
+  const [selectedDespesa, setSelectedDespesa] = useState(null);
 
   // Esta é a visão "meus dados" do vendedor — a RLS permite que gestor/admin
   // também leiam todas as linhas, então filtramos por dono aqui para não
@@ -982,7 +1089,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
         ) : (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
             {despesasDoMes.map((d) => (
-              <DespesaRow key={d.id} despesa={d} onVerComprovante={handleVerComprovante} onRefazer={handleRefazerDespesa} />
+              <DespesaRow key={d.id} despesa={d} onVerComprovante={handleVerComprovante} onRefazer={handleRefazerDespesa} onOpenDetalhe={() => setSelectedDespesa(d)} />
             ))}
           </div>
         )}
@@ -1003,6 +1110,15 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
           onMarcarNaoRealizado={marcarNaoRealizado}
           onExcluir={deleteRegistro}
           onClose={() => setSelectedRegistro(null)}
+        />
+      )}
+
+      {selectedDespesa && (
+        <DespesaDetalheModal
+          despesa={selectedDespesa}
+          onVerComprovante={handleVerComprovante}
+          onRefazer={handleRefazerDespesa}
+          onClose={() => setSelectedDespesa(null)}
         />
       )}
     </div>
