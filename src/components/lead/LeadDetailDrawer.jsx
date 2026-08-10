@@ -17,7 +17,7 @@ import { Button } from "../ui/Button";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { formatK, formatBRL } from "../../utils/currency";
 import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
-import { formatDateBR, closeDateUrgencyStyle, toLocalISODate } from "../../utils/date";
+import { formatDateBR, closeDateUrgencyStyle, toLocalISODate, localDateInputToISOString } from "../../utils/date";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
@@ -503,6 +503,13 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     setShowFollowUpInput(false);
   };
 
+  // "Já está negociando com esse cliente?" (Formulário Inicial) — campo comum,
+  // editável direto (sem toggle "Alterar", diferente do follow-up acima) —
+  // spec aprovada com o Daniel. Vazio grava NULL (volta a usar createdAt).
+  const handleNegotiationStartedAtChange = (val) => {
+    onUpdate(lead.id, { negotiationStartedAt: val ? localDateInputToISOString(val) : null });
+  };
+
   const handleStartEditContactEmail = () => {
     setContactEmailDraft(lead.contactEmail || "");
     setContactEmailError(null);
@@ -927,6 +934,10 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                       hint="Somente leitura — quem edita é “Responsáveis”, ao lado."
                     />
                   )}
+                  <NegotiationStartRow
+                    value={lead.negotiationStartedAt ? lead.negotiationStartedAt.slice(0, 10) : ""}
+                    onChange={handleNegotiationStartedAtChange}
+                  />
                 </dl>
                 {lead.notes && !Array.isArray(lead.notes) && (
                   <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
@@ -958,6 +969,10 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
                   <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
                   <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
+                  <NegotiationStartRow
+                    value={lead.negotiationStartedAt ? lead.negotiationStartedAt.slice(0, 10) : ""}
+                    onChange={handleNegotiationStartedAtChange}
+                  />
                 </dl>
                 {customValues.capture_notes && (
                   <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
@@ -2041,6 +2056,32 @@ function CaptureRow({ label, value, mono, link, badge, hint }) {
         ) : value}
       </dd>
       {hint && <div className="text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>{hint}</div>}
+    </div>
+  );
+}
+
+// "Já está negociando com esse cliente?" — mesmo padrão dt/dd de CaptureRow,
+// mas editável (campo comum do Formulário Inicial, não um bloco novo/
+// chamativo — spec aprovada com o Daniel). Mesmo <input type="date"> já
+// usado no drawer (follow-up).
+function NegotiationStartRow({ value, onChange }) {
+  return (
+    <div>
+      <dt className="text-[11px] font-semibold" style={{ color: "var(--text-dim)" }}>
+        Já está negociando com esse cliente?
+      </dt>
+      <dd className="text-sm" style={{ marginTop: 2 }}>
+        <input
+          type="date"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="text-sm rounded-lg border px-2.5 py-1.5 outline-none"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+        />
+      </dd>
+      <div className="text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>
+        Deixe em branco pra usar a data de hoje (padrão atual).
+      </div>
     </div>
   );
 }

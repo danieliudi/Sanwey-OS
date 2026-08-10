@@ -219,6 +219,18 @@ export function ExecutiveDashboard({
     return { pipeline, forecast, wonValue, wonCount, stale, conversion };
   }, [metricsByCompany]);
 
+  // CAC agregado do Grupo inteiro no período selecionado — sem filtro de
+  // vendedor aqui (diferente do Funil de Vendas): soma tudo que a RLS já
+  // deixou visível pro usuário atual, mesmo espírito de `totals` acima (que
+  // também não filtra por vendedor). Ver src/utils/cac.js.
+  const cac = useMemo(() => {
+    if (!showComercialArea) return null;
+    const cutoff = periodCutoff(period);
+    const travelExpensesTotal = sumTravelExpenses(viagemDespesas, { periodStart: cutoff });
+    const sampleCostsTotal = sumSampleCosts(leadSamplesAll, { periodStart: cutoff });
+    return calculateCAC({ travelExpensesTotal, sampleCostsTotal, wonCount: totals.wonCount });
+  }, [showComercialArea, viagemDespesas, leadSamplesAll, period, totals.wonCount]);
+
   const maxPipeline = useMemo(
     () => Math.max(1, ...metricsByCompany.map(m => m.pipeline)),
     [metricsByCompany],
@@ -279,8 +291,8 @@ export function ExecutiveDashboard({
   const { registros: viagens, loading: loadingViagens } = useCRMViagens({});
   // CAC (aba Comercial → Visão geral) — só busca despesas/amostras quando a
   // área Comercial está visível pro usuário atual. Ver src/utils/cac.js.
-  const { despesas: viagemDespesas, loading: loadingViagemDespesas } = useCRMDespesas({ enabled: showComercialArea });
-  const { samples: leadSamplesAll, loading: loadingLeadSamples } = useAllLeadSamples({ enabled: showComercialArea });
+  const { despesas: viagemDespesas } = useCRMDespesas({ enabled: showComercialArea });
+  const { samples: leadSamplesAll } = useAllLeadSamples({ enabled: showComercialArea });
   const { records: esgRecords, loading: loadingEsgRecords } = useEsgEmissionRecords({});
   const { factors: esgFactors, loading: loadingEsgFactors } = useEsgEmissionFactors();
   const { reports: esgReports, loading: loadingEsgReports } = useEsgReports({});
@@ -483,11 +495,14 @@ export function ExecutiveDashboard({
                 <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
                   Comercial
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
                   <StatCard icon={HandCoins}    value={formatK(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
                   <StatCard icon={TrendingUp}   value={formatK(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
                   <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
                   <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
+                  <div title={CAC_FORMULA_HINT}>
+                    <StatCard icon={Wallet}     value={cac != null ? formatBRL(cac) : "—"} label="CAC médio"  sublabel="Aquisição por negócio ganho" />
+                  </div>
                   <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
                   <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
                 </div>
