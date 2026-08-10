@@ -17,11 +17,14 @@ import { Button } from "../ui/Button";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { formatK, formatBRL } from "../../utils/currency";
 import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
-import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
+import { formatDateBR, closeDateUrgencyStyle, toLocalISODate } from "../../utils/date";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
 import { useLeadChecklists } from "../../hooks/use-lead-checklists";
+import { useLeadSamples } from "../../hooks/use-lead-samples";
+import { CurrencyInput } from "../ui/CurrencyInput";
+import { Modal } from "../ui/Modal";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { ProposalPanel } from "./ProposalPanel";
 import { StageFieldInput } from "./StageFieldInput";
@@ -876,6 +879,14 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               </div>
             )}
 
+            {/* Amostras enviadas — registro de amostra física dada ao
+                cliente durante a negociação, com custo, pra depois cruzar
+                com conversão (lead ganhou ou não). Mesmo padrão visual de
+                bloco de lista relacionada ao lead usado em "Produto
+                vinculado" acima / AttachmentsPanel (linha com borda,
+                lixeira inline por item). */}
+            <SamplesPanel leadId={lead.id} companyColor={company.primary} currentUser={currentUser} />
+
             <div className="pt-1">
               <Button variant="primary" size="sm" icon={Send} accent={company.primary} onClick={handleStartOutreach}>
                 Enviar e-mail de abordagem
@@ -1458,6 +1469,153 @@ function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ── Amostras enviadas ────────────────────────────────────────────────────────
+// Aprovado via mockup com o Daniel — bloco de lista relacionada ao lead,
+// mesmo padrão visual de AttachmentsPanel logo abaixo (linha com borda,
+// lixeira inline por item, sem modal de confirmação chamativo — registro
+// pequeno, não entidade grande tipo Fornecedor, regra do CLAUDE.md).
+function SamplesPanel({ leadId, companyColor, currentUser }) {
+  const { samples, loading, error, createSample, deleteSample, totalCost } = useLeadSamples(leadId);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [sentAt, setSentAt] = useState(() => toLocalISODate(new Date()));
+  const [cost, setCost] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const openModal = () => {
+    setNotes("");
+    setSentAt(toLocalISODate(new Date()));
+    setCost("");
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!notes.trim() || saving) return;
+    setSaving(true);
+    try {
+      await createSample({ notes: notes.trim(), sentAt, cost, createdBy: currentUser?.id || null });
+      setModalOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs font-semibold" style={{ color: companyColor }}>
+          🧪 Amostras enviadas
+        </div>
+        <button
+          onClick={openModal}
+          className="text-xs font-semibold flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
+          style={{ color: companyColor, background: companyColor + "18", border: "none" }}
+          onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
+          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+        >
+          <Plus size={11} />Registrar amostra
+        </button>
+      </div>
+
+      {loading && (
+        <div className="text-xs text-center py-2" style={{ color: "var(--text-dim)" }}>Carregando…</div>
+      )}
+
+      {!loading && samples.length === 0 && (
+        <div className="text-xs text-center py-2 italic" style={{ color: "var(--text-dim)" }}>
+          Nenhuma amostra registrada ainda.
+        </div>
+      )}
+
+      {samples.length > 0 && (
+        <div className="space-y-1.5">
+          {samples.map(s => (
+            <div
+              key={s.id}
+              className="flex items-center gap-2.5 p-2.5 rounded-lg border"
+              style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
+                  {s.notes || "Amostra"}
+                </div>
+                <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                  {formatDateBR(s.sent_at)}
+                </div>
+              </div>
+              <div className="text-xs font-semibold shrink-0" style={{ color: "var(--text)" }}>
+                {formatBRL(s.cost)}
+              </div>
+              <button
+                onClick={() => deleteSample(s.id)}
+                className="p-1.5 rounded-lg transition-colors shrink-0"
+                style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                title="Excluir amostra"
+                aria-label="Excluir amostra"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {samples.length > 0 && (
+        <div className="flex items-center justify-between mt-3 pt-3 text-xs" style={{ borderTop: "1px solid var(--surface-alt)" }}>
+          <span className="font-semibold" style={{ color: "var(--text-dim)" }}>Total gasto</span>
+          <span className="font-bold" style={{ color: "var(--text)" }}>{formatBRL(totalCost)}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-2 text-xs" style={{ color: "var(--danger)" }}>{error}</div>
+      )}
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Registrar amostra" width={420}>
+        <div className="p-5 space-y-3">
+          <div>
+            <label className="text-[11px] font-semibold mb-1 block" style={{ color: "var(--text-dim)" }}>Descrição</label>
+            <input
+              autoFocus
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Ex.: Kit Sanbag 15L"
+              className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.currentTarget.style.borderColor = companyColor; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold mb-1 block" style={{ color: "var(--text-dim)" }}>Data de envio</label>
+            <input
+              type="date"
+              value={sentAt}
+              onChange={e => setSentAt(e.target.value)}
+              className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.currentTarget.style.borderColor = companyColor; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold mb-1 block" style={{ color: "var(--text-dim)" }}>Custo</label>
+            <CurrencyInput value={cost} onChange={setCost} />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button variant="primary" size="sm" accent={companyColor} disabled={saving || !notes.trim()} onClick={handleSave}>
+              {saving ? "Registrando…" : "Registrar"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
 }
 
 function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
