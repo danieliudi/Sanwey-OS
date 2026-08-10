@@ -8,7 +8,7 @@ import {
   DELIVERABLE_DEPARTMENTS,
   DELIVERABLE_PRIORITIES,
   DELIVERABLE_REQUEST_TYPES,
-  EXPENSE_CATEGORIES,
+  MANUAL_EXPENSE_CATEGORIES,
   MARKETING_CHANNELS,
   MARKETING_KPIS,
 } from "../constants/marketing-pipelines";
@@ -204,7 +204,10 @@ export function generateDemoExpenses() {
       company_ids: [companyId],
       campaign_id: null,
       description,
-      category:    pick(rand, EXPENSE_CATEGORIES),
+      // MANUAL_ (não EXPENSE_CATEGORIES): "Compra de Marketing" só existe como
+      // despesa gerada por uma compra real do board de Compras — demo não tem
+      // a compra por trás, e a linha órfã inflaria o teto dessa categoria.
+      category:    pick(rand, MANUAL_EXPENSE_CATEGORIES),
       amount,
       status:      pick(rand, EXPENSE_STATUSES),
       due_date:    daysFromNow(rand, -5, 45),

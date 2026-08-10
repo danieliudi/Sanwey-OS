@@ -50,6 +50,13 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: agrupe várias despesas soltas numa prestação de contas e envie de uma vez, em vez de despesa por despesa.",
     version: "4.34.0",
   },
+  {
+    id: "marketing-orcamento",
+    route: "marketing-despesas",
+    target: '[data-tour="despesas-abas"]',
+    text: "Novo: a aba Orçamento mostra quanto do teto de cada categoria já foi gasto no ano — incluindo o que está comprometido em compras aprovadas.",
+    version: "4.39.0",
+  },
 ];
 
 export default FEATURE_SPOTLIGHTS;

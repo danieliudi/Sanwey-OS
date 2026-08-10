@@ -36,9 +36,28 @@ export const DELIVERABLE_REQUEST_TYPES = [
   "Outro",
 ];
 
+// Categorias criadas AUTOMATICAMENTE pelo banco, nunca digitadas à mão. Hoje
+// só "Compra de Marketing": o trigger marketing_purchase_requests_sync_expense
+// grava exatamente essa string quando uma compra entra na etapa "pago".
+// Precisa estar em EXPENSE_CATEGORIES (filtro/gráfico/teto por categoria
+// enxergarem o dinheiro de compra paga), mas fica FORA do <select> do
+// formulário — ver MANUAL_EXPENSE_CATEGORIES abaixo.
+export const SYSTEM_EXPENSE_CATEGORIES = ["Compra de Marketing"];
+
 export const EXPENSE_CATEGORIES = [
-  "Mídia Paga", "Produção", "Agência", "Ferramentas", "Eventos", "Outros",
+  "Mídia Paga", "Produção", "Agência", "Ferramentas", "Eventos",
+  ...SYSTEM_EXPENSE_CATEGORIES,
+  "Outros",
 ];
+
+// O que o usuário pode escolher ao criar/editar uma despesa à mão. Criar uma
+// "Compra de Marketing" manualmente duplicaria, à mão, a despesa que o trigger
+// já cria sozinho a partir do board de Compras — mesmo dinheiro contado duas
+// vezes contra o teto, que é justamente a classe de bug que a exclusão de
+// stage='pago' do comprometido existe pra evitar.
+export const MANUAL_EXPENSE_CATEGORIES = EXPENSE_CATEGORIES.filter(
+  c => !SYSTEM_EXPENSE_CATEGORIES.includes(c)
+);
 
 export const MARKETING_CHANNELS = [
   "Email", "Social", "Conteúdo", "Digital", "Outdoor", "Evento",

@@ -1,31 +1,44 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, ShoppingCart, Clock, CheckCircle2, Search } from "lucide-react";
+import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, ShoppingCart, Clock, CheckCircle2, Search, Wallet, Target } from "lucide-react";
 import { useMarketingExpenses, useMarketingExpenseItems } from "../../hooks/use-marketing-expenses";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
-import { EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
+import { useMarketingBudgets } from "../../hooks/use-marketing-budgets";
+import { useMarketingPurchaseRequests } from "../../hooks/use-marketing-purchase-requests";
+import { EXPENSE_CATEGORIES, MANUAL_EXPENSE_CATEGORIES, SYSTEM_EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK, formatBRL } from "../../utils/currency";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
-import { formatDateBR, localDateInputToISOString, parseDateInput } from "../../utils/date";
+import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { supabase } from "../../lib/supabase";
 import { PageHeader } from "../shared/PageHeader";
 import { StatCard } from "../ui/StatCard";
 import { EntityMultiSelect } from "../shared/EntityMultiSelect";
+import { Tabs } from "../shared/Tabs";
+import { Modal } from "../ui/Modal";
+import { EmptyState } from "../ui/EmptyState";
+import { HelpTooltip } from "../ui/HelpTooltip";
+import { computeRoleFlags } from "../../utils/module-access";
+import {
+  computeBudgetUsage,
+  computeBudgetTotals,
+  computeBudgetGaps,
+  formatBudgetPct,
+  expenseFiscalYear,
+  BUDGET_STATUS_STYLE,
+  PURCHASE_BUDGET_CATEGORY,
+} from "../../utils/marketing-budget";
 
 const RECEIPT_BUCKET = "marketing-attachments";
 
-// Ano usado pelo filtro "Ano": data da fatura quando existir, senão o
-// vencimento (que toda despesa tem) — decidido com o Daniel, mockup
-// aprovado 05/08. parseDateInput (não `new Date` cru) evita o bug de
-// data-only virando meia-noite UTC e "voltando" um dia em fuso negativo.
-function expenseYear(expense) {
-  const raw = expense.invoiceDate || expense.dueDate;
-  if (!raw) return null;
-  const d = parseDateInput(raw);
-  return Number.isNaN(d.getTime()) ? null : d.getFullYear();
-}
+// Ano usado pelo filtro "Ano" = ano da fatura quando existir, senão o
+// vencimento (que toda despesa tem) — decidido com o Daniel, mockup aprovado
+// 05/08. A regra vive em utils/marketing-budget.js (`expenseFiscalYear`) desde
+// 10/08: era a mesma conta escrita aqui e, com createdAt, DIFERENTE no
+// MarketingDashboardView — agora os três leem do mesmo helper. Não
+// reintroduzir uma cópia local: um `new Date(str)` cru volta um dia em fuso
+// negativo e num 01/01 trocaria o ano inteiro.
 
 const EMPTY_FORM = {
   description: "",
@@ -235,6 +248,14 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
     e.preventDefault();
     if (!form.description.trim()) { setError("Descrição obrigatória."); return; }
     if (form.companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
+    // Sem vencimento E sem data de nota, a despesa não pertence a ano nenhum:
+    // ela some do filtro "Ano", do teto por categoria e do burn rate, mas
+    // continua no total da tabela — dois números contraditórios na mesma tela.
+    // Uma das duas datas basta (a regra fiscal é nota → vencimento).
+    if (!form.dueDate && !form.invoiceDate) {
+      setError("Informe o vencimento ou a data da nota — é o que define o ano da despesa.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -388,7 +409,17 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
               className="flex-1 text-sm rounded-xl border outline-none px-3 py-2"
               style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
             >
-              {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {/* MANUAL_ (não EXPENSE_CATEGORIES): "Compra de Marketing" é
+                  categoria de sistema, criada pelo trigger a partir do board de
+                  Compras — oferecê-la aqui convidaria a lançar à mão a mesma
+                  despesa que o banco já cria sozinho. A opção só aparece quando
+                  a despesa ABERTA já está nela (despesa gerada pela compra
+                  sendo editada); sem isso o <select> renderia com um valor fora
+                  das opções e o save reescreveria a categoria em silêncio. */}
+              {(SYSTEM_EXPENSE_CATEGORIES.includes(form.category)
+                ? EXPENSE_CATEGORIES
+                : MANUAL_EXPENSE_CATEGORIES
+              ).map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <select
               value={form.status}
@@ -625,6 +656,658 @@ function LinkedChips({ items = [] }) {
   );
 }
 
+// ── Painel de Orçamento (teto por categoria) ─────────────────────────────────
+// Mockup aprovado com o Daniel 10/08/2026. TODA a conta (as 3 faixas
+// disjuntas, o ano fiscal, o escopo por empresa) vive em
+// utils/marketing-budget.js — daqui pra baixo é só desenho. Se faltar um
+// número, ele nasce no helper, nunca somado à mão nesta camada: é lá que está
+// escrito por que stage='pago' fica FORA do comprometido (senão o mesmo
+// dinheiro conta duas vezes).
+
+function BudgetCompanyChips({ ids = [] }) {
+  // Teto sem empresa NÃO é "Grupo (todas)": a RLS de marketing_budgets exige
+  // `company_ids && current_user_companies()`, e array vazio não faz overlap
+  // com nada no Postgres — um teto assim é invisível pro time de marketing
+  // inteiro e não acompanha despesa nenhuma. O formulário passou a exigir ao
+  // menos uma empresa; este chip existe só pra um teto legado gritar que
+  // precisa ser editado, em vez de mostrar 0% como se estivesse saudável.
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return (
+      <span
+        className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+        style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}
+        title="Teto sem empresa: não acompanha nenhuma despesa. Edite e selecione ao menos uma empresa."
+      >
+        Sem empresa
+      </span>
+    );
+  }
+  return (
+    <>
+      {ids.map(id => {
+        const co = COMPANIES[id];
+        if (!co) return null;
+        return (
+          <span
+            key={id}
+            className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: co.primary + "22", color: co.primary }}
+          >
+            {co.short}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+function BudgetLegendItem({ swatch, label, value, tooltip }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="rounded-sm shrink-0" style={{ width: 10, height: 10, ...swatch }} />
+      <span style={{ color: "var(--text-dim)" }}>{label}</span>
+      {tooltip && <HelpTooltip text={tooltip} size={11} />}
+      <span className="font-semibold" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+        {formatBRL(value)}
+      </span>
+    </span>
+  );
+}
+
+function BudgetBar({ usage, canManage, onEdit, onDelete }) {
+  const { budget, paid, pending, committed, total, pct, status } = usage;
+  const amount = budget.amount || 0;
+  const isOver = status === "estourado";
+  const st = BUDGET_STATUS_STYLE[status] || BUDGET_STATUS_STYLE.ok;
+
+  // Normalização do trilho: quando o gasto passa do teto, o denominador vira o
+  // PRÓPRIO gasto — as 3 faixas continuam somando 100% da largura (nada vaza
+  // pra fora do trilho) e o teto vira uma marca DENTRO da barra, mostrando
+  // onde ele ficou. Sem isso, 130% de consumo desenharia 130% de largura.
+  const denom = Math.max(amount, total);
+  const widthOf = v => (denom > 0 ? `${Math.max(0, (v / denom) * 100)}%` : "0%");
+
+  // --accent NUNCA sinaliza estouro: ele muda por frente comercial em runtime
+  // (ficaria verde na Resibag). No estouro a barra inteira vira --danger e o
+  // comprometido continua distinguível pela HACHURA, não pela cor.
+  const bandColor  = isOver ? "var(--danger)" : "var(--accent)";
+  const hatchColor = isOver ? "var(--danger)" : "var(--warning)";
+  const hatchStyle = {
+    backgroundImage: `repeating-linear-gradient(45deg, ${hatchColor} 0, ${hatchColor} 3px, transparent 3px, transparent 7px)`,
+    backgroundColor: `color-mix(in srgb, ${hatchColor} 18%, transparent)`,
+  };
+
+  // Rótulo e cor saem do mesmo número (formatBudgetPct): com Math.round, 79,6%
+  // imprimia "80%" ainda em cinza e 100,4% imprimia "100%" já em vermelho.
+  const pctLabel = formatBudgetPct(pct, status);
+  // Faixa 3 só existe pra categoria que as compras alimentam (o helper nem
+  // calcula pras outras) — mostrar "Comprometido: R$ 0" em "Mídia Paga" seria
+  // um zero que nunca vai mudar.
+  const showCommitted = committed > 0 || budget.category === PURCHASE_BUDGET_CATEGORY;
+
+  return (
+    <div className="rounded-2xl border p-3 sm:p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+      <div className="flex items-start justify-between gap-2 flex-wrap mb-2">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold break-words" style={{ color: "var(--text)" }}>
+            {budget.category}
+          </div>
+          <div className="flex flex-wrap gap-1 mt-1">
+            <BudgetCompanyChips ids={budget.companyIds} />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-xs" style={{ color: "var(--text-dim)", fontVariantNumeric: "tabular-nums" }}>
+            <span className="font-bold" style={{ color: isOver ? "var(--danger)" : "var(--text)" }}>
+              {formatBRL(total)}
+            </span>
+            {" de "}
+            {formatBRL(amount)}
+          </div>
+          <span
+            className="px-2 py-0.5 rounded-full text-[11px] font-bold"
+            style={{ background: st.bg, color: st.color }}
+            title={st.label}
+          >
+            {pctLabel}
+          </span>
+          {canManage && (
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={onEdit}
+                title="Editar teto"
+                style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", padding: 4, borderRadius: 6, display: "flex", alignItems: "center" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
+              >
+                <Pencil size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                title="Excluir teto"
+                style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", padding: 4, borderRadius: 6, display: "flex", alignItems: "center" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div
+        className="rounded-full overflow-hidden flex relative"
+        style={{ height: 16, background: "var(--border)" }}
+        role="img"
+        aria-label={`${budget.category}: ${formatBRL(total)} de ${formatBRL(amount)} (${pctLabel})`}
+      >
+        <div style={{ width: widthOf(paid), background: bandColor, flexShrink: 0 }} title={`Pago: ${formatBRL(paid)}`} />
+        <div style={{ width: widthOf(pending), background: bandColor, opacity: 0.5, flexShrink: 0 }} title={`A pagar: ${formatBRL(pending)}`} />
+        <div style={{ width: widthOf(committed), flexShrink: 0, ...hatchStyle }} title={`Comprometido em compra: ${formatBRL(committed)}`} />
+        {isOver && amount > 0 && (
+          <span
+            aria-hidden="true"
+            title={`Teto: ${formatBRL(amount)}`}
+            style={{ position: "absolute", top: 0, bottom: 0, left: `${(amount / denom) * 100}%`, width: 2, background: "var(--text)", opacity: 0.55 }}
+          />
+        )}
+      </div>
+
+      {/* Cor de texto pelo token do próprio status (--warning no "atenção"),
+          nunca --amber solto: sobre --surface no tema claro, --amber fica em
+          2,46:1 e some do card. */}
+      <div
+        className="mt-2 text-[11px] font-semibold"
+        style={{ color: status === "ok" ? "var(--text-dim)" : st.color }}
+      >
+        {isOver
+          ? (amount > 0
+              ? `Estourou ${formatBRL(total - amount)} acima do teto (${pctLabel} do limite).`
+              : `Teto zerado — ${formatBRL(total)} já lançados sem limite disponível.`)
+          : `Disponível: ${formatBRL(Math.max(0, amount - total))}`}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px]">
+        <BudgetLegendItem swatch={{ background: bandColor }} label="Pago" value={paid} />
+        <BudgetLegendItem swatch={{ background: bandColor, opacity: 0.5 }} label="A pagar" value={pending} />
+        {showCommitted && (
+          <BudgetLegendItem
+            swatch={hatchStyle}
+            label="Comprometido em compra"
+            value={committed}
+            tooltip="Compras já aprovadas que ainda não viraram despesa. Quando a compra é paga, o sistema cria a despesa sozinho e o valor migra para a faixa 'Pago' — nunca conta nas duas ao mesmo tempo."
+          />
+        )}
+      </div>
+
+      {budget.notes && (
+        <div className="mt-2 text-[11px]" style={{ color: "var(--text-faint)" }}>
+          {budget.notes}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BudgetFormModal({ initial, budgets = [], defaultYear, onSave, onClose }) {
+  const [form, setForm] = useState(() => ({
+    category:   initial?.category   ?? EXPENSE_CATEGORIES[0],
+    periodYear: initial?.periodYear ?? defaultYear,
+    amount:     initial?.amount != null ? String(initial.amount) : "",
+    companyIds: initial?.companyIds ?? [],
+    notes:      initial?.notes ?? "",
+  }));
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState(null);
+
+  const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
+  const toggleCompany = (id) => set("companyIds",
+    form.companyIds.includes(id) ? form.companyIds.filter(c => c !== id) : [...form.companyIds, id]
+  );
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const year = Number(form.periodYear);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      setError("Informe um ano válido (ex.: 2026).");
+      return;
+    }
+    const value = form.amount === "" || form.amount == null ? 0 : Number(form.amount);
+    if (!Number.isFinite(value) || value < 0) {
+      setError("O valor do teto não pode ser negativo.");
+      return;
+    }
+
+    // company_ids entra SEMPRE ordenado: a UNIQUE do banco é
+    // (company_ids, category, period_year) e array no Postgres compara
+    // elemento a elemento — sem ordenar, ["sanwey","resibag"] e
+    // ["resibag","sanwey"] viram dois tetos distintos pro mesmo escopo real.
+    const companyIds = COMPANY_IDS.filter(id => form.companyIds.includes(id));
+
+    // Ao menos uma empresa é requisito do BANCO, não preferência de tela: as
+    // policies de marketing_budgets exigem `company_ids && current_user_companies()`
+    // e '{}' && qualquer coisa é FALSE no Postgres. Sem esta validação, um
+    // gerente de marketing tomava a mensagem crua de violação de RLS ao salvar,
+    // e um teto criado por admin sem empresa ficava invisível pro time todo.
+    if (companyIds.length === 0) {
+      setError("Selecione ao menos uma empresa para o teto.");
+      return;
+    }
+
+    const clash = (budgets || []).find(b =>
+      b.id !== initial?.id &&
+      b.category === form.category &&
+      Number(b.periodYear) === year &&
+      (b.companyIds || []).join("|") === companyIds.join("|")
+    );
+    if (clash) {
+      setError("Já existe um teto para essa categoria, ano e empresas.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        category:   form.category,
+        periodYear: year,
+        amount:     value,
+        companyIds,
+        notes:      (form.notes || "").trim() || null,
+      });
+      onClose();
+    } catch (err) {
+      // 23505 = unique_violation: a mesma checagem acima, só que ganha da
+      // corrida entre dois gerentes salvando ao mesmo tempo.
+      setError(err?.code === "23505"
+        ? "Já existe um teto para essa categoria, ano e empresas."
+        : (err?.message || "Erro ao salvar o teto."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectStyle = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" };
+
+  return (
+    <Modal open onClose={onClose} title={initial ? "Editar teto" : "Novo teto de orçamento"} width={440}>
+      <form onSubmit={handleSubmit} className="p-6 space-y-3">
+        <div>
+          <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+            Categoria
+          </div>
+          <select
+            autoFocus
+            value={form.category}
+            onChange={e => set("category", e.target.value)}
+            className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+            style={selectStyle}
+          >
+            {/* EXPENSE_CATEGORIES (lista completa, não MANUAL_): "Compra de
+                Marketing" é justamente a categoria onde o comprometido existe —
+                deixá-la de fora aqui cegaria o teto pra todo dinheiro de compra. */}
+            {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {form.category === PURCHASE_BUDGET_CATEGORY && (
+            <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+              Única categoria com a faixa "Comprometido": compras aprovadas que ainda não viraram despesa entram aqui.
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+              Ano
+            </div>
+            <input
+              type="number"
+              min="2000"
+              max="2100"
+              step="1"
+              value={form.periodYear}
+              onChange={e => set("periodYear", e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+            />
+          </div>
+          <div className="flex-1">
+            <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+              Teto
+            </div>
+            <CurrencyInput
+              placeholder="Valor do teto"
+              value={form.amount}
+              onChange={v => set("amount", v)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+            />
+          </div>
+        </div>
+
+        <div>
+          <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+            Empresas
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {COMPANY_IDS.map(id => {
+              const co = COMPANIES[id];
+              const sel = form.companyIds.includes(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleCompany(id)}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors"
+                  style={{
+                    borderColor: sel ? co.primary : "var(--border)",
+                    background:  sel ? co.primary + "22" : "var(--surface)",
+                    color:       sel ? co.primary : "var(--text-dim)",
+                    cursor:      "pointer",
+                  }}
+                >
+                  {co.short}
+                </button>
+              );
+            })}
+          </div>
+          <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+            Selecione ao menos uma empresa — o teto acompanha só as despesas e compras dessas empresas.
+          </div>
+        </div>
+
+        <div>
+          <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+            Observação (opcional)
+          </div>
+          <textarea
+            placeholder="Ex.: teto aprovado na reunião de planejamento"
+            value={form.notes}
+            onChange={e => set("notes", e.target.value)}
+            rows={2}
+            className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+            onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+            onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+          />
+        </div>
+
+        {error && (
+          <div className="text-[12px] rounded-lg px-3 py-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 text-sm font-semibold py-2 rounded-xl"
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving ? 0.5 : 1, border: "none", cursor: saving ? "default" : "pointer" }}
+          >
+            {saving ? "Salvando…" : "Salvar"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 text-sm rounded-xl border"
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// Mesmo padrão de exclusão da referência canônica (FornecedoresView.jsx):
+// Modal compartilhado + "Cancelar"/"Excluir" com o Excluir em var(--danger).
+function ConfirmDeleteBudgetModal({ budget, onConfirm, onClose }) {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleConfirm = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      await onConfirm();
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao excluir o teto.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Excluir teto?" width={400}>
+      <div className="p-6">
+        <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>
+          O teto de "{budget.category}" ({budget.periodYear}) será removido. As despesas e compras
+          continuam registradas normalmente — só o limite deixa de ser acompanhado.
+        </p>
+        {error && (
+          <div className="mb-3 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+            {error}
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={deleting}
+            className="px-4 py-2 rounded-lg text-sm font-semibold border"
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", opacity: deleting ? 0.6 : 1, cursor: "pointer" }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={deleting}
+            className="px-4 py-2 rounded-lg text-sm font-semibold"
+            style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", opacity: deleting ? 0.6 : 1, cursor: "pointer" }}
+          >
+            {deleting ? "Excluindo…" : "Excluir"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// Dinheiro real que NÃO aparece em nenhuma barra acima. Antes disso, três
+// descartes aconteciam em silêncio (despesa sem data nenhuma, categoria sem
+// teto, empresa fora do escopo dos tetos) e o painel podia parecer saudável
+// com a maior parte do ano fora dele — a tabela ao lado, na mesma tela,
+// mostrando outro total. O cálculo vive em computeBudgetGaps; aqui é só texto.
+function BudgetGapsNotice({ gaps, year }) {
+  if (!gaps) return null;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const lines = [];
+  if (gaps.undated.count > 0) {
+    lines.push(`${formatBRL(gaps.undated.amount)} em ${plural(gaps.undated.count, "despesa", "despesas")} sem data de nota nem vencimento — não entram em nenhum ano.`);
+  }
+  if (gaps.noBudget.count > 0) {
+    lines.push(`${formatBRL(gaps.noBudget.amount)} em categorias sem teto em ${year}: ${gaps.noBudget.categories.join(", ")}.`);
+  }
+  if (gaps.outOfScope.count > 0) {
+    lines.push(`${formatBRL(gaps.outOfScope.amount)} em ${plural(gaps.outOfScope.count, "lançamento", "lançamentos")} de empresas fora do escopo dos tetos acima.`);
+  }
+  if (lines.length === 0) return null;
+
+  return (
+    <div
+      className="rounded-xl border px-3 py-2 mb-4 text-[11px]"
+      style={{
+        borderColor: "color-mix(in srgb, var(--warning) 35%, transparent)",
+        background: "var(--warning-bg)",
+        color: "var(--warning)",
+      }}
+    >
+      <div className="font-bold mb-0.5">Fora do acompanhamento de teto</div>
+      <ul className="list-disc pl-4 space-y-0.5">
+        {lines.map(l => <li key={l}>{l}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+function BudgetPanel({
+  usages, totals, gaps, year, onYearChange, yearOptions,
+  companyFilter, onCompanyFilterChange,
+  canManage, onNew, onEdit, onDelete,
+  loading, committedLoading, error,
+}) {
+  const filterSelectStyle = { borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" };
+  const isOver = totals.status === "estourado";
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        <select
+          value={String(year)}
+          onChange={e => onYearChange(Number(e.target.value))}
+          title="Ano do orçamento"
+          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+          style={filterSelectStyle}
+        >
+          {yearOptions.map(y => <option key={y} value={String(y)}>{y}</option>)}
+        </select>
+        <select
+          value={companyFilter}
+          onChange={e => onCompanyFilterChange(e.target.value)}
+          title="Empresa"
+          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+          style={filterSelectStyle}
+        >
+          <option value="all">Todas as empresas</option>
+          {COMPANY_IDS.map(id => (
+            <option key={id} value={id}>{COMPANIES[id]?.short}</option>
+          ))}
+        </select>
+        {committedLoading && (
+          <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>Carregando compras…</span>
+        )}
+        <div className="flex-1" />
+        {canManage && (
+          <button
+            onClick={onNew}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+            style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
+          >
+            <Plus size={13} />
+            Definir teto
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <div className="text-[12px] rounded-lg px-3 py-2 mb-4" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+          {error}
+        </div>
+      )}
+
+      {usages.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <StatCard
+            dense
+            icon={Target}
+            value={formatK(totals.budgetAmount)}
+            label="Teto total"
+            tooltip="Soma dos tetos listados abaixo. Dois tetos com empresas diferentes são dois limites independentes — não há rateio entre eles."
+          />
+          <StatCard
+            dense
+            icon={DollarSign}
+            value={formatK(totals.consumed)}
+            label="Consumido"
+            tooltip="Pago + a pagar nas categorias que têm teto cadastrado neste ano. Gasto em categoria sem teto aparece no aviso abaixo, não aqui. Cada despesa conta uma vez, mesmo quando bate em mais de um teto."
+          />
+          <StatCard
+            dense
+            icon={ShoppingCart}
+            value={formatK(totals.committed)}
+            label="Comprometido"
+            valueColor="var(--warning)"
+            tooltip="Compras aprovadas que ainda não viraram despesa (o mesmo vale para uma compra paga cuja despesa foi excluída). Some no total contra o teto, mas não é gasto registrado ainda."
+          />
+          {/* Estourado: o número do card é o PRÓPRIO estouro. Com
+              Math.max(0, teto - total) ele virava "R$ 0" embaixo do rótulo
+              vermelho "Estourado", e no mobile (dense esconde o sublabel) o
+              card lia literalmente "R$ 0 / Estourado". */}
+          <StatCard
+            dense
+            icon={Wallet}
+            value={formatK(isOver
+              ? totals.total - totals.budgetAmount
+              : Math.max(0, totals.budgetAmount - totals.total))}
+            label={isOver ? "Estourado" : "Disponível"}
+            valueColor={isOver ? "var(--danger)" : undefined}
+            sublabel={isOver ? "acima do teto" : undefined}
+          />
+        </div>
+      )}
+
+      {!loading && <BudgetGapsNotice gaps={gaps} year={year} />}
+
+      {loading && (
+        <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>
+          Carregando tetos…
+        </div>
+      )}
+
+      {!loading && usages.length === 0 && (
+        <div className="rounded-2xl border" style={{ borderColor: "var(--border)" }}>
+          <EmptyState
+            icon={Target}
+            title={`Nenhum teto definido para ${year}`}
+            description={
+              canManage
+                ? "Defina um teto por categoria para acompanhar quanto já foi pago, quanto ainda está a pagar e quanto está comprometido em compras aprovadas."
+                : "Ainda não há teto de orçamento para este ano. Um gerente de marketing pode definir o primeiro."
+            }
+            action={canManage && (
+              <button
+                onClick={onNew}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
+              >
+                <Plus size={15} />
+                Definir primeiro teto
+              </button>
+            )}
+          />
+        </div>
+      )}
+
+      {!loading && usages.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {usages.map(usage => (
+            <BudgetBar
+              key={usage.budget.id}
+              usage={usage}
+              canManage={canManage}
+              onEdit={() => onEdit(usage.budget)}
+              onDelete={() => onDelete(usage.budget)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DespesasView({ user, users = [], campaigns = [] }) {
   const {
     expenses,
@@ -638,6 +1321,31 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
   const { deliverables } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
   const { tasks } = useMarketingTasks({ userId: user?.id, role: user?.role, roles: user?.roles });
   const { fetchAllItems } = useMarketingExpenseItems();
+
+  // Aba ativa (regra 6: componente Tabs compartilhado, nada de sistema de abas
+  // novo). O painel de Orçamento é o único que precisa das compras — quem só
+  // lança despesa não paga o fetch da tabela inteira de Compras.
+  const [tab, setTab] = useState("despesas");
+
+  const {
+    budgets,
+    loading: budgetsLoading,
+    error: budgetsError,
+    createBudget,
+    updateBudget,
+    deleteBudget,
+  } = useMarketingBudgets({ userId: user?.id, role: user?.role, roles: user?.roles });
+
+  const { purchases, loading: purchasesLoading } = useMarketingPurchaseRequests({ enabled: tab === "orcamento" });
+
+  // Gate de gestão de teto = isMarketingManager (module-access.js:77), o mesmo
+  // conjunto que current_user_is_marketing_manager() no banco. Analista de
+  // marketing enxerga as barras, não os botões. Quem manda de verdade continua
+  // sendo a RLS — isto só esconde um controle que falharia de qualquer jeito.
+  const canManageBudgets = useMemo(
+    () => computeRoleFlags(user?.roles?.length ? user.roles : (user?.role ? [user.role] : [])).isMarketingManager,
+    [user?.roles, user?.role]
+  );
 
   const campaignMap = useMemo(() => Object.fromEntries(campaigns.map(c => [c.id, c])), [campaigns]);
   const deliverableMap = useMemo(() => Object.fromEntries(deliverables.map(d => [d.id, d])), [deliverables]);
@@ -653,6 +1361,13 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
   const [modalOpen, setModalOpen]           = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleteError, setDeleteError]       = useState(null);
+
+  // Ano do painel de Orçamento — separado de `filterYear` de propósito: o
+  // filtro da tabela aceita "todos os anos", um teto é sempre de UM ano.
+  const [budgetYear, setBudgetYear]           = useState(() => new Date().getFullYear());
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [budgetEditing, setBudgetEditing]     = useState(null);
+  const [budgetDeleting, setBudgetDeleting]   = useState(null);
 
   // Todos os itens de todas as despesas, carregados uma vez — alimenta o
   // filtro "Item" (busca por descrição de linha, ex.: "Seguro", não pela
@@ -679,7 +1394,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
 
   const years = useMemo(() => {
     const set = new Set();
-    expenses.forEach(e => { const y = expenseYear(e); if (y) set.add(y); });
+    expenses.forEach(e => { const y = expenseFiscalYear(e); if (y) set.add(y); });
     return Array.from(set).sort((a, b) => b - a);
   }, [expenses]);
 
@@ -697,7 +1412,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
         if (filterStatus !== "all" && e.status !== filterStatus) return false;
         if (filterCompany !== "all" && !(e.companyIds || []).includes(filterCompany)) return false;
         if (filterCampaign !== "all" && e.campaignId !== filterCampaign) return false;
-        if (filterYear !== "all" && String(expenseYear(e)) !== filterYear) return false;
+        if (filterYear !== "all" && String(expenseFiscalYear(e)) !== filterYear) return false;
         return true;
       })
       .map(e => {
@@ -723,6 +1438,47 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
     pendente: filtered.filter(e => e.status === "pendente").reduce((s, e) => s + (e.amount || 0), 0),
     pago:     filtered.filter(e => e.status === "pago").reduce((s, e) => s + (e.amount || 0), 0),
   }), [filtered]);
+
+  // Sempre inclui o ano corrente e o ano selecionado, além dos anos que já têm
+  // teto — sem isso, excluir o último teto de um ano deixaria o <select> com um
+  // valor fora das opções (classe de bug "campo sem opções renderizando vazio").
+  const budgetYearOptions = useMemo(() => {
+    const set = new Set([new Date().getFullYear(), budgetYear]);
+    budgets.forEach(b => { if (b.periodYear) set.add(Number(b.periodYear)); });
+    return Array.from(set).sort((a, b) => b - a);
+  }, [budgets, budgetYear]);
+
+  // O painel consome o MESMO escopo de empresa que a tabela (`filterCompany`),
+  // nunca um recorte próprio — mesmo princípio da regra 11 do CLAUDE.md.
+  const budgetUsages = useMemo(() => computeBudgetUsage({
+    budgets,
+    expenses,
+    purchases,
+    year: budgetYear,
+    companyIds: filterCompany === "all" ? [] : [filterCompany],
+  }).sort((a, b) => b.pct - a.pct), [budgets, expenses, purchases, budgetYear, filterCompany]);
+
+  const budgetTotals = useMemo(() => computeBudgetTotals(budgetUsages), [budgetUsages]);
+
+  // Contrapeso do agregado: quanto do ano ficou FORA das barras (sem data, sem
+  // teto na categoria, ou de empresa fora do escopo dos tetos). Mesmo recorte
+  // de ano/empresa que as barras usam — nunca um escopo próprio.
+  const budgetGaps = useMemo(() => computeBudgetGaps({
+    budgets,
+    expenses,
+    purchases,
+    year: budgetYear,
+    companyIds: filterCompany === "all" ? [] : [filterCompany],
+  }), [budgets, expenses, purchases, budgetYear, filterCompany]);
+
+  const openNewBudget = () => { setBudgetEditing(null); setBudgetModalOpen(true); };
+  const openEditBudget = (budget) => { setBudgetEditing(budget); setBudgetModalOpen(true); };
+  const closeBudgetModal = () => { setBudgetModalOpen(false); setBudgetEditing(null); };
+
+  const handleSaveBudget = async (payload) => {
+    if (budgetEditing) await updateBudget(budgetEditing.id, payload);
+    else await createBudget(payload);
+  };
 
   const handleSave = async (form) => {
     // A modal sempre traz um `form.id` (gerado no cliente pra permitir subir
@@ -783,6 +1539,42 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
         }
       />
 
+      {/* Abas fora do bloco condicional de conteúdo (mesmo espírito da regra 11:
+          o cabeçalho da tela não reflui ao trocar de aba). Controles específicos
+          de cada aba — filtros da tabela, ano do orçamento — vivem DENTRO da
+          aba correspondente, nunca aqui em cima.
+          `data-tour` = âncora do spotlight da regra 12. */}
+      <div className="mb-4" data-tour="despesas-abas">
+        <Tabs
+          tabs={[
+            { id: "despesas",  label: "Despesas",  icon: DollarSign },
+            { id: "orcamento", label: "Orçamento", icon: Target },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
+      </div>
+
+      {tab === "orcamento" ? (
+        <BudgetPanel
+          usages={budgetUsages}
+          totals={budgetTotals}
+          gaps={budgetGaps}
+          year={budgetYear}
+          onYearChange={setBudgetYear}
+          yearOptions={budgetYearOptions}
+          companyFilter={filterCompany}
+          onCompanyFilterChange={setFilterCompany}
+          canManage={canManageBudgets}
+          onNew={openNewBudget}
+          onEdit={openEditBudget}
+          onDelete={setBudgetDeleting}
+          loading={budgetsLoading}
+          committedLoading={purchasesLoading}
+          error={budgetsError}
+        />
+      ) : (
+      <>
       <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4${itemQuery ? " lg:grid-cols-4" : ""}`}>
         <StatCard icon={DollarSign}  value={formatK(totals.all)}      label="Total" />
         <StatCard icon={Clock}       value={formatK(totals.pendente)} label="Pendente" valueColor="var(--warning)" />
@@ -981,7 +1773,22 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                     {canWrite && (
                       confirmDeleteId === expense.id ? (
                         <div className="flex items-center gap-1.5 whitespace-nowrap">
-                          <span className="text-[11px]" style={{ color: "var(--text)" }}>Excluir?</span>
+                          {/* Despesa de categoria de sistema não foi digitada
+                              por ninguém: o trigger a criou a partir de uma
+                              compra paga. Excluir aqui não desfaz a compra
+                              (a FK é ON DELETE SET NULL) — avisa antes, em vez
+                              de deixar parecer uma duplicata inofensiva. */}
+                          {SYSTEM_EXPENSE_CATEGORIES.includes(expense.category) ? (
+                            <span
+                              className="text-[11px] font-semibold"
+                              style={{ color: "var(--warning)" }}
+                              title="Esta despesa foi criada automaticamente pela compra paga correspondente. Excluí-la não cancela a compra — o valor volta a aparecer como 'comprometido' no painel de Orçamento."
+                            >
+                              Excluir? (veio de uma compra)
+                            </span>
+                          ) : (
+                            <span className="text-[11px]" style={{ color: "var(--text)" }}>Excluir?</span>
+                          )}
                           <button
                             onClick={() => handleDelete(expense.id)}
                             style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
@@ -1042,6 +1849,26 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
             </tbody>
           </table>
         </div>
+      )}
+      </>
+      )}
+
+      {budgetModalOpen && (
+        <BudgetFormModal
+          initial={budgetEditing}
+          budgets={budgets}
+          defaultYear={budgetYear}
+          onSave={handleSaveBudget}
+          onClose={closeBudgetModal}
+        />
+      )}
+
+      {budgetDeleting && (
+        <ConfirmDeleteBudgetModal
+          budget={budgetDeleting}
+          onConfirm={() => deleteBudget(budgetDeleting.id)}
+          onClose={() => setBudgetDeleting(null)}
+        />
       )}
 
       {modalOpen && (

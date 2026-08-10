@@ -9,6 +9,7 @@ import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
 import { useMarketingPurchaseRequests } from "../../hooks/use-marketing-purchase-requests";
 import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
+import { useMarketingBudgets } from "../../hooks/use-marketing-budgets";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
@@ -29,7 +30,11 @@ import { StatCard } from "../ui/StatCard";
 import { StatCardGrid } from "../shared/StatCardGrid";
 import { EmptyState } from "../ui/EmptyState";
 import { formatK } from "../../utils/currency";
-import { formatDateBR } from "../../utils/date";
+import {
+  computeBudgetUsage, computeBudgetTotals, expenseFiscalDate, purchaseFiscalDate,
+  budgetRatioStatus, formatBudgetPct, BUDGET_STATUS_STYLE,
+} from "../../utils/marketing-budget";
+import { formatDateBR, parseDateInput } from "../../utils/date";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
 import { AnalyticsTab } from "./AnalyticsTab";
@@ -89,9 +94,13 @@ function filterByPeriod(leads, period) {
   });
 }
 
+// parseDateInput, não `new Date(iso)` cru: quem chama aqui passa data fiscal
+// (vencimento/nota), que chega como "AAAA-MM-DD" — lida como instante UTC, ela
+// volta um dia em BRT e o dia 1 de qualquer mês cairia no mês anterior.
 function isThisMonth(iso) {
   if (!iso) return false;
-  const d = new Date(iso);
+  const d = parseDateInput(iso);
+  if (Number.isNaN(d.getTime())) return false;
   const now = new Date();
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
@@ -272,6 +281,7 @@ export function ExecutiveDashboard({
   const { tasks,        loading: loadingTasks }        = useMarketingTasks({});
   const { purchases,    loading: loadingPurchases }    = useMarketingPurchaseRequests({});
   const { expenses,     loading: loadingExpenses }     = useMarketingExpenses({});
+  const { budgets: marketingBudgets, loading: loadingBudgets } = useMarketingBudgets({ enabled: showMarketingArea });
   const { vagas, candidatos, loading: loadingRecrutamento } = useRHRecrutamento({});
   const { colaboradores,     loading: loadingColaboradores } = useRHColaboradores({});
   const { requests: feriasRequests, loading: loadingFerias } = useRHFeriasRequests({});
@@ -301,8 +311,43 @@ export function ExecutiveDashboard({
   const campanhasAtivas   = loadingCampaigns ? dash : campaigns.filter(c => c.stage !== "encerrado").length;
   const entregasAbertas   = loadingDeliverables ? dash : countOpen(deliverables, deliverableStages);
   const tarefasAtrasadas  = loadingTasks ? dash : tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && isOpenStage(t, taskStages)).length;
-  const comprasNoMes      = loadingPurchases ? dash : purchases.filter(p => isThisMonth(p.createdAt)).reduce((sum, p) => sum + (p.totalValue || 0), 0);
-  const despesasNoMes     = loadingExpenses ? dash : expenses.filter(e => isThisMonth(e.createdAt)).reduce((sum, e) => sum + (e.amount || 0), 0);
+  // Mês de uma despesa/compra = data fiscal (nota → vencimento → criação, o
+  // helper único de src/utils/marketing-budget.js), NUNCA createdAt: com a data
+  // de digitação, uma nota de dezembro lançada em janeiro entrava em "Despesas
+  // no mês" de janeiro enquanto o tile vizinho ("% consumido") a jogava em
+  // dezembro — dois números lado a lado com regras de data diferentes.
+  const comprasNoMes      = loadingPurchases ? dash : purchases.filter(p => isThisMonth(purchaseFiscalDate(p))).reduce((sum, p) => sum + (p.totalValue || 0), 0);
+  const despesasNoMes     = loadingExpenses ? dash : expenses.filter(e => isThisMonth(expenseFiscalDate(e))).reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  // Orçamento de Marketing — teto do ano corrente x consumido (pago + a pagar),
+  // pelo motor único de src/utils/marketing-budget.js. Escopo do Grupo inteiro
+  // (sem filtro de empresa), igual às outras métricas de Marketing desta tela;
+  // o filtro de período do topo é do Comercial e não vale aqui — teto é anual.
+  // `purchases` entra pra que o comprometido seja calculado corretamente caso
+  // a faixa passe a ser exibida; o "% consumido" abaixo usa `consumed`
+  // (pago + a pagar), que é literalmente o que o rótulo diz.
+  const currentYear = new Date().getFullYear();
+  const marketingBudget = useMemo(
+    () => computeBudgetTotals(computeBudgetUsage({
+      budgets: marketingBudgets, expenses, purchases, year: currentYear,
+    })),
+    [marketingBudgets, expenses, purchases, currentYear],
+  );
+  // Teto 0 conta como "sem teto": não existe percentual honesto contra zero.
+  const temTetoMarketing = !loadingBudgets && marketingBudget.count > 0 && marketingBudget.budgetAmount > 0;
+  // Mesmos limiares do resto da feature (budgetRatioStatus, 80%): abaixo disso
+  // o número fica neutro — cor só quando há sinal a dar. Nunca --accent pra
+  // alerta (muda por frente comercial em runtime). Rótulo e cor saem do MESMO
+  // número (formatBudgetPct): com Math.round, 79,6% imprimia "80%" sem cor de
+  // atenção e 100,4% imprimia "100%" já em vermelho.
+  const marketingBudgetRatio = temTetoMarketing ? marketingBudget.consumed / marketingBudget.budgetAmount : null;
+  const marketingBudgetStatus = budgetRatioStatus(marketingBudgetRatio);
+  const marketingPctConsumido = temTetoMarketing
+    ? formatBudgetPct(marketingBudgetRatio, marketingBudgetStatus)
+    : null;
+  const marketingBudgetColor = marketingBudgetStatus && marketingBudgetStatus !== "ok"
+    ? BUDGET_STATUS_STYLE[marketingBudgetStatus].color
+    : null;
 
   // RH
   const vagasPublicadas       = loadingRecrutamento ? dash : vagas.filter(v => v.stage === "publicada").length;
@@ -339,7 +384,18 @@ export function ExecutiveDashboard({
     },
     showMarketingArea && {
       id: "marketing", label: "Marketing", color: "#7C3AED",
-      value: campanhasAtivas, sub: `${tarefasAtrasadas} tarefa${tarefasAtrasadas !== 1 ? "s" : ""} atrasada${tarefasAtrasadas !== 1 ? "s" : ""}`,
+      value: campanhasAtivas,
+      // A entrada continua sendo 1 número + 1 sinal (regra 9 — a faixa nunca
+      // é redesenhada, só enriquecida). O sinal de orçamento tem precedência
+      // sobre o de tarefas quando dispara (>= 80% do teto): é o alerta mais
+      // caro de descobrir tarde, e a linha só comporta um.
+      // formatBudgetPct já devolve o "%" — nunca concatenar de novo (mesma
+      // classe do bug de "R$ R$" duplicado).
+      sub: marketingBudgetColor
+        ? <span style={{ color: marketingBudgetColor, fontWeight: 700 }}>
+            Orçamento {marketingPctConsumido} consumido
+          </span>
+        : `${tarefasAtrasadas} tarefa${tarefasAtrasadas !== 1 ? "s" : ""} atrasada${tarefasAtrasadas !== 1 ? "s" : ""}`,
     },
     showRHArea && {
       id: "rh", label: "RH", color: "#0EA5E9",
@@ -558,6 +614,15 @@ export function ExecutiveDashboard({
                 { v: tarefasAtrasadas,               l: "Tarefas atrasadas" },
                 { v: loadingPurchases ? dash : formatK(comprasNoMes), l: "Compras no mês" },
                 { v: loadingExpenses ? dash : formatK(despesasNoMes), l: "Despesas no mês" },
+                // Sem teto cadastrado, "—" — nunca 0% (que leria como "nada
+                // consumido") nem divisão por zero.
+                { v: temTetoMarketing ? formatK(marketingBudget.budgetAmount) : dash, l: `Orçamento ${currentYear}` },
+                {
+                  v: temTetoMarketing
+                    ? <span style={marketingBudgetColor ? { color: marketingBudgetColor } : undefined}>{marketingPctConsumido}</span>
+                    : dash,
+                  l: (temTetoMarketing || loadingBudgets) ? "% consumido" : "% consumido · sem teto definido",
+                },
               ]}
             />
           )}

@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.39.0",
+    items: [
+      { kind: "novo", text: "Marketing: nova aba Orçamento dentro de Despesas. Gerente e admin definem um teto por categoria e ano, e cada categoria ganha uma barra mostrando o que já foi pago, o que está a pagar e o que está comprometido em compras aprovadas — com aviso quando passa de 80% e destaque quando estoura.", roles: ["marketing", "gerente_marketing", "admin"] },
+      { kind: "novo", text: "Painel Executivo: a área de Marketing passa a mostrar o orçamento do ano e quanto já foi consumido, e a faixa de saúde acende quando o consumo passa de 80% do teto.", roles: ["diretoria", "admin"] },
+      { kind: "correcao", text: "Marketing: o indicador \"Orçamento comprometido\" mostrava a soma dos tetos das campanhas, não o gasto — e a variação ao lado era de despesas. Agora mostra o consumo real.", roles: ["marketing", "gerente_marketing", "admin"] },
+      { kind: "correcao", text: "Despesas de Marketing: telas diferentes usavam datas diferentes pra decidir em que mês e ano uma despesa entrava, então os totais não batiam entre elas. Agora vale a mesma regra em todo lugar — data da nota, ou vencimento quando não há nota.", roles: ["marketing", "gerente_marketing", "admin", "diretoria"] },
+      { kind: "ajuste", text: "Despesas de Marketing: lançar uma despesa agora exige vencimento ou data da nota. Sem uma das duas, o valor não entrava em nenhum ano e sumia dos totais sem avisar.", roles: ["marketing", "gerente_marketing", "admin"] },
+    ],
+  },
+  {
     version: "4.38.0",
     items: [
       { kind: "novo", text: "Funil de Vendas e Pós-venda: ao cadastrar um negócio que já vinha sendo negociado fora da plataforma, agora dá pra informar quando a conversa realmente começou. O card para de aparecer como recém-criado nas contagens e na ordenação — deixe em branco e nada muda em relação a antes.", roles: ["consultor", "vendedor", "gerente"] },
