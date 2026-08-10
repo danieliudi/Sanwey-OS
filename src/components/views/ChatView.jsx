@@ -613,7 +613,26 @@ function NewConversationModal({ open, onClose, candidates, onPick }) {
   );
 }
 
-const CHANNEL_ICON_PRESETS = ["💬", "📢", "📣", "💼", "🎉", "🛠️"];
+const CHANNEL_ICON_PRESETS = [
+  { icon: "💬", label: "Conversa geral" },
+  { icon: "📢", label: "Avisos/comunicados" },
+  { icon: "📣", label: "Divulgação/campanha" },
+  { icon: "💼", label: "Trabalho/projeto" },
+  { icon: "🎉", label: "Social/celebração" },
+  { icon: "🛠️", label: "Suporte/operacional" },
+  { icon: "📊", label: "Relatórios/métricas" },
+  { icon: "🎯", label: "Metas/resultados" },
+  { icon: "💡", label: "Ideias/brainstorm" },
+  { icon: "📅", label: "Agenda/eventos" },
+  { icon: "🧾", label: "Financeiro" },
+  { icon: "🚀", label: "Lançamento" },
+  { icon: "🧑‍🤝‍🧑", label: "RH/pessoas" },
+  { icon: "✈️", label: "Viagens" },
+  { icon: "📦", label: "Compras/logística" },
+  { icon: "🌎", label: "Comex/internacional" },
+  { icon: "🌱", label: "ESG/sustentabilidade" },
+  { icon: "⚠️", label: "Urgente/alerta" },
+];
 
 // Mockup "Chat: grupos e canais de aviso", aprovado 10/08/2026 — dois modos
 // de membro: "Pessoa por pessoa" (igual ao NewConversationModal, reaproveita
@@ -626,7 +645,7 @@ const CHANNEL_ICON_PRESETS = ["💬", "📢", "📣", "💼", "🎉", "🛠️"]
 // já feita no outro modo.
 function CreateChannelModal({ open, onClose, candidates, onCreate }) {
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState(CHANNEL_ICON_PRESETS[0]);
+  const [icon, setIcon] = useState(CHANNEL_ICON_PRESETS[0].icon);
   const [description, setDescription] = useState("");
   const [readOnly, setReadOnly] = useState(false);
   const [memberMode, setMemberMode] = useState("pessoas"); // "pessoas" | "grupo"
@@ -640,7 +659,7 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
 
   useEffect(() => {
     if (!open) return;
-    setName(""); setIcon(CHANNEL_ICON_PRESETS[0]); setDescription(""); setReadOnly(false);
+    setName(""); setIcon(CHANNEL_ICON_PRESETS[0].icon); setDescription(""); setReadOnly(false);
     setMemberMode("pessoas"); setQuery(""); setSelectedIds([]);
     setDepartments([]); setCompanies([]); setMatchCount(null); setSaving(false); setError(null);
   }, [open]);
@@ -713,11 +732,13 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
   return (
     <Modal open={open} onClose={onClose} title="Criar canal" width={460}>
       <div className="px-6 py-4" style={{ maxHeight: "70vh", overflowY: "auto" }}>
-        <div className="flex items-center gap-2 mb-3">
-          {CHANNEL_ICON_PRESETS.map(ic => (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {CHANNEL_ICON_PRESETS.map(({ icon: ic, label }) => (
             <button
               key={ic}
               type="button"
+              title={label}
+              aria-label={label}
               onClick={() => setIcon(ic)}
               style={{
                 width: 32, height: 32, borderRadius: 8, fontSize: 15, cursor: "pointer",
