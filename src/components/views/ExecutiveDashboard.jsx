@@ -26,8 +26,9 @@ import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
+import { StatCardGrid } from "../shared/StatCardGrid";
 import { EmptyState } from "../ui/EmptyState";
-import { formatK, formatBRL } from "../../utils/currency";
+import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
@@ -436,9 +437,15 @@ export function ExecutiveDashboard({
               área. Área nova = uma entrada nova aqui + uma aba, nunca um
               redesign da grade (regra 8 do CLAUDE.md). */}
           <div className="print:hidden">
+            {/* Colunas: 3 fixas no mobile (a 360px, 6 colunas cortavam o
+                rótulo — "Comerci…"), o layout de hoje a partir de lg. O
+                número de colunas do desktop é dinâmico (varia com as áreas
+                visíveis), então vai por custom property inline e a media
+                query mora no index.css — Tailwind JIT não gera classe
+                montada por template string em runtime. */}
             <div
-              className="grid gap-2.5"
-              style={{ gridTemplateColumns: `repeat(${Math.min(healthCards.length, 6) || 1}, 1fr)` }}
+              className="exec-health-band grid gap-2.5"
+              style={{ "--exec-health-cols": `repeat(${Math.min(healthCards.length, 6) || 1}, 1fr)` }}
             >
               {healthCards.map(h => (
                 <button
@@ -495,17 +502,24 @@ export function ExecutiveDashboard({
                 <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
                   Comercial
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+                {/* 7 indicadores — abaixo de lg vira grade densa de 2 colunas
+                    com 4 visíveis + "+3 indicadores" (StatCardGrid); a partir
+                    de lg volta a ser exatamente a grade de 7 de hoje. Era o
+                    pior caso de altura no mobile da plataforma (~700px). */}
+                <StatCardGrid desktopClassName="md:grid-cols-3 lg:grid-cols-7">
                   <StatCard icon={HandCoins}    value={formatK(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
                   <StatCard icon={TrendingUp}   value={formatK(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
                   <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
                   <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
-                  <div title={CAC_FORMULA_HINT}>
-                    <StatCard icon={Wallet}     value={cac != null ? formatBRL(cac) : "—"} label="CAC médio"  sublabel="Aquisição por negócio ganho" />
-                  </div>
+                  {/* formatK em vez de formatBRL: em card estreito o valor
+                      cheio cortava. O hint da fórmula saiu do <div title>
+                      externo (que quebraria o cloneElement do StatCardGrid)
+                      pro `tooltip` do próprio StatCard — HelpTooltip é o
+                      padrão da plataforma pra hint de rótulo de StatCard. */}
+                  <StatCard icon={Wallet}       value={cac != null ? formatK(cac) : "—"} label="CAC médio" tooltip={CAC_FORMULA_HINT} sublabel="Aquisição por negócio ganho" />
                   <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
                   <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
-                </div>
+                </StatCardGrid>
               </div>
 
               <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto mt-4" style={{ borderColor: "var(--border)" }}>

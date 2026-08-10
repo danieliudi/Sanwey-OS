@@ -257,3 +257,16 @@ body {
   }
   body.printing-doc { background: #FFFFFF !important; }
 }
+
+/* Faixa de saúde por área do Painel Executivo (ExecutiveDashboard.jsx).
+   O número de colunas do desktop é dinâmico (varia com as áreas visíveis do
+   usuário), então chega como custom property inline `--exec-health-cols` —
+   classe Tailwind montada por template string não existe em runtime (o JIT
+   só gera o que está escrito literal no fonte). Abaixo de lg trava em 3
+   colunas: a 360px, 6 colunas davam ~55px por botão e cortavam o rótulo
+   ("Comerci…", "Pós-ve…"). A partir de 1024px o desktop fica pixel-idêntico
+   ao de antes. */
+.exec-health-band { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 1024px) {
+  .exec-health-band { grid-template-columns: var(--exec-health-cols); }
+}

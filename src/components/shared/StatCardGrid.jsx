@@ -37,7 +37,13 @@ export function StatCardGrid({
             key={child.key ?? i}
             className={!expanded && i >= maxMobile ? "hidden lg:block" : undefined}
           >
-            {React.isValidElement(child) ? React.cloneElement(child, { dense: true }) : child}
+            {/* Só injeta `dense` em componente React. Se o filho for uma tag
+                DOM (alguém embrulhando o card num <div> pra segurar um
+                title/ref), passar `dense` viraria atributo inválido no HTML e
+                warning do React — aconteceu de verdade no Painel Executivo. */}
+            {React.isValidElement(child) && typeof child.type !== "string"
+              ? React.cloneElement(child, { dense: true })
+              : child}
           </div>
         ))}
       </div>
