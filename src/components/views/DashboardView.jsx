@@ -7,6 +7,7 @@ import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { VISAO_GERAL_WIDGETS } from "../../constants/visao-geral-widgets";
 import { StatCard } from "../ui/StatCard";
+import { StatCardGrid } from "../shared/StatCardGrid";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { Eyebrow } from "../shared/PanelHeading";
@@ -262,43 +263,37 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
         </div>
       </div>
 
-      {/* Stat cards — carrossel de peek abaixo de 1024px (adendo mobile) */}
-      <div className="order-2 lg:order-1 -mx-4 sm:-mx-6 lg:mx-0">
+      {/* Stat cards — grade de 2 colunas abaixo de 1024px (StatCardGrid,
+          10/08/2026). Substituiu o carrossel horizontal: metade dos
+          indicadores ficava fora da tela sem sinal claro. Estes tiles usam
+          `variant="ruler"` (eyebrow + número grande), que ignora o `dense`
+          injetado pelo StatCardGrid — o ganho aqui é só o fim do scroll
+          lateral. Divisor/respiro de desktop ficam no wrapper externo. */}
+      <div className="order-2 lg:order-1 lg:pb-[22px] lg:mb-[26px] lg:border-b lg:border-[var(--border)]">
         {zone1VisibleCount === 0 ? (
           <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
         ) : (
-          <div
-            className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:grid-cols-4 lg:gap-7 lg:overflow-visible lg:pb-[22px] lg:mb-[26px] lg:border-b lg:border-[var(--border)]"
-            style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
-          >
+          <StatCardGrid desktopClassName="lg:grid-cols-4 lg:gap-7">
             {widgetVisible("leads_count") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Target} value={scopedLeads.length}
-                  label={isManager ? (isGroupView ? "Leads no grupo" : "Leads da empresa") : "Meus leads"}
-                  trend={mom.leads.d} compact variant="ruler" />
-              </div>
+              <StatCard icon={Target} value={scopedLeads.length}
+                label={isManager ? (isGroupView ? "Leads no grupo" : "Leads da empresa") : "Meus leads"}
+                trend={mom.leads.d} compact variant="ruler" />
             )}
             {widgetVisible("pipeline_open") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={HandCoins} value={formatK(stats.pipelineValue)}
-                  label="Funil de Vendas aberto"
-                  sublabel={`${stats.openCount} oportunidades`} compact variant="ruler" />
-              </div>
+              <StatCard icon={HandCoins} value={formatK(stats.pipelineValue)}
+                label="Funil de Vendas aberto"
+                sublabel={`${stats.openCount} oportunidades`} compact variant="ruler" />
             )}
             {widgetVisible("won_value") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={CheckCircle2} value={formatK(stats.wonValue)}
-                  label="Valor ganho" trend={mom.won.d} accent={accent} compact variant="ruler" />
-              </div>
+              <StatCard icon={CheckCircle2} value={formatK(stats.wonValue)}
+                label="Valor ganho" trend={mom.won.d} accent={accent} compact variant="ruler" />
             )}
             {widgetVisible("avg_fit") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Gauge} value={stats.avgFit} label="Fit score médio"
-                  sublabel={`${stats.newCount} novos em 48h`} compact variant="ruler"
-                  tooltip="Pontuação de 0 a 100 que indica o potencial do lead. Acima de 70 é considerado quente." />
-              </div>
+              <StatCard icon={Gauge} value={stats.avgFit} label="Fit score médio"
+                sublabel={`${stats.newCount} novos em 48h`} compact variant="ruler"
+                tooltip="Pontuação de 0 a 100 que indica o potencial do lead. Acima de 70 é considerado quente." />
             )}
-          </div>
+          </StatCardGrid>
         )}
       </div>
 

@@ -26,6 +26,7 @@ import { PanelEmptyState } from "../shared/PanelEmptyState";
 import { TaskBucket } from "../shared/TaskBucket";
 import { StageDistributionBar } from "../shared/StageDistributionBar";
 import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
+import { StatCardGrid } from "../shared/StatCardGrid";
 import { greetingFor } from "../../utils/greeting";
 import { exportCampaignsToCSV } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
@@ -592,60 +593,42 @@ export function MarketingDashboardView({ user }) {
       </div>
 
       {/* ── Zona 1 — Resumo (7 tiles possíveis: 5 sempre + 2 de agência) ── */}
-      <div className="-mx-4 sm:-mx-6 lg:mx-0">
+      <div>
         {zone1VisibleCount === 0 ? (
           <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
         ) : (
-          <div
-            className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:overflow-visible"
-            style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))" }}
-          >
+          <StatCardGrid desktopClassName="lg:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
             {widgetVisible("kpi_active") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Megaphone} value={kpi.active} label="Campanhas ativas"
-                  trend={mom.campaigns.d} compact />
-              </div>
+              <StatCard icon={Megaphone} value={kpi.active} label="Campanhas ativas"
+                trend={mom.campaigns.d} compact />
             )}
             {widgetVisible("kpi_live") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Zap} value={kpi.live} label="Ao vivo agora"
-                  sublabel={kpi.live > 0 ? "em exibição" : "nenhuma ao vivo"}
-                  accent={kpi.live > 0 ? "var(--success)" : undefined} compact />
-              </div>
+              <StatCard icon={Zap} value={kpi.live} label="Ao vivo agora"
+                sublabel={kpi.live > 0 ? "em exibição" : "nenhuma ao vivo"}
+                accent={kpi.live > 0 ? "var(--success)" : undefined} compact />
             )}
             {widgetVisible("kpi_budget") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={DollarSign} value={formatK(kpi.budget)} label="Orçamento comprometido"
-                  trend={-mom.expenses.d} compact />
-              </div>
+              <StatCard icon={DollarSign} value={formatK(kpi.budget)} label="Orçamento comprometido"
+                trend={-mom.expenses.d} compact />
             )}
             {widgetVisible("kpi_deliverables") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Package} value={kpi.entregue} label="Entregas concluídas"
-                  trend={mom.deliverables.d} compact />
-              </div>
+              <StatCard icon={Package} value={kpi.entregue} label="Entregas concluídas"
+                trend={mom.deliverables.d} compact />
             )}
             {widgetVisible("kpi_score") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Award} value={kpi.avgScore != null ? kpi.avgScore : "—"} label="Performance médio"
-                  sublabel={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "ótimo" : kpi.avgScore >= 60 ? "bom" : "atenção") : "sem dados"}
-                  compact />
-              </div>
+              <StatCard icon={Award} value={kpi.avgScore != null ? kpi.avgScore : "—"} label="Performance médio"
+                sublabel={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "ótimo" : kpi.avgScore >= 60 ? "bom" : "atenção") : "sem dados"}
+                compact />
             )}
             {widgetVisible("kpi_agency_sla") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Award} value={agencyMetrics.sla != null ? `${agencyMetrics.sla}%` : "—"} label="SLA cumprido"
-                  sublabel={agencyMetrics.total > 0 ? `${agencyMetrics.total} entregas` : "sem entregas"} compact />
-              </div>
+              <StatCard icon={Award} value={agencyMetrics.sla != null ? `${agencyMetrics.sla}%` : "—"} label="SLA cumprido"
+                sublabel={agencyMetrics.total > 0 ? `${agencyMetrics.total} entregas` : "sem entregas"} compact />
             )}
             {widgetVisible("kpi_agency_leadtime") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Clock} value={agencyMetrics.avgLead != null ? `${agencyMetrics.avgLead}d` : "—"} label="Lead time médio"
-                  sublabel="Pendente → Entregue" compact />
-              </div>
+              <StatCard icon={Clock} value={agencyMetrics.avgLead != null ? `${agencyMetrics.avgLead}d` : "—"} label="Lead time médio"
+                sublabel="Pendente → Entregue" compact />
             )}
-          </div>
+          </StatCardGrid>
         )}
       </div>
 

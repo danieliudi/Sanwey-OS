@@ -6,6 +6,7 @@ import { useMyTasks } from "../../hooks/use-my-tasks";
 import { Card, CardGrid, CardSkeleton } from "../shared/Card";
 import { Tabs } from "../shared/Tabs";
 import { StatCard } from "../ui/StatCard";
+import { StatCardGrid } from "../shared/StatCardGrid";
 import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
 
@@ -141,7 +142,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <StatCardGrid desktopClassName="md:grid-cols-4">
             <StatCard
               icon={Flame}
               value={urgentNowCount}
@@ -162,7 +163,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
               label="Alertas ativos"
               sublabel="Recalculado em tempo real"
             />
-          </div>
+          </StatCardGrid>
 
           <Tabs
             tabs={[
