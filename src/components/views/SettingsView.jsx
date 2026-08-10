@@ -126,7 +126,7 @@ function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
 
 const EXPORT_DOMAIN_LABEL = {
   leads_crm: "Leads (Funil de Vendas)",
-  leads_dashboard: "Leads (Minhas Tarefas)",
+  leads_dashboard: "Leads (Pendências)",
   leads_explorer: "Leads (Explorador)",
   viagens_registros: "Viagens (registros)",
   viagens_despesas: "Viagens (despesas)",
@@ -889,7 +889,7 @@ export function SettingsView({
   // Texto lista o que a ação realmente apaga hoje — "empresas ativas, widgets,
   // notificações" tinha ficado defasado desde que a Lista Pessoal entrou.
   const handleResetSettings = useCallback(() => {
-    if (window.confirm("Isso vai restaurar suas preferências (aparência, notificações, Lista Pessoal e, se você for gestor, empresas ativas e widgets do Painel Executivo) para o padrão. Continuar?")) {
+    if (window.confirm("Isso vai restaurar suas preferências (aparência, notificações, Meu To-do e, se você for gestor, empresas ativas e widgets do Painel Executivo) para o padrão. Continuar?")) {
       onReset();
     }
   }, [onReset]);
@@ -1875,7 +1875,7 @@ export function SettingsView({
                   description="Funcionalidades que você liga ou desliga só pra você — não afeta mais ninguém."
                 >
                   <ToggleRow
-                    label="Lista Pessoal"
+                    label="Meu To-do"
                     sublabel="Lista de tarefas privada no menu Meu Espaço. Ninguém mais — nem gerente, nem admin — vê o que você anota nela."
                     checked={Boolean(settings.personalTasksEnabled)}
                     onChange={() => onUpdate({ personalTasksEnabled: !settings.personalTasksEnabled })}

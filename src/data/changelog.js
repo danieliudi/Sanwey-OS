@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.33.4",
+    items: [
+      { kind: "ajuste", text: "No menu \"Meu Espaço\", \"Minhas Tarefas\" virou \"Pendências\" e \"Lista Pessoal\" virou \"Meu To-do\" — nomes mais claros pro que cada item realmente é (o feed de pendências entre módulos vs. a sua lista de tarefas privada)." },
+    ],
+  },
+  {
     version: "4.33.3",
     items: [
       { kind: "correcao", text: "Em Viagens & Despesas, uma despesa lançada agora pode ser clicada pra abrir o detalhe completo (valor, descrição, motivo de rejeição, comprovante) — antes só dava pra ver o comprovante, e só quando havia um anexado." },

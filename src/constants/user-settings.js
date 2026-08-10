@@ -148,7 +148,7 @@ export const NOTIFICATION_GROUPS = [
   },
   {
     id: "lista_pessoal",
-    label: "Lista Pessoal",
+    label: "Meu To-do",
     area: "sistema",
     // Lista Pessoal é universal (todo usuário autenticado tem a própria,
     // ver rota "personal-tasks" em App.jsx) — união de todos os papéis da

@@ -84,7 +84,7 @@ export function PersonalStageListManager({ open, onClose, stages, stagesHook, ta
     <StageListCore
       open={open}
       onClose={onClose}
-      title="Lista Pessoal"
+      title="Meu To-do"
       warning="Suas etapas são só suas — ninguém mais vê ou é afetado por essa mudança. Não dá pra remover etapa com tarefa dentro."
       stages={stages}
       rowKey={(s) => s.isNew ? s.tempId : s.stageKey}

@@ -443,7 +443,7 @@ export function PersonalTasksView({ currentUser }) {
             <div className="flex items-center gap-2">
               <ListChecks size={22} style={{ color: "var(--text)" }} />
               <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-                Lista Pessoal
+                Meu To-do
               </h1>
             </div>
             <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>

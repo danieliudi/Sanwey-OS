@@ -318,8 +318,10 @@ export default function App() {
   const { crossReferrals, approve: approveCross, reject: rejectCross } = useCrossReferrals(leads);
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
 
-  // Lista Pessoal (ex-"Tarefas Pessoais", renomeada 05/08 pra não colidir
-  // com "Minhas Tarefas"): nasce ligada (settings.personalTasksEnabled,
+  // Meu To-do (ex-"Tarefas Pessoais", depois "Lista Pessoal" 05/08, agora
+  // "Meu To-do" 10/08 — pedido do Daniel: "Minhas Tarefas" virou "Pendências"
+  // no mesmo grupo do menu, então o nome antigo deste item ficava ambíguo de
+  // novo): nasce ligada (settings.personalTasksEnabled,
   // default true) e é desligável em Configurações → Preferências → Recursos.
   // `enabled` deixa o hook inerte (sem fetch/subscribe) pra quem desligou.
   // `openCount` alimenta o badge do item no menu, igual ao chatUnread acima.
@@ -1348,10 +1350,10 @@ export default function App() {
     groups.push({
       label: "Meu Espaço",
       items: [
-        { id: "dashboard", label: "Minhas Tarefas", icon: CheckSquare },
+        { id: "dashboard", label: "Pendências", icon: CheckSquare },
         { id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined },
         ...(settings.personalTasksEnabled
-          ? [{ id: "personal-tasks", label: "Lista Pessoal", icon: ListChecks, badge: personalTasksOpenCount || undefined }]
+          ? [{ id: "personal-tasks", label: "Meu To-do", icon: ListChecks, badge: personalTasksOpenCount || undefined }]
           : []),
         ...((isRHUser || isDiretoria) && temFichaColaborador
           ? [{ id: "meu-rh", label: "Meu RH", icon: Home }]
