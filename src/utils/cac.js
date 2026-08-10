@@ -20,12 +20,38 @@
 //   - KanbanAnalyticsPanel do Funil de Vendas (CRMView.jsx, aba Análise)
 //   - ExecutiveDashboard.jsx (aba Comercial → Visão geral)
 
-export const CAC_FORMULA_HINT =
-  "CAC = (despesas de viagem + custo de amostras) ÷ negócios ganhos no período";
+// `sent_at`/`data_despesa` são colunas `date` puras — `new Date("2026-08-10")`
+// daria meia-noite UTC, comparada com um cutoff em ms LOCAL: amostra/despesa
+// na fronteira do período entrava ou saía errado por até 3h (BRT). Ver
+// parseDateInput.
+import { parseDateInput } from "./date";
+
+// Corte de período do CAC — fonte única (era uma função local do
+// ExecutiveDashboard; o Funil de Vendas precisava do MESMO corte pros dois
+// lados da divisão, então subiu pra cá em vez de virar 2ª cópia).
+// `null` = sem recorte (todo o histórico).
+export function periodCutoff(period) {
+  if (period === "all" || period == null) return null;
+  const now = Date.now();
+  if (period === "30d") return now - 30 * 86400000;
+  if (period === "60d") return now - 60 * 86400000;
+  if (period === "90d") return now - 90 * 86400000;
+  if (period === "ytd") return new Date(new Date().getFullYear(), 0, 1).getTime();
+  return null;
+}
+
+// O texto tem que descrever a janela que a tela REALMENTE calcula: dizer
+// "no período" numa tela sem recorte de período era mentira (achado de QA
+// 10/08/2026 — o Funil somava despesa de 2 anos e dividia por negócios
+// ganhos sem recorte nenhum, enquanto o Executivo aplicava o cutoff).
+export function cacFormulaHint(period) {
+  const janela = periodCutoff(period) == null ? "no histórico completo" : "no período selecionado";
+  return `CAC = (despesas de viagem + custo de amostras) ÷ negócios ganhos ${janela}`;
+}
 
 function toTimestamp(value) {
   if (!value) return NaN;
-  return new Date(value).getTime();
+  return parseDateInput(value).getTime();
 }
 
 // Soma `crm_viagem_despesas.valor` dentro do período, opcionalmente restrita

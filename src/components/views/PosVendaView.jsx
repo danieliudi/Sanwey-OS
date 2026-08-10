@@ -34,7 +34,7 @@ import { formatK } from "../../utils/currency";
 import { stageTextColor } from "../../utils/stage-colors";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
-import { localDateInputToISOString } from "../../utils/date";
+import { localDateInputToISOString, toLocalISODate } from "../../utils/date";
 
 function daysInStage(dateStr) {
   if (!dateStr) return 0;
@@ -205,6 +205,10 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
               type="date"
               value={negotiationStartedAt}
               onChange={e => setNegotiationStartedAt(e.target.value)}
+              /* Campo retroativo por definição — data futura quebra
+                 "novo em 48h" (DashboardView), "Tempo no funil" (negativo) e
+                 a ordenação por mais recente. */
+              max={toLocalISODate(new Date())}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
               style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
             />

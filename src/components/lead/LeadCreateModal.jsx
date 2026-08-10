@@ -12,7 +12,7 @@ import { StageFieldInput } from "./StageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
-import { localDateInputToISOString } from "../../utils/date";
+import { localDateInputToISOString, toLocalISODate } from "../../utils/date";
 
 // ── Customer search helpers ───────────────────────────────────────────────────
 
@@ -676,6 +676,10 @@ export function LeadCreateModal({
               type="date"
               value={negotiationStartedAt}
               onChange={e => setNegotiationStartedAt(e.target.value)}
+              /* Campo retroativo por definição — data futura quebra
+                 "novo em 48h" (DashboardView), "Tempo no funil" (negativo) e
+                 a ordenação por mais recente. */
+              max={toLocalISODate(new Date())}
               style={{
                 width: "100%", fontSize: 13, borderRadius: 6, border: "1px solid var(--border-strong)",
                 padding: "8px 12px", color: "var(--text)", background: "var(--surface)", outline: "none",

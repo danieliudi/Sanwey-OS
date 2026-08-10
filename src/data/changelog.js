@@ -34,6 +34,7 @@ export const CHANGELOG = [
       { kind: "ajuste", text: "Funil de Vendas: painel do negócio mais enxuto. Saíram o bloco de unidades (que repetia o de produto logo abaixo) e o de e-mails vinculados (que prometia uma integração com Outlook que nunca existiu); o follow-up virou um botão compacto, sem perder nada do que fazia.", roles: ["consultor", "vendedor", "gerente"] },
       { kind: "ajuste", text: "Chat: o seletor de ícone do canal passou de 6 para 18 opções, cada uma com uma dica explicando pra que serve." },
       { kind: "correcao", text: "Chat no celular: só dava pra abrir conversa direta — a opção de criar canal não aparecia no botão flutuante. Corrigido." },
+      { kind: "correcao", text: "Datas com ano de um ou dois dígitos eram gravadas no século passado sem avisar (digitar \"26\" virava 1926). Corrigido em todos os campos de data da plataforma." },
     ],
   },
   {

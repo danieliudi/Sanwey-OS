@@ -20,7 +20,7 @@ import { usePosvenda } from "../../hooks/use-posvenda";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
 import { useAllLeadSamples } from "../../hooks/use-lead-samples";
-import { sumTravelExpenses, sumSampleCosts, calculateCAC, CAC_FORMULA_HINT } from "../../utils/cac";
+import { sumTravelExpenses, sumSampleCosts, calculateCAC, cacFormulaHint, periodCutoff } from "../../utils/cac";
 import { useEsgEmissionRecords, useEsgEmissionFactors, useEsgReports } from "../../hooks/use-esg-carbon";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
@@ -77,18 +77,9 @@ function fmtT(kg) {
   return `${((kg || 0) / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t`;
 }
 
-// Extraído de `filterByPeriod` pra ser reaproveitado pelo CAC (regra 4 do
-// CLAUDE.md) — despesas de viagem/amostras precisam do mesmo corte de
-// período, sem serem `leads`.
-function periodCutoff(period) {
-  if (period === "all") return null;
-  const now = Date.now();
-  if (period === "30d") return now - 30 * 86400000;
-  if (period === "60d") return now - 60 * 86400000;
-  if (period === "90d") return now - 90 * 86400000;
-  if (period === "ytd") return new Date(new Date().getFullYear(), 0, 1).getTime();
-  return null;
-}
+// `periodCutoff` mora em src/utils/cac.js (fonte única) — o Funil de Vendas
+// precisa do MESMO corte pros dois lados da divisão do CAC, então deixou de
+// ser função local desta tela.
 function filterByPeriod(leads, period) {
   const cutoff = periodCutoff(period);
   if (cutoff == null) return leads;
@@ -516,7 +507,7 @@ export function ExecutiveDashboard({
                       externo (que quebraria o cloneElement do StatCardGrid)
                       pro `tooltip` do próprio StatCard — HelpTooltip é o
                       padrão da plataforma pra hint de rótulo de StatCard. */}
-                  <StatCard icon={Wallet}       value={cac != null ? formatK(cac) : "—"} label="CAC médio" tooltip={CAC_FORMULA_HINT} sublabel="Aquisição por negócio ganho" />
+                  <StatCard icon={Wallet}       value={cac != null ? formatK(cac) : "—"} label="CAC médio" tooltip={cacFormulaHint(period)} sublabel="Aquisição por negócio ganho" />
                   <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
                   <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
                 </StatCardGrid>

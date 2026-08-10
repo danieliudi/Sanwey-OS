@@ -203,6 +203,10 @@ export function CRMViagensCalculadoraView() {
 
   const [calc, setCalc] = useState({ loading: false, error: null, totalKm: null });
   const requestIdRef = useRef(0);
+  // Último valor de `distancia` preenchido automaticamente pela rota — é o que
+  // distingue "campo ainda é da rota" de "usuário digitou". Ver o useEffect
+  // do cálculo abaixo.
+  const autoDistanciaRef = useRef("");
 
   const updateStop = (id, patch) => {
     setStops((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -228,6 +232,15 @@ export function CRMViagensCalculadoraView() {
 
   useEffect(() => {
     if (!placeIdsKey || !isSupabaseConfigured) {
+      // Rota deixou de estar completa (3ª parada vazia, texto apagado): a
+      // distância vinda da rota anterior fica obsoleta e os 3 cards de custo
+      // abaixo seguiriam calculando em cima de um número que não corresponde
+      // mais ao que está na tela. Limpa — mas só o que ESTA tela preencheu
+      // sozinha; se o valor no campo foi digitado à mão, ele é do usuário e
+      // continua valendo (a calculadora funciona sem rota nenhuma).
+      requestIdRef.current++; // invalida resposta em voo da rota anterior
+      setDistancia((prev) => (prev !== "" && prev === autoDistanciaRef.current ? "" : prev));
+      autoDistanciaRef.current = "";
       setCalc((prev) => (prev.loading || prev.error || prev.totalKm != null ? { loading: false, error: null, totalKm: null } : prev));
       return;
     }
@@ -242,7 +255,17 @@ export function CRMViagensCalculadoraView() {
           return;
         }
         setCalc({ loading: false, error: null, totalKm: data?.totalKm ?? null });
-        if (data?.totalKm != null) setDistancia(String(data.totalKm));
+        if (data?.totalKm != null) {
+          const next = String(data.totalKm);
+          // Nunca sobrescrever o que o usuário digitou enquanto o cálculo
+          // estava em voo: só preenche se o campo estiver vazio ou ainda
+          // contiver exatamente o valor que esta tela preencheu por último.
+          setDistancia((prev) => {
+            if (prev !== "" && prev !== autoDistanciaRef.current) return prev;
+            autoDistanciaRef.current = next;
+            return next;
+          });
+        }
       })
       .catch((err) => {
         if (myRequestId !== requestIdRef.current) return;

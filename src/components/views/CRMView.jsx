@@ -29,7 +29,7 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { formatK, formatBRL } from "../../utils/currency";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
 import { useAllLeadSamples } from "../../hooks/use-lead-samples";
-import { sumTravelExpenses, sumSampleCosts, calculateCAC, CAC_FORMULA_HINT } from "../../utils/cac";
+import { sumTravelExpenses, sumSampleCosts, calculateCAC, cacFormulaHint, periodCutoff } from "../../utils/cac";
 import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
@@ -45,6 +45,12 @@ import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { daysSince } from "../../utils/date";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
+
+// Janela do CAC nesta tela (ver o useMemo `cac` mais abaixo). Esta tela não
+// tem seletor de período; "all" é o mesmo padrão do Painel Executivo, que é o
+// outro ponto que mostra o mesmo indicador. Valor de `period` de
+// src/utils/cac.js (`periodCutoff`): "all" | "30d" | "60d" | "90d" | "ytd".
+const CAC_PERIOD = "all";
 
 // ── Quick-add form ────────────────────────────────────────────────────────────
 
@@ -495,12 +501,28 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   }, [scopedLeads]);
   const cacLeadIds = useMemo(() => new Set(scopedLeads.map(l => l.id)), [scopedLeads]);
 
+  // Numerador e denominador têm que cobrir a MESMA janela — o bug corrigido em
+  // 10/08/2026 era exatamente este: as despesas/amostras entravam sem recorte
+  // (2 anos acumulados) e o texto do hint prometia "no período". `CAC_PERIOD`
+  // é o único lugar onde essa janela é decidida nesta tela; o Funil não tem
+  // seletor de período, então usa o mesmo valor padrão do Painel Executivo
+  // ("all") — assim os dois pontos batem — e o hint é gerado a partir dele
+  // (`cacFormulaHint`), nunca escrito à mão. Mudar `CAC_PERIOD` aqui move os
+  // dois lados juntos e o texto acompanha sozinho.
   const cac = useMemo(() => {
     if (!cacDataEnabled) return null;
-    const travelExpensesTotal = sumTravelExpenses(viagemDespesas, { vendorIds: cacVendorIds });
-    const sampleCostsTotal = sumSampleCosts(allLeadSamples, { leadIds: cacLeadIds });
-    return calculateCAC({ travelExpensesTotal, sampleCostsTotal, wonCount: summary.won });
-  }, [cacDataEnabled, viagemDespesas, allLeadSamples, cacVendorIds, cacLeadIds, summary.won]);
+    const periodStart = periodCutoff(CAC_PERIOD);
+    const travelExpensesTotal = sumTravelExpenses(viagemDespesas, { vendorIds: cacVendorIds, periodStart });
+    const sampleCostsTotal = sumSampleCosts(allLeadSamples, { leadIds: cacLeadIds, periodStart });
+    const wonCount = periodStart == null
+      ? summary.won
+      : scopedLeads.filter(l => {
+          if (l.stage !== "ganho") return false;
+          const ts = new Date(l.stageChangedAt || l.createdAt).getTime();
+          return !Number.isNaN(ts) && ts >= periodStart;
+        }).length;
+    return calculateCAC({ travelExpensesTotal, sampleCostsTotal, wonCount });
+  }, [cacDataEnabled, viagemDespesas, allLeadSamples, cacVendorIds, cacLeadIds, summary.won, scopedLeads]);
 
   // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
   // (estático ou condicional) vazio — vale tanto pro drag-and-drop quanto
@@ -773,7 +795,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           getOwnerIds={getLeadOwnerIds}
           usersById={usersById}
           specificStats={[
-            { label: "CAC médio", value: cac != null ? formatBRL(cac) : "—", title: CAC_FORMULA_HINT },
+            { label: "CAC médio", value: cac != null ? formatBRL(cac) : "—", title: cacFormulaHint(CAC_PERIOD) },
           ]}
         />
       ) : (<>

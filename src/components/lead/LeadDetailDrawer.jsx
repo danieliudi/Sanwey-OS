@@ -1510,7 +1510,9 @@ function SamplesPanel({ leadId, companyColor, currentUser }) {
     if (!notes.trim() || saving) return;
     setSaving(true);
     try {
-      await createSample({ notes: notes.trim(), sentAt, cost, createdBy: currentUser?.id || null });
+      // `created_by` vem do `DEFAULT auth.uid()` no banco, não do cliente
+      // (policy de INSERT exige que bata com o usuário autenticado).
+      await createSample({ notes: notes.trim(), sentAt, cost });
       setModalOpen(false);
     } finally {
       setSaving(false);
@@ -2075,6 +2077,10 @@ function NegotiationStartRow({ value, onChange }) {
           type="date"
           value={value}
           onChange={e => onChange(e.target.value)}
+          /* Campo retroativo por definição — data futura quebra
+             "novo em 48h" (DashboardView), "Tempo no funil" (negativo) e
+             a ordenação por mais recente. */
+          max={toLocalISODate(new Date())}
           className="text-sm rounded-lg border px-2.5 py-1.5 outline-none"
           style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
         />

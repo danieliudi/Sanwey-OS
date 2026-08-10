@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
+import { toLocalISODate } from "../utils/date";
 
 // Amostras físicas de produto enviadas ao cliente durante a negociação
 // (Funil de Vendas — LeadDetailDrawer, bloco "🧪 Amostras enviadas"). Custo
@@ -46,16 +47,25 @@ export function useLeadSamples(leadId) {
     return () => { debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [leadId, fetchAll]);
 
-  const createSample = useCallback(async ({ notes, sentAt, cost, createdBy }) => {
+  // `created_by` NÃO é enviado pelo cliente de propósito: a coluna tem
+  // `DEFAULT auth.uid()` e a policy de INSERT exige `created_by = auth.uid()`
+  // (ou admin), então mandar o valor daqui só abriria espaço pra registrar
+  // amostra em nome de outra pessoa. `cost` também nunca vai negativo — o
+  // banco tem `CHECK (cost >= 0)`; o clamp aqui é só pra dar um valor sensato
+  // em vez de erro de constraint.
+  const createSample = useCallback(async ({ notes, sentAt, cost }) => {
     if (!isSupabaseConfigured || !leadId) return null;
+    const parsedCost = Number(cost);
     const { data, error: err } = await supabase
       .from(TABLE)
       .insert({
         lead_id: leadId,
         notes: notes || null,
-        sent_at: sentAt || new Date().toISOString().slice(0, 10),
-        cost: Number.isFinite(Number(cost)) ? Number(cost) : 0,
-        created_by: createdBy || null,
+        // toLocalISODate, não `toISOString().slice(0,10)`: este último dá a
+        // data UTC — depois das 21h (BRT) gravaria a data de amanhã. Mesmo
+        // helper que o chamador já usa pro valor default do campo.
+        sent_at: sentAt || toLocalISODate(new Date()),
+        cost: Number.isFinite(parsedCost) ? Math.max(0, parsedCost) : 0,
       })
       .select()
       .single();
