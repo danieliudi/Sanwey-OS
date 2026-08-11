@@ -24,6 +24,20 @@
 
 export const CHANGELOG = [
   {
+    version: "4.41.2",
+    items: [
+      {
+        kind: "correcao",
+        text: 'Cadastrar fornecedor de marketing sem marcar nenhuma empresa dava "erro ao salvar" sem explicação. Agora "Empresas atendidas" é obrigatório e o aviso diz o que falta.',
+        roles: ["marketing", "gerente_marketing"],
+      },
+      {
+        kind: "correcao",
+        text: "Mesma correção no cadastro de clientes e na solicitação de compra de marketing: sem empresa selecionada, o sistema avisa em vez de falhar sem motivo aparente.",
+      },
+    ],
+  },
+  {
     version: "4.41.1",
     items: [
       { kind: "correcao", text: "Solicitação ao Marketing: o formulário não gravava nada para quem abria o link sem estar logado — a permissão pública existia, mas era anulada por uma regra interna antes de valer. Corrigido; pedidos de Material e de Compra voltam a ser enviados normalmente." },

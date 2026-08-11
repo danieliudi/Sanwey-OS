@@ -48,6 +48,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
   const [editing, setEditing] = useState(null); // null = novo, obj = editando
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [activeTab, setActiveTab] = useState("dados");
   const [sortCol, setSortCol] = useState(null); // null = ordem natural
@@ -150,9 +151,10 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     setPage(0);
   };
 
-  const openNew = () => { setEditing(null); setForm(EMPTY); setActiveTab("dados"); setModalOpen(true); };
+  const openNew = () => { setEditing(null); setForm(EMPTY); setSaveError(null); setActiveTab("dados"); setModalOpen(true); };
   const openDetail = (c, tab = "dados") => {
     setEditing(c);
+    setSaveError(null);
     setForm({
       name: c.name || "", category: c.category || "", city: c.city || "",
       state: c.state || "", cnpj: c.cnpj || "", companyIds: c.companyIds || [], notes: c.notes || "",
@@ -171,6 +173,10 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
 
   const save = async () => {
     if (!form.name.trim() || duplicateMatch) return;
+    // `clients_insert`/`clients_update` exigem `company_ids && current_user_companies()`
+    // — com o array vazio o overlap é FALSE e o usuário só via o erro cru da RLS.
+    if (form.companyIds.length === 0) { setSaveError("Selecione ao menos uma empresa relacionada."); return; }
+    setSaveError(null);
     setSaving(true);
     try {
       if (editing) await onUpdate?.(editing.id, form);
@@ -465,6 +471,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         setForm={setForm}
         saving={saving}
         onSave={save}
+        saveError={saveError}
         duplicateMatch={duplicateMatch}
         onUseDuplicate={(c) => { setModalOpen(false); openDetail(c); }}
         activeTab={activeTab}
@@ -508,7 +515,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
 }
 
 function ClientDetailModal({
-  open, onClose, editing, form, setForm, saving, onSave,
+  open, onClose, editing, form, setForm, saving, onSave, saveError,
   duplicateMatch, onUseDuplicate,
   activeTab, onTabChange, toggleCompany, inputStyle, onFocusRed, onBlurRed,
   stats, dealsByClient, onOpenLead, onOpenViagem,
@@ -592,7 +599,7 @@ function ClientDetailModal({
           </div>
 
           <div>
-            <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Empresas relacionadas</label>
+            <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Empresas relacionadas *</label>
             <div className="flex flex-wrap gap-2">
               {COMPANY_IDS.map(id => {
                 const co = COMPANIES[id];
@@ -606,6 +613,11 @@ function ClientDetailModal({
                 );
               })}
             </div>
+            {saveError && (
+              <div className="mt-2" style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
+                {saveError}
+              </div>
+            )}
           </div>
 
           <div>
