@@ -24,6 +24,25 @@
 
 export const CHANGELOG = [
   {
+    version: "4.42.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Campo obrigatório agora trava só para AVANÇAR de etapa. Arrastar um card para uma etapa anterior passa direto, sem precisar preencher o formulário da etapa atual — voltar não conclui a etapa, então não faz sentido cobrar a ficha dela. Vale em todos os quadros: Funil de Vendas, Entregas, Campanhas, Pós-venda, Comex, Onboarding, Férias, Feedback e Recrutamento.",
+      },
+      {
+        kind: "novo",
+        text: "Entregas: botão \"Devolver para a agência\" no detalhe da entrega, com motivo opcional que fica registrado no histórico — atalho para o caminho mais comum de uma arte em revisão.",
+        roles: ["marketing", "gerente_marketing"],
+      },
+      {
+        kind: "ajuste",
+        text: "Entregas: a \"Decisão de aprovação\" ganhou a opção \"Ajustes solicitados\", que antes não existia — só dava para marcar Aprovado, Reprovado ou Pendente, mesmo quando a arte estava indo e voltando da agência.",
+        roles: ["marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "4.41.3",
     items: [
       {

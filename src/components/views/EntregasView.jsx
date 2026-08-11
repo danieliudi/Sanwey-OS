@@ -22,7 +22,7 @@ import {
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatDateBR, localDateInputToISOString, parseDateInput } from "../../utils/date";
 import { useUsersById }  from "../../hooks/use-users-by-id";
-import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
@@ -815,8 +815,13 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const attemptStageChange = useCallback(async (itemId, toStage) => {
     const item = deliverables.find(d => d.id === itemId);
     if (!item) return false;
+    // Campo obrigatório trava AVANÇAR, não VOLTAR — devolver uma arte pra
+    // agência não conclui a etapa de Revisão, então não cobra a ficha de
+    // aprovação dela (decidido com o Daniel 11/08/2026).
     const fields = stageFields.getFields(item.stage);
-    const missing = getMissingRequiredFields(fields, item.customFields || {});
+    const missing = isStageRegression(kanbanStages, item.stage, toStage)
+      ? []
+      : getMissingRequiredFields(fields, item.customFields || {});
     if (missing.length > 0) {
       setStageError(`Não dá pra mover "${item.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return false;
@@ -835,7 +840,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       sendCompleteEmail(itemId);
     }
     return true;
-  }, [deliverables, stageFields, changeStage, sendCompleteEmail, fireAutomations]);
+  }, [deliverables, stageFields, kanbanStages, changeStage, sendCompleteEmail, fireAutomations]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
   const getItemCompleteness = useCallback((item) => {

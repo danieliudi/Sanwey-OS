@@ -33,7 +33,7 @@ import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { MobileTableCards } from "../shared/MobileTableCards";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { AppToast } from "../shared/AppToast";
-import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
@@ -1242,13 +1242,15 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const handleStageChange = async (id, stage) => {
     const colaborador = colaboradores.find((c) => c.id === id);
     if (!colaborador) return;
+    // Campo obrigatório trava AVANÇAR, não VOLTAR (ver isStageRegression).
+    const goingBack = isStageRegression(stages, colaborador.onboardingStage, stage);
     const fields = onboardingStageFields.getFields(colaborador.onboardingStage);
-    const missing = getMissingRequiredFields(fields, colaborador.customFields || {});
+    const missing = goingBack ? [] : getMissingRequiredFields(fields, colaborador.customFields || {});
     if (missing.length > 0) {
       setMoveError(`Não dá pra mover "${colaborador.fullName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
-    const invalid = getInvalidFields(fields, colaborador.customFields || {});
+    const invalid = goingBack ? [] : getInvalidFields(fields, colaborador.customFields || {});
     if (invalid.length > 0) {
       setMoveError(`Não dá pra mover "${colaborador.fullName}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;

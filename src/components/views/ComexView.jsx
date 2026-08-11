@@ -19,7 +19,7 @@ import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadRHComment } from "../../lib/comment-badge";
-import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { getMentionableUsers } from "../../utils/mentionable-users";
@@ -1098,7 +1098,10 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
 
   const loading = loadingOps || loadingStages;
 
-  const getStageBlockMessage = useCallback((op) => {
+  // Campo obrigatório trava AVANÇAR, não VOLTAR — voltar não conclui a etapa,
+  // então não cobra o formulário dela (ver isStageRegression).
+  const getStageBlockMessage = useCallback((op, toStage) => {
+    if (isStageRegression(stages, op.stage, toStage)) return null;
     const fields = stageFieldsHook.getFields(op.stage);
     const missing = getMissingRequiredFields(fields, op.customFields || {});
     if (missing.length > 0) {
@@ -1109,10 +1112,10 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
       return `Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`;
     }
     return null;
-  }, [stageFieldsHook]);
+  }, [stageFieldsHook, stages]);
 
   const handleMoveToStageGeneric = useCallback(async (op, stageKey, { onBlocked } = {}) => {
-    const blockMsg = getStageBlockMessage(op);
+    const blockMsg = getStageBlockMessage(op, stageKey);
     if (blockMsg) { (onBlocked || setBoardError)(blockMsg); return false; }
     setBusyId(op.id);
     try {

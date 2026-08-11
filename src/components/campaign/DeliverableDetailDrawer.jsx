@@ -395,6 +395,8 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   const [sideTab,      setSideTab]     = useState("form");
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,    setMoveError]   = useState(null);
+  const [returnOpen,   setReturnOpen]  = useState(false);
+  const [returnReason, setReturnReason] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
 
   // Campos customizados configurados via "Editar campos desta etapa"
@@ -557,6 +559,38 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   const priorityColor = PRIORITY_COLORS[item.priority] || NEUTRAL.slate;
   const priorityLabel = PRIORITY_LABELS[item.priority] || item.priority;
   const companyLabels = (item.companyIds || []).map(marketingUnitLabel).join(", ");
+
+  // Atalho do caminho mais comum de Entregas: a arte volta pra agência pra
+  // ajuste. A etapa-alvo é DESCOBERTA pelo nome configurado em
+  // rh_pipeline_stages (regra 5 do CLAUDE.md — etapa é dado, não código), e
+  // só aparece quando essa etapa existe ANTES da atual. Pipeline sem etapa de
+  // agência simplesmente não mostra o botão.
+  const returnStage = useMemo(() => {
+    const idx = effectiveStages.findIndex(s => s.id === item.stage);
+    if (idx <= 0) return null;
+    return [...effectiveStages.slice(0, idx)].reverse()
+      .find(s => /ag[êe]ncia/i.test(s.name || "")) || null;
+  }, [effectiveStages, item.stage]);
+
+  const handleReturnToAgency = async () => {
+    if (!returnStage) return;
+    const motivo = returnReason.trim();
+    // Registra o motivo ANTES de mover: depois da troca de etapa o drawer
+    // fecha, e o texto se perderia.
+    if (motivo) {
+      try {
+        await onUpdate(item.id, {
+          activities: [
+            ...(item.activities || []),
+            { type: "note", description: `Devolvido para ${returnStage.name}: ${motivo}`, at: new Date().toISOString() },
+          ],
+        });
+      } catch { /* motivo é opcional — falha aqui não impede a devolução */ }
+    }
+    setReturnOpen(false);
+    setReturnReason("");
+    await handleMoveStage(returnStage.id);
+  };
 
   const handleMoveStage = async (stageId) => {
     // Passa pela mesma validação de campo obrigatório (estático + dinâmico)
@@ -835,6 +869,44 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           >
             <RefreshCw size={13} /> {sendingEmail ? "Enviando…" : "Tentar enviar e-mail de novo"}
           </button>
+        )}
+        {canWrite && returnStage && (
+          <div className="mb-2">
+            {!returnOpen ? (
+              <button
+                onClick={() => setReturnOpen(true)}
+                data-tour="entregas-devolver-agencia"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold w-full"
+                style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", cursor: "pointer" }}
+              >
+                <RefreshCw size={13} /> Devolver para {returnStage.name}
+              </button>
+            ) : (
+              <div className="rounded-lg p-2.5" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+                <textarea
+                  value={returnReason}
+                  onChange={e => setReturnReason(e.target.value)}
+                  rows={2}
+                  autoFocus
+                  placeholder="Motivo (opcional) — ex.: ajustar cor do logo"
+                  className="w-full text-xs rounded-lg px-2 py-1.5 border resize-none mb-2"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                />
+                <div className="flex gap-2">
+                  <button onClick={handleReturnToAgency}
+                    className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                    style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer" }}>
+                    Devolver
+                  </button>
+                  <button onClick={() => { setReturnOpen(false); setReturnReason(""); }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                    style={{ background: "none", color: "var(--text-dim)", border: "1px solid var(--border)", cursor: "pointer" }}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
         {canWrite && (
           <StageNavigator

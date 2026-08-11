@@ -34,7 +34,7 @@ import { usePosvenda } from "../../hooks/use-posvenda";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { formatK } from "../../utils/currency";
 import { stageTextColor } from "../../utils/stage-colors";
-import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { localDateInputToISOString, toLocalISODate } from "../../utils/date";
 
@@ -929,14 +929,16 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
     const reportBlock = (msg) => { if (onBlocked) onBlocked(msg); else setStageError(msg); };
     const kase = cases.find(c => c.id === id);
     if (kase) {
+      // Campo obrigatório trava AVANÇAR, não VOLTAR (ver isStageRegression).
+      const goingBack = isStageRegression(stages, kase.stage, stageKey);
       const fields = stageFields.getFields(kase.stage);
       const customValues = kase.customFields || {};
-      const missing = getMissingRequiredFields(fields, customValues);
+      const missing = goingBack ? [] : getMissingRequiredFields(fields, customValues);
       if (missing.length > 0) {
         reportBlock(`Não dá pra mover "${kase.clientName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
         return false;
       }
-      const invalid = getInvalidFields(fields, customValues);
+      const invalid = goingBack ? [] : getInvalidFields(fields, customValues);
       if (invalid.length > 0) {
         reportBlock(`Não dá pra mover "${kase.clientName}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
         return false;
@@ -951,7 +953,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
       reportBlock(e?.message || "Não foi possível mover o caso.");
       return false;
     }
-  }, [cases, stageFields, changeStage]);
+  }, [cases, stageFields, stages, changeStage]);
 
   const handleDrop = useCallback((stageKey) => {
     if (draggedCase) attemptStageChange(draggedCase, stageKey);

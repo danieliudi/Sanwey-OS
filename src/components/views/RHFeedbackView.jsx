@@ -27,7 +27,7 @@ import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadRHComment } from "../../lib/comment-badge";
-import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
@@ -1457,13 +1457,15 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
       setCompletandoId(id);
       return;
     }
+    // Campo obrigatório trava AVANÇAR, não VOLTAR (ver isStageRegression).
+    const goingBack = isStageRegression(stages, feedback.status, stage);
     const fields = feedbackStageFields.getFields(feedback.status);
-    const missing = getMissingRequiredFields(fields, feedback.custom_fields || {});
+    const missing = goingBack ? [] : getMissingRequiredFields(fields, feedback.custom_fields || {});
     if (missing.length > 0) {
       setMoveError(`Não dá pra mover: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
-    const invalid = getInvalidFields(fields, feedback.custom_fields || {});
+    const invalid = goingBack ? [] : getInvalidFields(fields, feedback.custom_fields || {});
     if (invalid.length > 0) {
       setMoveError(`Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;

@@ -66,7 +66,7 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadRHComment } from "../../lib/comment-badge";
-import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { EmptyState } from "../ui/EmptyState";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -2910,13 +2910,15 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const attemptVagaStageChange = (id, newStage) => {
     const vaga = vagas.find((v) => v.id === id);
     if (!vaga || vaga.stage === newStage) return false;
+    // Campo obrigatório trava AVANÇAR, não VOLTAR (ver isStageRegression).
+    const goingBack = isStageRegression(vagaStages, vaga.stage, newStage);
     const fields = vagaStageFields.getFields(vaga.stage);
-    const missing = getMissingRequiredFields(fields, vaga.custom_fields || {});
+    const missing = goingBack ? [] : getMissingRequiredFields(fields, vaga.custom_fields || {});
     if (missing.length > 0) {
       setVagaMoveError(`Não dá pra mover "${vaga.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return false;
     }
-    const invalid = getInvalidFields(fields, vaga.custom_fields || {});
+    const invalid = goingBack ? [] : getInvalidFields(fields, vaga.custom_fields || {});
     if (invalid.length > 0) {
       setVagaMoveError(`Não dá pra mover "${vaga.title}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return false;
@@ -2975,13 +2977,15 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const attemptCandStageChange = (id, newStage) => {
     const candidato = candidatos.find((c) => c.id === id);
     if (!candidato || candidato.stage === newStage) return;
+    // Campo obrigatório trava AVANÇAR, não VOLTAR (ver isStageRegression).
+    const goingBackCand = isStageRegression(candStages, candidato.stage, newStage);
     const fields = candStageFields.getFields(candidato.stage);
-    const missing = getMissingRequiredFields(fields, candidato.customFields || {});
+    const missing = goingBackCand ? [] : getMissingRequiredFields(fields, candidato.customFields || {});
     if (missing.length > 0) {
       setCandMoveError(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
-    const invalid = getInvalidFields(fields, candidato.customFields || {});
+    const invalid = goingBackCand ? [] : getInvalidFields(fields, candidato.customFields || {});
     if (invalid.length > 0) {
       setCandMoveError(`Não dá pra mover "${candidato.name}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;

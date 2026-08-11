@@ -24,7 +24,7 @@ import { PipelineCalendarView } from "./PipelineCalendarView";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { useLeadFormConfig } from "../../hooks/use-lead-form-config";
 import { useStageFields } from "../../hooks/use-stage-fields";
-import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { formatK, formatBRL } from "../../utils/currency";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
@@ -547,20 +547,23 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       setStageError(`Não dá pra mover "${lead.company}": transição de etapa não permitida pela configuração do funil.`);
       return;
     }
+    // Campo obrigatório trava AVANÇAR, não VOLTAR (ver isStageRegression) —
+    // a matriz de transições acima continua valendo nas duas direções.
+    const goingBack = isStageRegression(pipelines[lead.companyId] || stages, lead.stage, targetStageId);
     const fields = stageFields.getFields(lead.companyId, lead.stage);
-    const missing = getMissingRequiredFields(fields, lead.customFields || {});
+    const missing = goingBack ? [] : getMissingRequiredFields(fields, lead.customFields || {});
     if (missing.length > 0) {
       setStageError(`Não dá pra mover "${lead.company}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
-    const invalid = getInvalidFields(fields, lead.customFields || {});
+    const invalid = goingBack ? [] : getInvalidFields(fields, lead.customFields || {});
     if (invalid.length > 0) {
       setStageError(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
     setStageError(null);
     onStageChange(leadId, targetStageId);
-  }, [scopedLeads, leads, stageFields, onStageChange, pipelineTransitions]);
+  }, [scopedLeads, leads, stageFields, stages, pipelines, onStageChange, pipelineTransitions]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3) — mesma fonte
   // de campos/valores do enforcement acima, só que sem bloquear nada.

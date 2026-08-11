@@ -64,6 +64,13 @@ export const FEATURE_SPOTLIGHTS = [
   // clicar num cliente da lista. Não há alvo estável na rota `clients`, e
   // apontar pra lista com um texto sobre uma aba que a pessoa ainda não vê
   // seria pior que não avisar. Coberto pelo changelog 4.40.0.
+  //
+  // 4.42.0 — "Devolver para a agência" (Entregas): mesmo caso da 4.40.0, o
+  // botão vive dentro do drawer de uma entrega, não numa rota. DECIDIDO PULAR
+  // o spotlight ancorado nele (o `data-tour="entregas-devolver-agencia"` fica
+  // no elemento pra quando houver um mecanismo de spotlight dentro de drawer).
+  // A metade que ancora numa rota — o arrastar pra trás sem preencher — não
+  // tem elemento nenhum: é a ausência de um bloqueio. Coberto pelo changelog.
 ];
 
 export default FEATURE_SPOTLIGHTS;

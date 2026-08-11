@@ -23,7 +23,7 @@ import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { MobileTableCards } from "../shared/MobileTableCards";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadRHComment } from "../../lib/comment-badge";
-import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
@@ -1017,7 +1017,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   // sessões automatizadas/headless sem handler de diálogo); sem `onBlocked`
   // (atalho no card do Kanban ou drag-and-drop, sem um slot de banner
   // visível), cai de volta pro alert(), igual RHFeedbackView/RHTreinamentosView.
-  const getStageBlockMessage = useCallback((req) => {
+  const getStageBlockMessage = useCallback((req, toStage) => {
+    // Campo obrigatório trava AVANÇAR, não VOLTAR (ver isStageRegression).
+    if (isStageRegression(stages, req.status, toStage)) return null;
     const fields = feriasStageFields.getFields(req.status);
     const missing = getMissingRequiredFields(fields, req.custom_fields || {});
     if (missing.length > 0) {
@@ -1028,7 +1030,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       return `Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`;
     }
     return null;
-  }, [feriasStageFields]);
+  }, [feriasStageFields, stages]);
 
   const handleAprovar = useCallback(async (req, { onBlocked } = {}) => {
     const blockMsg = getStageBlockMessage(req);
@@ -1096,7 +1098,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   // dos atalhos Aprovar/Recusar) — cobre pipelines com mais de
   // pendente/aprovado/recusado (ex.: uma etapa "em análise" intermediária).
   const handleMoveToStageGeneric = useCallback(async (req, stageKey, { onBlocked } = {}) => {
-    const blockMsg = getStageBlockMessage(req);
+    const blockMsg = getStageBlockMessage(req, stageKey);
     if (blockMsg) { (onBlocked || alert)(blockMsg); return false; }
     setBusyId(req.id);
     try {

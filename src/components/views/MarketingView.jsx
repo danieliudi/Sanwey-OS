@@ -29,7 +29,7 @@ import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
-import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { Select } from "../ui/Select";
@@ -807,8 +807,11 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const attemptStageChange = useCallback(async (campaignId, toStage) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (!campaign) return false;
+    // Campo obrigatório trava AVANÇAR, não VOLTAR (ver isStageRegression).
     const fields = stageFields.getFields(campaign.stage);
-    const missing = getMissingRequiredFields(fields, campaign.customFields || {});
+    const missing = isStageRegression(kanbanStages, campaign.stage, toStage)
+      ? []
+      : getMissingRequiredFields(fields, campaign.customFields || {});
     if (missing.length > 0) {
       setStageError(`Não dá pra mover "${campaign.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return false;
@@ -816,7 +819,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     setStageError(null);
     await handleStageChange(campaignId, toStage);
     return true;
-  }, [campaigns, stageFields, handleStageChange]);
+  }, [campaigns, stageFields, kanbanStages, handleStageChange]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
   const getCampaignCompleteness = useCallback((campaign) => {

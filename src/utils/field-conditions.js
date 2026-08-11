@@ -69,6 +69,26 @@ export function getMissingRequiredFields(fields, valuesByKey) {
     .filter(f => f.effectiveRequired && isValueEmpty(valuesByKey?.[f.fieldKey]));
 }
 
+// Campo obrigatório trava AVANÇAR, não VOLTAR — decidido com o Daniel
+// 11/08/2026 depois do relato da Tatiane em Entregas: pra devolver uma arte
+// pra agência ela precisava antes preencher "Aprovador responsável" e
+// "Decisão de aprovação", sem ter aprovado nem reprovado nada. Voltar não
+// conclui a etapa, então não faz sentido cobrar o formulário dela.
+//
+// `stageOrder` é a lista ORDENADA de etapas do quadro — aceita as três formas
+// que convivem na plataforma: string crua, { id } (constantes hardcoded como
+// PURCHASE_STAGES) e { stageKey }/{ stage_key } (rh_pipeline_stages). Etapa
+// desconhecida em qualquer das pontas devolve false, ou seja, mantém a trava:
+// na dúvida o comportamento é o antigo, nunca o mais frouxo.
+export function isStageRegression(stageOrder, fromStage, toStage) {
+  if (!Array.isArray(stageOrder) || !fromStage || !toStage) return false;
+  const ids = stageOrder.map(s => (typeof s === "string" ? s : (s?.id ?? s?.stageKey ?? s?.stage_key)));
+  const from = ids.indexOf(fromStage);
+  const to   = ids.indexOf(toStage);
+  if (from === -1 || to === -1) return false;
+  return to < from;
+}
+
 // Completude da etapa atual pro badge do card (seção 10.3 da auditoria):
 // "5/8" laranja se faltam campos obrigatórios, verde quando completo. total=0
 // (etapa sem nenhum campo obrigatório) não deve renderizar badge nenhum —
