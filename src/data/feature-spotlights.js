@@ -71,6 +71,21 @@ export const FEATURE_SPOTLIGHTS = [
   // no elemento pra quando houver um mecanismo de spotlight dentro de drawer).
   // A metade que ancora numa rota — o arrastar pra trás sem preencher — não
   // tem elemento nenhum: é a ausência de um bloqueio. Coberto pelo changelog.
+  {
+    id: "viagens-calendario-pessoal",
+    route: "crm-viagens",
+    target: '[data-tour="viagens-calendario-pessoal"]',
+    text: "Novo: veja suas saídas planejadas num calendário, e registre eventos/feiras além de visita a cliente.",
+    version: "4.43.0",
+  },
+  // 4.43.0 — calendário do time (visão do gestor): mesmo caso do "Devolver
+  // pra agência" — o toggle só existe dentro da aba "Gestão", que não é a
+  // aba padrão de quem também tem "Minhas viagens" (comercial + gestor).
+  // DECIDIDO PULAR o spotlight aqui; quem só tem papel gerente/admin (sem
+  // "Minhas viagens") já cai direto na aba onde o toggle está, mas mesmo
+  // assim não há garantia de que "Gestão" seja a rota visitada primeiro no
+  // sentido do mecanismo (que dispara ao entrar na ROTA, não na aba). Coberto
+  // pelo changelog.
 ];
 
 export default FEATURE_SPOTLIGHTS;

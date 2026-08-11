@@ -24,6 +24,26 @@
 
 export const CHANGELOG = [
   {
+    version: "4.43.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Viagens & Despesas: agora dá pra registrar \"Evento ou feira\" e \"Outra saída\" além de \"Visita a cliente\" — cliente deixa de ser obrigatório pros dois tipos novos, e \"Evento ou feira\" pode ser vinculado a uma campanha do Relatório de Feiras.",
+        roles: ["vendedor", "consultor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Viagens & Despesas: calendário mensal das suas saídas planejadas, ao lado da lista de sempre.",
+        roles: ["vendedor", "consultor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Viagens & Despesas (Gestão): calendário semanal com uma linha por vendedor, mostrando quem está fora nos próximos dias.",
+        roles: ["gerente", "admin"],
+      },
+    ],
+  },
+  {
     version: "4.42.0",
     items: [
       {

@@ -19,16 +19,19 @@ import {
   CheckCircle2,
   Square,
   CheckSquare,
+  CalendarDays,
+  List,
 } from "lucide-react";
-import { isSupabaseConfigured } from "../../lib/supabase";
+import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
 import { useCRMViagemPrestacoes } from "../../hooks/use-crm-viagem-prestacoes";
 import { useCRMViagemCategorias } from "../../hooks/use-crm-viagem-categorias";
 import { useAI } from "../../hooks/use-ai";
 import { receiptExtractionPrompt } from "../../constants/ai-prompts";
-import { formatDateBR } from "../../utils/date";
-import { STATUS_VISITA, STATUS_REEMBOLSO, STATUS_PRESTACAO, fmtMoney } from "../../utils/viagens";
+import { formatDateBR, parseDateInput } from "../../utils/date";
+import { STATUS_VISITA, STATUS_REEMBOLSO, STATUS_PRESTACAO, TIPO_SAIDA, fmtMoney } from "../../utils/viagens";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { Badge } from "../ui/Badge";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { StatCard } from "../ui/StatCard";
@@ -90,6 +93,21 @@ function monthLabel(mesRef) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Vendedor/consultor/gerente não tem SELECT em marketing_campaigns (RLS exige
+// ser de Marketing) — list_evento_campaigns() é a RPC estreita (só id/nome/
+// company_ids, nunca budget) que dá o mesmo dropdown do Funil de Vendas
+// (OriginCampaignRow) pra quem vincula uma saída externa a uma feira.
+function useEventoCampaigns() {
+  const [campaigns, setCampaigns] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    if (!isSupabaseConfigured) return undefined;
+    supabase.rpc("list_evento_campaigns").then(({ data }) => { if (alive) setCampaigns(data || []); });
+    return () => { alive = false; };
+  }, []);
+  return campaigns;
+}
+
 // ── Mês nav ───────────────────────────────────────────────────────────────────
 
 function MonthNav({ mesRef, onChange }) {
@@ -133,6 +151,23 @@ function MapsLinkButton({ address, size = 13 }) {
 
 // ── Card de visita ────────────────────────────────────────────────────────────
 
+// Cor por tipo — só pra distinguir visualmente, não é status (aquele já é o
+// Badge). Verde-evento porque é a mesma família de cor que o Relatório de
+// Feiras usa pra campanha de canal Evento.
+const TIPO_COLOR = { visita: "var(--text-dim)", evento: "var(--success)", outra: "var(--text-faint)" };
+
+function TipoChip({ tipo }) {
+  if (!tipo || tipo === "visita") return null; // "visita" é o padrão implícito — só marca o que foge dele
+  const info = TIPO_SAIDA[tipo];
+  if (!info) return null;
+  const color = TIPO_COLOR[tipo] || "var(--text-dim)";
+  return (
+    <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 999, background: color + "18", color, whiteSpace: "nowrap" }}>
+      {info.label}
+    </span>
+  );
+}
+
 function VisitaCard({ registro, onClick }) {
   const info = STATUS_VISITA[registro.status] || STATUS_VISITA.planejado;
   return (
@@ -147,7 +182,10 @@ function VisitaCard({ registro, onClick }) {
           <MapsLinkButton address={registro.destino_planejado} />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{registro.destino_planejado}</span>
         </div>
-        <Badge variant={info.variant}>{info.label}</Badge>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <TipoChip tipo={registro.tipo} />
+          <Badge variant={info.variant}>{info.label}</Badge>
+        </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: registro.objetivo || registro.cliente_nome ? 4 : 0 }}>
         <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
@@ -169,10 +207,142 @@ function VisitaCard({ registro, onClick }) {
   );
 }
 
+// ── Calendário pessoal ───────────────────────────────────────────────────────
+// Mesmo molde visual do calendário mensal já usado em Compras, Entregas,
+// Campanhas e Comex (mês em grade 7 colunas, "Hoje", setas de navegação) —
+// só o pedido do Daniel (11/08/2026) de ver a própria agenda de saídas sem
+// precisar ler a lista mês a mês.
+
+const WEEKDAYS_PT = ["D", "S", "T", "Q", "Q", "S", "S"];
+
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function VisitaCalendarView({ registros, initialMonth, onSelect }) {
+  const [cursor, setCursor] = useState(() => {
+    const d = initialMonth ? parseDateInput(initialMonth) : new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+
+  const byDay = useMemo(() => {
+    const map = new Map();
+    for (const r of registros) {
+      if (!r.data_planejada) continue;
+      const k = dayKey(parseDateInput(r.data_planejada));
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(r);
+    }
+    return map;
+  }, [registros]);
+
+  const grid = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const start = new Date(first);
+    start.setDate(first.getDate() - first.getDay());
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  }, [cursor]);
+
+  const today = new Date();
+  const month = cursor.getMonth();
+
+  return (
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronRight size={16} />
+          </button>
+          <h3 className="font-semibold" style={{ fontSize: 14, color: "var(--text)" }}>{monthLabel(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-01`)}</h3>
+        </div>
+        <button onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}>
+          Hoje
+        </button>
+      </div>
+      <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
+        {WEEKDAYS_PT.map((w, i) => (
+          <div key={i} className="px-2 py-2 text-[10px] font-bold text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(72px, auto)" }}>
+        {grid.map((d, i) => {
+          const inMonth = d.getMonth() === month;
+          const isToday = sameDay(d, today);
+          const items = byDay.get(dayKey(d)) || [];
+          return (
+            <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
+              style={{ borderColor: "var(--border)", background: "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={isToday
+                ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}>
+                {d.getDate()}
+              </span>
+              <div className="flex flex-col gap-0.5">
+                {items.slice(0, 3).map((r) => {
+                  const info = STATUS_VISITA[r.status] || STATUS_VISITA.planejado;
+                  const color = VARIANT_ACCENT[info.variant];
+                  return (
+                    <span key={r.id} onClick={() => onSelect(r)}
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
+                      style={{ background: color + "18", color }}
+                      title={`${r.destino_planejado}${r.cliente_nome ? ` · ${r.cliente_nome}` : ""}`}>
+                      {r.destino_planejado}
+                    </span>
+                  );
+                })}
+                {items.length > 3 && (
+                  <span className="text-[10px]" style={{ color: "var(--text-faint)" }}>+{items.length - 3}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Nova visita ───────────────────────────────────────────────────────────────
 
-function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
+function TipoSelector({ value, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {Object.entries(TIPO_SAIDA).map(([id, info]) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onChange(id)}
+          style={{
+            fontSize: 12, fontWeight: 700, padding: "6px 13px", borderRadius: 999, cursor: "pointer",
+            border: `1px solid ${value === id ? "var(--accent)" : "var(--border)"}`,
+            background: value === id ? "var(--accent)" : "var(--surface)",
+            color: value === id ? "var(--on-accent)" : "var(--text-dim)",
+          }}
+        >
+          {info.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function NovaVisitaModal({ clients, onCreateClient, eventoCampaigns, onSave, onClose }) {
   useEscToClose(onClose);
+  const [tipo, setTipo] = useState("visita");
   const [destino, setDestino] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const { suggestions, search: searchDestino, clear: clearDestinoSuggestions } = usePlacesAutocomplete();
@@ -180,10 +350,12 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
   const [objetivo, setObjetivo] = useState("");
   const [valorPrevisto, setValorPrevisto] = useState("");
   const [clientId, setClientId] = useState(null);
+  const [campaignId, setCampaignId] = useState("");
   const [quickCreateName, setQuickCreateName] = useState(null); // string | null — abre o mini-cadastro quando != null
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  const tipoInfo = TIPO_SAIDA[tipo] || TIPO_SAIDA.visita;
   const selectedClient = (clients || []).find((c) => c.id === clientId) || null;
 
   const handleClientCreated = (client) => {
@@ -195,20 +367,23 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
     e.preventDefault();
     if (!destino.trim()) { setError("Informe o destino."); return; }
     if (!dataPlanejada) { setError("Informe a data planejada."); return; }
+    if (tipoInfo.clienteObrigatorio && !clientId) { setError("Informe o cliente."); return; }
     setSaving(true);
     setError(null);
     try {
       await onSave({
+        tipo,
         destino_planejado: destino.trim(),
         data_planejada: dataPlanejada,
         objetivo: objetivo.trim() || null,
         valor_previsto: valorPrevisto !== "" ? Number(valorPrevisto) : null,
         client_id: clientId || null,
         cliente_nome: selectedClient?.name || null,
+        campaign_id: tipo === "evento" && campaignId ? campaignId : null,
       });
       onClose();
     } catch (err) {
-      setError(err?.message || "Erro ao criar visita.");
+      setError(err?.message || "Erro ao criar registro.");
     } finally {
       setSaving(false);
     }
@@ -220,7 +395,7 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Plane size={16} style={{ color: "var(--accent)" }} />
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova visita</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova saída externa</div>
           </div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}>
             <X size={18} />
@@ -228,8 +403,12 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
         </div>
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           <div className="flex flex-col gap-3">
+            <div>
+              <label style={LABEL_ST}>Tipo</label>
+              <TipoSelector value={tipo} onChange={setTipo} />
+            </div>
             <div style={{ position: "relative" }}>
-              <label style={LABEL_ST}>Destino *</label>
+              <label style={LABEL_ST}>Destino / local *</label>
               <input
                 type="text"
                 autoFocus
@@ -280,18 +459,34 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
               <label style={LABEL_ST}>Data planejada *</label>
               <input type="date" value={dataPlanejada} onChange={(e) => setDataPlanejada(e.target.value)} className={INPUT_CLS} style={INPUT_ST} />
             </div>
-            <div>
-              <label style={LABEL_ST}>Cliente</label>
-              <ClientSelector
-                value={clientId}
-                clients={clients || []}
-                onChange={setClientId}
-                onCreate={onCreateClient ? (query) => setQuickCreateName(query || "") : undefined}
-              />
-            </div>
+            {tipo !== "outra" && (
+              <div>
+                <label style={LABEL_ST}>Cliente{tipoInfo.clienteObrigatorio ? " *" : " (opcional)"}</label>
+                <ClientSelector
+                  value={clientId}
+                  clients={clients || []}
+                  onChange={setClientId}
+                  onCreate={onCreateClient ? (query) => setQuickCreateName(query || "") : undefined}
+                />
+              </div>
+            )}
+            {tipo === "evento" && (
+              <div>
+                <label style={LABEL_ST}>Feira / campanha (opcional)</label>
+                <select value={campaignId} onChange={(e) => setCampaignId(e.target.value)} className={INPUT_CLS} style={INPUT_ST}>
+                  <option value="">Não vinculado a nenhuma campanha</option>
+                  {(eventoCampaigns || []).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>
+                  Liga esta saída ao Relatório de Feiras, se a feira já for uma campanha cadastrada.
+                </div>
+              </div>
+            )}
             <div>
               <label style={LABEL_ST}>Objetivo</label>
-              <textarea value={objetivo} onChange={(e) => setObjetivo(e.target.value)} placeholder="O que você planeja tratar nesta visita?" rows={3} className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={INPUT_ST} />
+              <textarea value={objetivo} onChange={(e) => setObjetivo(e.target.value)} placeholder="O que você planeja tratar?" rows={3} className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={INPUT_ST} />
             </div>
             <div>
               <label style={LABEL_ST}>Valor previsto</label>
@@ -309,7 +504,7 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
 
           <div className="flex gap-2 mt-4">
             <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
-              {saving ? "Salvando…" : "Criar visita"}
+              {saving ? "Salvando…" : "Criar registro"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
               Cancelar
@@ -398,7 +593,10 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
               <MapsLinkButton address={registro.destino_realizado || registro.destino_planejado} size={14} />
             </div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{formatDateBR(registro.data_planejada)}{registro.cliente_nome && ` · ${registro.cliente_nome}`}</div>
-            <div style={{ marginTop: 8 }}><Badge variant={info.variant}>{info.label}</Badge></div>
+            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
+              <Badge variant={info.variant}>{info.label}</Badge>
+              <TipoChip tipo={registro.tipo} />
+            </div>
           </div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", flexShrink: 0 }}>
             <X size={18} />
@@ -1140,8 +1338,10 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   const { prestacoes, loading: loadingPrestacoes, criarPrestacao, enviarRascunho, excluirRascunho } = useCRMViagemPrestacoes({ userId });
   const { categorias, loading: loadingCategorias } = useCRMViagemCategorias({ userId });
   const ai = useAI(currentUser);
+  const eventoCampaigns = useEventoCampaigns();
 
   const [mesRef, setMesRef] = useState(currentMonthStr());
+  const [visitasView, setVisitasView] = useState("lista"); // "lista" | "calendario"
   const [showNovaVisita, setShowNovaVisita] = useState(false);
   const [showNovaDespesa, setShowNovaDespesa] = useState(false);
   const [showNovaPrestacao, setShowNovaPrestacao] = useState(false);
@@ -1332,24 +1532,36 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
         <div className="flex items-center justify-between mb-3">
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
             <Plane size={16} style={{ color: "var(--text-dim)" }} />
-            Visitas planejadas
+            Saídas planejadas
           </div>
-          <button
-            onClick={() => setShowNovaVisita(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent-hover)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent)"; }}
-          >
-            <Plus size={13} /> Nova visita
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+              <ViewToggleButton active={visitasView === "lista"} onClick={() => setVisitasView("lista")} icon={List} label="Lista" iconOnlyMobile />
+              <ViewToggleButton active={visitasView === "calendario"} onClick={() => setVisitasView("calendario")} icon={CalendarDays} label="Calendário" iconOnlyMobile dataTour="viagens-calendario-pessoal" />
+            </div>
+            <button
+              onClick={() => setShowNovaVisita(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent-hover)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent)"; }}
+            >
+              <Plus size={13} /> Nova saída externa
+            </button>
+          </div>
         </div>
 
         {loadingRegistros ? (
           <div style={{ textAlign: "center", padding: "32px 8px", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
+        ) : visitasView === "calendario" ? (
+          // Consome registrosProprios (o mesmo recorte "só o meu" que a lista
+          // usa), não registrosDoMes — o calendário tem navegação própria de
+          // mês, então não faz sentido travar no mês do MonthNav acima
+          // (regra 11 do CLAUDE.md: mesmo array filtrado, nunca o cru).
+          <VisitaCalendarView registros={registrosProprios} initialMonth={mesRef} onSelect={setSelectedRegistro} />
         ) : registrosDoMes.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "32px 8px", color: "var(--text-faint)" }}>
             <Plane size={32} strokeWidth={1} />
-            <span style={{ fontSize: 12 }}>Nenhuma visita planejada para {monthLabel(mesRef).toLowerCase()}</span>
+            <span style={{ fontSize: 12 }}>Nenhuma saída planejada para {monthLabel(mesRef).toLowerCase()}</span>
           </div>
         ) : (
           <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
@@ -1454,7 +1666,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
       </div>
 
       {showNovaVisita && (
-        <NovaVisitaModal clients={clients} onCreateClient={onCreateClient} onSave={handleCreateVisita} onClose={() => setShowNovaVisita(false)} />
+        <NovaVisitaModal clients={clients} onCreateClient={onCreateClient} eventoCampaigns={eventoCampaigns} onSave={handleCreateVisita} onClose={() => setShowNovaVisita(false)} />
       )}
 
       {showNovaDespesa && (

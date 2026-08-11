@@ -11,6 +11,10 @@ import {
   Loader2,
   Send,
   Inbox,
+  CalendarDays,
+  List,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
@@ -19,9 +23,10 @@ import { useCRMViagemPrestacoes } from "../../hooks/use-crm-viagem-prestacoes";
 import { useAI } from "../../hooks/use-ai";
 import { viagemCrossCheckPrompt } from "../../constants/ai-prompts";
 import { Badge } from "../ui/Badge";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, parseDateInput } from "../../utils/date";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
-import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO, STATUS_PRESTACAO, computeViagemDivergencias } from "../../utils/viagens";
+import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO, STATUS_PRESTACAO, TIPO_SAIDA, computeViagemDivergencias } from "../../utils/viagens";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
 
 const COMPROVANTE_OBRIGATORIO_ACIMA_DE = 100;
 
@@ -188,6 +193,150 @@ function VisitasTable({ registros, showVendedorCol, nomePorId, today }) {
       </div>
     </>
   );
+}
+
+// ── Calendário do time (semana, uma linha por vendedor) ─────────────────────
+// Decidido com o Daniel 11/08/2026: semana (não mês) porque é o que responde
+// "quem está fora nos próximos dias" num relance — um mês com uma linha por
+// pessoa vira parede de bolinhas. Mostra só status="planejado" (decisão do
+// Daniel: despesa é o que já aconteceu, não "o que vem por aí"). Não precisa
+// de policy nova — a RLS de crm_viagem_registros já dá o time inteiro pro
+// gerente via current_user_manages_viagem_of(); este componente só desenha o
+// que a query já devolve.
+
+const WEEKDAYS_FULL_PT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const TIPO_DOT_COLOR = { visita: "#3B5BC0", evento: "#0F8A6A", outra: "#8A6A1F" };
+
+function initials(name) {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
+}
+function avatarColor(id) {
+  const palette = ["#3B5BC0", "#6D3FBF", "#A5389B", "#0F8A6A", "#1F7A9E", "#8A6A1F"];
+  let h = 0;
+  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return palette[h % palette.length];
+}
+function weekKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function TeamWeekCalendar({ registros, vendedores, nomePorId, onSelect }) {
+  const [weekStart, setWeekStart] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay());
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return d;
+  }), [weekStart]);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // dia -> vendedor -> registros — bucket único, reaproveitado por linha.
+  const byDayByVendedor = useMemo(() => {
+    const map = new Map();
+    for (const r of registros) {
+      if (!r.data_planejada) continue;
+      const d = parseDateInput(r.data_planejada);
+      const dk = weekKey(d);
+      if (!map.has(dk)) map.set(dk, new Map());
+      const porVendedor = map.get(dk);
+      if (!porVendedor.has(r.vendedor_id)) porVendedor.set(r.vendedor_id, []);
+      porVendedor.get(r.vendedor_id).push(r);
+    }
+    return map;
+  }, [registros]);
+
+  const rangeLabel = `${days[0].getDate()} de ${monthLabelShort(days[0])} – ${days[6].getDate()} de ${monthLabelShort(days[6])}`;
+
+  return (
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="px-4 py-3 flex items-center justify-between border-b flex-wrap" style={{ borderColor: "var(--border)", gap: 8 }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setWeekStart(d => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }} aria-label="Semana anterior">
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setWeekStart(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }} aria-label="Próxima semana">
+            <ChevronRight size={16} />
+          </button>
+          <h3 className="font-semibold" style={{ fontSize: 13, color: "var(--text)" }}>{rangeLabel}</h3>
+        </div>
+        <button onClick={() => setWeekStart(() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); d.setHours(0, 0, 0, 0); return d; })}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}>
+          Esta semana
+        </button>
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <div style={{ minWidth: 760 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "150px repeat(7, 1fr)", borderBottom: "1px solid var(--border)" }}>
+            <div />
+            {days.map((d, i) => (
+              <div key={i} className="px-2 py-2 text-center" style={{ background: "var(--surface-alt)" }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-dim)" }}>{WEEKDAYS_FULL_PT[d.getDay()]}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: sameDateAs(d, today) ? "var(--accent)" : "var(--text)" }}>{d.getDate()}</div>
+              </div>
+            ))}
+          </div>
+
+          {vendedores.length === 0 ? (
+            <div style={{ padding: "24px 12px" }}><EmptyState icon={CalendarDays} text="Nenhum vendedor pra mostrar." /></div>
+          ) : vendedores.map((v) => (
+            <div key={v.id} style={{ display: "grid", gridTemplateColumns: "150px repeat(7, 1fr)", borderBottom: "1px solid var(--border)" }}>
+              <div className="flex items-center" style={{ gap: 8, padding: "10px 12px" }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#fff", background: avatarColor(v.id) }}>
+                  {initials(nomePorId.get(v.id) || v.name)}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 650, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nomePorId.get(v.id) || v.name}</div>
+                  {v.sectors?.length > 0 && <div style={{ fontSize: 10, color: "var(--text-faint)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.sectors.join(", ")}</div>}
+                </div>
+              </div>
+              {days.map((d, i) => {
+                const isToday = sameDateAs(d, today);
+                const itens = byDayByVendedor.get(weekKey(d))?.get(v.id) || [];
+                return (
+                  <div key={i} style={{ borderLeft: "1px solid var(--border)", padding: "6px 5px", minHeight: 48, display: "flex", flexDirection: "column", gap: 3, background: isToday ? "var(--surface-alt)" : "transparent" }}>
+                    {itens.map((r) => {
+                      const color = TIPO_DOT_COLOR[r.tipo] || TIPO_DOT_COLOR.visita;
+                      const label = TIPO_SAIDA[r.tipo]?.label || "Visita";
+                      return (
+                        <span
+                          key={r.id}
+                          onClick={() => onSelect?.(r)}
+                          title={`${label} · ${r.destino_planejado || ""}${r.cliente_nome ? ` · ${r.cliente_nome}` : ""}`}
+                          style={{ fontSize: 10, fontWeight: 700, padding: "3px 6px", borderRadius: 6, color: "#fff", background: color, cursor: onSelect ? "pointer" : "default", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        >
+                          {r.destino_planejado || label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function sameDateAs(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function monthLabelShort(d) {
+  return d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
 }
 
 function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, setRejectObs, onVerComprovante, onAprovar, onRejeitarClick, onCancelarRejeicao, onConfirmarRejeicao, onMarcarPago }) {
@@ -484,6 +633,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
 
   const [selectedMonth, setSelectedMonth] = useState(() => todayISO().slice(0, 7));
   const [selectedVendedorId, setSelectedVendedorId] = useState("todos");
+  const [visitasView, setVisitasView] = useState("tabela"); // "tabela" | "calendario"
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
@@ -514,6 +664,22 @@ export function CRMViagensGestorView({ currentUser, users }) {
       .filter((r) => selectedVendedorId === "todos" || r.vendedor_id === selectedVendedorId)
       .sort((a, b) => String(a.data_planejada || "").localeCompare(String(b.data_planejada || "")));
   }, [registros, selectedMonth, selectedVendedorId]);
+
+  // Calendário do time: mesmo recorte de vendedor que a tabela ao lado usa
+  // (respeita o filtro que o gestor escolheu), mas SEM o filtro de mês — o
+  // calendário navega por semana, com paginação própria, e só "planejado"
+  // entra (decisão do Daniel 11/08: despesa é o que já aconteceu).
+  const registrosPlanejadosDoTime = useMemo(() => {
+    return (registros || [])
+      .filter((r) => r.status === "planejado")
+      .filter((r) => selectedVendedorId === "todos" || r.vendedor_id === selectedVendedorId);
+  }, [registros, selectedVendedorId]);
+
+  const vendedoresDoCalendario = useMemo(() => {
+    return selectedVendedorId === "todos"
+      ? vendedoresComerciais
+      : vendedoresComerciais.filter((v) => v.id === selectedVendedorId);
+  }, [vendedoresComerciais, selectedVendedorId]);
 
   const despesasFiltradas = useMemo(() => {
     return (despesas || [])
@@ -711,11 +877,19 @@ export function CRMViagensGestorView({ currentUser, users }) {
       ) : (
         <>
           <section style={cardSt}>
-            <div style={sectionHeaderSt}>
-              <MapPin size={16} style={{ color: "var(--text-dim)" }} />
-              Visitas do mês — {monthLabel(selectedMonth)}
+            <div className="flex items-center justify-between flex-wrap" style={{ gap: 10, marginBottom: 12 }}>
+              <div style={{ ...sectionHeaderSt, marginBottom: 0 }}>
+                <MapPin size={16} style={{ color: "var(--text-dim)" }} />
+                {visitasView === "tabela" ? `Visitas do mês — ${monthLabel(selectedMonth)}` : "Calendário do time"}
+              </div>
+              <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                <ViewToggleButton active={visitasView === "tabela"} onClick={() => setVisitasView("tabela")} icon={List} label="Tabela" iconOnlyMobile />
+                <ViewToggleButton active={visitasView === "calendario"} onClick={() => setVisitasView("calendario")} icon={CalendarDays} label="Calendário" iconOnlyMobile dataTour="viagens-calendario-time" />
+              </div>
             </div>
-            {registrosFiltrados.length === 0 ? (
+            {visitasView === "calendario" ? (
+              <TeamWeekCalendar registros={registrosPlanejadosDoTime} vendedores={vendedoresDoCalendario} nomePorId={nomePorId} />
+            ) : registrosFiltrados.length === 0 ? (
               <EmptyState icon={MapPin} text="Nenhuma visita planejada neste mês." />
             ) : (
               <VisitasTable registros={registrosFiltrados} showVendedorCol={showVendedorCol} nomePorId={nomePorId} today={today} />

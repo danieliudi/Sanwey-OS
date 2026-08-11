@@ -6,6 +6,17 @@ import { formatDateBR } from "./date";
 
 export const COMERCIAL_ROLES = new Set(["vendedor", "consultor", "gerente"]);
 
+// Tipo de saída externa (decidido com o Daniel 11/08/2026) — "visita" é o
+// comportamento original (única opção até aqui, por isso é o default no
+// banco), "evento"/"outra" afrouxam a exigência de cliente vinculado. Destino
+// e data continuam obrigatórios pros três: mesmo uma feira acontece num
+// lugar, numa data.
+export const TIPO_SAIDA = {
+  visita: { label: "Visita a cliente", clienteObrigatorio: true },
+  evento: { label: "Evento ou feira",  clienteObrigatorio: false },
+  outra:  { label: "Outra saída",      clienteObrigatorio: false },
+};
+
 export function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
