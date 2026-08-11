@@ -475,14 +475,29 @@ export function PersonalTasksView({ currentUser }) {
   // usa o `createTask` já existente do hook principal.
   const runAutomations = useCallback((updatedTask, prevTask, eventType = "stage_change") => {
     const { patches, notifications, sideEffects } = automationsHook.evaluateAutomations(updatedTask, prevTask, eventType);
-    for (const p of patches) updateTask(updatedTask.id, p.patch).catch(() => {});
+    for (const p of patches) {
+      // Achado da revisão de QA: uma ação "mover pra etapa" de automação
+      // aplicava o patch direto via updateTask, sem passar pela mesma trava
+      // de dependência do attemptMove — uma automação do próprio usuário
+      // (ex.: "prioridade = Alta → mover pra Feito") conseguia terminar uma
+      // tarefa ainda bloqueada. Mesma checagem, sem chamar attemptMove
+      // (evitaria reentrar em runAutomations).
+      if (p.patch.status && terminalStageKeys.has(p.patch.status)) {
+        const blockers = depsHook.getBlockers(updatedTask.id, tasksById, terminalStageKeys);
+        if (blockers.length > 0) {
+          setMoveError(`A automação "${p.ruleName}" tentou mover "${updatedTask.title}" pra uma etapa concluída, mas ela ainda depende de ${blockers.map(b => `"${b.title}"`).join(", ")} — não foi aplicada.`);
+          continue;
+        }
+      }
+      updateTask(updatedTask.id, p.patch).catch(() => {});
+    }
     if (notifications.length > 0) setAutomationNotice(notifications[0].message);
     for (const fx of sideEffects) {
       if (fx.type === "create_task") {
         createTask({ title: fx.title, priority: fx.priority, status: columns[0]?.id || "a_fazer", dueDate: fx.dueDate }).catch(() => {});
       }
     }
-  }, [automationsHook, updateTask, createTask, columns]);
+  }, [automationsHook, updateTask, createTask, columns, terminalStageKeys, depsHook, tasksById]);
 
   // Único ponto de mudança de status usado por checkbox/menu/drag-and-drop —
   // ver setTaskStatus em use-personal-tasks.js (cobre o par completed_at +
@@ -520,6 +535,19 @@ export function PersonalTasksView({ currentUser }) {
   }, [tasksById, terminalStageKeys, depsHook, columns, setTaskStatus, runAutomations]);
 
   const handleMove = useCallback((id, status) => { attemptMove(id, status); }, [attemptMove]);
+
+  // Checkbox da Lista (mesma ação de "marcar como feita"/"reabrir" que
+  // TaskRow expõe) — achado da revisão de QA: isto chamava toggleDone cru
+  // (use-personal-tasks.js), passando direto por cima da trava de
+  // dependência (attemptMove). Uma tarefa bloqueada podia ser marcada como
+  // feita com 1 clique no checkbox, ignorando o badge "Bloqueada" ao lado
+  // dela. Mesmo par a_fazer/feito que toggleDone usa, só que roteado pela
+  // trava.
+  const handleToggleDone = useCallback((id) => {
+    const task = tasksById[id];
+    if (!task) return;
+    attemptMove(id, task.status === "feito" ? "a_fazer" : "feito");
+  }, [tasksById, attemptMove]);
 
   const handleCreate = useCallback(async (data) => { await createTask(data); }, [createTask]);
 
@@ -651,9 +679,9 @@ export function PersonalTasksView({ currentUser }) {
                   </select>
                 </div>
               </div>
-              <TaskSection title="Hoje"        tasks={buckets.hoje}    columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
-              <TaskSection title="Esta semana" tasks={buckets.semana}  columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
-              <TaskSection title="Sem data"    tasks={buckets.semData} columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
+              <TaskSection title="Hoje"        tasks={buckets.hoje}    columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
+              <TaskSection title="Esta semana" tasks={buckets.semana}  columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
+              <TaskSection title="Sem data"    tasks={buckets.semData} columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
             </div>
           ) : viewMode === "kanban" ? (
             <TaskKanbanBoard

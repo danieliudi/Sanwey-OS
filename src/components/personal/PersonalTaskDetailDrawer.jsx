@@ -53,7 +53,7 @@ function formatBytes(bytes) {
 
 /* ── Detalhes ────────────────────────────────────────────────── */
 
-function DetailsTab({ task, onFieldChange, saveStatus, tagsHook, depOptions, depIds, onDependencyChange, depError }) {
+function DetailsTab({ task, onFieldChange, saveStatus, tagsHook, depOptions, depIds, onDependencyChange, depError, depPending }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
@@ -126,6 +126,7 @@ function DetailsTab({ task, onFieldChange, saveStatus, tagsHook, depOptions, dep
           options={depOptions}
           placeholder="Nenhuma dependência — selecionar…"
           emptyLabel="Nenhuma outra tarefa disponível."
+          disabled={depPending}
         />
         {depError ? (
           <div className="mt-1.5 text-[11px]" style={{ color: "var(--danger)" }}>{depError}</div>
@@ -439,6 +440,7 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
   const [leftTab, setLeftTab] = useState("detalhes");
   const [saveStatus, setSaveStatus] = useState(null);
   const [depError, setDepError] = useState(null);
+  const [depPending, setDepPending] = useState(false);
   const draftRef = useRef({});
   const debounceRef = useRef(null);
 
@@ -453,20 +455,32 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
   // não guarda estado próprio), então o diff entre o array antigo e o novo
   // decide o que virou insert/delete. Erro de ciclo (ver use-personal-task-
   // dependencies.js) aparece embaixo do campo, não trava o resto do drawer.
+  //
+  // `depPending` desabilita o campo enquanto o round-trip do clique anterior
+  // não voltou — achado da revisão de QA: sem isso, 2 cliques rápidos
+  // calculavam o diff contra o mesmo `depIds` (ainda desatualizado), podendo
+  // reenviar o mesmo id 2x (a constraint UNIQUE do banco barra a duplicata,
+  // mas o 2º clique voltava como erro de "já existe" mesmo quando a intenção
+  // real do usuário era o oposto — remover).
   const handleDependencyChange = useCallback(async (nextIds) => {
-    if (!depsHook) return;
+    if (!depsHook || depPending) return;
+    setDepPending(true);
     setDepError(null);
-    const added = nextIds.filter(id => !depIds.includes(id));
-    const removed = depIds.filter(id => !nextIds.includes(id));
-    for (const id of removed) {
-      const dep = currentDeps.find(d => d.dependsOnId === id);
-      if (dep) await depsHook.removeDependency(dep.id);
+    try {
+      const added = nextIds.filter(id => !depIds.includes(id));
+      const removed = depIds.filter(id => !nextIds.includes(id));
+      for (const id of removed) {
+        const dep = currentDeps.find(d => d.dependsOnId === id);
+        if (dep) await depsHook.removeDependency(dep.id);
+      }
+      for (const id of added) {
+        const { error } = await depsHook.addDependency(task.id, id);
+        if (error) setDepError(error);
+      }
+    } finally {
+      setDepPending(false);
     }
-    for (const id of added) {
-      const { error } = await depsHook.addDependency(task.id, id);
-      if (error) setDepError(error);
-    }
-  }, [depsHook, depIds, currentDeps, task.id]);
+  }, [depsHook, depPending, depIds, currentDeps, task.id]);
 
   const handleFieldChange = useCallback((key, value) => {
     draftRef.current = { ...draftRef.current, [key]: value };
@@ -557,6 +571,7 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
           depIds={depIds}
           onDependencyChange={handleDependencyChange}
           depError={depError}
+          depPending={depPending || (depsHook?.loading ?? false)}
         />
       )}
       {leftTab === "checklist" && <ChecklistTab taskId={task.id} userId={userId} />}
