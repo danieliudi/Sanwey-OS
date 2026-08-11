@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown, Download } from "lucide-react";
+import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown, Download, AlertCircle } from "lucide-react";
+import { AppToast } from "../shared/AppToast";
 import { usePersonalTasks } from "../../hooks/use-personal-tasks";
 import { exportPersonalTasksToCSV } from "../../utils/export-csv";
 import { usePersonalTaskStages } from "../../hooks/use-personal-task-stages";
@@ -387,6 +388,7 @@ export function PersonalTasksView({ currentUser }) {
   const [listSort, setListSort] = useState("recent");
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
   const [editingFieldsStageKey, setEditingFieldsStageKey] = useState(null);
+  const [moveError, setMoveError] = useState(null);
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -421,15 +423,32 @@ export function PersonalTasksView({ currentUser }) {
 
   // Único ponto de mudança de status usado por checkbox/menu/drag-and-drop —
   // ver setTaskStatus em use-personal-tasks.js (cobre o par completed_at +
-  // disparo de recorrência num só lugar).
-  const handleMove = useCallback((id, status) => { setTaskStatus(id, status); }, [setTaskStatus]);
+  // disparo de recorrência num só lugar). Antes era fire-and-forget sem catch:
+  // uma falha no banco (ex.: a etapa não existir mais) fazia o card "voltar"
+  // silenciosamente pro lugar de origem, sem nenhum aviso — exatamente o "não
+  // está deixando eu transferir" reportado pelo Daniel 11/08/2026 (causa raiz
+  // real era o CHECK constraint stale, já corrigido; este catch é a rede de
+  // segurança pra qualquer falha futura do mesmo tipo). Mesmo padrão de
+  // AppToast já usado em EntregasView (stageError).
+  const handleMove = useCallback((id, status) => {
+    setTaskStatus(id, status).catch(err => {
+      setMoveError(err?.message || "Não deu pra mover a tarefa. Tenta de novo.");
+    });
+  }, [setTaskStatus]);
 
   const handleCreate = useCallback(async (data) => { await createTask(data); }, [createTask]);
 
   const handleOpen = useCallback((task) => setSelectedTaskId(task.id), []);
   const handleCloseDrawer = useCallback(() => setSelectedTaskId(null), []);
   const handleDeleteFromDrawer = useCallback(async (id) => { await deleteTask(id); setSelectedTaskId(null); }, [deleteTask]);
-  const handleSetStatusFromDrawer = useCallback(async (id, status) => { await setTaskStatus(id, status); setSelectedTaskId(null); }, [setTaskStatus]);
+  const handleSetStatusFromDrawer = useCallback(async (id, status) => {
+    try {
+      await setTaskStatus(id, status);
+      setSelectedTaskId(null);
+    } catch (err) {
+      setMoveError(err?.message || "Não deu pra mover a tarefa. Tenta de novo.");
+    }
+  }, [setTaskStatus]);
 
   const selectedTask = useMemo(() => tasks.find(t => t.id === selectedTaskId) || null, [tasks, selectedTaskId]);
 
@@ -437,6 +456,11 @@ export function PersonalTasksView({ currentUser }) {
 
   return (
     <>
+      {moveError && (
+        <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setMoveError(null)}>
+          {moveError}
+        </AppToast>
+      )}
       <KanbanBoardHeader className="mb-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>

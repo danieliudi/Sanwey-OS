@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.43.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "No \"Meu To-do\", mover um card pra uma etapa que você criou (não uma das 3 originais) não fazia nada — o card voltava pro lugar sem aviso. Corrigido; qualquer falha de movimentação agora também mostra um aviso na tela em vez de falhar em silêncio.",
+      },
+    ],
+  },
+  {
     version: "4.43.1",
     items: [
       {
