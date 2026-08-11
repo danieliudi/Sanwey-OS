@@ -1,3 +1,4 @@
+-- APLICADA em 11/08/2026 (migration `uniformes_coleta_compra_retirada`).
 -- Uniformes — coleta por departamento, compra via Compras de Marketing,
 -- e retirada assinada. Decidido com o Daniel 11/08/2026.
 --
@@ -109,17 +110,17 @@ create index if not exists uniform_round_lines_person_idx on uniform_round_lines
 
 -- ── updated_at ───────────────────────────────────────────────────────────
 create or replace function uniform_set_updated_at() returns trigger
-language plpgsql set search_path to 'public','pg_temp' as $$
-begin new.updated_at := now(); return new; end $$;
+language plpgsql set search_path to 'public','pg_temp' as $fn$
+begin new.updated_at := now(); return new; end $fn$;
 
-do $$
+do $blk$
 declare t text;
 begin
   foreach t in array array['uniform_items','uniform_people','uniform_person_sizes','uniform_rounds','uniform_round_lines'] loop
     execute format('drop trigger if exists %1$s_updated_at on %1$s', t);
     execute format('create trigger %1$s_updated_at before update on %1$s for each row execute function uniform_set_updated_at()', t);
   end loop;
-end $$;
+end $blk$;
 
 -- ── RLS ──────────────────────────────────────────────────────────────────
 alter table uniform_items        enable row level security;
@@ -134,24 +135,22 @@ alter table uniform_round_lines  enable row level security;
 -- correção que marketing_budgets já carrega; '{}' && qualquer_coisa é FALSE
 -- em Postgres e trancaria a tabela inteira).
 create or replace function uniform_can_write() returns boolean
-language sql stable security definer set search_path to 'public','pg_temp' as $$
+language sql stable security definer set search_path to 'public','pg_temp' as $fn$
   select current_user_is_admin() or current_user_is_marketing() or current_user_is_rh();
-$$;
+$fn$;
 revoke all on function uniform_can_write() from public;
 revoke execute on function uniform_can_write() from anon;
 grant execute on function uniform_can_write() to authenticated;
 
 -- Marketing e RH escrevem; diretoria lê. RH entra porque a retirada pode
 -- acontecer no balcão do RH (decidido 11/08) — não é acesso de cortesia.
-do $$
+do $blk$
 declare t text;
 begin
   foreach t in array array['uniform_items','uniform_people','uniform_person_sizes','uniform_rounds','uniform_round_lines'] loop
     execute format('drop policy if exists %1$s_write on %1$s', t);
     execute format('drop policy if exists %1$s_read  on %1$s', t);
-    execute format($f$create policy %1$s_write on %1$s for all to authenticated
-                     using (uniform_can_write()) with check (uniform_can_write())$f$, t);
-    execute format($f$create policy %1$s_read on %1$s for select to authenticated
-                     using (uniform_can_write() or current_user_has_role('diretoria'))$f$, t);
+    execute format('create policy %1$s_write on %1$s for all to authenticated using (uniform_can_write()) with check (uniform_can_write())', t);
+    execute format('create policy %1$s_read on %1$s for select to authenticated using (uniform_can_write() or current_user_has_role(''diretoria''))', t);
   end loop;
-end $$;
+end $blk$;
