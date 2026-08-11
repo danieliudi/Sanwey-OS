@@ -34,4 +34,5 @@ export const RECURRENCE_OPTIONS = [
   { id: "daily",   label: "Todo dia" },
   { id: "weekly",  label: "Toda semana" },
   { id: "monthly", label: "Todo mês" },
+  { id: "custom",  label: "A cada X dias" },
 ];

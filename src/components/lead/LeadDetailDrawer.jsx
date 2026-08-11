@@ -38,10 +38,16 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
 import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
 import { activityTypeMeta } from "../../utils/activity-types";
+import { useEmailTemplates } from "../../hooks/use-email-templates";
+import { useLeadEmails } from "../../hooks/use-lead-emails";
+import { usePersonalTasks } from "../../hooks/use-personal-tasks";
+import { EmailTemplateBuilderModal } from "./EmailTemplateBuilderModal";
+import { escapeHtml } from "../../utils/html";
 
 export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
+  const [emailPrefill, setEmailPrefill] = useState(null);
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -474,34 +480,15 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
     onUpdate(lead.id, { ownerIds: newIds });
   };
 
-  // FASE 3 — buraco "e-mail de abordagem não é registrado". O mailto: abre no
-  // cliente de e-mail do usuário, então a plataforma sabe que a abordagem foi
-  // INICIADA — nunca que foi enviada. O texto do item reflete exatamente isso;
-  // prometer mais do que se sabe é pior que não registrar.
-  //
-  // A activity é gravada ANTES de setar window.location.href de propósito: o
-  // handler do mailto pode tirar o foco da aba (e, em alguns navegadores,
-  // descarregar a página), o que abortaria um fetch disparado depois. Mesmo
-  // padrão fire-and-forget de handleSaveFollowUp — não await, pra não segurar
-  // a abertura do cliente de e-mail nem o autosave já corrigido neste arquivo.
+  // Achado da revisão de QA (11/08/2026): isto abria mailto: (só sabia dizer
+  // "iniciado", nunca confirmava envio de verdade) bem em cima da nova aba
+  // "Email" que manda de verdade via Resend — duas ações de "enviar e-mail"
+  // competindo, uma delas fingindo. Agora só leva pra aba Email com o
+  // rascunho da IA pré-preenchido; o envio real (e o registro de atividade
+  // real) acontece de lá, um caminho só.
   const handleStartOutreach = () => {
-    const subject = `${company.name} · ${lead.triggerLabel}`;
-    const recipient = lead.contactEmail || null;
-    if (onAddActivity) {
-      onAddActivity(lead.id, {
-        type: "email_sent",
-        userId: currentUser?.id || null,
-        userName: currentUser?.name || null,
-        body: recipient
-          ? `E-mail de abordagem iniciado para ${recipient}`
-          : "E-mail de abordagem iniciado",
-        meta: { to: recipient, subject, channel: "mailto" },
-      });
-    }
-    const to = recipient ? encodeURIComponent(recipient) : "";
-    const href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailDraft)}`;
-    window.location.href = href;
-    onUpdate(lead.id, { lastActivity: new Date().toISOString() });
+    setEmailPrefill({ subject: `${company.name} · ${lead.triggerLabel}`, body: emailDraft });
+    setSideTab("email");
   };
 
   const handleSaveFollowUp = () => {
@@ -935,7 +922,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
 
             <div className="pt-1">
               <Button variant="primary" size="sm" icon={Send} accent={company.primary} onClick={handleStartOutreach}>
-                Enviar e-mail de abordagem
+                Preparar e-mail de abordagem
               </Button>
             </div>
 
@@ -1034,6 +1021,11 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
               </div>
             )}
             </>
+            )}
+
+            {/* ── Tab: Email ── */}
+            {sideTab === "email" && (
+              <EmailPanel lead={lead} currentUser={currentUser} onAddActivity={onAddActivity} initialDraft={emailPrefill} />
             )}
 
             {/* ── Tab: Atividades ── */}
@@ -1298,6 +1290,7 @@ const SIDE_TAB_HINTS = {
 
 const SIDE_TABS = [
   { id: "form",         label: "Form",        icon: FileText },
+  { id: "email",        label: "Email",       icon: Mail },
   { id: "atividades",   label: "Atividades",  icon: Activity },
   { id: "historico",    label: "Histórico",   icon: History },
   { id: "ia",           label: "IA",          icon: Sparkles },
@@ -1316,6 +1309,7 @@ function SideTabs({ activeTab, onChange }) {
           <button
             key={t.id}
             onClick={() => onChange(t.id)}
+            data-tour={`lead-tab-${t.id}`}
             title={SIDE_TAB_HINTS[t.id] || undefined}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
             style={{
@@ -1517,6 +1511,220 @@ function ActivitiesPanel({ stageHistory, activities, users }) {
           </li>
         )}
       </ol>
+    </div>
+  );
+}
+
+// ── Email panel ────────────────────────────────────────────────────────────
+//
+// Aba "Email" (SIDE_TABS) — aprovada 11/08/2026, inspirada nos prints do
+// Pipefy que o Daniel mandou, adaptada ao que já existia: substitui o
+// mailto: de handleStartOutreach (que só sabia dizer "iniciado") por envio
+// real via Resend (edge function send-crm-email), com histórico de verdade
+// (useLeadEmails) e biblioteca de templates reaproveitável entre leads
+// (useEmailTemplates). Variáveis são substituídas aqui no client, antes de
+// enviar — o vendedor vê exatamente o texto final enquanto edita, a edge
+// function não reprocessa nada.
+const EMAIL_INPUT_BASE = {
+  width: "100%", fontSize: 13, borderRadius: 6,
+  border: "1px solid var(--border-strong)", padding: "8px 10px",
+  background: "var(--surface)", color: "var(--text)", outline: "none", fontFamily: "inherit",
+};
+
+function applyEmailVars(text, vars) {
+  return Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{{${k}}}`).join(v ?? ""), text || "");
+}
+
+function EmailPanel({ lead, currentUser, onAddActivity, initialDraft }) {
+  const templatesHook = useEmailTemplates(currentUser?.id);
+  const emailsHook = useLeadEmails(lead.id);
+  const { createTask } = usePersonalTasks({ userId: currentUser?.id, enabled: true });
+
+  const [templateId, setTemplateId] = useState("");
+  const [toEmail, setToEmail] = useState(lead.contactEmail || "");
+  // initialDraft vem de "Preparar e-mail de abordagem" (handleStartOutreach)
+  // — só lido no mount (o componente é desmontado/remontado a cada troca de
+  // aba, ver `{sideTab === "email" && (...)}`, então isto já funciona como
+  // "aplica só quando chega vindo de lá").
+  const [subject, setSubject] = useState(initialDraft?.subject || "");
+  const [bodyText, setBodyText] = useState(initialDraft?.body || "");
+  const [repeatEnabled, setRepeatEnabled] = useState(false);
+  const [repeatDays, setRepeatDays] = useState(15);
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [notice, setNotice] = useState(null);
+
+  const vars = useMemo(() => ({
+    contato: lead.company || "",
+    empresa: lead.company || "",
+    vendedor: currentUser?.name || "",
+  }), [lead.company, currentUser?.name]);
+
+  const applyTemplate = (id) => {
+    setTemplateId(id);
+    const tpl = templatesHook.templates.find(t => t.id === id);
+    if (tpl) {
+      setSubject(applyEmailVars(tpl.subject, vars));
+      setBodyText(applyEmailVars(tpl.bodyHtml, vars));
+    }
+  };
+
+  const handleSend = async () => {
+    setNotice(null);
+    // Achado da revisão de QA (11/08/2026): bodyText pode conter {{empresa}}/
+    // {{contato}} já substituídos por lead.company — que vem de um formulário
+    // PÚBLICO sem login (submit_lead_capture), sem nenhuma restrição de
+    // caractere. Escapar aqui, não na hora de preencher o textarea (ali o
+    // vendedor precisa ver o texto literal enquanto edita) — só no que
+    // realmente vai virar HTML de verdade no e-mail.
+    const bodyHtml = escapeHtml(bodyText).split("\n").map(line => line || "&nbsp;").join("<br/>");
+    const cleanSubject = subject.replace(/[\r\n]+/g, " ").trim();
+    const res = await emailsHook.sendEmail({ toEmail, subject: cleanSubject, bodyHtml, templateId: templateId || null });
+    if (!res.success) return;
+
+    onAddActivity?.(lead.id, {
+      type: "email_sent",
+      userId: currentUser?.id || null,
+      userName: currentUser?.name || null,
+      body: `E-mail enviado: "${subject}" para ${toEmail}`,
+      meta: { to: toEmail, subject, channel: "resend" },
+    });
+
+    if (repeatEnabled && Number.isInteger(repeatDays) && repeatDays > 0) {
+      const due = new Date();
+      due.setDate(due.getDate() + repeatDays);
+      // Achado da revisão de QA: createTask lança em erro (use-personal-tasks.js)
+      // — sem try/catch aqui, uma falha na criação do lembrete (o e-mail já
+      // tinha sido enviado com sucesso!) deixava a função sem nunca chegar no
+      // setNotice/limpeza do formulário, como se nada tivesse acontecido.
+      try {
+        await createTask({
+          title: `Enviar email pra ${lead.company || "cliente"}`,
+          description: `Lembrete criado a partir do lead — repete a cada ${repeatDays} dias. Abra o lead e use a aba Email pra reenviar (ou ajustar antes de enviar de novo).`,
+          priority: "media",
+          status: "a_fazer",
+          recurrence: "custom",
+          recurrenceConfig: { intervalDays: repeatDays },
+          dueDate: toLocalISODate(due),
+          relatedLeadId: lead.id,
+        });
+        setNotice(`E-mail enviado — lembrete criado no seu Meu To-do pra daqui ${repeatDays} dias.`);
+      } catch {
+        setNotice("E-mail enviado — mas não deu pra criar o lembrete recorrente. Tente criar manualmente no Meu To-do.");
+      }
+    } else {
+      setNotice("E-mail enviado.");
+    }
+    setSubject("");
+    setBodyText("");
+    setTemplateId("");
+  };
+
+  const canSend = toEmail.trim() && subject.trim() && bodyText.trim() && !emailsHook.sending;
+
+  return (
+    <div className="space-y-4">
+      {notice && (
+        <div className="p-2.5 rounded-lg text-xs" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
+          {notice}
+        </div>
+      )}
+      {emailsHook.sendError && (
+        <div className="p-2.5 rounded-lg text-xs flex items-start gap-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />{emailsHook.sendError}
+        </div>
+      )}
+
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Template</div>
+          <select value={templateId} onChange={e => applyTemplate(e.target.value)} style={EMAIL_INPUT_BASE}>
+            <option value="">Em branco</option>
+            {templatesHook.templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+        <button
+          onClick={() => setBuilderOpen(true)}
+          className="text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
+          style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", cursor: "pointer" }}
+        >
+          + Criar template
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2.5">
+        <div>
+          <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Para</div>
+          <input value={toEmail} onChange={e => setToEmail(e.target.value)} placeholder="contato@cliente.com.br" style={EMAIL_INPUT_BASE} />
+        </div>
+        <div>
+          <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Assunto</div>
+          <input value={subject} onChange={e => setSubject(e.target.value)} style={EMAIL_INPUT_BASE} />
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Mensagem</div>
+        <textarea value={bodyText} onChange={e => setBodyText(e.target.value)} rows={6} style={{ ...EMAIL_INPUT_BASE, resize: "vertical" }} />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <label className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-dim)" }}>
+          <input type="checkbox" checked={repeatEnabled} onChange={e => setRepeatEnabled(e.target.checked)} />
+          Repetir a cada
+          <input
+            type="number" min={1} max={365} value={repeatDays}
+            onChange={e => setRepeatDays(Math.min(365, Math.max(1, Number(e.target.value) || 1)))}
+            disabled={!repeatEnabled}
+            style={{ ...EMAIL_INPUT_BASE, width: 52, padding: "4px 6px", opacity: repeatEnabled ? 1 : 0.5 }}
+          />
+          dias (cria lembrete no Meu To-do)
+        </label>
+        <button
+          onClick={handleSend}
+          disabled={!canSend}
+          className="px-4 py-2 rounded-lg text-xs font-bold shrink-0"
+          style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: canSend ? "pointer" : "default", opacity: canSend ? 1 : 0.5 }}
+        >
+          {emailsHook.sending ? "Enviando…" : "Enviar email"}
+        </button>
+      </div>
+
+      <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+        <div className="text-[11px] font-semibold mb-2" style={{ color: "var(--text-dim)" }}>Já enviados</div>
+        {emailsHook.loading ? (
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>Carregando…</div>
+        ) : emailsHook.emails.length === 0 ? (
+          <div className="text-xs italic" style={{ color: "var(--text-dim)" }}>Nenhum e-mail enviado ainda.</div>
+        ) : (
+          <div className="space-y-1.5">
+            {emailsHook.emails.map(e => (
+              <div key={e.id} className="p-2.5 rounded-lg border flex items-start gap-2" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
+                  style={{
+                    background: e.status === "sent" ? "var(--success-bg)" : "var(--danger-bg)",
+                    color: e.status === "sent" ? "var(--success)" : "var(--danger)",
+                  }}
+                >
+                  {e.status === "sent" ? "✓" : "!"}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>{e.subject}</div>
+                  <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                    {e.status === "sent" ? "Enviado" : `Falhou: ${e.errorMessage || "erro desconhecido"}`} · {new Date(e.sentAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} · pra {e.toEmail}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <EmailTemplateBuilderModal
+        open={builderOpen}
+        onClose={() => setBuilderOpen(false)}
+        onSave={templatesHook.addTemplate}
+      />
     </div>
   );
 }

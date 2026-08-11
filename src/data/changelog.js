@@ -24,6 +24,26 @@
 
 export const CHANGELOG = [
   {
+    version: "4.45.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O Funil de Vendas ganhou uma aba \"Email\" no card do lead: envie um e-mail de verdade pro cliente (com confirmação real de entrega, não só o \"e-mail iniciado\" de antes), usando um template pronto ou escrevendo na hora.",
+        roles: ["vendedor", "consultor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Templates de e-mail reutilizáveis: crie o seu (compartilhado com o time ou só seu) com variáveis como {{empresa}} e {{vendedor}}, preenchidas sozinhas ao enviar.",
+        roles: ["vendedor", "consultor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Marque \"Repetir a cada N dias\" ao enviar um e-mail e a plataforma cria um lembrete recorrente no seu Meu To-do, vinculado ao lead — nunca mais esquecer um follow-up.",
+        roles: ["vendedor", "consultor", "gerente", "admin"],
+      },
+    ],
+  },
+  {
     version: "4.44.0",
     items: [
       {

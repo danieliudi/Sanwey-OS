@@ -29,6 +29,9 @@ function rowToTask(r) {
     completedAt: r.completed_at ?? null,
     createdAt:   r.created_at,
     updatedAt:   r.updated_at,
+    // Preenchido só quando a tarefa nasce do "Repetir email" no Funil de
+    // Vendas (LeadDetailDrawer > aba Email) — deep link de volta pro lead.
+    relatedLeadId: r.related_lead_id ?? null,
   };
 }
 
@@ -46,6 +49,7 @@ function taskToRow(data) {
   if (data.customFields !== undefined) row.custom_fields = data.customFields;
   if (data.notes        !== undefined) row.notes        = data.notes;
   if (data.completedAt !== undefined) row.completed_at = data.completedAt;
+  if (data.relatedLeadId !== undefined) row.related_lead_id = data.relatedLeadId;
   return row;
 }
 
@@ -91,6 +95,14 @@ function nextOccurrenceDate(dueDate, recurrence, recurrenceConfig) {
   }
   if (recurrence === "monthly" && Number.isInteger(cfg.dayOfMonth)) {
     return toLocalISODate(nextMonthDayOccurrence(base, cfg.dayOfMonth));
+  }
+  // "A cada X dias" (nasceu do "Repetir email" no Funil de Vendas, mas
+  // disponível pra qualquer tarefa do Meu To-Do via RecurrencePicker) —
+  // intervalo livre, não amarrado a semana/mês.
+  if (recurrence === "custom" && Number.isInteger(cfg.intervalDays) && cfg.intervalDays > 0) {
+    const next = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    next.setDate(next.getDate() + cfg.intervalDays);
+    return toLocalISODate(next);
   }
 
   const next = new Date(base.getFullYear(), base.getMonth(), base.getDate());

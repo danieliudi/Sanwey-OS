@@ -57,6 +57,20 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: crie automações no seu Meu To-do (ex.: \"quando eu mover pra Feito, avisar\") e marque que uma tarefa depende de outra — clique aqui.",
     version: "4.44.0",
   },
+  // Achado da revisão de QA (11/08/2026): esta entrada quase ficou de fora
+  // (regra 12) — target vive dentro do drawer de detalhe do lead (só
+  // aparece com um lead aberto), mesma situação de "lista-pessoal-
+  // automacoes" acima; o runtime já pula em silêncio se o elemento não
+  // existir na hora, então registrar mesmo assim é estritamente melhor que
+  // não registrar (dispara pra quem já tem um lead aberto na 1ª visita
+  // depois do release).
+  {
+    id: "lead-email-tab",
+    route: "crm",
+    target: '[data-tour="lead-tab-email"]',
+    text: "Novo: envie e-mail de verdade pro cliente direto daqui, com templates reutilizáveis e lembrete recorrente — clique na aba \"Email\".",
+    version: "4.45.0",
+  },
   {
     id: "marketing-orcamento",
     route: "marketing-despesas",

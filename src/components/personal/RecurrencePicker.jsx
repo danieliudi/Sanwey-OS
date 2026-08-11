@@ -73,6 +73,25 @@ export function RecurrencePicker({ recurrence, recurrenceConfig, onRecurrenceCha
           <span style={{ fontSize: 12, color: "var(--text-dim)" }}>do mês</span>
         </div>
       )}
+
+      {recurrence === "custom" && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          <span style={{ fontSize: 12, color: "var(--text-dim)" }}>A cada</span>
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={cfg.intervalDays ?? ""}
+            placeholder="15"
+            onChange={e => {
+              const v = e.target.value === "" ? undefined : Math.min(365, Math.max(1, Number(e.target.value)));
+              onConfigChange({ ...cfg, intervalDays: v });
+            }}
+            style={{ ...inputBase, width: 64 }}
+          />
+          <span style={{ fontSize: 12, color: "var(--text-dim)" }}>dias</span>
+        </div>
+      )}
     </div>
   );
 }
