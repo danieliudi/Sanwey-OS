@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.44.0",
+    items: [
+      {
+        kind: "novo",
+        text: "\"Meu To-do\" ganhou dependência entre tarefas: marque que uma tarefa depende de outra e o card mostra um aviso \"Bloqueada\" até a pendência ser concluída — não dá mais pra marcar como feita antes da hora.",
+      },
+      {
+        kind: "novo",
+        text: "\"Meu To-do\" ganhou automações pessoais (aba \"Automações\"): crie regras simples do tipo \"quando eu mover pra tal etapa, avisar/criar tarefa/mudar prioridade\" — só você vê e edita as suas.",
+      },
+    ],
+  },
+  {
     version: "4.43.2",
     items: [
       {

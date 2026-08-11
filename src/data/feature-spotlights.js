@@ -51,6 +51,13 @@ export const FEATURE_SPOTLIGHTS = [
     version: "4.34.0",
   },
   {
+    id: "lista-pessoal-automacoes",
+    route: "personal-tasks",
+    target: '[data-tour="lista-pessoal-automacoes"]',
+    text: "Novo: crie automações no seu Meu To-do (ex.: \"quando eu mover pra Feito, avisar\") e marque que uma tarefa depende de outra — clique aqui.",
+    version: "4.44.0",
+  },
+  {
     id: "marketing-orcamento",
     route: "marketing-despesas",
     target: '[data-tour="despesas-abas"]',

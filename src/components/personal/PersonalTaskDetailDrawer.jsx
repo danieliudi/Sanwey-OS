@@ -7,6 +7,7 @@ import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
 import { StageNavigator } from "../shared/StageNavigator";
 import { EditableTitle } from "../shared/EditableTitle";
+import { EntityMultiSelect } from "../shared/EntityMultiSelect";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { usePersonalTaskChecklists } from "../../hooks/use-personal-task-checklists";
@@ -52,7 +53,7 @@ function formatBytes(bytes) {
 
 /* ── Detalhes ────────────────────────────────────────────────── */
 
-function DetailsTab({ task, onFieldChange, saveStatus, tagsHook }) {
+function DetailsTab({ task, onFieldChange, saveStatus, tagsHook, depOptions, depIds, onDependencyChange, depError }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
@@ -116,6 +117,23 @@ function DetailsTab({ task, onFieldChange, saveStatus, tagsHook }) {
           onChange={(tags) => onFieldChange("tags", tags)}
           tagsHook={tagsHook}
         />
+      </FieldRow>
+
+      <FieldRow label="Depende de">
+        <EntityMultiSelect
+          value={depIds}
+          onChange={onDependencyChange}
+          options={depOptions}
+          placeholder="Nenhuma dependência — selecionar…"
+          emptyLabel="Nenhuma outra tarefa disponível."
+        />
+        {depError ? (
+          <div className="mt-1.5 text-[11px]" style={{ color: "var(--danger)" }}>{depError}</div>
+        ) : (
+          <div className="mt-1.5 text-[11px]" style={{ color: "var(--text-faint)" }}>
+            Só suas outras tarefas — não é possível criar uma dependência circular.
+          </div>
+        )}
       </FieldRow>
     </div>
   );
@@ -417,11 +435,38 @@ function NotesTab({ task, onUpdate }) {
 
 /* ── Shell ───────────────────────────────────────────────────── */
 
-export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stageFieldsHook, onClose, onUpdate, onDelete, onSetStatus, onEditStageFields }) {
+export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stageFieldsHook, depsHook, allTasks, onClose, onUpdate, onDelete, onSetStatus, onEditStageFields }) {
   const [leftTab, setLeftTab] = useState("detalhes");
   const [saveStatus, setSaveStatus] = useState(null);
+  const [depError, setDepError] = useState(null);
   const draftRef = useRef({});
   const debounceRef = useRef(null);
+
+  const depOptions = useMemo(
+    () => (allTasks || []).filter(t => t.id !== task.id).map(t => ({ id: t.id, label: t.title })),
+    [allTasks, task.id]
+  );
+  const currentDeps = depsHook ? depsHook.getDependencies(task.id) : [];
+  const depIds = currentDeps.map(d => d.dependsOnId);
+
+  // EntityMultiSelect é controlado (recebe `value` de volta via depsHook —
+  // não guarda estado próprio), então o diff entre o array antigo e o novo
+  // decide o que virou insert/delete. Erro de ciclo (ver use-personal-task-
+  // dependencies.js) aparece embaixo do campo, não trava o resto do drawer.
+  const handleDependencyChange = useCallback(async (nextIds) => {
+    if (!depsHook) return;
+    setDepError(null);
+    const added = nextIds.filter(id => !depIds.includes(id));
+    const removed = depIds.filter(id => !nextIds.includes(id));
+    for (const id of removed) {
+      const dep = currentDeps.find(d => d.dependsOnId === id);
+      if (dep) await depsHook.removeDependency(dep.id);
+    }
+    for (const id of added) {
+      const { error } = await depsHook.addDependency(task.id, id);
+      if (error) setDepError(error);
+    }
+  }, [depsHook, depIds, currentDeps, task.id]);
 
   const handleFieldChange = useCallback((key, value) => {
     draftRef.current = { ...draftRef.current, [key]: value };
@@ -502,7 +547,18 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
         activeId={leftTab}
         onChange={setLeftTab}
       />
-      {leftTab === "detalhes"  && <DetailsTab task={displayTask} onFieldChange={handleFieldChange} saveStatus={saveStatus} tagsHook={tagsHook} />}
+      {leftTab === "detalhes"  && (
+        <DetailsTab
+          task={displayTask}
+          onFieldChange={handleFieldChange}
+          saveStatus={saveStatus}
+          tagsHook={tagsHook}
+          depOptions={depOptions}
+          depIds={depIds}
+          onDependencyChange={handleDependencyChange}
+          depError={depError}
+        />
+      )}
       {leftTab === "checklist" && <ChecklistTab taskId={task.id} userId={userId} />}
       {leftTab === "anexos"    && <AttachmentsTab taskId={task.id} userId={userId} />}
     </>

@@ -7,7 +7,7 @@
 export const STATUS_COLUMNS = [
   { id: "a_fazer", name: "A Fazer", color: "#64748B" },
   { id: "fazendo", name: "Fazendo", color: "#D97706" },
-  { id: "feito",   name: "Feito",   color: "#16A34A" },
+  { id: "feito",   name: "Feito",   color: "#16A34A", terminal: true },
 ];
 
 export const PERSONAL_TASK_PRIORITIES = [

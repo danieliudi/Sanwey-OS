@@ -1,11 +1,14 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown, Download, AlertCircle } from "lucide-react";
+import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown, Download, AlertCircle, Lock, Zap } from "lucide-react";
 import { AppToast } from "../shared/AppToast";
 import { usePersonalTasks } from "../../hooks/use-personal-tasks";
 import { exportPersonalTasksToCSV } from "../../utils/export-csv";
 import { usePersonalTaskStages } from "../../hooks/use-personal-task-stages";
 import { usePersonalTaskStageFields } from "../../hooks/use-personal-task-stage-fields";
 import { usePersonalTaskTags } from "../../hooks/use-personal-task-tags";
+import { usePersonalTaskDependencies } from "../../hooks/use-personal-task-dependencies";
+import { usePersonalTaskAutomations } from "../../hooks/use-personal-task-automations";
+import { PersonalTaskAutomationsPanel } from "../personal/PersonalTaskAutomationsPanel";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems, SORT_OPTIONS } from "../../utils/kanban-sort";
@@ -38,7 +41,7 @@ function useViewMode() {
   const [mode, setModeState] = useState(() => {
     try {
       const v = window.localStorage.getItem(VIEW_STORAGE_KEY);
-      return v === "kanban" || v === "agenda" ? v : "list";
+      return v === "kanban" || v === "agenda" || v === "automacoes" ? v : "list";
     } catch {
       return "list";
     }
@@ -139,10 +142,26 @@ function TagFilterBar({ allTags, activeTags, onToggle }) {
 
 /* ── List mode ───────────────────────────────────────────────── */
 
+// Dependência (ver use-personal-task-dependencies.js) ainda não concluída —
+// mesmo aviso tanto na Lista quanto no Kanban, cor var(--warning) (não
+// var(--danger): não é um erro, é um estado normal de "ainda não pode
+// terminar").
+function BlockedBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0"
+      style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
+      title="Depende de outra tarefa ainda não concluída"
+    >
+      <Lock size={9} /> Bloqueada
+    </span>
+  );
+}
+
 // Checkbox quadrado com check — mesmo padrão visual do item de checklist de
 // Entregas (ChecklistsTab em DeliverableDetailDrawer.jsx): borda/fundo
 // var(--success) quando marcado, título com line-through.
-function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen }) {
+function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen, blocked }) {
   const done = task.status === "feito";
   return (
     <div
@@ -172,7 +191,10 @@ function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen }) {
         >
           {task.title}
         </span>
-        <TagChips tags={task.tags} />
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {blocked && <BlockedBadge />}
+          <TagChips tags={task.tags} />
+        </div>
       </div>
       <PriorityPill priority={task.priority} />
       <DueDateLabel task={task} />
@@ -189,7 +211,7 @@ function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen }) {
   );
 }
 
-function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen }) {
+function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen, blockedIds }) {
   if (tasks.length === 0) return null;
   return (
     <div className="mb-5">
@@ -198,7 +220,7 @@ function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen
       </div>
       <div className="flex flex-col gap-2">
         {tasks.map(t => (
-          <TaskRow key={t.id} task={t} columns={columns} onToggle={onToggle} onMove={onMove} onDelete={onDelete} onOpen={onOpen} />
+          <TaskRow key={t.id} task={t} columns={columns} onToggle={onToggle} onMove={onMove} onDelete={onDelete} onOpen={onOpen} blocked={blockedIds?.has(t.id)} />
         ))}
       </div>
     </div>
@@ -207,7 +229,7 @@ function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen
 
 /* ── Kanban mode ─────────────────────────────────────────────── */
 
-function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, onDragEnd }) {
+function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, onDragEnd, blocked }) {
   return (
     <div
       draggable
@@ -231,7 +253,12 @@ function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, 
           />
         </div>
       </div>
-      {task.tags?.length > 0 && <div className="mb-2"><TagChips tags={task.tags} /></div>}
+      {(blocked || task.tags?.length > 0) && (
+        <div className="flex items-center gap-1.5 flex-wrap mb-2">
+          {blocked && <BlockedBadge />}
+          <TagChips tags={task.tags} />
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2">
         <PriorityPill priority={task.priority} />
         <DueDateLabel task={task} />
@@ -240,7 +267,7 @@ function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, 
   );
 }
 
-function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, onEditStageFields }) {
+function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, onEditStageFields, blockedIds }) {
   const trailingRef = useRef(null);
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
   const [draggedTask, setDraggedTask] = useState(null);
@@ -321,7 +348,7 @@ function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, o
                       </div>
                     ) : items.map(t => (
                       <TaskKanbanCard key={t.id} task={t} columns={columns} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
-                        onDragStart={setDraggedTask} onDragEnd={handleDragEnd} />
+                        onDragStart={setDraggedTask} onDragEnd={handleDragEnd} blocked={blockedIds?.has(t.id)} />
                     ))}
                   </div>
                 </div>
@@ -346,7 +373,7 @@ function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, o
               <div className="flex flex-col gap-2">
                 {items.map(t => (
                   <TaskKanbanCard key={t.id} task={t} columns={columns} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
-                    onDragStart={() => {}} onDragEnd={() => {}} />
+                    onDragStart={() => {}} onDragEnd={() => {}} blocked={blockedIds?.has(t.id)} />
                 ))}
                 {items.length === 0 && (
                   <div className="text-xs" style={{ color: "var(--text-dim)", opacity: 0.6 }}>Nenhuma tarefa</div>
@@ -375,11 +402,28 @@ export function PersonalTasksView({ currentUser }) {
   const stagesHook = usePersonalTaskStages(currentUser?.id);
   const stageFieldsHook = usePersonalTaskStageFields(currentUser?.id);
   const tagsHook = usePersonalTaskTags(currentUser?.id);
+  const depsHook = usePersonalTaskDependencies(currentUser?.id);
+  const automationsHook = usePersonalTaskAutomations(currentUser?.id);
 
   // Quem nunca customizou etapas continua vendo as 3 de sempre — as linhas
   // em personal_task_stages só nascem quando o usuário salva o editor pela
   // 1ª vez (ver PersonalStageListManager), não semeadas de antemão.
   const columns = stagesHook.stages.length > 0 ? stagesHook.stages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, terminal: s.terminal })) : STATUS_COLUMNS;
+  // "Concluída" pra fim de dependência = qualquer etapa com `terminal: true`
+  // OU a chave literal "feito" — o editor de etapas (PersonalStageListManager,
+  // que reaproveita o StageListCore compartilhado com Pipeline/RH) ainda não
+  // expõe um jeito de marcar uma etapa custom como terminal (o campo existe
+  // no schema/save, mas não tem checkbox na UI — achado ao construir isto).
+  // "feito" sempre entra no set porque é a MESMA etapa que toggleDone/
+  // recorrência (use-personal-tasks.js) já tratam como "concluída" hoje —
+  // manter os dois consistentes evita um 2º critério de "pronto" divergente.
+  // Continua a chave (não o nome exibido), então funciona mesmo se o usuário
+  // renomear "Feito" pra outra coisa (ex.: "Arquivo").
+  const terminalStageKeys = useMemo(() => {
+    const set = new Set(columns.filter(c => c.terminal).map(c => c.id));
+    set.add("feito");
+    return set;
+  }, [columns]);
 
   const [viewMode, setViewMode] = useViewMode();
   const [showCreate, setShowCreate] = useState(false);
@@ -421,6 +465,25 @@ export function PersonalTasksView({ currentUser }) {
     return { hoje, semana, semData };
   }, [sortedFilteredTasks]);
 
+  const tasksById = useMemo(() => Object.fromEntries(tasks.map(t => [t.id, t])), [tasks]);
+
+  const [automationNotice, setAutomationNotice] = useState(null);
+
+  // Roda depois que a mudança de etapa já foi gravada — não bloqueia a
+  // mudança em si se a automação falhar (mesmo espírito de fireAutomations
+  // em EntregasView/MarketingView). "notify" vira AppToast; "create_task"
+  // usa o `createTask` já existente do hook principal.
+  const runAutomations = useCallback((updatedTask, prevTask, eventType = "stage_change") => {
+    const { patches, notifications, sideEffects } = automationsHook.evaluateAutomations(updatedTask, prevTask, eventType);
+    for (const p of patches) updateTask(updatedTask.id, p.patch).catch(() => {});
+    if (notifications.length > 0) setAutomationNotice(notifications[0].message);
+    for (const fx of sideEffects) {
+      if (fx.type === "create_task") {
+        createTask({ title: fx.title, priority: fx.priority, status: columns[0]?.id || "a_fazer", dueDate: fx.dueDate }).catch(() => {});
+      }
+    }
+  }, [automationsHook, updateTask, createTask, columns]);
+
   // Único ponto de mudança de status usado por checkbox/menu/drag-and-drop —
   // ver setTaskStatus em use-personal-tasks.js (cobre o par completed_at +
   // disparo de recorrência num só lugar). Antes era fire-and-forget sem catch:
@@ -430,35 +493,78 @@ export function PersonalTasksView({ currentUser }) {
   // real era o CHECK constraint stale, já corrigido; este catch é a rede de
   // segurança pra qualquer falha futura do mesmo tipo). Mesmo padrão de
   // AppToast já usado em EntregasView (stageError).
-  const handleMove = useCallback((id, status) => {
-    setTaskStatus(id, status).catch(err => {
+  //
+  // Trava de dependência: só bloqueia entrar numa etapa `terminal` (não
+  // qualquer movimento — dependência não impede reorganizar entre etapas
+  // intermediárias, só "terminar" com pendência aberta). Mesmo princípio de
+  // "obrigatório trava avançar, não voltar" já usado em Entregas/Pipeline.
+  const attemptMove = useCallback(async (id, status) => {
+    const task = tasksById[id];
+    if (!task) return false;
+    if (terminalStageKeys.has(status)) {
+      const blockers = depsHook.getBlockers(id, tasksById, terminalStageKeys);
+      if (blockers.length > 0) {
+        const stageName = columns.find(c => c.id === status)?.name || status;
+        setMoveError(`Não dá pra mover "${task.title}" pra "${stageName}": depende de ${blockers.map(b => `"${b.title}"`).join(", ")}, que ainda não ${blockers.length > 1 ? "foram concluídas" : "foi concluída"}.`);
+        return false;
+      }
+    }
+    try {
+      await setTaskStatus(id, status);
+      runAutomations({ ...task, status }, task);
+      return true;
+    } catch (err) {
       setMoveError(err?.message || "Não deu pra mover a tarefa. Tenta de novo.");
-    });
-  }, [setTaskStatus]);
+      return false;
+    }
+  }, [tasksById, terminalStageKeys, depsHook, columns, setTaskStatus, runAutomations]);
+
+  const handleMove = useCallback((id, status) => { attemptMove(id, status); }, [attemptMove]);
 
   const handleCreate = useCallback(async (data) => { await createTask(data); }, [createTask]);
+
+  // Único ponto de edição de campo usado pelo drawer (autosave debounced) —
+  // gatilho "field_value" das automações (ex.: "prioridade = Alta") só
+  // dispara aqui, não em toda mudança de status (essa já passa por
+  // attemptMove/runAutomations com eventType "stage_change").
+  const handleTaskUpdate = useCallback(async (id, patch) => {
+    const prevTask = tasksById[id];
+    await updateTask(id, patch);
+    if (prevTask && Object.prototype.hasOwnProperty.call(patch, "priority")) {
+      runAutomations({ ...prevTask, ...patch }, prevTask, "field_value");
+    }
+  }, [tasksById, updateTask, runAutomations]);
 
   const handleOpen = useCallback((task) => setSelectedTaskId(task.id), []);
   const handleCloseDrawer = useCallback(() => setSelectedTaskId(null), []);
   const handleDeleteFromDrawer = useCallback(async (id) => { await deleteTask(id); setSelectedTaskId(null); }, [deleteTask]);
   const handleSetStatusFromDrawer = useCallback(async (id, status) => {
-    try {
-      await setTaskStatus(id, status);
-      setSelectedTaskId(null);
-    } catch (err) {
-      setMoveError(err?.message || "Não deu pra mover a tarefa. Tenta de novo.");
-    }
-  }, [setTaskStatus]);
+    const ok = await attemptMove(id, status);
+    if (ok) setSelectedTaskId(null);
+  }, [attemptMove]);
 
   const selectedTask = useMemo(() => tasks.find(t => t.id === selectedTaskId) || null, [tasks, selectedTaskId]);
 
   const hasAnyTask = tasks.length > 0;
+
+  const blockedTaskIds = useMemo(() => {
+    const set = new Set();
+    for (const t of tasks) {
+      if (depsHook.getBlockers(t.id, tasksById, terminalStageKeys).length > 0) set.add(t.id);
+    }
+    return set;
+  }, [tasks, depsHook, tasksById, terminalStageKeys]);
 
   return (
     <>
       {moveError && (
         <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setMoveError(null)}>
           {moveError}
+        </AppToast>
+      )}
+      {automationNotice && (
+        <AppToast variant="default" position="top-right" icon={Zap} onDismiss={() => setAutomationNotice(null)}>
+          {automationNotice}
         </AppToast>
       )}
       <KanbanBoardHeader className="mb-4">
@@ -479,6 +585,7 @@ export function PersonalTasksView({ currentUser }) {
               <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "list"}   onClick={() => setViewMode("list")}   icon={List}       label="Lista"  iconOnlyMobile />
               <ViewToggleButton active={viewMode === "agenda"} onClick={() => setViewMode("agenda")} icon={Calendar}   label="Agenda" iconOnlyMobile dataTour="lista-pessoal-agenda" />
+              <ViewToggleButton active={viewMode === "automacoes"} onClick={() => setViewMode("automacoes")} icon={Zap} label="Automações" iconOnlyMobile dataTour="lista-pessoal-automacoes" />
             </div>
             <button
               onClick={() => exportPersonalTasksToCSV(filteredTasks, { columns })}
@@ -515,6 +622,8 @@ export function PersonalTasksView({ currentUser }) {
 
       {loading ? (
         <div className="text-sm" style={{ color: "var(--text-dim)" }}>Carregando…</div>
+      ) : viewMode === "automacoes" ? (
+        <PersonalTaskAutomationsPanel automationsHook={automationsHook} columns={columns} />
       ) : !hasAnyTask ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <ListChecks size={32} style={{ opacity: 0.4, marginBottom: 10, color: "var(--text-dim)" }} />
@@ -542,15 +651,16 @@ export function PersonalTasksView({ currentUser }) {
                   </select>
                 </div>
               </div>
-              <TaskSection title="Hoje"        tasks={buckets.hoje}    columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
-              <TaskSection title="Esta semana" tasks={buckets.semana}  columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
-              <TaskSection title="Sem data"    tasks={buckets.semData} columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} />
+              <TaskSection title="Hoje"        tasks={buckets.hoje}    columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
+              <TaskSection title="Esta semana" tasks={buckets.semana}  columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
+              <TaskSection title="Sem data"    tasks={buckets.semData} columns={columns} onToggle={toggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
             </div>
           ) : viewMode === "kanban" ? (
             <TaskKanbanBoard
               tasks={filteredTasks} columns={columns} onMove={handleMove} onDelete={deleteTask}
               onCreate={() => setShowCreate(true)} onOpen={handleOpen}
               onEditStageFields={setEditingFieldsStageKey}
+              blockedIds={blockedTaskIds}
             />
           ) : (
             <PersonalTaskAgendaView tasks={filteredTasks} onOpen={handleOpen} />
@@ -569,8 +679,10 @@ export function PersonalTasksView({ currentUser }) {
           columns={columns}
           tagsHook={tagsHook}
           stageFieldsHook={stageFieldsHook}
+          depsHook={depsHook}
+          allTasks={tasks}
           onClose={handleCloseDrawer}
-          onUpdate={updateTask}
+          onUpdate={handleTaskUpdate}
           onDelete={handleDeleteFromDrawer}
           onSetStatus={handleSetStatusFromDrawer}
           onEditStageFields={setEditingFieldsStageKey}
