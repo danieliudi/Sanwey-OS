@@ -50,12 +50,23 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: agrupe várias despesas soltas numa prestação de contas e envie de uma vez, em vez de despesa por despesa.",
     version: "4.34.0",
   },
+  // Achado do Daniel 11/08/2026 (print do app + "o texto está muito
+  // confuso"): esta entrada dizia "clique aqui" tanto pra criar automações
+  // quanto pra "marcar que uma tarefa depende de outra" — mas o alvo é só a
+  // aba Automações; dependência entre tarefas se marca dentro do card
+  // (campo "Depende de" no drawer), não tem elemento estável na Kanban pra
+  // apontar (mesmo motivo de outras entradas puladas nesta lista — ver
+  // "4.40.0"/"4.42.0" abaixo). Corrigido pra descrever só o que o botão
+  // realmente faz, e trocado o exemplo de "Feito" (nome que só existia
+  // porque era o padrão antigo — hoje a etapa final nasce "Arquivar", e
+  // etapas são renomeáveis) por uma frase que não trava num nome de etapa
+  // específico.
   {
     id: "lista-pessoal-automacoes",
     route: "personal-tasks",
     target: '[data-tour="lista-pessoal-automacoes"]',
-    text: "Novo: crie automações no seu Meu To-do (ex.: \"quando eu mover pra Feito, avisar\") e marque que uma tarefa depende de outra — clique aqui.",
-    version: "4.44.0",
+    text: "Novo: crie automações no seu Meu To-do — por exemplo, \"quando eu mover uma tarefa pra etapa final, me avisar\" — clique aqui.",
+    version: "4.44.1",
   },
   // Achado da revisão de QA (11/08/2026): esta entrada quase ficou de fora
   // (regra 12) — target vive dentro do drawer de detalhe do lead (só
