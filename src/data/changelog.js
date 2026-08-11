@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.40.0",
+    items: [
+      { kind: "novo", text: "Clientes: a aba Conexões virou Histórico — uma linha do tempo única com tudo que já aconteceu com aquele cliente, atravessando todos os negócios dele: visitas, comentários, amostras, e-mails de abordagem, propostas e casos de pós-venda. Mudanças de etapa e anexos aparecem como pano de fundo, e dá pra filtrar só as interações.", roles: ["consultor", "vendedor", "gerente", "diretoria", "admin"] },
+      { kind: "novo", text: "Funil de Vendas: iniciar uma abordagem por e-mail e gerar uma proposta agora ficam registrados no negócio e no histórico do cliente. Antes não sobrava nenhum rastro dessas duas ações.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "novo", text: "Pós-venda: o caso agora pode ser vinculado direto ao cliente, sem depender de um negócio. Antes o nome do cliente era texto solto e o caso sumia do histórico dele.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "ajuste", text: "Importação de feira: quando o CNPJ da linha bate com um cliente já cadastrado, o negócio nasce vinculado a ele — sem criar cadastro duplicado.", roles: ["gerente"] },
+      { kind: "correcao", text: "Corrigido: dados de clientes de uma frente comercial podiam ser consultados por quem não trabalha nela. Agora as duas consultas envolvidas respeitam a mesma regra de empresa do resto da plataforma.", roles: ["admin"] },
+    ],
+  },
+  {
     version: "4.39.0",
     items: [
       { kind: "novo", text: "Marketing: nova aba Orçamento dentro de Despesas. Gerente e admin definem um teto por categoria e ano, e cada categoria ganha uma barra mostrando o que já foi pago, o que está a pagar e o que está comprometido em compras aprovadas — com aviso quando passa de 80% e destaque quando estoura.", roles: ["marketing", "gerente_marketing", "admin"] },

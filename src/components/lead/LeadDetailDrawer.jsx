@@ -37,6 +37,7 @@ import { getMentionableUsers } from "../../utils/mentionable-users";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
 import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
+import { activityTypeMeta } from "../../utils/activity-types";
 
 export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
@@ -473,9 +474,32 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
     onUpdate(lead.id, { ownerIds: newIds });
   };
 
+  // FASE 3 — buraco "e-mail de abordagem não é registrado". O mailto: abre no
+  // cliente de e-mail do usuário, então a plataforma sabe que a abordagem foi
+  // INICIADA — nunca que foi enviada. O texto do item reflete exatamente isso;
+  // prometer mais do que se sabe é pior que não registrar.
+  //
+  // A activity é gravada ANTES de setar window.location.href de propósito: o
+  // handler do mailto pode tirar o foco da aba (e, em alguns navegadores,
+  // descarregar a página), o que abortaria um fetch disparado depois. Mesmo
+  // padrão fire-and-forget de handleSaveFollowUp — não await, pra não segurar
+  // a abertura do cliente de e-mail nem o autosave já corrigido neste arquivo.
   const handleStartOutreach = () => {
     const subject = `${company.name} · ${lead.triggerLabel}`;
-    const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailDraft)}`;
+    const recipient = lead.contactEmail || null;
+    if (onAddActivity) {
+      onAddActivity(lead.id, {
+        type: "email_sent",
+        userId: currentUser?.id || null,
+        userName: currentUser?.name || null,
+        body: recipient
+          ? `E-mail de abordagem iniciado para ${recipient}`
+          : "E-mail de abordagem iniciado",
+        meta: { to: recipient, subject, channel: "mailto" },
+      });
+    }
+    const to = recipient ? encodeURIComponent(recipient) : "";
+    const href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailDraft)}`;
     window.location.href = href;
     onUpdate(lead.id, { lastActivity: new Date().toISOString() });
   };
@@ -1125,7 +1149,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                 não perder o rascunho da proposta ao trocar de aba; key={lead.id}
                 reseta ao navegar pra outro lead. Achado da 2ª auditoria. */}
             <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
-              <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} />
+              <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} onAddActivity={onAddActivity} />
             </div>
         </>
       )}
@@ -1459,22 +1483,30 @@ function ActivitiesPanel({ stageHistory, activities, users }) {
           const toStage = a.to ? DEFAULT_PIPELINE_STAGES.find(s => s.id === a.to) : null;
           const user = a.userId ? (users || []).find(u => u.id === a.userId) : null;
           const userName = user?.name || a.userName || "Sistema";
+          // Ícone por tipo vem da taxonomia compartilhada (utils/activity-types.js)
+          // — tipo novo ganha ícone/rótulo sem precisar tocar neste switch, que
+          // era exatamente como 'email_sent'/'proposal_generated' cairiam aqui
+          // como item genérico.
+          const { icon: TypeIcon } = activityTypeMeta(a.type);
           return (
-            <li key={i} className="text-xs" style={{ color: "var(--text)" }}>
-              {a.type === "stage" ? (
-                <div>
-                  <span style={{ color: "var(--text-dim)" }}>{userName} </span>
-                  moveu para <strong>{toStage?.name || a.to}</strong>
-                  {fromStage && <span style={{ color: "var(--text-dim)" }}> (de {fromStage.name})</span>}
+            <li key={i} className="text-xs flex items-start gap-2" style={{ color: "var(--text)" }}>
+              <TypeIcon size={12} style={{ flexShrink: 0, marginTop: 2, color: "var(--text-dim)" }} />
+              <div className="min-w-0 flex-1">
+                {a.type === "stage" ? (
+                  <div>
+                    <span style={{ color: "var(--text-dim)" }}>{userName} </span>
+                    moveu para <strong>{toStage?.name || a.to}</strong>
+                    {fromStage && <span style={{ color: "var(--text-dim)" }}> (de {fromStage.name})</span>}
+                  </div>
+                ) : (
+                  <div>
+                    <span style={{ color: "var(--text-dim)" }}>{userName} </span>
+                    {a.body}
+                  </div>
+                )}
+                <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                  {new Date(a.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                 </div>
-              ) : (
-                <div>
-                  <span style={{ color: "var(--text-dim)" }}>{userName} </span>
-                  {a.body}
-                </div>
-              )}
-              <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
-                {new Date(a.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
               </div>
             </li>
           );

@@ -1905,6 +1905,7 @@ export default function App() {
                     users={users}
                     currentUser={currentUser}
                     campaigns={campaigns}
+                    clients={clients}
                     state={fairImportState}
                     setState={setFairImportState}
                   />
@@ -1946,6 +1947,8 @@ export default function App() {
               onCompanyChange={setActiveCompany}
               leads={leads}
               users={users}
+              clients={clients}
+              onCreateClient={createClient}
               onOpenLead={setSelectedLead}
             />
           } />

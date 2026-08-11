@@ -8,6 +8,10 @@ function rowToCase(r) {
     id:             r.id,
     companyId:      r.company_id,
     leadId:         r.lead_id,
+    // Cliente do cadastro central. `clientName` continua sendo o texto livre
+    // exibido (fallback pros casos sem vínculo) — `clientId` é o que liga o
+    // caso à linha do tempo do cliente (FASE 3).
+    clientId:       r.client_id ?? null,
     clientName:     r.client_name,
     value:          Number(r.value) || 0,
     ownerIds:       Array.isArray(r.owner_ids) ? r.owner_ids : [],
@@ -26,6 +30,7 @@ function caseToRow(c) {
   return {
     company_id:       c.companyId,
     lead_id:          c.leadId ?? null,
+    client_id:        c.clientId ?? null,
     client_name:      c.clientName,
     value:            c.value ?? 0,
     owner_ids:        c.ownerIds ?? [],
@@ -150,6 +155,9 @@ export async function createPosvendaCaseFromLead(lead, userId) {
   const row = caseToRow({
     companyId:  lead.companyId,
     leadId:     lead.id,
+    // Herda o cliente já vinculado ao negócio — sem isto o caso nasceria sem
+    // client_id mesmo vindo de um negócio que conhece o cliente (buraco 3).
+    clientId:   lead.clientId ?? null,
     clientName: lead.company,
     value:      lead.value,
     ownerIds:   lead.ownerIds && lead.ownerIds.length ? lead.ownerIds : (lead.owner ? [lead.owner] : []),

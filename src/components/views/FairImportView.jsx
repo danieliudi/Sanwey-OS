@@ -7,6 +7,7 @@ import {
 import { COMPANIES } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
+import { findClientByCnpj } from "../../utils/client-dedup";
 const uuidv4 = () => crypto.randomUUID();
 
 // ── Column detection helpers ─────────────────────────────────────────────────
@@ -204,7 +205,7 @@ const COMPANY_OPTIONS = [
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function FairImportView({ addLead, leads: existingLeads, users, currentUser, campaigns = [], state, setState }) {
+export function FairImportView({ addLead, leads: existingLeads, users, currentUser, campaigns = [], clients = [], state, setState }) {
   const fileRef = useRef(null);
   // Persistent across tab switches — held in App.jsx
   const { fairName, fairCampaignId = "", phase, rows, importResult, importing } = state;
@@ -280,9 +281,38 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
     setRows(prev => prev.map(r => r._importId === importId ? { ...r, _selected: !r._selected } : r));
   };
 
+  // ── Vínculo com o cadastro central de clientes (FASE 3 / buraco 4) ────────
+  // O lead de feira nascia sem `clientId`, então nunca aparecia na linha do
+  // tempo do cliente — justamente a origem que o Daniel quer medir.
+  //
+  // Casamos por CNPJ contra `clients` usando o MESMO utilitário que a dedupe
+  // de cliente já usa em todo caminho de criação (`findClientByCnpj`, que
+  // normaliza os dígitos e exige os 14 completos) — não uma segunda regra de
+  // matching escrita aqui.
+  //
+  // Quando não há cliente correspondente, o lead entra SEM vínculo e a tela
+  // diz quantos ficaram assim. Deliberadamente NÃO criamos cliente
+  // automaticamente: a coluna CNPJ é opcional nos exports de feira, e boa
+  // parte das linhas vem sem ela — sem CNPJ a dedupe não protege nada, e
+  // "Transportes ABC" e "Transportes ABC Ltda" da mesma feira virariam dois
+  // cadastros. Lista de feira também é contato cru (crachá escaneado), não
+  // cliente qualificado. Vincular depois é barato e seguro: o
+  // LeadDetailDrawer já tem ClientSelector + mini-cadastro com checagem de
+  // duplicata.
+  const clientIdByRow = useMemo(() => {
+    const map = new Map();
+    for (const r of rows) {
+      const match = findClientByCnpj(clients, r.cnpj);
+      if (match) map.set(r._importId, match.id);
+    }
+    return map;
+  }, [rows, clients]);
+
   const selectedRows = rows.filter(r => r._selected && !r._isDuplicate);
   const dupCount = rows.filter(r => r._isDuplicate).length;
   const unassignedCount = selectedRows.filter(r => !r.owner).length;
+  const linkedClientCount = selectedRows.filter(r => clientIdByRow.has(r._importId)).length;
+  const noClientCount = selectedRows.length - linkedClientCount;
 
   const handleImport = async () => {
     if (!selectedRows.length) return;
@@ -297,6 +327,9 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
       try {
         const lead = {
           ...row,
+          // null quando nenhum cliente casou por CNPJ — ver nota em
+          // `clientIdByRow`. Vínculo manual depois, sem cadastro duplicado.
+          clientId: clientIdByRow.get(row._importId) || null,
           triggerLabel: effectiveFairName,
           campaignId: selectedCampaign ? selectedCampaign.id : null,
           evidence: `Contato realizado na ${effectiveFairName}`,
@@ -502,6 +535,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           <Stat label="Selecionados" value={selectedRows.length} color="var(--color-resibag)" />
           <Stat label="Duplicados" value={dupCount} color={dupCount > 0 ? "var(--amber)" : undefined} />
           <Stat label="Sem responsável" value={unassignedCount} color={unassignedCount > 0 ? "var(--amber)" : undefined} />
+          <Stat label="Cliente vinculado" value={linkedClientCount} color={linkedClientCount > 0 ? "var(--color-resibag)" : undefined} />
         </div>
       )}
 
@@ -513,6 +547,24 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
               style={{ background: "var(--amber-bg)", borderLeftColor: "var(--amber)", color: "var(--text)" }}>
               <TriangleAlert size={14} style={{ color: "var(--amber)", flexShrink: 0 }} />
               {unassignedCount} lead{unassignedCount > 1 ? "s" : ""} sem vendedor atribuído — defina antes de importar ou deixe para o gerente redistribuir depois.
+            </div>
+          )}
+
+          {/* Vínculo com o cadastro de clientes. Informativo, não bloqueia a
+              importação — por isso token neutro, não --amber/--danger: quem
+              importa não tem como resolver isso aqui (o cliente pode
+              simplesmente ainda não existir), e nenhum cadastro é criado
+              automaticamente pra evitar cliente duplicado. */}
+          {noClientCount > 0 && (
+            <div className="flex items-start gap-2 p-3 rounded-xl border-l-4 text-sm"
+              style={{ background: "var(--surface-alt)", borderLeftColor: "var(--border-strong)", color: "var(--text)" }}>
+              <Building2 size={14} style={{ color: "var(--text-dim)", flexShrink: 0, marginTop: 2 }} />
+              <span>
+                {noClientCount} de {selectedRows.length} lead{selectedRows.length > 1 ? "s" : ""} ficará{noClientCount > 1 ? "o" : ""} sem
+                cliente vinculado (CNPJ ausente ou ainda não cadastrado) — não vão aparecer no histórico do
+                cliente até alguém vincular pelo negócio. Nenhum cliente novo é criado automaticamente, pra
+                não duplicar cadastro.
+              </span>
             </div>
           )}
 
