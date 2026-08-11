@@ -20,7 +20,11 @@ export const VISAO_GERAL_WIDGETS = {
   marketing: [
     { id: "kpi_active", zone: 1, label: "Campanhas ativas" },
     { id: "kpi_live", zone: 1, label: "Ao vivo agora" },
-    { id: "kpi_budget", zone: 1, label: "Orçamento comprometido" },
+    // Rótulo acompanha o tile: era "Orçamento comprometido" quando o número
+    // era a soma dos tetos das campanhas; hoje o tile mede consumo do ano
+    // (pago + a pagar). O `id` NÃO muda — é a chave da preferência já salva
+    // por usuário.
+    { id: "kpi_budget", zone: 1, label: "Consumido no ano" },
     { id: "kpi_deliverables", zone: 1, label: "Entregas concluídas" },
     { id: "kpi_score", zone: 1, label: "Performance médio" },
     { id: "kpi_agency_sla", zone: 1, label: "SLA cumprido", roleGate: "not_agencia" },

@@ -26,7 +26,10 @@ import { useLeadFormConfig } from "../../hooks/use-lead-form-config";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
-import { formatK } from "../../utils/currency";
+import { formatK, formatBRL } from "../../utils/currency";
+import { useCRMDespesas } from "../../hooks/use-crm-despesas";
+import { useAllLeadSamples } from "../../hooks/use-lead-samples";
+import { sumTravelExpenses, sumSampleCosts, calculateCAC, cacFormulaHint, periodCutoff } from "../../utils/cac";
 import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
@@ -42,6 +45,12 @@ import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { daysSince } from "../../utils/date";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
+
+// Janela do CAC nesta tela (ver o useMemo `cac` mais abaixo). Esta tela não
+// tem seletor de período; "all" é o mesmo padrão do Painel Executivo, que é o
+// outro ponto que mostra o mesmo indicador. Valor de `period` de
+// src/utils/cac.js (`periodCutoff`): "all" | "30d" | "60d" | "90d" | "ytd".
+const CAC_PERIOD = "all";
 
 // ── Quick-add form ────────────────────────────────────────────────────────────
 
@@ -401,7 +410,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       // Vendedor sees own leads + subordinates' leads
       s = s.filter(l => getLeadOwnerIds(l).some(id => id === user.id || subordinateIds.has(id)));
     }
-    // Sector filter: if user has sectors, only show leads in those sectors (or without sector)
+    // Filtro por setor. ATENÇÃO: desde 10/08/2026 o setor é aplicado também na
+    // RLS (`leads_select` + `current_user_sectors()`), então este filtro deixou
+    // de ser a proteção e passou a ser só refinamento de tela — o servidor já
+    // não manda negócio de outro setor. Não remova achando que é redundante:
+    // ele ainda cobre o caso do gerente/admin, que recebe tudo do banco e usa
+    // o seletor de setor do cabeçalho pra focar num time.
     if (user.sectors?.length && (user.role === "vendedor" || user.role === "consultor")) {
       s = s.filter(l => !l.sector || user.sectors.includes(l.sector));
     }
@@ -438,7 +452,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         deadline: l => l.closeDate,
         value: l => l.value,
         name: l => l.company,
-        createdAt: l => l.createdAt,
+        createdAt: l => l.negotiationStartedAt || l.createdAt,
       });
     }
     return bucket;
@@ -470,6 +484,50 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     }
     return { pipelineValue, won, lost };
   }, [scopedLeads]);
+
+  // CAC agregado (aba Análise) — despesas de viagem só carregam quando a
+  // aba está aberta (evita listener/realtime extra na visão padrão de
+  // Kanban, o caso mais comum desta tela). Ver src/utils/cac.js pra fórmula
+  // e racional completo.
+  const cacDataEnabled = viewMode === "analise";
+  const { despesas: viagemDespesas } = useCRMDespesas({ userId: user?.id, enabled: cacDataEnabled });
+  const { samples: allLeadSamples } = useAllLeadSamples({ enabled: cacDataEnabled });
+
+  // Escopo de vendedor pro CAC = donos dos negócios já visíveis em
+  // `scopedLeads` (mesmo filtro de vendedor/empresa que a tela já aplica —
+  // com "Todos os vendedores" isso cobre o time inteiro em escopo; com um
+  // vendedor específico selecionado, vira só ele). Decisão explícita: um
+  // vendedor com despesa de viagem mas nenhum negócio na etapa atual não
+  // entra no numerador — aceitável na fase 1 (agregado, não por negócio).
+  const cacVendorIds = useMemo(() => {
+    const s = new Set();
+    for (const l of scopedLeads) for (const id of getLeadOwnerIds(l)) if (id) s.add(id);
+    return s;
+  }, [scopedLeads]);
+  const cacLeadIds = useMemo(() => new Set(scopedLeads.map(l => l.id)), [scopedLeads]);
+
+  // Numerador e denominador têm que cobrir a MESMA janela — o bug corrigido em
+  // 10/08/2026 era exatamente este: as despesas/amostras entravam sem recorte
+  // (2 anos acumulados) e o texto do hint prometia "no período". `CAC_PERIOD`
+  // é o único lugar onde essa janela é decidida nesta tela; o Funil não tem
+  // seletor de período, então usa o mesmo valor padrão do Painel Executivo
+  // ("all") — assim os dois pontos batem — e o hint é gerado a partir dele
+  // (`cacFormulaHint`), nunca escrito à mão. Mudar `CAC_PERIOD` aqui move os
+  // dois lados juntos e o texto acompanha sozinho.
+  const cac = useMemo(() => {
+    if (!cacDataEnabled) return null;
+    const periodStart = periodCutoff(CAC_PERIOD);
+    const travelExpensesTotal = sumTravelExpenses(viagemDespesas, { vendorIds: cacVendorIds, periodStart });
+    const sampleCostsTotal = sumSampleCosts(allLeadSamples, { leadIds: cacLeadIds, periodStart });
+    const wonCount = periodStart == null
+      ? summary.won
+      : scopedLeads.filter(l => {
+          if (l.stage !== "ganho") return false;
+          const ts = new Date(l.stageChangedAt || l.createdAt).getTime();
+          return !Number.isNaN(ts) && ts >= periodStart;
+        }).length;
+    return calculateCAC({ travelExpensesTotal, sampleCostsTotal, wonCount });
+  }, [cacDataEnabled, viagemDespesas, allLeadSamples, cacVendorIds, cacLeadIds, summary.won, scopedLeads]);
 
   // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
   // (estático ou condicional) vazio — vale tanto pro drag-and-drop quanto
@@ -741,6 +799,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           getStageEnteredAt={l => l.stageChangedAt}
           getOwnerIds={getLeadOwnerIds}
           usersById={usersById}
+          specificStats={[
+            { label: "CAC médio", value: cac != null ? formatBRL(cac) : "—", title: cacFormulaHint(CAC_PERIOD) },
+          ]}
         />
       ) : (<>
       {/* Mobile kanban: vertical collapsible stages — via RHMobileKanbanAccordion
@@ -1088,9 +1149,9 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
           vb = users?.get?.(bId)?.name?.toLowerCase() || "";
           break;
         }
-        case "stageChangedAt": va = a.stageChangedAt || a.createdAt || ""; vb = b.stageChangedAt || b.createdAt || ""; break;
-        case "timeInStage": va = daysSince(a.stageChangedAt || a.createdAt); vb = daysSince(b.stageChangedAt || b.createdAt); break;
-        case "timeInPipe":  va = daysSince(a.createdAt || a.dateDetected); vb = daysSince(b.createdAt || b.dateDetected); break;
+        case "stageChangedAt": va = a.stageChangedAt || a.negotiationStartedAt || a.createdAt || ""; vb = b.stageChangedAt || b.negotiationStartedAt || b.createdAt || ""; break;
+        case "timeInStage": va = daysSince(a.stageChangedAt || a.negotiationStartedAt || a.createdAt); vb = daysSince(b.stageChangedAt || b.negotiationStartedAt || b.createdAt); break;
+        case "timeInPipe":  va = daysSince(a.negotiationStartedAt || a.createdAt || a.dateDetected); vb = daysSince(b.negotiationStartedAt || b.createdAt || b.dateDetected); break;
         default:          va = ""; vb = "";
       }
       if (va < vb) return sortDir === "asc" ? -1 : 1;
@@ -1189,7 +1250,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 {resolvedOwners.length > 0 && <AvatarStack users={resolvedOwners} size={18} max={2} />}
-                <span>{fmt(lead.stageChangedAt || lead.createdAt)}</span>
+                <span>{fmt(lead.stageChangedAt || lead.negotiationStartedAt || lead.createdAt)}</span>
               </div>
             </div>
           </div>
@@ -1338,15 +1399,15 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                 </td>
                 {/* Last move */}
                 <td style={{ padding: "10px 12px", color: "var(--text-dim)", fontSize: 12 }}>
-                  {fmt(lead.stageChangedAt || lead.createdAt)}
+                  {fmt(lead.stageChangedAt || lead.negotiationStartedAt || lead.createdAt)}
                 </td>
                 {/* SLA: tempo na etapa atual, colorido pelo slaDays da etapa */}
-                <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 600, ...stageTimeStyle(daysSince(lead.stageChangedAt || lead.createdAt), stage?.slaDays) }}>
-                  {daysSince(lead.stageChangedAt || lead.createdAt)}d
+                <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 600, ...stageTimeStyle(daysSince(lead.stageChangedAt || lead.negotiationStartedAt || lead.createdAt), stage?.slaDays) }}>
+                  {daysSince(lead.stageChangedAt || lead.negotiationStartedAt || lead.createdAt)}d
                 </td>
                 {/* SLA: tempo total desde que o lead entrou no pipe */}
                 <td style={{ padding: "10px 12px", color: "var(--text-dim)", fontSize: 12 }}>
-                  {daysSince(lead.createdAt || lead.dateDetected)}d
+                  {daysSince(lead.negotiationStartedAt || lead.createdAt || lead.dateDetected)}d
                 </td>
               </tr>
             );

@@ -30,6 +30,7 @@ import { Eyebrow, PanelTitle } from "../shared/PanelHeading";
 import { PanelEmptyState } from "../shared/PanelEmptyState";
 import { TaskBucket } from "../shared/TaskBucket";
 import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
+import { StatCardGrid } from "../shared/StatCardGrid";
 import { StageDistributionBar } from "../shared/StageDistributionBar";
 import { greetingFor } from "../../utils/greeting";
 import { exportColaboradoresToCSV } from "../../utils/export-csv";
@@ -321,8 +322,8 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           </div>
         </div>
 
-        {/* Zona 1 — Resumo: 6 tiles (carrossel de peek abaixo de 1024px) */}
-        <div className="-mx-4 sm:-mx-6 lg:mx-0">
+        {/* Zona 1 — Resumo: 6 tiles */}
+        <div>
           {zone1VisibleCount === 0 ? (
             <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
           ) : loadingColaboradores ? (
@@ -333,50 +334,34 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
               Carregando...
             </div>
           ) : (
-            <div
-              className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:overflow-visible"
-              style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))" }}
-            >
+            <StatCardGrid desktopClassName="md:grid-cols-3 lg:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
               {widgetVisible("stat_total") && (
-                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={Users} value={totalFuncionarios} label="Total de Funcionários"
-                    trend={pctChange(totalFuncionarios, totalAtStartOfMonth)} compact />
-                </div>
+                <StatCard icon={Users} value={totalFuncionarios} label="Total de Funcionários"
+                  trend={pctChange(totalFuncionarios, totalAtStartOfMonth)} compact />
               )}
               {widgetVisible("stat_ativos") && (
-                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={UserCheck} value={totalAtivos} label="Ativos"
-                    sublabel={totalFuncionarios > 0 ? `${Math.round((totalAtivos / totalFuncionarios) * 100)}% do total` : undefined} compact />
-                </div>
+                <StatCard icon={UserCheck} value={totalAtivos} label="Ativos"
+                  sublabel={totalFuncionarios > 0 ? `${Math.round((totalAtivos / totalFuncionarios) * 100)}% do total` : undefined} compact />
               )}
               {widgetVisible("stat_ferias") && (
-                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={Calendar} value={totalFerias} label="De Férias"
-                    sublabel={totalFuncionarios > 0 ? `${Math.round((totalFerias / totalFuncionarios) * 100)}% do total` : undefined} compact />
-                </div>
+                <StatCard icon={Calendar} value={totalFerias} label="De Férias"
+                  sublabel={totalFuncionarios > 0 ? `${Math.round((totalFerias / totalFuncionarios) * 100)}% do total` : undefined} compact />
               )}
               {widgetVisible("stat_afastados") && (
-                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={UserMinus} value={totalAfastados} label="Afastados"
-                    accent={totalAfastados > 0 ? "var(--warning)" : undefined}
-                    sublabel={totalFuncionarios > 0 ? `${Math.round((totalAfastados / totalFuncionarios) * 100)}% do total` : undefined} compact />
-                </div>
+                <StatCard icon={UserMinus} value={totalAfastados} label="Afastados"
+                  accent={totalAfastados > 0 ? "var(--warning)" : undefined}
+                  sublabel={totalFuncionarios > 0 ? `${Math.round((totalAfastados / totalFuncionarios) * 100)}% do total` : undefined} compact />
               )}
               {widgetVisible("stat_desligamentos") && (
-                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={UserMinus} value={desligados12m.length} label="Desligamentos (12 meses)"
-                    trend={mom.exits.d} compact />
-                </div>
+                <StatCard icon={UserMinus} value={desligados12m.length} label="Desligamentos (12 meses)"
+                  trend={mom.exits.d} compact />
               )}
               {widgetVisible("stat_turnover_rate") && (
-                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={TrendingUp} value={`${turnoverRate}%`} label="Taxa de turnover aproximada"
-                    accent={turnoverRate >= 20 ? "var(--danger)" : undefined}
-                    sublabel={desligados12m.length > 0 ? `${voluntariosPct}% voluntário` : undefined} compact />
-                </div>
+                <StatCard icon={TrendingUp} value={`${turnoverRate}%`} label="Taxa de turnover aproximada"
+                  accent={turnoverRate >= 20 ? "var(--danger)" : undefined}
+                  sublabel={desligados12m.length > 0 ? `${voluntariosPct}% voluntário` : undefined} compact />
               )}
-            </div>
+            </StatCardGrid>
           )}
         </div>
 

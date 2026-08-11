@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Zap, LifeBuoy, Megaphone,
-  Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
+  Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck, Tent,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
@@ -84,6 +84,7 @@ import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
 import { MarketingTarefasView } from "./components/views/MarketingTarefasView";
 import { DespesasView } from "./components/views/DespesasView";
+import { FairReportView } from "./components/views/FairReportView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
 import { MinhasTarefasView } from "./components/views/MinhasTarefasView";
 import { ChatView } from "./components/views/ChatView";
@@ -139,6 +140,7 @@ const SECTION_SCREEN_TIP_KEYS = {
   marketing: "Campanhas",
   "marketing-entregas": "Entregas",
   "marketing-despesas": "Despesas",
+  "marketing-feiras": "Relatório de Feiras",
   "marketing-home": "Visão Geral",
   "rh-overview": "Visão Geral",
   "rh-funcionarios": "Funcionários",
@@ -1057,6 +1059,7 @@ export default function App() {
   // otherwise reset its local useState.)
   const [fairImportState, setFairImportState] = useState({
     fairName: "",
+    fairCampaignId: "",
     phase: "idle",
     rows: [],
     importResult: null,
@@ -1436,7 +1439,8 @@ export default function App() {
         { id: "marketing-tarefas",        label: "Tarefas",      icon: ListTodo },
         { id: "marketing-fornecedores",   label: "Fornecedores", icon: Truck },
         { id: "marketing-compras",        label: "Compras",      icon: ShoppingCart },
-        { id: "marketing-despesas",       label: "Despesas",     icon: DollarSign }
+        { id: "marketing-despesas",       label: "Despesas",     icon: DollarSign },
+        { id: "marketing-feiras",         label: "Feiras",       icon: Tent }
       );
       groups.push({ label: "Marketing", items: mktItems });
     }
@@ -1599,7 +1603,7 @@ export default function App() {
     if (!isInsightsUser && section === "insights") {
       setSection("dashboard");
     }
-    const marketingOnly = ["marketing", "marketing-entregas", "marketing-tarefas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras"];
+    const marketingOnly = ["marketing", "marketing-entregas", "marketing-tarefas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras", "marketing-feiras"];
     if (!isMarketingUser && !isAgencia && !isDiretoria && marketingOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -1900,6 +1904,8 @@ export default function App() {
                     leads={leads}
                     users={users}
                     currentUser={currentUser}
+                    campaigns={campaigns}
+                    clients={clients}
                     state={fairImportState}
                     setState={setFairImportState}
                   />
@@ -1941,6 +1947,8 @@ export default function App() {
               onCompanyChange={setActiveCompany}
               leads={leads}
               users={users}
+              clients={clients}
+              onCreateClient={createClient}
               onOpenLead={setSelectedLead}
             />
           } />
@@ -2119,6 +2127,16 @@ export default function App() {
               ? <MarketingTarefasView user={currentUser} users={users} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
+          <Route path={ROUTES["marketing-feiras"]} element={
+            ((isMarketingUser && !isAgencia) || isDiretoria)
+              ? <FairReportView
+                  user={currentUser}
+                  campaigns={campaigns}
+                  leads={leads}
+                  activeCompany={activeCompany}
+                />
+              : <Navigate to={ROUTES.marketing} replace />
+          } />
           <Route path={ROUTES["marketing-despesas"]} element={
             ((isMarketingUser && !isAgencia) || isDiretoria)
               ? <DespesasView user={currentUser} users={users} campaigns={campaigns} />
@@ -2272,6 +2290,7 @@ export default function App() {
       <ErrorBoundary>
         <LeadDetailDrawer
           lead={selectedLead}
+          campaigns={campaigns}
           onClose={closeDrawer}
           onStageMoved={reopenLeadAfterMove}
           onUpdate={updateLead}

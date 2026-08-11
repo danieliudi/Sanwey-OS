@@ -11,10 +11,11 @@ import { daysSince } from "../../utils/date";
 // que é a versão empilhada de resumo executivo das 3 Visões Gerais). As
 // linhas "Genérico"/"Específico" são novas (mockup aprovado com o Daniel,
 // layout em 2 linhas, nunca misturadas).
-function MiniStat({ label, value, color }) {
+function MiniStat({ label, value, color, title }) {
   return (
     <div
       className="rounded-xl border"
+      title={title}
       style={{
         background: "var(--surface)",
         borderColor: "var(--border)",
@@ -193,7 +194,7 @@ export function KanbanAnalyticsPanel({ stages, records, getStageKey, getStageEnt
           <Eyebrow>Específico</Eyebrow>
           <div className="flex items-stretch gap-3 flex-wrap">
             {specificStats.map((s, i) => (
-              <MiniStat key={i} label={s.label} value={s.value} color={s.color} />
+              <MiniStat key={i} label={s.label} value={s.value} color={s.color} title={s.title} />
             ))}
           </div>
         </>

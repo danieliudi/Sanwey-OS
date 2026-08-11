@@ -24,6 +24,8 @@ import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { StageFieldInput } from "../shared/StageFieldInput";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { ClientSelector } from "../client/ClientSelector";
+import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
@@ -34,10 +36,21 @@ import { formatK } from "../../utils/currency";
 import { stageTextColor } from "../../utils/stage-colors";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
+import { localDateInputToISOString, toLocalISODate } from "../../utils/date";
 
 function daysInStage(dateStr) {
   if (!dateStr) return 0;
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+// Idade do caso pra exibição (aging badge/"Nesta etapa há") — prioridade
+// stageChangedAt (igual isStale/daysIdle em pipeline-metrics.js), caindo pra
+// negotiationStartedAt (retroativo, se preenchido na criação) e por último
+// createdAt. Normalmente stageChangedAt já vem sempre preenchido (caseToRow
+// default), então isso raramente muda o resultado hoje — é o mesmo fallback
+// final pedido pro resto da plataforma, aplicado aqui defensivamente.
+function caseAgeRef(kase) {
+  return kase.stageChangedAt || kase.negotiationStartedAt || kase.createdAt;
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
@@ -75,14 +88,20 @@ function PosVendaCardBody({ kase, owners, sourceLead, onOpenLead }) {
 // ── Novo caso (modal — funciona igual a partir do FAB, do botão do header,
 // do "+" de cada coluna e do "+" do acordeão mobile) ─────────────────────────
 
-function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClose }) {
+function QuickAddCaseModal({ stage, companyId, currentUser, users, clients = [], onCreateClient, onAdd, onClose }) {
   const [clientName, setClientName] = useState("");
+  // Vínculo com o cadastro central. Sem isto o caso nascia só com o texto
+  // livre e sumia da linha do tempo do cliente quando não havia negócio
+  // vinculado (buraco 3 da FASE 3).
+  const [clientId, setClientId] = useState(null);
+  const [quickCreateName, setQuickCreateName] = useState(null); // string | null
   const [value, setValue] = useState("");
   const [ownerIds, setOwnerIds] = useState(currentUser?.id ? [currentUser.id] : []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [customValues, setCustomValues] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [negotiationStartedAt, setNegotiationStartedAt] = useState("");
   const inputRef = useRef(null);
 
   const stageFields = useRHStageFields("posvenda");
@@ -117,11 +136,13 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
       const primaryOwner = ownerIds[0] || currentUser?.id || null;
       await onAdd({
         companyId,
+        clientId,
         clientName: clientName.trim(),
         value: parseFloat(value) || 0,
         ownerIds: ownerIds.length ? ownerIds : (primaryOwner ? [primaryOwner] : []),
         stage: stage.stageKey,
         customFields: customValues,
+        negotiationStartedAt: negotiationStartedAt ? localDateInputToISOString(negotiationStartedAt) : null,
       });
       onClose();
     } catch (err) {
@@ -148,6 +169,27 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
           <div className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>
             Etapa: <span style={{ color: stage.color }}>{stage.name}</span>
           </div>
+          {/* Cliente do cadastro central — mesmo ClientSelector do Funil
+              (LeadDetailDrawer). Opcional: caso avulso continua podendo ser
+              aberto só com o nome, mas quem vincula aqui passa a aparecer na
+              linha do tempo do cliente. */}
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-dim)" }}>
+              Cliente do cadastro
+            </label>
+            <ClientSelector
+              value={clientId}
+              clients={clients}
+              onChange={(id) => {
+                setClientId(id);
+                const picked = clients.find(c => c.id === id);
+                // Só preenche o nome quando ainda está vazio — não sobrescreve
+                // o que a pessoa já digitou.
+                if (picked && !clientName.trim()) setClientName(picked.name || "");
+              }}
+              onCreate={onCreateClient ? (query) => setQuickCreateName(query || "") : undefined}
+            />
+          </div>
           <input
             ref={inputRef}
             type="text"
@@ -171,6 +213,38 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
               placeholder="Responsável(is)"
             />
           )}
+          {/* Campo opcional e secundário — card discreto, não é o campo
+              principal do form (spec aprovada com o Daniel). */}
+          <div className="rounded-xl p-3" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+                Já está negociando com esse cliente?
+              </span>
+              <span
+                className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+                style={{ color: "var(--text-dim)", background: "var(--surface)", border: "1px solid var(--border)", letterSpacing: "0.04em" }}
+              >
+                opcional
+              </span>
+            </div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-dim)" }}>
+              Quando começou
+            </label>
+            <input
+              type="date"
+              value={negotiationStartedAt}
+              onChange={e => setNegotiationStartedAt(e.target.value)}
+              /* Campo retroativo por definição — data futura quebra
+                 "novo em 48h" (DashboardView), "Tempo no funil" (negativo) e
+                 a ordenação por mais recente. */
+              max={toLocalISODate(new Date())}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
+            />
+            <p className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+              Deixe em branco pra usar a data de hoje (padrão atual).
+            </p>
+          </div>
           {visibleFields.length > 0 && (
             <div className="pt-1 space-y-3">
               {visibleFields.map(f => (
@@ -216,15 +290,33 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
           </div>
         </form>
       </div>
+      {/* Fora do <form> acima — ClientQuickCreateModal tem form próprio, e
+          form aninhado não é HTML válido. */}
+      {quickCreateName !== null && (
+        <ClientQuickCreateModal
+          initialName={quickCreateName || clientName.trim()}
+          clients={clients}
+          onCreate={onCreateClient}
+          onDone={(created) => {
+            if (created?.id) {
+              setClientId(created.id);
+              if (!clientName.trim()) setClientName(created.name || "");
+            }
+            setQuickCreateName(null);
+          }}
+          onClose={() => setQuickCreateName(null)}
+        />
+      )}
     </div>
   );
 }
 
 // ── Detalhe do caso (drawer de 3 painéis — mesmo shell de Venda/RH/Comex) ───
 
-function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, users, currentUser, onClose, onMove, onDelete, onOpenLead, onUpdateCustomFields, onAddActivity, onUpdateActivity }) {
+function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, users, currentUser, clients = [], onCreateClient, onLinkClient, onClose, onMove, onDelete, onOpenLead, onUpdateCustomFields, onAddActivity, onUpdateActivity }) {
   const st = stages.find(s => s.stageKey === kase.stage) || { name: "—", color: "#8A8680" };
   const [moveError, setMoveError] = useState(null);
+  const [quickCreateName, setQuickCreateName] = useState(null); // string | null
 
   const stageFields = useRHStageFields("posvenda");
   const customDefs = stageFields.getFields(kase.stage);
@@ -241,7 +333,7 @@ function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, user
 
   const customValuesByKey = { ...(kase.customFields || {}), ...customDraft };
   const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
-  const days = daysInStage(kase.stageChangedAt);
+  const days = daysInStage(caseAgeRef(kase));
 
   const header = (
     <div className="min-w-0">
@@ -258,6 +350,36 @@ function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, user
 
   const left = (
     <>
+      {/* Cliente do cadastro central — mesma peça do Funil (LeadDetailDrawer).
+          É o que faz o caso aparecer na linha do tempo do cliente mesmo sem
+          negócio de origem vinculado. */}
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)" }}>Cliente</div>
+        <ClientSelector
+          value={kase.clientId}
+          clients={clients}
+          disabled={!canWrite}
+          onChange={(id) => onLinkClient?.(id)}
+          onCreate={canWrite && onCreateClient ? (query) => setQuickCreateName(query || "") : undefined}
+        />
+        {!kase.clientId && (
+          <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+            Sem cliente vinculado — este caso não entra na linha do tempo do cliente.
+          </div>
+        )}
+        {quickCreateName !== null && (
+          <ClientQuickCreateModal
+            initialName={quickCreateName || kase.clientName || ""}
+            clients={clients}
+            onCreate={onCreateClient}
+            onDone={(created) => {
+              if (created?.id) onLinkClient?.(created.id);
+              setQuickCreateName(null);
+            }}
+            onClose={() => setQuickCreateName(null)}
+          />
+        )}
+      </div>
       <div>
         <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Valor</div>
         <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{formatK(kase.value)}</div>
@@ -402,7 +524,7 @@ function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
       )}
       metaRight={(kase) => {
         const owners = (kase.ownerIds || []).map(id => usersById.get(id)).filter(Boolean);
-        const days = daysInStage(kase.stageChangedAt);
+        const days = daysInStage(caseAgeRef(kase));
         return (
           <>
             {owners.length > 0 && <AvatarStack users={owners} size={18} max={2} />}
@@ -430,7 +552,7 @@ function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
             const stage  = stages.find(s => s.stageKey === kase.stage);
             const color  = stage?.color || "var(--text-dim)";
             const owners = (kase.ownerIds || []).map(id => usersById.get(id)).filter(Boolean);
-            const days   = daysInStage(kase.stageChangedAt);
+            const days   = daysInStage(caseAgeRef(kase));
             return (
               <tr key={kase.id} onClick={() => onRowClick(kase)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
@@ -713,7 +835,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 
 // ── PosVendaView ──────────────────────────────────────────────────────────────
 
-export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, users, onOpenLead }) {
+export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, users, clients = [], onCreateClient, onOpenLead }) {
   const isGroupView = activeCompany === "all";
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
@@ -767,7 +889,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
       bucket[s.stageKey].cases = sortKanbanItems(bucket[s.stageKey].cases, getSortCriteria(s.stageKey), {
         value: c => c.value,
         name: c => c.clientName,
-        createdAt: c => c.createdAt,
+        createdAt: c => c.negotiationStartedAt || c.createdAt,
       });
     }
     return bucket;
@@ -1014,7 +1136,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
               onDeleteCard={canWrite ? deleteCase : undefined}
               deleteLabel="Excluir caso"
               deleteConfirmMessage="Excluir este caso de pós-venda? Não pode ser desfeito."
-              agingDays={daysInStage(kase.stageChangedAt)}
+              agingDays={daysInStage(caseAgeRef(kase))}
               showMoveOptions
             >
               <PosVendaCardBody kase={kase} owners={resolveOwners(kase.ownerIds)} sourceLead={leadsById.get(kase.leadId)} onOpenLead={onOpenLead} />
@@ -1135,7 +1257,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                             onDeleteCard={canWrite ? deleteCase : undefined}
                             deleteLabel="Excluir caso"
                             deleteConfirmMessage="Excluir este caso de pós-venda? Não pode ser desfeito."
-                            agingDays={daysInStage(kase.stageChangedAt)}
+                            agingDays={daysInStage(caseAgeRef(kase))}
                             showMoveOptions={false}
                           >
                             <PosVendaCardBody kase={kase} owners={resolveOwners(kase.ownerIds)} sourceLead={leadsById.get(kase.leadId)} onOpenLead={onOpenLead} />
@@ -1200,6 +1322,9 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           canWrite={canWrite}
           users={users}
           currentUser={user}
+          clients={clients}
+          onCreateClient={onCreateClient}
+          onLinkClient={(id) => updateCase(selectedCase.id, { clientId: id })}
           onClose={() => setSelectedCaseId(null)}
           onMove={(stageKey, onBlocked) => attemptStageChange(selectedCase.id, stageKey, onBlocked)}
           onDelete={() => deleteCase(selectedCase.id)}
@@ -1216,6 +1341,8 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           companyId={companyForBoard}
           currentUser={user}
           users={users}
+          clients={clients}
+          onCreateClient={onCreateClient}
           onAdd={createCase}
           onClose={() => setCreateModalStage(null)}
         />

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight, Ship, Handshake, Leaf } from "lucide-react";
+import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight, Ship, Handshake, Leaf, Wallet } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { ROUTES } from "../../constants/routes";
 import { useAI } from "../../hooks/use-ai";
@@ -9,6 +9,7 @@ import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
 import { useMarketingPurchaseRequests } from "../../hooks/use-marketing-purchase-requests";
 import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
+import { useMarketingBudgets } from "../../hooks/use-marketing-budgets";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
@@ -18,14 +19,22 @@ import { useComexImportOperations } from "../../hooks/use-comex-import-operation
 import { useComexExportOperations } from "../../hooks/use-comex-export-operations";
 import { usePosvenda } from "../../hooks/use-posvenda";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
+import { useCRMDespesas } from "../../hooks/use-crm-despesas";
+import { useAllLeadSamples } from "../../hooks/use-lead-samples";
+import { sumTravelExpenses, sumSampleCosts, calculateCAC, cacFormulaHint, periodCutoff } from "../../utils/cac";
 import { useEsgEmissionRecords, useEsgEmissionFactors, useEsgReports } from "../../hooks/use-esg-carbon";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
+import { StatCardGrid } from "../shared/StatCardGrid";
 import { EmptyState } from "../ui/EmptyState";
 import { formatK } from "../../utils/currency";
-import { formatDateBR } from "../../utils/date";
+import {
+  computeBudgetUsage, computeBudgetTotals, expenseFiscalDate, purchaseFiscalDate,
+  budgetRatioStatus, formatBudgetPct, BUDGET_STATUS_STYLE,
+} from "../../utils/marketing-budget";
+import { formatDateBR, parseDateInput } from "../../utils/date";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
 import { AnalyticsTab } from "./AnalyticsTab";
@@ -73,23 +82,25 @@ function fmtT(kg) {
   return `${((kg || 0) / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t`;
 }
 
+// `periodCutoff` mora em src/utils/cac.js (fonte única) — o Funil de Vendas
+// precisa do MESMO corte pros dois lados da divisão do CAC, então deixou de
+// ser função local desta tela.
 function filterByPeriod(leads, period) {
-  if (period === "all") return leads;
-  const now = Date.now();
-  let cutoff;
-  if (period === "30d") cutoff = now - 30 * 86400000;
-  else if (period === "60d") cutoff = now - 60 * 86400000;
-  else if (period === "90d") cutoff = now - 90 * 86400000;
-  else if (period === "ytd") cutoff = new Date(new Date().getFullYear(), 0, 1).getTime();
+  const cutoff = periodCutoff(period);
+  if (cutoff == null) return leads;
   return leads.filter(l => {
     const ts = new Date(l.stageChangedAt || l.createdAt).getTime();
     return !Number.isNaN(ts) && ts >= cutoff;
   });
 }
 
+// parseDateInput, não `new Date(iso)` cru: quem chama aqui passa data fiscal
+// (vencimento/nota), que chega como "AAAA-MM-DD" — lida como instante UTC, ela
+// volta um dia em BRT e o dia 1 de qualquer mês cairia no mês anterior.
 function isThisMonth(iso) {
   if (!iso) return false;
-  const d = new Date(iso);
+  const d = parseDateInput(iso);
+  if (Number.isNaN(d.getTime())) return false;
   const now = new Date();
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
@@ -209,6 +220,18 @@ export function ExecutiveDashboard({
     return { pipeline, forecast, wonValue, wonCount, stale, conversion };
   }, [metricsByCompany]);
 
+  // CAC agregado do Grupo inteiro no período selecionado — sem filtro de
+  // vendedor aqui (diferente do Funil de Vendas): soma tudo que a RLS já
+  // deixou visível pro usuário atual, mesmo espírito de `totals` acima (que
+  // também não filtra por vendedor). Ver src/utils/cac.js.
+  const cac = useMemo(() => {
+    if (!showComercialArea) return null;
+    const cutoff = periodCutoff(period);
+    const travelExpensesTotal = sumTravelExpenses(viagemDespesas, { periodStart: cutoff });
+    const sampleCostsTotal = sumSampleCosts(leadSamplesAll, { periodStart: cutoff });
+    return calculateCAC({ travelExpensesTotal, sampleCostsTotal, wonCount: totals.wonCount });
+  }, [showComercialArea, viagemDespesas, leadSamplesAll, period, totals.wonCount]);
+
   const maxPipeline = useMemo(
     () => Math.max(1, ...metricsByCompany.map(m => m.pipeline)),
     [metricsByCompany],
@@ -258,6 +281,7 @@ export function ExecutiveDashboard({
   const { tasks,        loading: loadingTasks }        = useMarketingTasks({});
   const { purchases,    loading: loadingPurchases }    = useMarketingPurchaseRequests({});
   const { expenses,     loading: loadingExpenses }     = useMarketingExpenses({});
+  const { budgets: marketingBudgets, loading: loadingBudgets } = useMarketingBudgets({ enabled: showMarketingArea });
   const { vagas, candidatos, loading: loadingRecrutamento } = useRHRecrutamento({});
   const { colaboradores,     loading: loadingColaboradores } = useRHColaboradores({});
   const { requests: feriasRequests, loading: loadingFerias } = useRHFeriasRequests({});
@@ -267,6 +291,10 @@ export function ExecutiveDashboard({
   const { operations: comexExports, loading: loadingComexExports } = useComexExportOperations({});
   const { cases: posvendaCases, loading: loadingPosvenda } = usePosvenda({});
   const { registros: viagens, loading: loadingViagens } = useCRMViagens({});
+  // CAC (aba Comercial → Visão geral) — só busca despesas/amostras quando a
+  // área Comercial está visível pro usuário atual. Ver src/utils/cac.js.
+  const { despesas: viagemDespesas } = useCRMDespesas({ enabled: showComercialArea });
+  const { samples: leadSamplesAll } = useAllLeadSamples({ enabled: showComercialArea });
   const { records: esgRecords, loading: loadingEsgRecords } = useEsgEmissionRecords({});
   const { factors: esgFactors, loading: loadingEsgFactors } = useEsgEmissionFactors();
   const { reports: esgReports, loading: loadingEsgReports } = useEsgReports({});
@@ -283,8 +311,43 @@ export function ExecutiveDashboard({
   const campanhasAtivas   = loadingCampaigns ? dash : campaigns.filter(c => c.stage !== "encerrado").length;
   const entregasAbertas   = loadingDeliverables ? dash : countOpen(deliverables, deliverableStages);
   const tarefasAtrasadas  = loadingTasks ? dash : tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && isOpenStage(t, taskStages)).length;
-  const comprasNoMes      = loadingPurchases ? dash : purchases.filter(p => isThisMonth(p.createdAt)).reduce((sum, p) => sum + (p.totalValue || 0), 0);
-  const despesasNoMes     = loadingExpenses ? dash : expenses.filter(e => isThisMonth(e.createdAt)).reduce((sum, e) => sum + (e.amount || 0), 0);
+  // Mês de uma despesa/compra = data fiscal (nota → vencimento → criação, o
+  // helper único de src/utils/marketing-budget.js), NUNCA createdAt: com a data
+  // de digitação, uma nota de dezembro lançada em janeiro entrava em "Despesas
+  // no mês" de janeiro enquanto o tile vizinho ("% consumido") a jogava em
+  // dezembro — dois números lado a lado com regras de data diferentes.
+  const comprasNoMes      = loadingPurchases ? dash : purchases.filter(p => isThisMonth(purchaseFiscalDate(p))).reduce((sum, p) => sum + (p.totalValue || 0), 0);
+  const despesasNoMes     = loadingExpenses ? dash : expenses.filter(e => isThisMonth(expenseFiscalDate(e))).reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  // Orçamento de Marketing — teto do ano corrente x consumido (pago + a pagar),
+  // pelo motor único de src/utils/marketing-budget.js. Escopo do Grupo inteiro
+  // (sem filtro de empresa), igual às outras métricas de Marketing desta tela;
+  // o filtro de período do topo é do Comercial e não vale aqui — teto é anual.
+  // `purchases` entra pra que o comprometido seja calculado corretamente caso
+  // a faixa passe a ser exibida; o "% consumido" abaixo usa `consumed`
+  // (pago + a pagar), que é literalmente o que o rótulo diz.
+  const currentYear = new Date().getFullYear();
+  const marketingBudget = useMemo(
+    () => computeBudgetTotals(computeBudgetUsage({
+      budgets: marketingBudgets, expenses, purchases, year: currentYear,
+    })),
+    [marketingBudgets, expenses, purchases, currentYear],
+  );
+  // Teto 0 conta como "sem teto": não existe percentual honesto contra zero.
+  const temTetoMarketing = !loadingBudgets && marketingBudget.count > 0 && marketingBudget.budgetAmount > 0;
+  // Mesmos limiares do resto da feature (budgetRatioStatus, 80%): abaixo disso
+  // o número fica neutro — cor só quando há sinal a dar. Nunca --accent pra
+  // alerta (muda por frente comercial em runtime). Rótulo e cor saem do MESMO
+  // número (formatBudgetPct): com Math.round, 79,6% imprimia "80%" sem cor de
+  // atenção e 100,4% imprimia "100%" já em vermelho.
+  const marketingBudgetRatio = temTetoMarketing ? marketingBudget.consumed / marketingBudget.budgetAmount : null;
+  const marketingBudgetStatus = budgetRatioStatus(marketingBudgetRatio);
+  const marketingPctConsumido = temTetoMarketing
+    ? formatBudgetPct(marketingBudgetRatio, marketingBudgetStatus)
+    : null;
+  const marketingBudgetColor = marketingBudgetStatus && marketingBudgetStatus !== "ok"
+    ? BUDGET_STATUS_STYLE[marketingBudgetStatus].color
+    : null;
 
   // RH
   const vagasPublicadas       = loadingRecrutamento ? dash : vagas.filter(v => v.stage === "publicada").length;
@@ -321,7 +384,18 @@ export function ExecutiveDashboard({
     },
     showMarketingArea && {
       id: "marketing", label: "Marketing", color: "#7C3AED",
-      value: campanhasAtivas, sub: `${tarefasAtrasadas} tarefa${tarefasAtrasadas !== 1 ? "s" : ""} atrasada${tarefasAtrasadas !== 1 ? "s" : ""}`,
+      value: campanhasAtivas,
+      // A entrada continua sendo 1 número + 1 sinal (regra 9 — a faixa nunca
+      // é redesenhada, só enriquecida). O sinal de orçamento tem precedência
+      // sobre o de tarefas quando dispara (>= 80% do teto): é o alerta mais
+      // caro de descobrir tarde, e a linha só comporta um.
+      // formatBudgetPct já devolve o "%" — nunca concatenar de novo (mesma
+      // classe do bug de "R$ R$" duplicado).
+      sub: marketingBudgetColor
+        ? <span style={{ color: marketingBudgetColor, fontWeight: 700 }}>
+            Orçamento {marketingPctConsumido} consumido
+          </span>
+        : `${tarefasAtrasadas} tarefa${tarefasAtrasadas !== 1 ? "s" : ""} atrasada${tarefasAtrasadas !== 1 ? "s" : ""}`,
     },
     showRHArea && {
       id: "rh", label: "RH", color: "#0EA5E9",
@@ -410,9 +484,15 @@ export function ExecutiveDashboard({
               área. Área nova = uma entrada nova aqui + uma aba, nunca um
               redesign da grade (regra 8 do CLAUDE.md). */}
           <div className="print:hidden">
+            {/* Colunas: 3 fixas no mobile (a 360px, 6 colunas cortavam o
+                rótulo — "Comerci…"), o layout de hoje a partir de lg. O
+                número de colunas do desktop é dinâmico (varia com as áreas
+                visíveis), então vai por custom property inline e a media
+                query mora no index.css — Tailwind JIT não gera classe
+                montada por template string em runtime. */}
             <div
-              className="grid gap-2.5"
-              style={{ gridTemplateColumns: `repeat(${Math.min(healthCards.length, 6) || 1}, 1fr)` }}
+              className="exec-health-band grid gap-2.5"
+              style={{ "--exec-health-cols": `repeat(${Math.min(healthCards.length, 6) || 1}, 1fr)` }}
             >
               {healthCards.map(h => (
                 <button
@@ -469,14 +549,24 @@ export function ExecutiveDashboard({
                 <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
                   Comercial
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                {/* 7 indicadores — abaixo de lg vira grade densa de 2 colunas
+                    com 4 visíveis + "+3 indicadores" (StatCardGrid); a partir
+                    de lg volta a ser exatamente a grade de 7 de hoje. Era o
+                    pior caso de altura no mobile da plataforma (~700px). */}
+                <StatCardGrid desktopClassName="md:grid-cols-3 lg:grid-cols-7">
                   <StatCard icon={HandCoins}    value={formatK(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
                   <StatCard icon={TrendingUp}   value={formatK(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
                   <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
                   <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
+                  {/* formatK em vez de formatBRL: em card estreito o valor
+                      cheio cortava. O hint da fórmula saiu do <div title>
+                      externo (que quebraria o cloneElement do StatCardGrid)
+                      pro `tooltip` do próprio StatCard — HelpTooltip é o
+                      padrão da plataforma pra hint de rótulo de StatCard. */}
+                  <StatCard icon={Wallet}       value={cac != null ? formatK(cac) : "—"} label="CAC médio" tooltip={cacFormulaHint(period)} sublabel="Aquisição por negócio ganho" />
                   <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
                   <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
-                </div>
+                </StatCardGrid>
               </div>
 
               <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto mt-4" style={{ borderColor: "var(--border)" }}>
@@ -524,6 +614,15 @@ export function ExecutiveDashboard({
                 { v: tarefasAtrasadas,               l: "Tarefas atrasadas" },
                 { v: loadingPurchases ? dash : formatK(comprasNoMes), l: "Compras no mês" },
                 { v: loadingExpenses ? dash : formatK(despesasNoMes), l: "Despesas no mês" },
+                // Sem teto cadastrado, "—" — nunca 0% (que leria como "nada
+                // consumido") nem divisão por zero.
+                { v: temTetoMarketing ? formatK(marketingBudget.budgetAmount) : dash, l: `Orçamento ${currentYear}` },
+                {
+                  v: temTetoMarketing
+                    ? <span style={marketingBudgetColor ? { color: marketingBudgetColor } : undefined}>{marketingPctConsumido}</span>
+                    : dash,
+                  l: (temTetoMarketing || loadingBudgets) ? "% consumido" : "% consumido · sem teto definido",
+                },
               ]}
             />
           )}

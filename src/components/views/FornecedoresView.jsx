@@ -44,6 +44,10 @@ function SupplierModal({ supplier, onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim()) { setError("Nome e e-mail são obrigatórios."); return; }
+    // Sem empresa o INSERT bate na RLS (`company_ids && current_user_companies()`
+    // é FALSE pra array vazio) e o usuário só via o erro cru do Postgres. Mesmo
+    // guard que Campanhas/Entregas/Tarefas de Marketing já faziam.
+    if (form.companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -90,7 +94,7 @@ function SupplierModal({ supplier, onSave, onClose }) {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Empresas atendidas</label>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Empresas atendidas *</label>
             <div className="flex gap-2">
               {COMPANY_IDS.map(id => (
                 <button key={id} type="button" onClick={() => toggleCompany(id)}

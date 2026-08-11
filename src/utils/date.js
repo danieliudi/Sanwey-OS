@@ -3,11 +3,24 @@ const dateBR = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digi
 // Colunas `date` do Postgres chegam como "AAAA-MM-DD" puro; `new Date(...)`
 // interpretaria isso como meia-noite UTC, o que "volta" um dia em fusos
 // negativos (Brasil). Datas com hora (timestamptz) seguem o parsing normal.
+// `new Date(ano, mes, dia)` mapeia ano de 0 a 99 pro século 20 — verificado:
+// `new Date(26, 7, 10)` => 1926-08-10. Um <input type="date"> normaliza "26"
+// digitado no campo de ano pra "0026-08-10", então o valor era gravado como
+// 1926 silenciosamente. `setFullYear` não faz essa "correção": grava o ano
+// literal. Todo ponto que constrói data local a partir de componentes passa
+// por aqui.
+function localDateFromParts(year, monthIndex, day) {
+  const d = new Date(2000, 0, 1);
+  d.setFullYear(year, monthIndex, day);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 export function parseDateInput(input) {
   if (input instanceof Date) return input;
   const s = String(input);
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (m) return localDateFromParts(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return new Date(s);
 }
 
@@ -78,5 +91,7 @@ export function localDateInputToISOString(dateStr) {
   if (!dateStr) return null;
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr));
   if (!m) return new Date(dateStr).toISOString();
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toISOString();
+  // localDateFromParts (acima) em vez de `new Date(y, m, d)`: ano de 0 a 99
+  // viraria 1900-1999.
+  return localDateFromParts(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toISOString();
 }

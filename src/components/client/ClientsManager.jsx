@@ -1,15 +1,16 @@
 import React, { useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Users, X, Database, History } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
-import { ConnectionsPanel } from "../shared/ConnectionsPanel";
-import { useClientConnections } from "../../hooks/use-client-connections";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { EmptyState } from "../ui/EmptyState";
+import { useClientTimeline } from "../../hooks/use-client-timeline";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { CLIENT_CATEGORIES, clientCategoryLabel, clientCategoryColor } from "../../constants/client-categories";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, parseDateInput } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
-import { STATUS_VISITA } from "../../utils/viagens";
+import { activityTypeMeta } from "../../utils/activity-types";
 import { findClientByCnpj, DuplicateClientError } from "../../utils/client-dedup";
 
 const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
@@ -17,13 +18,6 @@ const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","
 const EMPTY = { name: "", category: "", city: "", state: "", cnpj: "", companyIds: [], notes: "" };
 
 const STAGE_LABELS = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
-
-const VIAGEM_STATUS_BADGE = {
-  planejado:     { bg: "var(--surface-alt)", color: "var(--text-dim)" },
-  realizado:     { bg: "var(--success-bg)",  color: "var(--success)" },
-  nao_realizado: { bg: "var(--danger-bg)",   color: "var(--danger)" },
-  cancelado:     { bg: "var(--surface-alt)", color: "var(--text-faint)" },
-};
 
 // Data em que o negócio realmente fechou: data_fechamento (custom field da
 // etapa "ganho") tem prioridade, caindo pra stageChangedAt quando o campo
@@ -54,6 +48,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
   const [editing, setEditing] = useState(null); // null = novo, obj = editando
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [activeTab, setActiveTab] = useState("dados");
   const [sortCol, setSortCol] = useState(null); // null = ordem natural
@@ -156,9 +151,10 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     setPage(0);
   };
 
-  const openNew = () => { setEditing(null); setForm(EMPTY); setActiveTab("dados"); setModalOpen(true); };
+  const openNew = () => { setEditing(null); setForm(EMPTY); setSaveError(null); setActiveTab("dados"); setModalOpen(true); };
   const openDetail = (c, tab = "dados") => {
     setEditing(c);
+    setSaveError(null);
     setForm({
       name: c.name || "", category: c.category || "", city: c.city || "",
       state: c.state || "", cnpj: c.cnpj || "", companyIds: c.companyIds || [], notes: c.notes || "",
@@ -177,6 +173,10 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
 
   const save = async () => {
     if (!form.name.trim() || duplicateMatch) return;
+    // `clients_insert`/`clients_update` exigem `company_ids && current_user_companies()`
+    // — com o array vazio o overlap é FALSE e o usuário só via o erro cru da RLS.
+    if (form.companyIds.length === 0) { setSaveError("Selecione ao menos uma empresa relacionada."); return; }
+    setSaveError(null);
     setSaving(true);
     try {
       if (editing) await onUpdate?.(editing.id, form);
@@ -305,7 +305,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                           abria o perfil quando dealCount>0, deixando cliente
                           sem negócio ainda sem nenhuma forma de abrir o
                           próprio cadastro pelo nome (achado de usabilidade). */}
-                      <button onClick={() => openDetail(c, dealCount > 0 ? "conexoes" : "dados")}
+                      <button onClick={() => openDetail(c, dealCount > 0 ? "historico" : "dados")}
                         className="font-semibold text-left inline-flex items-center gap-1"
                         style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                         {c.name}
@@ -373,7 +373,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                 <div key={c.id} className="rounded-lg border p-3" style={{ borderColor: "var(--border)" }}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <button onClick={() => openDetail(c, dealCount > 0 ? "conexoes" : "dados")}
+                      <button onClick={() => openDetail(c, dealCount > 0 ? "historico" : "dados")}
                         className="font-semibold text-left inline-flex items-center gap-1"
                         style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 14 }}>
                         {c.name}
@@ -471,6 +471,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         setForm={setForm}
         saving={saving}
         onSave={save}
+        saveError={saveError}
         duplicateMatch={duplicateMatch}
         onUseDuplicate={(c) => { setModalOpen(false); openDetail(c); }}
         activeTab={activeTab}
@@ -514,60 +515,15 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
 }
 
 function ClientDetailModal({
-  open, onClose, editing, form, setForm, saving, onSave,
+  open, onClose, editing, form, setForm, saving, onSave, saveError,
   duplicateMatch, onUseDuplicate,
   activeTab, onTabChange, toggleCompany, inputStyle, onFocusRed, onBlurRed,
   stats, dealsByClient, onOpenLead, onOpenViagem,
 }) {
-  const { data, loading } = useClientConnections(editing?.id);
-
   const tabs = editing
-    ? [{ id: "dados", label: "Dados" }, { id: "conexoes", label: "Conexões" }]
+    ? [{ id: "dados", label: "Dados" }, { id: "historico", label: "Histórico" }]
     : [{ id: "dados", label: "Dados" }];
   const tab = editing ? activeTab : "dados";
-
-  const groups = [
-    {
-      key: "negocios",
-      label: "Negócios (Funil de Vendas)",
-      color: "var(--accent)",
-      items: data?.negocios || [],
-      renderItem: (item) => ({
-        title: item.company || "Negócio sem nome",
-        badgeLabel: STAGE_LABELS[item.stage] || item.stage,
-        meta: formatBRL(item.value || 0),
-      }),
-      // A RPC get_client_connections só devolve colunas parciais (id/company/
-      // stage/value/owner/created_at) — resolve o lead COMPLETO em
-      // dealsByClient (já carregado pelo componente pai a partir de `leads`)
-      // antes de abrir, senão LeadDetailDrawer quebra por falta de
-      // companyId/clientId/customFields/etc.
-      onOpenItem: (item) => {
-        const fullLead = dealsByClient?.get(editing?.id)?.find(l => l.id === item.id);
-        onOpenLead?.(fullLead || item);
-        onClose();
-      },
-      emptyLabel: "Nenhum negócio vinculado a este cliente ainda.",
-    },
-    {
-      key: "viagens",
-      label: "Viagens & Despesas",
-      color: "#0891B2",
-      items: data?.viagens || [],
-      renderItem: (item) => {
-        const badge = VIAGEM_STATUS_BADGE[item.status] || VIAGEM_STATUS_BADGE.planejado;
-        return {
-          title: item.destino_planejado || "Viagem sem destino",
-          badgeLabel: STATUS_VISITA[item.status]?.label || item.status,
-          badgeBg: badge.bg,
-          badgeColor: badge.color,
-          meta: formatDateBR(item.data_planejada),
-        };
-      },
-      onOpenItem: (item) => { onOpenViagem?.(item.id); onClose(); },
-      emptyLabel: "Nenhuma viagem vinculada a este cliente ainda.",
-    },
-  ];
 
   return (
     <EntityProfileModal
@@ -643,7 +599,7 @@ function ClientDetailModal({
           </div>
 
           <div>
-            <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Empresas relacionadas</label>
+            <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Empresas relacionadas *</label>
             <div className="flex flex-wrap gap-2">
               {COMPANY_IDS.map(id => {
                 const co = COMPANIES[id];
@@ -657,6 +613,11 @@ function ClientDetailModal({
                 );
               })}
             </div>
+            {saveError && (
+              <div className="mt-2" style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
+                {saveError}
+              </div>
+            )}
           </div>
 
           <div>
@@ -706,13 +667,409 @@ function ClientDetailModal({
         </div>
       )}
 
-      {tab === "conexoes" && editing && (
-        <ConnectionsPanel
-          groups={groups}
-          loading={loading}
-          introText="Conexões deste cliente em outras telas da plataforma."
+      {tab === "historico" && editing && (
+        <ClientTimelinePanel
+          clientId={editing.id}
+          deals={dealsByClient?.get(editing.id) || []}
+          onOpenLead={onOpenLead}
+          onOpenViagem={onOpenViagem}
+          onClose={onClose}
         />
       )}
     </EntityProfileModal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Linha do tempo do cliente (FASE 3, nível B)
+//
+// A aba antes chamada "Conexões" era DUAS listas de links (Negócios,
+// Viagens) — "onde este cliente aparece", não "o que já aconteceu com ele".
+// Agora é uma linha do tempo cronológica única, atravessando todos os
+// negócios dele, alimentada por `get_client_timeline` (hook
+// use-client-timeline.js). A navegação que as duas listas davam continua:
+// a etiqueta do negócio abre o negócio, e o item de visita abre a viagem.
+//
+// Mantido LOCAL a este arquivo de propósito — regra 4 do CLAUDE.md: extrai
+// pra shared/ só na 3ª ocorrência real de uma linha do tempo, e esta é a 1ª.
+// ─────────────────────────────────────────────────────────────────────────
+
+// `kind` da RPC → tipo de activity, pra reaproveitar rótulo/ícone de
+// utils/activity-types.js (mesma fonte que o feed do negócio usa) em vez de
+// repetir o switch aqui. `email`/`proposta` já mapeados de propósito: os dois
+// tipos existem no lado da escrita (email_sent/proposal_generated) e passam a
+// aparecer sozinhos quando a RPC começar a devolvê-los, sem tocar nesta tela.
+const TIMELINE_KIND_ACTIVITY = {
+  comentario: "comment",
+  nota:       "note",
+  etapa:      "stage",
+  follow_up:  "follow_up_set",
+  visita:     "visit",
+  amostra:    "sample_sent",
+  anexo:      "attachment",
+  posvenda:   "posvenda_case",
+  email:      "email_sent",
+  proposta:   "proposal_generated",
+};
+// Faturamento é marco anual de client_billing_history, não um tipo de
+// activity — por isso é o único que não vem de activity-types.js.
+const FATURAMENTO_META = { label: "Faturamento", icon: Receipt };
+
+function timelineKindMeta(kind) {
+  if (kind === "faturamento") return FATURAMENTO_META;
+  return activityTypeMeta(TIMELINE_KIND_ACTIVITY[kind]);
+}
+
+function normalizeText(s) {
+  return String(s || "").replace(/\s+/g, " ").trim();
+}
+function shortText(s, max = 150) {
+  const t = normalizeText(s);
+  if (!t) return "";
+  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
+}
+
+// Texto COMPLETO do item (a truncagem acontece no render, em TimelineItem, que
+// precisa saber se cortou pra pendurar o `title` nativo). Casos que precisam de
+// tratamento além do `detail` que a RPC já monta:
+//  - etapa: a RPC resolve o nome de exibição a partir de rh_pipeline_stages
+//    (configurável por empresa) e manda em meta.from_label/to_label; o
+//    catálogo padrão do bundle vira só fallback, e a chave crua o último.
+//  - visita cancelada/não realizada: o título já diz o status; o que falta na
+//    tela é o MOTIVO, que a RPC manda em meta.motivo_divergencia.
+//  - valores (amostra/posvenda/faturamento): vêm crus em `meta` de propósito
+//    — formatBRL já inclui "R$ ", nunca concatenar.
+//  - follow_up: `meta.date` é "AAAA-MM-DD"; formatDateBR passa por
+//    parseDateInput e não erra o fuso.
+function timelineDetail(item) {
+  const meta = item.meta || {};
+  const money = (v) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) || Number(v) === 0 ? null : formatBRL(v));
+
+  if (item.kind === "etapa" && meta.to) {
+    const stageName = (key, label) => label || STAGE_LABELS[key] || key;
+    const from = meta.from ? stageName(meta.from, meta.from_label) : null;
+    const to = stageName(meta.to, meta.to_label);
+    const base = from ? `De "${from}" para "${to}"` : `Entrou em "${to}"`;
+    return meta.note ? `${base} — ${meta.note}` : base;
+  }
+  if (item.kind === "visita") {
+    const naoAconteceu = meta.status === "cancelado" || meta.status === "nao_realizado";
+    const motivo = naoAconteceu && meta.motivo_divergencia ? `Motivo: ${meta.motivo_divergencia}` : null;
+    return [motivo, item.detail].filter(Boolean).join(" · ");
+  }
+  if (item.kind === "follow_up" && meta.date) {
+    return [`Agendado para ${formatDateBR(meta.date)}`, item.detail].filter(Boolean).join(" · ");
+  }
+  if (item.kind === "amostra") {
+    const custo = money(meta.cost);
+    return [item.detail, custo && `Custo ${custo}`].filter(Boolean).join(" · ");
+  }
+  if (item.kind === "posvenda") {
+    return [item.detail, money(meta.value)].filter(Boolean).join(" · ");
+  }
+  if (item.kind === "faturamento") {
+    return [money(meta.total_value), item.detail].filter(Boolean).join(" · ");
+  }
+  return item.detail;
+}
+
+const LEAD_BADGE_STYLE = {
+  fontSize: 10, fontWeight: 700, lineHeight: 1.6, padding: "1px 7px", borderRadius: 999,
+  background: "var(--surface-alt)", color: "var(--text-dim)",
+  maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+};
+
+function TimelineItem({ item, isLast, isFuture = false, deals, onOpenLead, onOpenViagem, onClose }) {
+  const { icon: Icon } = timelineKindMeta(item.kind);
+  // Interação x evento interno: quem manda é `category` da RPC (fonte única
+  // da taxonomia aprovada), não o `kind` do activity-types. O que ainda VAI
+  // acontecer (visita agendada, follow-up futuro) nunca conta como interação
+  // já realizada — a tela responde "o que já tentamos", não "o que vamos".
+  const isInteraction = item.category === "interacao" && !isFuture;
+  const fullDetail = normalizeText(timelineDetail(item));
+  const detail = shortText(fullDetail);
+  const truncated = detail !== fullDetail;
+  // Nota legada de leads.notes não tem autor — nunca inventar um. Marco de
+  // faturamento não tem ator nenhum, então nem mostra o slot.
+  const actor = item.kind === "faturamento" ? null : (item.actor_name || "autor não registrado");
+  // Mesmo cuidado que a aba antiga tinha: a linha do tempo devolve só o id do
+  // negócio; o LeadDetailDrawer precisa do lead COMPLETO (companyId,
+  // customFields...). Sem o lead resolvido, a etiqueta fica só informativa.
+  const fullLead = item.lead_id ? deals.find(l => l.id === item.lead_id) : null;
+  const viagemId = item.kind === "visita" ? item.meta?.viagemId : null;
+  const openViagem = viagemId && onOpenViagem
+    ? () => { onOpenViagem(viagemId); onClose?.(); }
+    : null;
+
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+      {/* Trilho: bolinha + linha vertical de conexão */}
+      <div style={{ position: "relative", width: 11, flexShrink: 0 }}>
+        {!isLast && (
+          <span aria-hidden style={{ position: "absolute", left: 5, top: 18, bottom: 0, width: 1, background: "var(--border)" }} />
+        )}
+        <span
+          aria-hidden
+          title={isFuture ? "Ainda não aconteceu" : (isInteraction ? "Interação com o cliente" : "Evento interno")}
+          style={{
+            position: "absolute", top: 4, left: 0, width: 11, height: 11, borderRadius: "50%",
+            boxSizing: "border-box",
+            background: isInteraction ? "var(--accent)" : "var(--surface)",
+            border: isInteraction ? "none" : "1.5px solid var(--border)",
+          }}
+        />
+      </div>
+
+      <div style={{ minWidth: 0, flex: 1, paddingBottom: 14 }}>
+        <div className="flex items-center flex-wrap" style={{ gap: 6 }}>
+          <Icon size={12} style={{ color: "var(--text-dim)", flexShrink: 0 }} aria-hidden />
+          {openViagem ? (
+            <button type="button" onClick={openViagem} title="Abrir a viagem"
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left",
+                       fontSize: 12.5, fontWeight: 600, color: "var(--accent)", overflowWrap: "anywhere" }}>
+              {item.title}
+            </button>
+          ) : (
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: isInteraction ? "var(--text)" : "var(--text-dim)", overflowWrap: "anywhere" }}>
+              {item.title}
+            </span>
+          )}
+          {/* A bolinha é a ÚNICA marca da taxonomia interação x evento interno,
+              e ela é aria-hidden + só tem `title` (que não abre no toque). Este
+              slot carrega essa informação — repetir o rótulo do tipo aqui seria
+              redundante com item.title, que já diz "Comentário"/"Etapa"/etc. */}
+          <span className="sr-only">
+            {isFuture ? "Agendado, ainda não aconteceu" : (isInteraction ? "Interação com o cliente" : "Evento interno")}
+          </span>
+          {item.lead_name && (
+            fullLead ? (
+              <button type="button" onClick={() => { onOpenLead?.(fullLead); onClose?.(); }}
+                title={`Abrir negócio "${item.lead_name}"`}
+                style={{ ...LEAD_BADGE_STYLE, border: "none", cursor: "pointer" }}>
+                {item.lead_name}
+              </button>
+            ) : (
+              <span title={item.lead_name} style={LEAD_BADGE_STYLE}>{item.lead_name}</span>
+            )
+          )}
+        </div>
+        {/* `title` só quando o texto foi de fato cortado: comentário e resumo de
+            visita são as fontes mais ricas de "o que já tentamos" e o conteúdo é
+            o item, não o rótulo — sem isso o resto some sem afordância nenhuma.
+            `title` nativo é o padrão da plataforma pra hint em elemento que já
+            existe (regra 1 do CLAUDE.md). */}
+        <div
+          title={truncated ? fullDetail : undefined}
+          style={{ fontSize: 11.5, color: "var(--text-dim)", lineHeight: 1.55, marginTop: 2, overflowWrap: "anywhere" }}
+        >
+          {formatDateBR(item.ts)}
+          {actor && <> · <span style={{ color: item.actor_name ? "var(--text-dim)" : "var(--text-faint)" }}>{actor}</span></>}
+          {detail && <> · {detail}</>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ClientTimelinePanel({ clientId, deals = [], onOpenLead, onOpenViagem, onClose }) {
+  const { items, loading, error } = useClientTimeline(clientId);
+  const [onlyInteractions, setOnlyInteractions] = useState(false);
+
+  // Histórico x agendado: visita ainda não realizada entra com ts =
+  // data_planejada (data FUTURA). Como a lista é ts DESC, ela aparecia no TOPO
+  // de uma aba chamada "Histórico", sob um cabeçalho de ano no futuro e com o
+  // mesmo peso de uma visita que já aconteceu — e contava em "Só interações",
+  // ou seja, virava "tentativa" que ainda não existiu. Separado aqui.
+  const { passados, futuros } = useMemo(() => {
+    const now = Date.now();
+    const pass = [], fut = [];
+    for (const it of items) {
+      const d = parseDateInput(it.ts);
+      (!Number.isNaN(d.getTime()) && d.getTime() > now ? fut : pass).push(it);
+    }
+    // fut vem em ts DESC (mais distante primeiro); o mais próximo é o que
+    // interessa primeiro numa lista de "o que vem por aí".
+    return { passados: pass, futuros: fut.slice().reverse() };
+  }, [items]);
+
+  const interacoesPassadas = useMemo(
+    () => passados.filter(i => i.category === "interacao"), [passados]);
+
+  const visible = onlyInteractions ? interacoesPassadas : passados;
+  const visibleFuturos = onlyInteractions ? futuros.filter(i => i.category === "interacao") : futuros;
+
+  // Agrupamento por ano — a RPC já entrega ordenado por ts DESC, então basta
+  // quebrar quando o ano muda. parseDateInput (nunca `new Date(string)` cru,
+  // regra do CLAUDE.md) resolve tanto timestamptz quanto data pura.
+  const years = useMemo(() => {
+    const out = [];
+    for (const it of visible) {
+      const d = parseDateInput(it.ts);
+      const year = Number.isNaN(d.getTime()) ? "—" : d.getFullYear();
+      if (!out.length || out[out.length - 1].year !== year) out.push({ year, items: [] });
+      out[out.length - 1].items.push(it);
+    }
+    return out;
+  }, [visible]);
+
+  if (loading) {
+    return <div className="text-xs text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando histórico…</div>;
+  }
+  if (error) {
+    // Bloqueio de acesso não é erro do sistema — a causa mais provável de cair
+    // aqui é o gate da RPC (usuário sem empresa vinculada no perfil), que se
+    // resolve no cadastro, não na tela. `--danger` fica reservado pra falha
+    // real de rede/servidor.
+    const isPermission = /sem permiss/i.test(error);
+    return isPermission ? (
+      <div className="text-xs rounded-lg" style={{ background: "var(--surface-alt)", color: "var(--text-dim)", padding: "10px 12px", lineHeight: 1.5 }}>
+        Você não tem acesso ao histórico deste cliente. Se ele deveria aparecer, o mais
+        provável é que seu usuário ainda não esteja vinculado a nenhuma frente comercial —
+        peça pro admin vincular em Usuários.
+      </div>
+    ) : (
+      <div className="text-xs rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "10px 12px", lineHeight: 1.5 }}>
+        Não foi possível carregar o histórico deste cliente: {error}
+      </div>
+    );
+  }
+
+  // Estado vazio honesto: a base está praticamente vazia hoje, então quem
+  // abre isto pela primeira vez PRECISA entender que a tela não está
+  // quebrada — ela ainda não tem o que mostrar, e o que passa a alimentá-la.
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        icon={History}
+        title="O histórico deste cliente começa agora"
+        description={
+          <>
+            <p>
+              Nenhum registro deste cliente nas frentes comerciais que você acompanha. Esta
+              linha do tempo se constrói sozinha, conforme o time trabalha — é ela que
+              responde “o que já tentamos com esse cliente?” daqui a um ou dois anos.
+            </p>
+            <p className="mt-2.5">Passam a aparecer aqui, sem ninguém precisar preencher nada:</p>
+            <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+              {["visita", "comentario", "amostra", "follow_up", "email", "proposta", "posvenda"].map(kind => {
+                const { label, icon: Icon } = timelineKindMeta(kind);
+                return (
+                  <span key={kind} className="inline-flex items-center gap-1"
+                    style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+                             background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+                    <Icon size={11} /> {label}
+                  </span>
+                );
+              })}
+            </div>
+            <p className="mt-2.5" style={{ fontSize: 12, color: "var(--text-faint)" }}>
+              Mudança de etapa e anexo também entram, como pano de fundo — no filtro “Tudo”.
+            </p>
+            {deals.length > 0 && (
+              <p className="mt-2.5" style={{ fontSize: 12 }}>
+                {deals.length === 1 ? "Há 1 negócio vinculado" : `Há ${deals.length} negócios vinculados`} a
+                este cliente, ainda sem nenhum registro de interação.
+              </p>
+            )}
+          </>
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col" style={{ gap: 12 }}>
+      {/* Não prometer completude que o painel não pode entregar: o recorte da
+          RPC é por frente comercial (current_user_companies), então um cliente
+          pode ter negócio numa frente que este usuário não acompanha. */}
+      <div className="text-xs" style={{ color: "var(--text-dim)", lineHeight: 1.5 }}>
+        Registros deste cliente nas frentes comerciais que você acompanha, atravessando
+        todos os negócios dele.
+      </div>
+
+      {/* Filtro: os eventos internos são pano de fundo — misturados com o
+          mesmo peso, a linha vira ruído. Bolinha cheia = interação,
+          bolinha vazada = evento interno (ou ainda não aconteceu). */}
+      {/* maxWidth 100%: em 360px o par de botões cabe, mas o clipping é a
+          degradação aceitável — nunca empurrar a largura do modal. */}
+      <div className="inline-flex rounded-lg border overflow-hidden self-start"
+        style={{ borderColor: "var(--border)", background: "var(--surface)", maxWidth: "100%" }} role="tablist">
+        <ViewToggleButton active={!onlyInteractions} onClick={() => setOnlyInteractions(false)}
+          icon={List} label={`Tudo (${passados.length})`} />
+        <ViewToggleButton active={onlyInteractions} onClick={() => setOnlyInteractions(true)}
+          icon={MessageCircle} label={`Só interações (${interacoesPassadas.length})`} />
+      </div>
+
+      {/* Agendado — fora do agrupamento por ano e fora da contagem acima: é o
+          que AINDA VAI acontecer, não histórico. */}
+      {visibleFuturos.length > 0 && (
+        <div className="flex flex-col">
+          <div className="flex items-center" style={{ gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", color: "var(--text-dim)" }}>
+              AGENDADO
+            </span>
+            <span aria-hidden style={{ flex: 1, height: 1, background: "var(--border)" }} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)" }}>
+              {visibleFuturos.length}
+            </span>
+          </div>
+          {visibleFuturos.map((item, i) => (
+            <TimelineItem
+              key={`fut-${item.kind}-${item.ts}-${item.lead_id || ""}-${i}`}
+              item={item}
+              isLast={i === visibleFuturos.length - 1}
+              isFuture
+              deals={deals}
+              onOpenLead={onOpenLead}
+              onOpenViagem={onOpenViagem}
+              onClose={onClose}
+            />
+          ))}
+        </div>
+      )}
+
+      {visible.length === 0 ? (
+        <div className="text-xs rounded-lg" style={{ background: "var(--surface-alt)", color: "var(--text-dim)", padding: "12px", lineHeight: 1.5 }}>
+          {passados.length === 0 ? (
+            <>Nada aconteceu com este cliente ainda — só o que está agendado acima.</>
+          ) : (
+            <>
+              Nenhuma interação com o cliente registrada ainda — só eventos internos.{" "}
+              <button type="button" onClick={() => setOnlyInteractions(false)}
+                className="font-semibold underline cursor-pointer"
+                style={{ background: "none", border: "none", padding: 0, color: "var(--accent)" }}>
+                Ver tudo
+              </button>
+            </>
+          )}
+        </div>
+      ) : (
+        years.map((group, gi) => (
+          <div key={group.year} className="flex flex-col">
+            {/* Marco de ano */}
+            <div className="flex items-center" style={{ gap: 8, marginBottom: 10, marginTop: gi === 0 ? 0 : 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", color: "var(--text-dim)" }}>
+                {group.year}
+              </span>
+              <span aria-hidden style={{ flex: 1, height: 1, background: "var(--border)" }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)" }}>
+                {group.items.length}
+              </span>
+            </div>
+            {group.items.map((item, i) => (
+              <TimelineItem
+                key={`${item.kind}-${item.ts}-${item.lead_id || ""}-${i}`}
+                item={item}
+                isLast={i === group.items.length - 1}
+                deals={deals}
+                onOpenLead={onOpenLead}
+                onOpenViagem={onOpenViagem}
+                onClose={onClose}
+              />
+            ))}
+          </div>
+        ))
+      )}
+    </div>
   );
 }

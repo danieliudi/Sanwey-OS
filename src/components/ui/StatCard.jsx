@@ -6,7 +6,16 @@ import { HelpTooltip } from "./HelpTooltip";
 // (DashboardView.jsx) — o card com ícone continua o padrão em todo o
 // resto da plataforma (regra 4 do CLAUDE.md: StatCard não é reescrito
 // globalmente por causa de uma tela só).
-export function StatCard({ icon: Icon, value, label, sublabel, accent, compact = false, trend, tooltip, valueColor, variant = "card" }) {
+// dense — modo compacto de mobile, aprovado 10/08/2026 (revalidação a 360px).
+// NÃO confundir com `compact`, que só reduz a fonte do número e continua
+// valendo no desktop. `dense` é responsivo por CSS: abaixo de md encolhe
+// padding/ícone/número e esconde o sublabel (que vira `title` no ícone);
+// a partir de md o card volta a ser exatamente o de hoje. É CSS puro de
+// propósito — sem listener de resize, sem piscar na primeira renderização.
+// O corte é em md (768px), não lg, pra casar com o breakpoint de coluna que
+// as telas já usavam — em lg, tablet retrato ficaria com card denso numa
+// coluna larguíssima, e o StatCardGrid esconderia cards que antes apareciam.
+export function StatCard({ icon: Icon, value, label, sublabel, accent, compact = false, dense = false, trend, tooltip, valueColor, variant = "card" }) {
   if (variant === "ruler") {
     return (
       <div className="cursor-default">
@@ -56,26 +65,28 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
   }
   return (
     <div
-      className="p-5 rounded-lg border transition-all duration-150 hover:shadow-md cursor-default"
+      className={`${dense ? "h-full p-2.5 md:p-5" : "p-5"} rounded-lg border transition-all duration-150 hover:shadow-md cursor-default`}
       style={{
         background: accent || "var(--surface)",
         borderColor: accent ? "transparent" : "var(--border)",
         boxShadow: accent ? "none" : "var(--shadow-card)",
       }}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className={`flex items-center justify-between ${dense ? "mb-2 md:mb-4" : "mb-4"}`}>
         <div
-          className="rounded-sm flex items-center justify-center"
-          style={{
-            width: 36, height: 36,
-            background: accent ? "rgba(255,255,255,0.15)" : "var(--surface-alt)",
-          }}
+          className={`${dense ? "w-5 h-5 md:w-9 md:h-9" : "w-9 h-9"} rounded-sm flex items-center justify-center shrink-0`}
+          title={dense && sublabel ? sublabel : undefined}
+          style={{ background: accent ? "rgba(255,255,255,0.15)" : "var(--surface-alt)" }}
         >
-          <Icon size={18} style={{ color: accent ? "var(--on-accent)" : "var(--text-dim)" }} strokeWidth={2} />
+          <Icon
+            className={dense ? "w-3 h-3 md:w-[18px] md:h-[18px]" : "w-[18px] h-[18px]"}
+            style={{ color: accent ? "var(--on-accent)" : "var(--text-dim)" }}
+            strokeWidth={2}
+          />
         </div>
         {trend !== undefined && (
           <span
-            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            className={`${dense ? "text-[9.5px] px-1.5 md:text-xs md:px-2" : "text-xs px-2"} font-semibold py-0.5 rounded-full`}
             style={{
               background: accent
                 ? "rgba(255,255,255,0.15)"
@@ -90,11 +101,17 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
         )}
       </div>
       <div
-        className="leading-none mb-1.5"
+        className={`leading-none ${dense ? "mb-1 md:mb-1.5" : "mb-1.5"} ${
+          dense
+            ? (compact ? "text-[18px] md:text-[26px]" : "text-[18px] md:text-[32px]")
+            : (compact ? "text-[26px]" : "text-[32px]")
+        }`}
         style={{
           fontFamily: "Inter, sans-serif",
           fontWeight: 800,
-          fontSize: compact ? 26 : 32,
+          // só no denso: fora dele mudaria a renderização dos dígitos nos ~56
+          // usos existentes de StatCard, o que é mudança visual sem mockup.
+          ...(dense ? { fontVariantNumeric: "tabular-nums" } : {}),
           color: accent ? "var(--on-accent)" : (valueColor || "var(--text)"),
           letterSpacing: "-0.02em",
         }}
@@ -102,7 +119,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
         {value}
       </div>
       <div
-        className="font-medium text-sm flex items-center gap-1"
+        className={`font-medium ${dense ? "text-[11px] leading-tight md:text-sm" : "text-sm"} flex items-center gap-1`}
         style={{ color: accent ? "rgba(255,255,255,0.9)" : "var(--text-dim)" }}
       >
         {label}
@@ -110,7 +127,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
       </div>
       {sublabel && (
         <div
-          className="text-xs mt-0.5"
+          className={`${dense ? "hidden md:block" : ""} text-xs mt-0.5`}
           style={{ color: accent ? "rgba(255,255,255,0.65)" : "var(--text-faint)" }}
         >
           {sublabel}

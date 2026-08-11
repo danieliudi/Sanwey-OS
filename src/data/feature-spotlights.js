@@ -50,6 +50,20 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: agrupe várias despesas soltas numa prestação de contas e envie de uma vez, em vez de despesa por despesa.",
     version: "4.34.0",
   },
+  {
+    id: "marketing-orcamento",
+    route: "marketing-despesas",
+    target: '[data-tour="despesas-abas"]',
+    text: "Novo: a aba Orçamento mostra quanto do teto de cada categoria já foi gasto no ano — incluindo o que está comprometido em compras aprovadas.",
+    version: "4.39.0",
+  },
+  // 4.40.0 — aba "Histórico" do cliente (ex-"Conexões"): DECIDIDO PULAR o
+  // spotlight, com motivo (regra 12 do CLAUDE.md manda registrar a decisão de
+  // pular, não pular a pergunta). O mecanismo ancora num elemento visível ao
+  // entrar numa ROTA; essa aba só existe dentro do modal do cliente, depois de
+  // clicar num cliente da lista. Não há alvo estável na rota `clients`, e
+  // apontar pra lista com um texto sobre uma aba que a pessoa ainda não vê
+  // seria pior que não avisar. Coberto pelo changelog 4.40.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;

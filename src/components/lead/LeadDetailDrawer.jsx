@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, MapPin, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, Linkedin, Newspaper, MessageSquareWarning, Search,
-  Check, Trash2, Mail, ChevronDown, ChevronUp,
+  Check, Trash2, Mail,
   Clock, GitBranch, CalendarClock, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
   File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake,
@@ -17,11 +17,14 @@ import { Button } from "../ui/Button";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { formatK, formatBRL } from "../../utils/currency";
 import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
-import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
+import { formatDateBR, closeDateUrgencyStyle, toLocalISODate, localDateInputToISOString } from "../../utils/date";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
 import { useLeadChecklists } from "../../hooks/use-lead-checklists";
+import { useLeadSamples } from "../../hooks/use-lead-samples";
+import { CurrencyInput } from "../ui/CurrencyInput";
+import { Modal } from "../ui/Modal";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { ProposalPanel } from "./ProposalPanel";
 import { StageFieldInput } from "./StageFieldInput";
@@ -34,8 +37,9 @@ import { getMentionableUsers } from "../../utils/mentionable-users";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
 import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
+import { activityTypeMeta } from "../../utils/activity-types";
 
-export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
+export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
   const [followUpDate, setFollowUpDate] = useState("");
@@ -44,7 +48,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const [editingContactEmail, setEditingContactEmail] = useState(false);
   const [contactEmailDraft, setContactEmailDraft] = useState("");
   const [contactEmailError, setContactEmailError] = useState(null);
-  const [emailsOpen, setEmailsOpen] = useState(true);
   const [quickCreateName, setQuickCreateName] = useState(null); // string | null — abre o mini-cadastro (com checagem de duplicata) quando != null
   const [noteText, setNoteText] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
@@ -471,9 +474,32 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     onUpdate(lead.id, { ownerIds: newIds });
   };
 
+  // FASE 3 — buraco "e-mail de abordagem não é registrado". O mailto: abre no
+  // cliente de e-mail do usuário, então a plataforma sabe que a abordagem foi
+  // INICIADA — nunca que foi enviada. O texto do item reflete exatamente isso;
+  // prometer mais do que se sabe é pior que não registrar.
+  //
+  // A activity é gravada ANTES de setar window.location.href de propósito: o
+  // handler do mailto pode tirar o foco da aba (e, em alguns navegadores,
+  // descarregar a página), o que abortaria um fetch disparado depois. Mesmo
+  // padrão fire-and-forget de handleSaveFollowUp — não await, pra não segurar
+  // a abertura do cliente de e-mail nem o autosave já corrigido neste arquivo.
   const handleStartOutreach = () => {
     const subject = `${company.name} · ${lead.triggerLabel}`;
-    const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailDraft)}`;
+    const recipient = lead.contactEmail || null;
+    if (onAddActivity) {
+      onAddActivity(lead.id, {
+        type: "email_sent",
+        userId: currentUser?.id || null,
+        userName: currentUser?.name || null,
+        body: recipient
+          ? `E-mail de abordagem iniciado para ${recipient}`
+          : "E-mail de abordagem iniciado",
+        meta: { to: recipient, subject, channel: "mailto" },
+      });
+    }
+    const to = recipient ? encodeURIComponent(recipient) : "";
+    const href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailDraft)}`;
     window.location.href = href;
     onUpdate(lead.id, { lastActivity: new Date().toISOString() });
   };
@@ -499,6 +525,28 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const handleCancelFollowUp = () => {
     setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
     setShowFollowUpInput(false);
+  };
+
+  // "Já está negociando com esse cliente?" (Formulário Inicial) — campo comum,
+  // editável direto (sem toggle "Alterar", diferente do follow-up acima) —
+  // spec aprovada com o Daniel. Vazio grava NULL (volta a usar createdAt).
+  const handleNegotiationStartedAtChange = (val) => {
+    onUpdate(lead.id, { negotiationStartedAt: val ? localDateInputToISOString(val) : null });
+  };
+
+  // Origem do negócio. A importação de feira já grava isso sozinha; aqui é o
+  // caminho manual — cobre o lead que o vendedor conheceu no estande e
+  // cadastrou à mão depois, que costuma ser o melhor da feira e que ficaria
+  // fora do relatório se o vínculo existisse só na importação.
+  const handleCampaignChange = (val) => {
+    const campaign = (campaigns || []).find(c => c.id === val) || null;
+    onUpdate(lead.id, {
+      campaignId: val || null,
+      // triggerLabel segue espelhando o nome pra não quebrar export CSV e
+      // telas antigas que leem esse campo. Ao limpar a campanha, limpa junto:
+      // senão o CSV exportaria uma feira que o negócio não tem mais.
+      triggerLabel: campaign ? campaign.name : null,
+    });
   };
 
   const handleStartEditContactEmail = () => {
@@ -598,41 +646,26 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 </div>
               )}
 
-              {/* E-mail do contato — morava no painel central; agora fica
-                  junto do bloco Cliente, aqui na lateral. */}
-              <div className="mt-3 p-3 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text-dim)" }}>
-                    <Mail size={13} />
-                    E-mail do contato
-                  </div>
-                  {!editingContactEmail && (
-                    <button
-                      onClick={handleStartEditContactEmail}
-                      className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
-                      style={{ color: company.primary, background: company.light }}
-                      onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-                    >
-                      {lead.contactEmail ? "Alterar" : "Adicionar"}
-                    </button>
-                  )}
-                </div>
-
-                {lead.contactEmail && !editingContactEmail && (
-                  <div className="text-sm mt-1 break-all" style={{ color: "var(--text)" }}>
-                    {lead.contactEmail}
-                  </div>
-                )}
-
-                {!lead.contactEmail && !editingContactEmail && (
-                  <div className="text-xs mt-1 italic" style={{ color: "var(--text-dim)" }}>
-                    Nenhum e-mail cadastrado
-                  </div>
+              {/* E-mail do contato — linha compacta (era card com label +
+                  botão "Adicionar"/"Alterar"). Bloco "E-mails vinculados"
+                  removido (feature nunca implementada — nada grava
+                  lead.linkedEmails, ver CLAUDE.md). */}
+              <div className="mt-3">
+                {!editingContactEmail && (
+                  <button
+                    onClick={handleStartEditContactEmail}
+                    className="w-full flex items-center gap-1.5 text-sm py-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ color: lead.contactEmail ? "var(--text)" : "var(--text-dim)", background: "transparent", border: "none" }}
+                  >
+                    <Mail size={13} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
+                    <span className={`truncate ${lead.contactEmail ? "" : "italic"}`}>
+                      {lead.contactEmail || "Adicionar e-mail"}
+                    </span>
+                  </button>
                 )}
 
                 {editingContactEmail && (
-                  <div className="mt-2">
+                  <div className="mt-1">
                     <input
                       type="email"
                       value={contactEmailDraft}
@@ -655,75 +688,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                     </div>
                     {contactEmailError && (
                       <div className="text-xs mt-1" style={{ color: "var(--danger)" }}>{contactEmailError}</div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* E-mails vinculados */}
-              <div className="mt-2 rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-                <button
-                  onClick={() => setEmailsOpen(v => !v)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 transition-colors cursor-pointer"
-                  style={{ background: "var(--surface)", border: "none" }}
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text)" }}>
-                    <Mail size={13} style={{ color: "var(--text-dim)" }} />
-                    E-mails vinculados
-                    {(lead.linkedEmails || []).length > 0 && (
-                      <span
-                        className="inline-flex items-center justify-center rounded-full text-xs font-bold px-1.5 py-0.5 ml-1"
-                        style={{ background: company.primary + "22", color: company.primary, fontSize: 10, minWidth: 18 }}
-                      >
-                        {lead.linkedEmails.length}
-                      </span>
-                    )}
-                  </div>
-                  {emailsOpen ? <ChevronUp size={14} style={{ color: "var(--text-dim)" }} /> : <ChevronDown size={14} style={{ color: "var(--text-dim)" }} />}
-                </button>
-
-                {emailsOpen && (
-                  <div style={{ background: "var(--surface-alt)" }}>
-                    {(!lead.linkedEmails || lead.linkedEmails.length === 0) ? (
-                      <div className="px-3 pb-3 pt-1 text-xs" style={{ color: "var(--text-dim)" }}>
-                        Nenhum e-mail vinculado ainda. Quando e-mails do Outlook forem detectados para{" "}
-                        <span style={{ color: "var(--text)", fontWeight: 600 }}>
-                          {lead.contactEmail || "o e-mail do contato"}
-                        </span>
-                        , aparecerão aqui.
-                      </div>
-                    ) : (
-                      <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                        {lead.linkedEmails.map((email, idx) => (
-                          <div key={email.id || idx} className="px-3 py-2.5">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                                <span
-                                  className="text-xs font-bold"
-                                  style={{ color: email.direction === "sent" ? company.primary : "var(--text)" }}
-                                  title={email.direction === "sent" ? "Enviado" : "Recebido"}
-                                >
-                                  {email.direction === "sent" ? "→" : "←"}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
-                                  {email.subject || "(sem assunto)"}
-                                </div>
-                                <div className="text-xs mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>
-                                  {email.direction === "sent" ? `Para: ${email.to}` : `De: ${email.from}`}
-                                </div>
-                              </div>
-                              <div className="text-xs shrink-0" style={{ color: "var(--text-dim)" }}>
-                                {email.date ? formatDateBR(email.date) : "—"}
-                              </div>
-                            </div>
-                            {idx < lead.linkedEmails.length - 1 && (
-                              <div className="mt-2" style={{ borderTop: "1px solid var(--border)" }} />
-                            )}
-                          </div>
-                        ))}
-                      </div>
                     )}
                   </div>
                 )}
@@ -771,15 +735,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               />
             </div>
 
-            {/* Métricas compactas — Unidades / Prob. / Fechamento */}
+            {/* Métricas compactas — Prob. / Fechamento / Follow-up.
+                "Unidades" removida (duplicava "Produto vinculado" abaixo).
+                "Prob." perdeu o fundo tingido de company.primary (passava
+                impressão de alerta sem motivo — CLAUDE.md); fundo neutro
+                igual ao de "Fechamento". Follow-up vira o 3º mini-card no
+                lugar de "Unidades", clicável, abrindo o mesmo fluxo de
+                edição de antes (input de data + salvar/cancelar) fora do
+                grid, logo abaixo. */}
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Unidades</div>
-                <div className="text-sm font-bold mt-0.5" style={{ color: "var(--text)" }}>
-                  {lead.quantity ? `${lead.quantity} un` : "—"}
-                </div>
-              </div>
-              <div className="rounded-lg p-2" style={{ background: company.primary + "0D", border: `1px solid ${company.primary}22` }}>
                 <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Prob.</div>
                 <div className="text-sm font-bold mt-0.5" style={{ color: company.primary }}>
                   {probDisplay}%
@@ -797,7 +762,42 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   {lead.closeDate ? formatDateBR(lead.closeDate).replace(/(\d{2}\/\d{2}\/)\d{2}(\d{2})$/, "$1$2") : "—"}
                 </div>
               </div>
+              <button
+                onClick={() => setShowFollowUpInput(true)}
+                className="rounded-lg p-2 text-left cursor-pointer transition-all duration-150"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+              >
+                <div className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
+                  <Calendar size={9} />Follow-up
+                </div>
+                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>
+                  {lead.nextFollowUp ? formatDateBR(lead.nextFollowUp) : "Agendar"}
+                </div>
+              </button>
             </div>
+
+            {showFollowUpInput && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={followUpDate}
+                  onChange={e => setFollowUpDate(e.target.value)}
+                  className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors cursor-pointer"
+                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                  onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+                  autoFocus
+                />
+                <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveFollowUp}>
+                  Salvar
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleCancelFollowUp}>
+                  Cancelar
+                </Button>
+              </div>
+            )}
 
             {/* Decisor — só ocupa espaço quando há dado real; sem isso
                 sobravam duas linhas de "—" sem utilidade (achado do Daniel). */}
@@ -925,52 +925,13 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               </div>
             )}
 
-            {/* Follow-up inline */}
-            <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text-dim)" }}>
-                  <Calendar size={13} />
-                  Follow-up agendado
-                </div>
-                {!showFollowUpInput && (
-                  <button
-                    onClick={() => setShowFollowUpInput(true)}
-                    className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
-                    style={{ color: company.primary, background: company.light }}
-                    onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-                  >
-                    {lead.nextFollowUp ? "Alterar" : "Agendar"}
-                  </button>
-                )}
-              </div>
-
-              {lead.nextFollowUp && !showFollowUpInput && (
-                <div className="text-sm font-semibold mt-1" style={{ color: "var(--text)" }}>
-                  {formatDateBR(lead.nextFollowUp)}
-                </div>
-              )}
-
-              {showFollowUpInput && (
-                <div className="flex items-center gap-2 mt-2">
-                  <input
-                    type="date"
-                    value={followUpDate}
-                    onChange={e => setFollowUpDate(e.target.value)}
-                    className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors cursor-pointer"
-                    style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-                    onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
-                  />
-                  <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveFollowUp}>
-                    Salvar
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={handleCancelFollowUp}>
-                    Cancelar
-                  </Button>
-                </div>
-              )}
-            </div>
+            {/* Amostras enviadas — registro de amostra física dada ao
+                cliente durante a negociação, com custo, pra depois cruzar
+                com conversão (lead ganhou ou não). Mesmo padrão visual de
+                bloco de lista relacionada ao lead usado em "Produto
+                vinculado" acima / AttachmentsPanel (linha com borda,
+                lixeira inline por item). */}
+            <SamplesPanel leadId={lead.id} companyColor={company.primary} currentUser={currentUser} />
 
             <div className="pt-1">
               <Button variant="primary" size="sm" icon={Send} accent={company.primary} onClick={handleStartOutreach}>
@@ -1012,6 +973,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                       hint="Somente leitura — quem edita é “Responsáveis”, ao lado."
                     />
                   )}
+                  <NegotiationStartRow
+                    value={lead.negotiationStartedAt ? lead.negotiationStartedAt.slice(0, 10) : ""}
+                    onChange={handleNegotiationStartedAtChange}
+                  />
+                  <OriginCampaignRow
+                    value={lead.campaignId}
+                    campaigns={campaigns}
+                    lead={lead}
+                    onChange={handleCampaignChange}
+                  />
                 </dl>
                 {lead.notes && !Array.isArray(lead.notes) && (
                   <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
@@ -1043,6 +1014,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
                   <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
                   <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
+                  <NegotiationStartRow
+                    value={lead.negotiationStartedAt ? lead.negotiationStartedAt.slice(0, 10) : ""}
+                    onChange={handleNegotiationStartedAtChange}
+                  />
+                  <OriginCampaignRow
+                    value={lead.campaignId}
+                    campaigns={campaigns}
+                    lead={lead}
+                    onChange={handleCampaignChange}
+                  />
                 </dl>
                 {customValues.capture_notes && (
                   <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
@@ -1168,7 +1149,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 não perder o rascunho da proposta ao trocar de aba; key={lead.id}
                 reseta ao navegar pra outro lead. Achado da 2ª auditoria. */}
             <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
-              <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} />
+              <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} onAddActivity={onAddActivity} />
             </div>
         </>
       )}
@@ -1502,22 +1483,30 @@ function ActivitiesPanel({ stageHistory, activities, users }) {
           const toStage = a.to ? DEFAULT_PIPELINE_STAGES.find(s => s.id === a.to) : null;
           const user = a.userId ? (users || []).find(u => u.id === a.userId) : null;
           const userName = user?.name || a.userName || "Sistema";
+          // Ícone por tipo vem da taxonomia compartilhada (utils/activity-types.js)
+          // — tipo novo ganha ícone/rótulo sem precisar tocar neste switch, que
+          // era exatamente como 'email_sent'/'proposal_generated' cairiam aqui
+          // como item genérico.
+          const { icon: TypeIcon } = activityTypeMeta(a.type);
           return (
-            <li key={i} className="text-xs" style={{ color: "var(--text)" }}>
-              {a.type === "stage" ? (
-                <div>
-                  <span style={{ color: "var(--text-dim)" }}>{userName} </span>
-                  moveu para <strong>{toStage?.name || a.to}</strong>
-                  {fromStage && <span style={{ color: "var(--text-dim)" }}> (de {fromStage.name})</span>}
+            <li key={i} className="text-xs flex items-start gap-2" style={{ color: "var(--text)" }}>
+              <TypeIcon size={12} style={{ flexShrink: 0, marginTop: 2, color: "var(--text-dim)" }} />
+              <div className="min-w-0 flex-1">
+                {a.type === "stage" ? (
+                  <div>
+                    <span style={{ color: "var(--text-dim)" }}>{userName} </span>
+                    moveu para <strong>{toStage?.name || a.to}</strong>
+                    {fromStage && <span style={{ color: "var(--text-dim)" }}> (de {fromStage.name})</span>}
+                  </div>
+                ) : (
+                  <div>
+                    <span style={{ color: "var(--text-dim)" }}>{userName} </span>
+                    {a.body}
+                  </div>
+                )}
+                <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                  {new Date(a.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                 </div>
-              ) : (
-                <div>
-                  <span style={{ color: "var(--text-dim)" }}>{userName} </span>
-                  {a.body}
-                </div>
-              )}
-              <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
-                {new Date(a.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
               </div>
             </li>
           );
@@ -1554,6 +1543,155 @@ function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ── Amostras enviadas ────────────────────────────────────────────────────────
+// Aprovado via mockup com o Daniel — bloco de lista relacionada ao lead,
+// mesmo padrão visual de AttachmentsPanel logo abaixo (linha com borda,
+// lixeira inline por item, sem modal de confirmação chamativo — registro
+// pequeno, não entidade grande tipo Fornecedor, regra do CLAUDE.md).
+function SamplesPanel({ leadId, companyColor, currentUser }) {
+  const { samples, loading, error, createSample, deleteSample, totalCost } = useLeadSamples(leadId);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [sentAt, setSentAt] = useState(() => toLocalISODate(new Date()));
+  const [cost, setCost] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const openModal = () => {
+    setNotes("");
+    setSentAt(toLocalISODate(new Date()));
+    setCost("");
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!notes.trim() || saving) return;
+    setSaving(true);
+    try {
+      // `created_by` vem do `DEFAULT auth.uid()` no banco, não do cliente
+      // (policy de INSERT exige que bata com o usuário autenticado).
+      await createSample({ notes: notes.trim(), sentAt, cost });
+      setModalOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs font-semibold" style={{ color: companyColor }}>
+          🧪 Amostras enviadas
+        </div>
+        <button
+          onClick={openModal}
+          className="text-xs font-semibold flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
+          style={{ color: companyColor, background: companyColor + "18", border: "none" }}
+          onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
+          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+        >
+          <Plus size={11} />Registrar amostra
+        </button>
+      </div>
+
+      {loading && (
+        <div className="text-xs text-center py-2" style={{ color: "var(--text-dim)" }}>Carregando…</div>
+      )}
+
+      {!loading && samples.length === 0 && (
+        <div className="text-xs text-center py-2 italic" style={{ color: "var(--text-dim)" }}>
+          Nenhuma amostra registrada ainda.
+        </div>
+      )}
+
+      {samples.length > 0 && (
+        <div className="space-y-1.5">
+          {samples.map(s => (
+            <div
+              key={s.id}
+              className="flex items-center gap-2.5 p-2.5 rounded-lg border"
+              style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
+                  {s.notes || "Amostra"}
+                </div>
+                <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                  {formatDateBR(s.sent_at)}
+                </div>
+              </div>
+              <div className="text-xs font-semibold shrink-0" style={{ color: "var(--text)" }}>
+                {formatBRL(s.cost)}
+              </div>
+              <button
+                onClick={() => deleteSample(s.id)}
+                className="p-1.5 rounded-lg transition-colors shrink-0"
+                style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                title="Excluir amostra"
+                aria-label="Excluir amostra"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {samples.length > 0 && (
+        <div className="flex items-center justify-between mt-3 pt-3 text-xs" style={{ borderTop: "1px solid var(--surface-alt)" }}>
+          <span className="font-semibold" style={{ color: "var(--text-dim)" }}>Total gasto</span>
+          <span className="font-bold" style={{ color: "var(--text)" }}>{formatBRL(totalCost)}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-2 text-xs" style={{ color: "var(--danger)" }}>{error}</div>
+      )}
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Registrar amostra" width={420}>
+        <div className="p-5 space-y-3">
+          <div>
+            <label className="text-[11px] font-semibold mb-1 block" style={{ color: "var(--text-dim)" }}>Descrição</label>
+            <input
+              autoFocus
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Ex.: Kit Sanbag 15L"
+              className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.currentTarget.style.borderColor = companyColor; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold mb-1 block" style={{ color: "var(--text-dim)" }}>Data de envio</label>
+            <input
+              type="date"
+              value={sentAt}
+              onChange={e => setSentAt(e.target.value)}
+              className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.currentTarget.style.borderColor = companyColor; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold mb-1 block" style={{ color: "var(--text-dim)" }}>Custo</label>
+            <CurrencyInput value={cost} onChange={setCost} />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button variant="primary" size="sm" accent={companyColor} disabled={saving || !notes.trim()} onClick={handleSave}>
+              {saving ? "Registrando…" : "Registrar"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
 }
 
 function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
@@ -1979,6 +2117,72 @@ function CaptureRow({ label, value, mono, link, badge, hint }) {
         ) : value}
       </dd>
       {hint && <div className="text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>{hint}</div>}
+    </div>
+  );
+}
+
+// "Já está negociando com esse cliente?" — mesmo padrão dt/dd de CaptureRow,
+// mas editável (campo comum do Formulário Inicial, não um bloco novo/
+// chamativo — spec aprovada com o Daniel). Mesmo <input type="date"> já
+// usado no drawer (follow-up).
+function OriginCampaignRow({ value, campaigns, lead, onChange }) {
+  // Só campanhas de canal "Evento" e da empresa do negócio. Sem esse filtro
+  // dava pra escolher "Newsletter de Julho" como origem: o negócio saía do
+  // aviso de "sem feira indicada" e ao mesmo tempo não entrava em feira
+  // nenhuma no relatório — sumia dos dois lados, calado.
+  const list = (campaigns || []).filter(c =>
+    c.channel === "Evento"
+    && (!lead?.companyId || !c.companyIds?.length || c.companyIds.includes(lead.companyId))
+  );
+  return (
+    <div>
+      <dt className="text-[11px] font-semibold" style={{ color: "var(--text-dim)" }}>
+        Veio de qual feira/campanha?
+      </dt>
+      <dd className="text-sm" style={{ marginTop: 2 }}>
+        <select
+          value={value || ""}
+          onChange={e => onChange(e.target.value)}
+          className="text-sm rounded-lg border px-2.5 py-1.5 outline-none w-full"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+        >
+          <option value="">Não informado</option>
+          {list.map(c => (
+            <option key={c.id} value={c.id}>
+              {c.name}{c.channel ? ` · ${c.channel}` : ""}
+            </option>
+          ))}
+        </select>
+      </dd>
+      <div className="text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>
+        É isso que liga o custo da feira ao resultado deste negócio no relatório.
+      </div>
+    </div>
+  );
+}
+
+function NegotiationStartRow({ value, onChange }) {
+  return (
+    <div>
+      <dt className="text-[11px] font-semibold" style={{ color: "var(--text-dim)" }}>
+        Já está negociando com esse cliente?
+      </dt>
+      <dd className="text-sm" style={{ marginTop: 2 }}>
+        <input
+          type="date"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          /* Campo retroativo por definição — data futura quebra
+             "novo em 48h" (DashboardView), "Tempo no funil" (negativo) e
+             a ordenação por mais recente. */
+          max={toLocalISODate(new Date())}
+          className="text-sm rounded-lg border px-2.5 py-1.5 outline-none"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+        />
+      </dd>
+      <div className="text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>
+        Deixe em branco pra usar a data de hoje (padrão atual).
+      </div>
     </div>
   );
 }

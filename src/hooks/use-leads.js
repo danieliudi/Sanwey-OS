@@ -27,6 +27,7 @@ function rowToLead(r) {
     situacao: r.situacao,
     trigger: r.trigger,
     triggerLabel: r.trigger_label,
+    campaignId: r.campaign_id ?? null,
     evidence: r.evidence,
     fitScore: r.fit_score ?? 0,
     sku: r.sku,
@@ -53,6 +54,7 @@ function rowToLead(r) {
     nextFollowUp: r.next_follow_up,
     clientId: r.client_id ?? null,
     createdAt: r.created_at,
+    negotiationStartedAt: r.negotiation_started_at ?? null,
     lastActivity: r.last_activity,
     stageChangedAt: r.stage_changed_at,
     isDemo: Boolean(r.is_demo),
@@ -81,6 +83,7 @@ function leadToRow(l, extras = {}) {
     situacao: l.situacao ?? null,
     trigger: l.trigger ?? null,
     trigger_label: l.triggerLabel ?? null,
+    campaign_id: l.campaignId ?? null,
     evidence: l.evidence ?? null,
     fit_score: l.fitScore ?? 0,
     sku: l.sku ?? null,
@@ -107,6 +110,7 @@ function leadToRow(l, extras = {}) {
     next_follow_up: l.nextFollowUp ?? null,
     client_id: l.clientId ?? null,
     sent_to_posvenda_at: l.sentToPosvendaAt ?? null,
+    negotiation_started_at: l.negotiationStartedAt ?? null,
     ...extras,
   };
 }
@@ -120,6 +124,7 @@ function patchToRow(patch) {
     orderCount: "order_count",
     contactEmail: "contact_email",
     triggerLabel: "trigger_label",
+    campaignId: "campaign_id",
     fitScore: "fit_score",
     skuName: "sku_name",
     unitPrice: "unit_price",
@@ -134,6 +139,7 @@ function patchToRow(patch) {
     clientId: "client_id",
     ownerIds: "owner_ids",
     sentToPosvendaAt: "sent_to_posvenda_at",
+    negotiationStartedAt: "negotiation_started_at",
   };
   const out = {};
   for (const [k, v] of Object.entries(patch)) {
@@ -323,6 +329,7 @@ export function useLeads({ userId, role, companies } = {}) {
       situacao: source.situacao,
       trigger: source.trigger,
       triggerLabel: source.triggerLabel,
+      campaignId: source.campaignId,
       evidence: source.evidence,
       fitScore: source.fitScore,
       sku: source.sku,

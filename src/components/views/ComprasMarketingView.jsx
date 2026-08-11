@@ -190,6 +190,9 @@ function CreateModal({ currentUser, onCreate, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.itemName.trim() || !form.requesterName.trim()) { setError("Item e solicitante são obrigatórios."); return; }
+    // Idem Fornecedores: array vazio nunca casa com a RLS de company_ids. Aqui
+    // o default já vem preenchido, mas o usuário pode desmarcar tudo.
+    if (form.companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -244,7 +247,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Empresas</label>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Empresas *</label>
             <div className="flex gap-2">
               {MARKETING_UNIT_IDS.map(id => (
                 <button key={id} type="button" onClick={() => toggleCompany(id)}

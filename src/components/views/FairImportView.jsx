@@ -7,6 +7,7 @@ import {
 import { COMPANIES } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
+import { findClientByCnpj } from "../../utils/client-dedup";
 const uuidv4 = () => crypto.randomUUID();
 
 // ── Column detection helpers ─────────────────────────────────────────────────
@@ -204,11 +205,26 @@ const COMPANY_OPTIONS = [
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function FairImportView({ addLead, leads: existingLeads, users, currentUser, state, setState }) {
+export function FairImportView({ addLead, leads: existingLeads, users, currentUser, campaigns = [], clients = [], state, setState }) {
   const fileRef = useRef(null);
   // Persistent across tab switches — held in App.jsx
-  const { fairName, phase, rows, importResult, importing } = state;
+  const { fairName, fairCampaignId = "", phase, rows, importResult, importing } = state;
   const setFairName    = (v) => setState(s => ({ ...s, fairName: typeof v === "function" ? v(s.fairName) : v }));
+  const setFairCampaignId = (v) => setState(s => ({ ...s, fairCampaignId: typeof v === "function" ? v(s.fairCampaignId) : v }));
+
+  // Feira = campanha de canal "Evento" (o modelo que a plataforma já usa —
+  // é o mesmo canal que dispara o checklist de evento). Antes o nome da feira
+  // era texto livre digitado a cada importação, então "Intermodal 2026" e
+  // "intermodal 26" viravam feiras diferentes na hora de agregar. Agora a
+  // seleção grava `campaignId`, que é a chave estável do relatório de feiras.
+  const eventCampaigns = useMemo(
+    () => (campaigns || []).filter(c => c.channel === "Evento"),
+    [campaigns]
+  );
+  const selectedCampaign = eventCampaigns.find(c => c.id === fairCampaignId) || null;
+  // `triggerLabel` continua sendo gravado (o export CSV e telas antigas leem
+  // esse campo) — só que derivado do nome da campanha, não mais digitado.
+  const effectiveFairName = selectedCampaign ? selectedCampaign.name : fairName.trim();
   const setPhase       = (v) => setState(s => ({ ...s, phase: typeof v === "function" ? v(s.phase) : v }));
   const setRows        = (v) => setState(s => ({ ...s, rows: typeof v === "function" ? v(s.rows) : v }));
   const setImportResult = (v) => setState(s => ({ ...s, importResult: typeof v === "function" ? v(s.importResult) : v }));
@@ -265,13 +281,42 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
     setRows(prev => prev.map(r => r._importId === importId ? { ...r, _selected: !r._selected } : r));
   };
 
+  // ── Vínculo com o cadastro central de clientes (FASE 3 / buraco 4) ────────
+  // O lead de feira nascia sem `clientId`, então nunca aparecia na linha do
+  // tempo do cliente — justamente a origem que o Daniel quer medir.
+  //
+  // Casamos por CNPJ contra `clients` usando o MESMO utilitário que a dedupe
+  // de cliente já usa em todo caminho de criação (`findClientByCnpj`, que
+  // normaliza os dígitos e exige os 14 completos) — não uma segunda regra de
+  // matching escrita aqui.
+  //
+  // Quando não há cliente correspondente, o lead entra SEM vínculo e a tela
+  // diz quantos ficaram assim. Deliberadamente NÃO criamos cliente
+  // automaticamente: a coluna CNPJ é opcional nos exports de feira, e boa
+  // parte das linhas vem sem ela — sem CNPJ a dedupe não protege nada, e
+  // "Transportes ABC" e "Transportes ABC Ltda" da mesma feira virariam dois
+  // cadastros. Lista de feira também é contato cru (crachá escaneado), não
+  // cliente qualificado. Vincular depois é barato e seguro: o
+  // LeadDetailDrawer já tem ClientSelector + mini-cadastro com checagem de
+  // duplicata.
+  const clientIdByRow = useMemo(() => {
+    const map = new Map();
+    for (const r of rows) {
+      const match = findClientByCnpj(clients, r.cnpj);
+      if (match) map.set(r._importId, match.id);
+    }
+    return map;
+  }, [rows, clients]);
+
   const selectedRows = rows.filter(r => r._selected && !r._isDuplicate);
   const dupCount = rows.filter(r => r._isDuplicate).length;
   const unassignedCount = selectedRows.filter(r => !r.owner).length;
+  const linkedClientCount = selectedRows.filter(r => clientIdByRow.has(r._importId)).length;
+  const noClientCount = selectedRows.length - linkedClientCount;
 
   const handleImport = async () => {
     if (!selectedRows.length) return;
-    if (!fairName.trim()) { alert("Informe o nome da feira antes de importar."); return; }
+    if (!effectiveFairName) { alert("Selecione a feira antes de importar."); return; }
 
     setImporting(true);
     setPhase("importing");
@@ -282,8 +327,12 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
       try {
         const lead = {
           ...row,
-          triggerLabel: fairName.trim(),
-          evidence: `Contato realizado na ${fairName.trim()}`,
+          // null quando nenhum cliente casou por CNPJ — ver nota em
+          // `clientIdByRow`. Vínculo manual depois, sem cadastro duplicado.
+          clientId: clientIdByRow.get(row._importId) || null,
+          triggerLabel: effectiveFairName,
+          campaignId: selectedCampaign ? selectedCampaign.id : null,
+          evidence: `Contato realizado na ${effectiveFairName}`,
           notes: row._note ? [{ text: row._note, author: "Import", ts: new Date().toISOString() }] : [],
         };
         // Remove UI-only fields
@@ -313,6 +362,10 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
     setPhase("idle");
     setRows([]);
     setImportResult(null);
+    // Sem limpar a feira selecionada, "Importar outra lista" deixava a feira
+    // anterior escolhida e o botão já habilitado — dava pra subir a lista da
+    // feira B dentro da feira A com um clique.
+    setFairCampaignId("");
     setFairName("");
     setExpandedRow(null);
   };
@@ -328,7 +381,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
             Import concluído
           </div>
           <div className="text-base mt-1" style={{ color: "var(--text-dim)" }}>
-            {importResult.ok} leads importados para "{fairName}"
+            {importResult.ok} leads importados para "{effectiveFairName}"
             {importResult.skipped > 0 && ` · ${importResult.skipped} erros`}
           </div>
         </div>
@@ -397,16 +450,39 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
         <div>
           <label className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
             style={{ color: "var(--text-dim)", letterSpacing: "0.15em" }}>
-            Nome da feira
+            Feira
           </label>
-          <input
-            type="text"
-            placeholder="Ex: Intermodal 2026"
-            value={fairName}
-            onChange={e => setFairName(e.target.value)}
-            className="w-full text-sm rounded-xl border px-3 py-2 outline-none focus:ring-1"
-            style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
-          />
+          {eventCampaigns.length > 0 ? (
+            <>
+              <Select
+                value={fairCampaignId}
+                onChange={e => setFairCampaignId(e.target.value)}
+                className="w-full"
+              >
+                <option value="">Selecione a feira…</option>
+                {eventCampaigns.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </Select>
+              <p className="mt-1.5" style={{ fontSize: 11, color: "var(--text-faint)" }}>
+                A feira é a campanha de canal “Evento”. É ela que amarra custo e
+                leads no relatório — não está na lista? Cadastre em Marketing →
+                Campanhas.
+              </p>
+            </>
+          ) : (
+            <div className="rounded-xl border px-3 py-2.5"
+              style={{ borderColor: "var(--warning)", background: "var(--warning-bg)" }}>
+              <p style={{ fontSize: 12, color: "var(--text)", fontWeight: 600 }}>
+                Nenhuma feira cadastrada
+              </p>
+              <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
+                Cadastre a feira como campanha de canal “Evento” em Marketing →
+                Campanhas antes de importar. Sem isso os leads entram sem
+                origem e ficam de fora do relatório de feiras.
+              </p>
+            </div>
+          )}
         </div>
 
         {phase === "idle" && (
@@ -459,6 +535,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           <Stat label="Selecionados" value={selectedRows.length} color="var(--color-resibag)" />
           <Stat label="Duplicados" value={dupCount} color={dupCount > 0 ? "var(--amber)" : undefined} />
           <Stat label="Sem responsável" value={unassignedCount} color={unassignedCount > 0 ? "var(--amber)" : undefined} />
+          <Stat label="Cliente vinculado" value={linkedClientCount} color={linkedClientCount > 0 ? "var(--color-resibag)" : undefined} />
         </div>
       )}
 
@@ -470,6 +547,24 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
               style={{ background: "var(--amber-bg)", borderLeftColor: "var(--amber)", color: "var(--text)" }}>
               <TriangleAlert size={14} style={{ color: "var(--amber)", flexShrink: 0 }} />
               {unassignedCount} lead{unassignedCount > 1 ? "s" : ""} sem vendedor atribuído — defina antes de importar ou deixe para o gerente redistribuir depois.
+            </div>
+          )}
+
+          {/* Vínculo com o cadastro de clientes. Informativo, não bloqueia a
+              importação — por isso token neutro, não --amber/--danger: quem
+              importa não tem como resolver isso aqui (o cliente pode
+              simplesmente ainda não existir), e nenhum cadastro é criado
+              automaticamente pra evitar cliente duplicado. */}
+          {noClientCount > 0 && (
+            <div className="flex items-start gap-2 p-3 rounded-xl border-l-4 text-sm"
+              style={{ background: "var(--surface-alt)", borderLeftColor: "var(--border-strong)", color: "var(--text)" }}>
+              <Building2 size={14} style={{ color: "var(--text-dim)", flexShrink: 0, marginTop: 2 }} />
+              <span>
+                {noClientCount} de {selectedRows.length} lead{selectedRows.length > 1 ? "s" : ""} ficará{noClientCount > 1 ? "o" : ""} sem
+                cliente vinculado (CNPJ ausente ou ainda não cadastrado) — não vão aparecer no histórico do
+                cliente até alguém vincular pelo negócio. Nenhum cliente novo é criado automaticamente, pra
+                não duplicar cadastro.
+              </span>
             </div>
           )}
 
@@ -515,7 +610,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
             <Button
               variant="primary"
               onClick={handleImport}
-              disabled={!selectedRows.length || !fairName.trim() || importing}
+              disabled={!selectedRows.length || !effectiveFairName || importing}
               icon={importing ? Loader2 : undefined}
             >
               {importing ? "Importando…" : `Importar ${selectedRows.length} leads`}

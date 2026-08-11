@@ -9,12 +9,17 @@ import {
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
+import { useMarketingBudgets } from "../../hooks/use-marketing-budgets";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useDashboardWidgetPrefs } from "../../hooks/use-dashboard-widget-prefs";
 import { VISAO_GERAL_WIDGETS, widgetAllowedForRole } from "../../constants/visao-geral-widgets";
 import { MARKETING_STAGES, EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatBRL, formatK } from "../../utils/currency";
+import {
+  computeBudgetUsage, computeBudgetTotals, expenseFiscalYear, expenseFiscalDate,
+  budgetRatioStatus, formatBudgetPct, BUDGET_STATUS_STYLE,
+} from "../../utils/marketing-budget";
 import { formatDateBR, daysSince } from "../../utils/date";
 import { monthBounds, within, pctChange } from "../../utils/trend";
 import { StatCard } from "../ui/StatCard";
@@ -26,6 +31,7 @@ import { PanelEmptyState } from "../shared/PanelEmptyState";
 import { TaskBucket } from "../shared/TaskBucket";
 import { StageDistributionBar } from "../shared/StageDistributionBar";
 import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
+import { StatCardGrid } from "../shared/StatCardGrid";
 import { greetingFor } from "../../utils/greeting";
 import { exportCampaignsToCSV } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
@@ -198,7 +204,11 @@ function BurnRateChart({ expenses, primaryColor }) {
       const [start, end] = monthBounds(ref);
       return {
         month: shortMonth(ref),
-        total: expenses.filter(e => within(e.createdAt, start, end)).reduce((s, e) => s + (e.amount || 0), 0),
+        // Mês da despesa = data da nota (ou vencimento), NUNCA createdAt: uma
+        // nota de dezembro lançada em janeiro aparecia no mês da digitação e
+        // não batia com o consumo do teto, que sempre usou essa regra
+        // (expenseFiscalDate = a mesma fonte única do cálculo de orçamento).
+        total: expenses.filter(e => within(expenseFiscalDate(e), start, end)).reduce((s, e) => s + (e.amount || 0), 0),
         isCurrent: i === 5,
       };
     });
@@ -228,13 +238,19 @@ function BurnRateChart({ expenses, primaryColor }) {
 
 // ── Category donut ───────────────────────────────────────────────────────────────
 
+// Uma cor por categoria de EXPENSE_CATEGORIES — toda categoria da lista
+// precisa de entrada própria aqui. Sem ela, a fatia cai no fallback #9CA3AF,
+// que é a cor de "Outros": duas fatias e dois swatches de legenda idênticos,
+// impossíveis de distinguir. Foi o que aconteceu quando "Compra de Marketing"
+// entrou na lista (categoria criada pelo trigger de compra paga).
 const CAT_COLORS = {
-  "Mídia Paga":  "#7C3AED",
-  "Produção":    "#1D4ED8",
-  "Agência":     "#D97706",
-  "Ferramentas": "#16A34A",
-  "Eventos":     "#DC2626",
-  "Outros":      "#9CA3AF",
+  "Mídia Paga":          "#7C3AED",
+  "Produção":            "#1D4ED8",
+  "Agência":             "#D97706",
+  "Ferramentas":         "#16A34A",
+  "Eventos":             "#DC2626",
+  "Compra de Marketing": "#0891B2",
+  "Outros":              "#9CA3AF",
 };
 
 function CategoryDonut({ expenses }) {
@@ -379,6 +395,10 @@ export function MarketingDashboardView({ user }) {
   const { campaigns,    loading: lC } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
   const { deliverables, loading: lD } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
   const { expenses,     loading: lE } = useMarketingExpenses({ userId: user?.id, role: user?.role });
+  // Tetos de orçamento (marketing_budgets) — só pra contextualizar o consumo do
+  // ano no tile de Zona 1. Leitura pura: quem pode escrever é a tela de
+  // orçamento, não o Dashboard.
+  const { budgets,      loading: lB } = useMarketingBudgets({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   // Etapas vivas (DB, editáveis via "Editar etapas" no Kanban) — MARKETING_STAGES
   // é só o fallback estático de antes da customização por etapa existir. Sem
@@ -438,14 +458,64 @@ export function MarketingDashboardView({ user }) {
   const kpi = useMemo(() => {
     const active = fCampaigns.filter(c => c.stage !== "encerrado").length;
     const live   = fCampaigns.filter(c => c.stage === "ao_vivo").length;
-    const budget = fCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
     const scored = fCampaigns.filter(c => c.performanceScore > 0);
     const avgScore = scored.length > 0
       ? Math.round(scored.reduce((s, c) => s + (c.performanceScore || 0), 0) / scored.length)
       : null;
     const entregue = fDeliverables.filter(d => d.stage === "entregue").length;
-    return { active, live, budget, avgScore, entregue };
+    return { active, live, avgScore, entregue };
   }, [fCampaigns, fDeliverables]);
+
+  // ── Orçamento do ano ──
+  // O tile `kpi_budget` mostrava `sum(campaign.budget)` — a soma dos TETOS das
+  // campanhas — sob o rótulo "Orçamento comprometido", com a seta de tendência
+  // das DESPESAS. Número de teto com tendência de consumo: nada ali media
+  // dinheiro gasto. Agora mede o consumo de verdade do ano fiscal corrente
+  // (pago + a pagar, vocabulário de src/utils/marketing-budget.js).
+  //
+  // Este número sai de TODAS as despesas do ano, não só das categorias que têm
+  // teto cadastrado — é consumo real, tem que aparecer mesmo sem nenhum teto
+  // definido. O contexto de teto (o "% do teto" do sublabel) vem separado,
+  // logo abaixo, e só quando existir teto.
+  const currentYear = new Date().getFullYear();
+  const yearSpend = useMemo(() => {
+    let paid = 0, pending = 0;
+    for (const e of fExpenses) {
+      if (expenseFiscalYear(e) !== currentYear) continue;
+      const value = Number(e.amount) || 0;
+      if (e.status === "pago") paid += value;
+      else if (e.status === "pendente") pending += value;
+    }
+    return { paid, pending, consumed: paid + pending };
+  }, [fExpenses, currentYear]);
+
+  // Consumo x teto, pelo mesmo motor que a tela de Orçamento usa. `purchases`
+  // fica de fora de propósito: o tile mostra CONSUMIDO (pago + a pagar), e
+  // comprometido é uma faixa própria — misturar as duas aqui repetiria o erro
+  // que este card acabou de corrigir (rótulo de uma coisa, número de outra).
+  const budgetTotals = useMemo(
+    () => computeBudgetTotals(computeBudgetUsage({
+      budgets,
+      expenses: fExpenses,
+      year: currentYear,
+      companyIds: selectedCompany === "all" ? [] : [selectedCompany],
+    })),
+    [budgets, fExpenses, currentYear, selectedCompany],
+  );
+  // Teto de valor 0 (a CHECK do banco aceita >= 0) cai aqui como "sem teto":
+  // não há percentual honesto a mostrar contra zero.
+  const hasBudget = budgetTotals.count > 0 && budgetTotals.budgetAmount > 0;
+  // Rótulo e cor derivam da MESMA razão (consumido/teto, sem o comprometido —
+  // é o que o card mede). Math.round imprimia "80% do teto" ainda em cinza e
+  // "100%" já em vermelho; formatBudgetPct alinha os dois.
+  const budgetRatio = hasBudget ? budgetTotals.consumed / budgetTotals.budgetAmount : null;
+  const budgetStatus = budgetRatioStatus(budgetRatio);
+  const budgetPctLabel = hasBudget ? formatBudgetPct(budgetRatio, budgetStatus) : null;
+  // --accent (o "ok" do BUDGET_STATUS_STYLE) muda por frente comercial em
+  // runtime, então estado normal fica neutro: só atenção/estouro ganham cor.
+  const budgetStatusColor = hasBudget && budgetStatus !== "ok"
+    ? BUDGET_STATUS_STYLE[budgetStatus].color
+    : null;
 
   const agencyMetrics = useMemo(() => computeAgencyMetrics(fDeliverables), [fDeliverables]);
 
@@ -465,14 +535,17 @@ export function MarketingDashboardView({ user }) {
     const cp = fCampaigns.filter(c => within(c.createdAt, ps, pe)).length;
     const dc = fDeliverables.filter(d => d.stage === "entregue" && within(d.stageChangedAt, cs, ce)).length;
     const dp = fDeliverables.filter(d => d.stage === "entregue" && within(d.stageChangedAt, ps, pe)).length;
-    const ec = fExpenses.filter(e => within(e.createdAt, cs, ce)).reduce((s, e) => s + (e.amount || 0), 0);
-    const ep = fExpenses.filter(e => within(e.createdAt, ps, pe)).reduce((s, e) => s + (e.amount || 0), 0);
+    // `expenses` saiu daqui junto com a seta que ele alimentava: era um MoM de
+    // despesa (mês x mês, por `createdAt`) desenhado, invertido, num card cujo
+    // valor era a soma dos tetos das campanhas. O card agora mostra consumo
+    // acumulado do ano, que não tem leitura mês-a-mês coerente — melhor sem
+    // seta do que com uma seta que mede outra coisa. O gasto mensal continua
+    // visível, com a data fiscal certa, no painel "Burn rate".
     return {
       campaigns:    { v: cc, d: pctChange(cc, cp) },
       deliverables: { v: dc, d: pctChange(dc, dp) },
-      expenses:     { v: ec, d: pctChange(ec, ep) },
     };
-  }, [fCampaigns, fDeliverables, fExpenses]);
+  }, [fCampaigns, fDeliverables]);
 
   // ── Monthly trend (6 months) ──
   const trendData = useMemo(() => {
@@ -592,60 +665,53 @@ export function MarketingDashboardView({ user }) {
       </div>
 
       {/* ── Zona 1 — Resumo (7 tiles possíveis: 5 sempre + 2 de agência) ── */}
-      <div className="-mx-4 sm:-mx-6 lg:mx-0">
+      <div>
         {zone1VisibleCount === 0 ? (
           <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
         ) : (
-          <div
-            className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:overflow-visible"
-            style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))" }}
-          >
+          <StatCardGrid desktopClassName="md:grid-cols-3 lg:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">
             {widgetVisible("kpi_active") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Megaphone} value={kpi.active} label="Campanhas ativas"
-                  trend={mom.campaigns.d} compact />
-              </div>
+              <StatCard icon={Megaphone} value={kpi.active} label="Campanhas ativas"
+                trend={mom.campaigns.d} compact />
             )}
             {widgetVisible("kpi_live") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Zap} value={kpi.live} label="Ao vivo agora"
-                  sublabel={kpi.live > 0 ? "em exibição" : "nenhuma ao vivo"}
-                  accent={kpi.live > 0 ? "var(--success)" : undefined} compact />
-              </div>
+              <StatCard icon={Zap} value={kpi.live} label="Ao vivo agora"
+                sublabel={kpi.live > 0 ? "em exibição" : "nenhuma ao vivo"}
+                accent={kpi.live > 0 ? "var(--success)" : undefined} compact />
             )}
+            {/* `sublabel` fica string pura de propósito: em `dense` (mobile,
+                injetado pelo StatCardGrid) o StatCard usa o sublabel como
+                `title` do ícone, e um elemento React ali viraria
+                "[object Object]" — o sinal de cor vai no número (valueColor). */}
             {widgetVisible("kpi_budget") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={DollarSign} value={formatK(kpi.budget)} label="Orçamento comprometido"
-                  trend={-mom.expenses.d} compact />
-              </div>
+              <StatCard
+                icon={DollarSign}
+                value={formatK(yearSpend.consumed)}
+                label={`Consumido em ${currentYear}`}
+                tooltip={`Despesas pagas (${formatK(yearSpend.paid)}) mais as a pagar (${formatK(yearSpend.pending)}), pela data da nota ou, na falta dela, do vencimento. Compras aprovadas que ainda não viraram despesa entram como "comprometido" no painel de Orçamento, não aqui. O "% do teto" considera só as categorias que têm teto cadastrado.`}
+                sublabel={lB ? "carregando teto…" : hasBudget ? `${budgetPctLabel} do teto do ano` : "sem teto definido"}
+                valueColor={budgetStatusColor || undefined}
+                compact
+              />
             )}
             {widgetVisible("kpi_deliverables") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Package} value={kpi.entregue} label="Entregas concluídas"
-                  trend={mom.deliverables.d} compact />
-              </div>
+              <StatCard icon={Package} value={kpi.entregue} label="Entregas concluídas"
+                trend={mom.deliverables.d} compact />
             )}
             {widgetVisible("kpi_score") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Award} value={kpi.avgScore != null ? kpi.avgScore : "—"} label="Performance médio"
-                  sublabel={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "ótimo" : kpi.avgScore >= 60 ? "bom" : "atenção") : "sem dados"}
-                  compact />
-              </div>
+              <StatCard icon={Award} value={kpi.avgScore != null ? kpi.avgScore : "—"} label="Performance médio"
+                sublabel={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "ótimo" : kpi.avgScore >= 60 ? "bom" : "atenção") : "sem dados"}
+                compact />
             )}
             {widgetVisible("kpi_agency_sla") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Award} value={agencyMetrics.sla != null ? `${agencyMetrics.sla}%` : "—"} label="SLA cumprido"
-                  sublabel={agencyMetrics.total > 0 ? `${agencyMetrics.total} entregas` : "sem entregas"} compact />
-              </div>
+              <StatCard icon={Award} value={agencyMetrics.sla != null ? `${agencyMetrics.sla}%` : "—"} label="SLA cumprido"
+                sublabel={agencyMetrics.total > 0 ? `${agencyMetrics.total} entregas` : "sem entregas"} compact />
             )}
             {widgetVisible("kpi_agency_leadtime") && (
-              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={Clock} value={agencyMetrics.avgLead != null ? `${agencyMetrics.avgLead}d` : "—"} label="Lead time médio"
-                  sublabel="Pendente → Entregue" compact />
-              </div>
+              <StatCard icon={Clock} value={agencyMetrics.avgLead != null ? `${agencyMetrics.avgLead}d` : "—"} label="Lead time médio"
+                sublabel="Pendente → Entregue" compact />
             )}
-          </div>
+          </StatCardGrid>
         )}
       </div>
 

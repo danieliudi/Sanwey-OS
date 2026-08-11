@@ -5,6 +5,8 @@ import { proposalPrompt } from "../../constants/ai-prompts";
 import { COMPANIES } from "../../constants/companies";
 import { useEsgReports } from "../../hooks/use-esg-carbon";
 import { formatDateBR } from "../../utils/date";
+// formatBRL já vem com "R$ " embutido — nunca concatenar outro na frente.
+import { formatBRL } from "../../utils/currency";
 
 const RED = "#b5000b";
 const BORDER = "#E5E7EB";
@@ -39,7 +41,7 @@ function printDocument() {
   setTimeout(cleanup, 3000);
 }
 
-export function ProposalPanel({ lead, currentUser, allLeads }) {
+export function ProposalPanel({ lead, currentUser, allLeads, onAddActivity }) {
   const { complete, isConfigured } = useAI(currentUser);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,8 +60,32 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
     setError(null);
     try {
       const text = await complete(proposalPrompt(lead, orderHistory));
+      const isFirstGeneration = !generatedOnce.current;
       setDraft(text);
       generatedOnce.current = true;
+      // FASE 3 — buraco "proposta gerada não é registrada". "Gerada", nunca
+      // "enviada": o documento é montado aqui na tela e o envio ao cliente é
+      // manual (PDF impresso/anexado por fora) — a plataforma não tem como
+      // saber que saiu. Só o 1º "Gerar" de cada abertura do drawer vira
+      // activity; "Gerar novamente" é iteração no texto da MESMA proposta e
+      // encheria a linha do tempo de ruído. Fire-and-forget (sem await), pelo
+      // mesmo motivo do resto do arquivo: nada aqui pode segurar a UI.
+      if (isFirstGeneration && onAddActivity) {
+        const value = Number(lead.value);
+        onAddActivity(lead.id, {
+          type: "proposal_generated",
+          userId: currentUser?.id || null,
+          userName: currentUser?.name || null,
+          body: Number.isFinite(value) && value > 0
+            ? `Proposta gerada — negócio em ${formatBRL(value)}`
+            : "Proposta gerada",
+          meta: {
+            leadValue: Number.isFinite(value) ? value : null,
+            skuName: lead.skuName || null,
+            companyId: lead.companyId || null,
+          },
+        });
+      }
     } catch (err) {
       setError(err.message || "Erro ao gerar proposta.");
     } finally {
