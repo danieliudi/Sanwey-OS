@@ -180,6 +180,7 @@ export function PurchaseRequestDetailDrawer({
   const [quoteRows,    setQuoteRows]    = useState(() => normalizeQuoteRows(purchase.quoteOptions));
   const [savingQuotes, setSavingQuotes] = useState(false);
   const [quotesError,  setQuotesError]  = useState(null);
+  const [quotesSaved,  setQuotesSaved]  = useState(false);
   const [winnerSupplierId, setWinnerSupplierId] = useState("");
 
   // Vazio por padrão — quem aprova (frequentemente o admin/Daniel) não é
@@ -224,6 +225,7 @@ export function PurchaseRequestDetailDrawer({
     setActionError(null);
     setUploadError(null);
     setQuotesError(null);
+    setQuotesSaved(false);
     setCenterTab("fase");
   }, [purchase.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -305,6 +307,20 @@ export function PurchaseRequestDetailDrawer({
   };
 
   const handleSaveQuotes = async () => {
+    // Linha com valor digitado mas SEM fornecedor escolhido era descartada em
+    // silêncio pelo filter abaixo — o valor sumia no próximo carregamento sem
+    // aviso nenhum (bug real reportado: "salvou o primeiro e sumiu o
+    // segundo"). Agora barra o save e diz qual linha está pela metade.
+    const incompletas = quoteRows
+      .map((r, i) => ({ ...r, n: i + 1 }))
+      .filter(r => !r.supplierId && r.value !== "");
+    if (incompletas.length > 0) {
+      setQuotesError(
+        `Escolha o fornecedor ${incompletas.map(r => r.n).join(" e ")} ou apague o valor — ` +
+        "cotação sem fornecedor não é salva."
+      );
+      return;
+    }
     setSavingQuotes(true);
     setQuotesError(null);
     try {
@@ -312,6 +328,11 @@ export function PurchaseRequestDetailDrawer({
         .filter(r => r.supplierId)
         .map(r => ({ supplierId: r.supplierId, value: r.value === "" ? null : Number(r.value) }));
       await onUpdate(purchase.id, { quoteOptions: cleaned });
+      // Sem confirmação visível, o clique parecia não ter feito nada e a
+      // pessoa salvava de novo achando que falhou — mesmo "✓ Salvo" já usado
+      // em "Execução da compra" logo abaixo.
+      setQuotesSaved(true);
+      setTimeout(() => setQuotesSaved(false), 2500);
     } catch (err) {
       setQuotesError(err.message || "Erro ao salvar cotações.");
     } finally {
@@ -646,11 +667,16 @@ export function PurchaseRequestDetailDrawer({
               {quotesError && (
                 <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{quotesError}</div>
               )}
-              <button onClick={handleSaveQuotes} disabled={savingQuotes}
-                className="px-4 py-2 rounded-lg text-sm font-semibold"
-                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: savingQuotes ? "default" : "pointer", opacity: savingQuotes ? 0.6 : 1 }}>
-                {savingQuotes ? "Salvando…" : "Salvar cotações"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={handleSaveQuotes} disabled={savingQuotes}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold"
+                  style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: savingQuotes ? "default" : "pointer", opacity: savingQuotes ? 0.6 : 1 }}>
+                  {savingQuotes ? "Salvando…" : "Salvar cotações"}
+                </button>
+                {quotesSaved && (
+                  <span style={{ fontSize: 11, color: "var(--success)", fontWeight: 700 }}>✓ Cotações salvas</span>
+                )}
+              </div>
             </>
           ) : (
             <div className="space-y-1.5">

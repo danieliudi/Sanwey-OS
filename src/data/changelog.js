@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.41.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "Compras: uma cotação com valor preenchido mas sem fornecedor escolhido era descartada em silêncio ao salvar — o valor sumia sem aviso. Agora o sistema avisa qual linha está pela metade, e mostra \"✓ Cotações salvas\" quando dá certo (antes o botão não dava retorno nenhum e parecia não ter salvado).",
+        roles: ["marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "4.41.2",
     items: [
       {
