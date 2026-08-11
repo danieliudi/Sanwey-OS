@@ -96,6 +96,14 @@ export function PersonalStageListManager({ open, onClose, stages, stagesHook, ta
       showProbability={false}
       countLabel="Tarefas"
       onSave={handleSave}
+      // Decidido com o Daniel 11/08/2026 (Opção A do mockup "Etapa Arquivar
+      // fixa"): a etapa final ("feito", nascida com o nome "Arquivar" — ver
+      // STATUS_COLUMNS) não pode ser excluída, pra garantir que todo usuário
+      // sempre tenha uma etapa final. Reaproveita o mesmo mecanismo já usado
+      // pra travar Férias/Onboarding/Treinamentos (protectedKeys do
+      // StageListCore compartilhado) — nada de código novo de trava.
+      protectedKeys={["feito"]}
+      protectedLabel="Meu To-do"
     />
   );
 }

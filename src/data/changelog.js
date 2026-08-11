@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.45.1",
+    items: [
+      {
+        kind: "ajuste",
+        text: "No \"Meu To-do\", a última etapa (a de tarefa concluída) agora sempre existe e não pode mais ser excluída no editor de etapas — garante que todo mundo tenha um lugar final pras tarefas, mesmo customizando o board. Nasce com o nome \"Arquivar\" pra quem nunca mexeu nas etapas.",
+      },
+    ],
+  },
+  {
     version: "4.45.0",
     items: [
       {

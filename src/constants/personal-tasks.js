@@ -4,10 +4,16 @@
 // porque agora tanto o board quanto o drawer de detalhe (StageNavigator)
 // precisam dos mesmos alvos de "mover para".
 
+// Decidido com o Daniel 11/08/2026 (Opção A do mockup "Etapa Arquivar fixa"):
+// a etapa final de todo Meu To-Do — chave "feito", travada contra exclusão
+// no editor (ver protectedKeys em PersonalStageListManager.jsx) — nasce com
+// o nome "Arquivar" pra deixar o uso pretendido claro desde o início. Quem
+// já tinha customizado antes disso (ex.: renomeou pra "Concluído") não é
+// afetado — isto só define o nome de largada pra quem nunca customizou.
 export const STATUS_COLUMNS = [
-  { id: "a_fazer", name: "A Fazer", color: "#64748B" },
-  { id: "fazendo", name: "Fazendo", color: "#D97706" },
-  { id: "feito",   name: "Feito",   color: "#16A34A", terminal: true },
+  { id: "a_fazer", name: "A Fazer",   color: "#64748B" },
+  { id: "fazendo", name: "Fazendo",   color: "#D97706" },
+  { id: "feito",   name: "Arquivar",  color: "#16A34A", terminal: true },
 ];
 
 export const PERSONAL_TASK_PRIORITIES = [
