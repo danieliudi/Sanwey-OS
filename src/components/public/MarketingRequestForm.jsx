@@ -146,16 +146,24 @@ export default function MarketingRequestForm({ defaultCategory = "material" }) {
         : [...prev.companyIds, id],
     }));
 
-  const canSubmit = useMemo(() => {
-    if (submitting) return false;
-    if (form.requesterName.trim().length < 2) return false;
-    if (category === "compra") return form.title.trim().length >= 2;
-    return (
-      form.title.trim().length >= 3 &&
-      form.department.trim().length >= 1 &&
-      form.requestType.length >= 1
-    );
-  }, [form, category, submitting]);
+  // O que ainda falta preencher. Antes isso era só um booleano: o botão ficava
+  // cinza e clicar não fazia nada, sem dizer por quê — e como "Material" exige
+  // 3 campos a mais que "Compra", dava a impressão de que só Compra funcionava
+  // (foi exatamente assim que o problema chegou, 11/08/2026).
+  const missing = useMemo(() => {
+    const m = [];
+    if (form.requesterName.trim().length < 2) m.push("seu nome");
+    if (category === "compra") {
+      if (form.title.trim().length < 2) m.push("o que você precisa comprar");
+    } else {
+      if (form.department.trim().length < 1) m.push("departamento");
+      if (form.requestType.length < 1) m.push("tipo de material");
+      if (form.title.trim().length < 3) m.push("título da solicitação");
+    }
+    return m;
+  }, [form, category]);
+
+  const canSubmit = !submitting && missing.length === 0;
 
   if (!isSupabaseConfigured) {
     return (
@@ -445,6 +453,12 @@ export default function MarketingRequestForm({ defaultCategory = "material" }) {
           {error && (
             <div style={{ padding: "10px 14px", borderRadius: 8, background: "#FEF2F2", color: "#B91C1C", fontSize: 13 }}>
               {error}
+            </div>
+          )}
+
+          {missing.length > 0 && !submitting && (
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: "#FFFBEB", color: "#92400E", fontSize: 13 }}>
+              Falta preencher: <strong>{missing.join(", ")}</strong>.
             </div>
           )}
 

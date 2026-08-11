@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.41.1",
+    items: [
+      { kind: "correcao", text: "Solicitação ao Marketing: o formulário não gravava nada para quem abria o link sem estar logado — a permissão pública existia, mas era anulada por uma regra interna antes de valer. Corrigido; pedidos de Material e de Compra voltam a ser enviados normalmente." },
+      { kind: "correcao", text: "Solicitação ao Marketing: o botão de enviar ficava cinza sem dizer o que faltava, o que dava a impressão de que só a opção Compra funcionava (Material pede três campos a mais). Agora a tela lista os campos pendentes." },
+    ],
+  },
+  {
     version: "4.41.0",
     items: [
       { kind: "novo", text: "O setor do vendedor passou a valer de verdade: negócio sem responsável agora aparece só para quem atende aquele setor, e o histórico do cliente mostra o que foi feito dentro do seu setor — incluindo por colegas do mesmo time. Gerência e diretoria continuam vendo tudo.", roles: ["consultor", "vendedor", "gerente", "diretoria", "admin"] },
