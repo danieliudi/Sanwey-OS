@@ -1,9 +1,9 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Archive, ArchiveRestore, ArrowLeft, Check, File, FileImage, FileSpreadsheet, FileText,
-  Hash, Image, Lock, Mic, MessageSquare, Pause, Paperclip, Play, Plus, Search,
-  Send, Smile, Users, X,
+  Hash, Image, Lock, LogOut, Mic, MessageSquare, Pause, Paperclip, Play, Plus, Search,
+  Send, Settings, Smile, Trash2, Users, X,
 } from "lucide-react";
 import { useChat, useChannelMessages } from "../../hooks/use-chat";
 import { useChatAttachments } from "../../hooks/use-chat-attachments";
@@ -81,7 +81,7 @@ function shortTimeAgo(iso) {
 function channelTitle(channel) {
   if (!channel) return "";
   if (channel.kind === "dm") return channel.dmPeerName || "Conversa";
-  return channel.name || "Canal";
+  return channel.name || (channel.readOnly ? "Canal" : "Grupo");
 }
 
 // Avatar tingido (não sólido): `bg` vem do banco como cor saturada e ficaria
@@ -711,7 +711,7 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
       });
       onClose();
     } catch (e) {
-      setError(e?.message || "Não foi possível criar o canal.");
+      setError(e?.message || (readOnly ? "Não foi possível criar o canal." : "Não foi possível criar o grupo."));
     } finally {
       setSaving(false);
     }
@@ -730,7 +730,7 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Criar canal" width={460}>
+    <Modal open={open} onClose={onClose} title={readOnly ? "Criar canal" : "Criar grupo"} width={460}>
       <div className="px-6 py-4" style={{ maxHeight: "70vh", overflowY: "auto" }}>
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           {CHANNEL_ICON_PRESETS.map(({ icon: ic, label }) => (
@@ -754,7 +754,7 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
           autoFocus
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="Nome do canal"
+          placeholder={readOnly ? "Nome do canal" : "Nome do grupo"}
           className="w-full py-2 px-3 rounded-md border outline-none mb-2"
           style={{ fontSize: 13, borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
         />
@@ -767,7 +767,7 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
         />
 
         <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 6 }}>
-          Tipo de canal
+          Tipo
         </div>
         <div className="grid grid-cols-2 gap-2 mb-4">
           <button
@@ -776,7 +776,7 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
             className="text-left rounded-lg p-2.5"
             style={{ border: `1.5px solid ${!readOnly ? "var(--accent)" : "var(--border)"}`, background: !readOnly ? "color-mix(in srgb, var(--accent) 7%, transparent)" : "var(--surface)", cursor: "pointer" }}
           >
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>💬 Aberto</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>💬 Grupo</div>
             <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Qualquer membro posta</div>
           </button>
           <button
@@ -785,7 +785,7 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
             className="text-left rounded-lg p-2.5"
             style={{ border: `1.5px solid ${readOnly ? "var(--accent)" : "var(--border)"}`, background: readOnly ? "color-mix(in srgb, var(--accent) 7%, transparent)" : "var(--surface)", cursor: "pointer" }}
           >
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>📢 Somente avisos</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>📢 Canal</div>
             <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Só gestor/admin posta, resto só lê</div>
           </button>
         </div>
@@ -868,9 +868,310 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
           className="rounded-md px-4 py-2"
           style={{ fontSize: 12.5, fontWeight: 700, color: "var(--on-accent)", background: "var(--accent)", border: "none", cursor: canSave ? "pointer" : "default", opacity: canSave ? 1 : 0.6 }}
         >
-          {saving ? "Criando…" : "Criar canal"}
+          {saving ? "Criando…" : (readOnly ? "Criar canal" : "Criar grupo")}
         </button>
       </div>
+    </Modal>
+  );
+}
+
+// "Gerenciar grupo/canal" (mockup aprovado 11/08/2026 — pedido do Daniel:
+// "falta a função de poder editar aquele canal/grupo, para adicionar e
+// deletar usuários, mudar nome"). Quem pode editar (`canManage`) é
+// recalculado no client a partir do roster carregado — mesma regra que o
+// backend já aplica em `chat_can_manage` (gestor da plataforma OU admin
+// deste grupo), então um clique num controle sem permissão nunca chega a
+// acontecer, mas o RPC segue sendo a fonte de verdade (decisão B do mockup:
+// grupo sincronizado por departamento fica com a lista de membros só-leitura,
+// sem os controles de adicionar/remover).
+function ManageChannelModal({
+  open, onClose, channel, currentUser, dmCandidates,
+  updateChannel, addMember, removeMember, leaveChannel, onLeft,
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [readOnly, setReadOnly] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [syncFilter, setSyncFilter] = useState(null);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [addQuery, setAddQuery] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [memberBusyId, setMemberBusyId] = useState(null);
+  const [leaving, setLeaving] = useState(false);
+
+  const channelId = channel?.id ?? null;
+
+  const loadRoster = useCallback(async () => {
+    if (!channelId) return;
+    setMembersLoading(true);
+    const [rosterRes, channelRes] = await Promise.all([
+      supabase.rpc("chat_channel_roster", { p_channel_id: channelId }),
+      supabase.from("chat_channels").select("sync_filter").eq("id", channelId).single(),
+    ]);
+    setMembers(rosterRes.data || []);
+    setSyncFilter(channelRes.data?.sync_filter ?? null);
+    setMembersLoading(false);
+  }, [channelId]);
+
+  useEffect(() => {
+    if (!open || !channel) return;
+    setName(channel.name || "");
+    setDescription(channel.description || "");
+    setReadOnly(Boolean(channel.readOnly));
+    setAddQuery("");
+    setError(null);
+    setSaving(false);
+    setMemberBusyId(null);
+    setLeaving(false);
+    loadRoster();
+  }, [open, channel, loadRoster]);
+
+  const canManage = useMemo(() => {
+    if (!currentUser) return false;
+    if (isManager(currentUser)) return true;
+    return members.some(m => m.user_id === currentUser.id && m.is_admin);
+  }, [members, currentUser]);
+
+  const isSynced = Boolean(syncFilter);
+
+  const addCandidates = useMemo(() => {
+    const memberIds = new Set(members.map(m => m.user_id));
+    const q = addQuery.trim().toLowerCase();
+    return dmCandidates
+      .filter(c => !memberIds.has(c.id))
+      .filter(c => !q || (c.name || "").toLowerCase().includes(q));
+  }, [dmCandidates, members, addQuery]);
+
+  const save = async () => {
+    if (!channelId || !name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await updateChannel({ channelId, name: name.trim(), description: description.trim() || null, readOnly });
+      onClose();
+    } catch (e) {
+      setError(e?.message || "Não foi possível salvar as alterações.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAdd = async (userId) => {
+    setMemberBusyId(userId);
+    setError(null);
+    try {
+      await addMember(channelId, userId);
+      await loadRoster();
+    } catch (e) {
+      setError(e?.message || "Não foi possível adicionar essa pessoa.");
+    } finally {
+      setMemberBusyId(null);
+    }
+  };
+
+  const handleRemove = async (userId) => {
+    setMemberBusyId(userId);
+    setError(null);
+    try {
+      await removeMember(channelId, userId);
+      await loadRoster();
+    } catch (e) {
+      setError(e?.message || "Não foi possível remover essa pessoa.");
+    } finally {
+      setMemberBusyId(null);
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!window.confirm(`Sair de "${channel?.name || (readOnly ? "Canal" : "Grupo")}"? Você deixa de receber mensagens dele.`)) return;
+    setLeaving(true);
+    setError(null);
+    try {
+      await leaveChannel(channelId);
+      onLeft?.();
+      onClose();
+    } catch (e) {
+      setError(e?.message || "Não foi possível sair.");
+      setLeaving(false);
+    }
+  };
+
+  if (!channel) return null;
+  const isDm = channel.kind === "dm";
+
+  return (
+    <Modal open={open} onClose={onClose} title={isDm ? "Conversa" : (readOnly ? "Gerenciar canal" : "Gerenciar grupo")} width={460}>
+      <div className="px-6 py-4" style={{ maxHeight: "70vh", overflowY: "auto" }}>
+        {isDm ? (
+          <div style={{ fontSize: 12.5, color: "var(--text-faint)" }}>Conversas diretas não têm configurações de grupo.</div>
+        ) : (
+          <>
+            {canManage ? (
+              <>
+                <input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder={readOnly ? "Nome do canal" : "Nome do grupo"}
+                  className="w-full py-2 px-3 rounded-md border outline-none mb-2"
+                  style={{ fontSize: 13, borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+                />
+                <input
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Descrição (opcional)"
+                  className="w-full py-2 px-3 rounded-md border outline-none mb-4"
+                  style={{ fontSize: 13, borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+                />
+                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 6 }}>
+                  Tipo
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setReadOnly(false)}
+                    className="text-left rounded-lg p-2.5"
+                    style={{ border: `1.5px solid ${!readOnly ? "var(--accent)" : "var(--border)"}`, background: !readOnly ? "color-mix(in srgb, var(--accent) 7%, transparent)" : "var(--surface)", cursor: "pointer" }}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>💬 Grupo</div>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Qualquer membro posta</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReadOnly(true)}
+                    className="text-left rounded-lg p-2.5"
+                    style={{ border: `1.5px solid ${readOnly ? "var(--accent)" : "var(--border)"}`, background: readOnly ? "color-mix(in srgb, var(--accent) 7%, transparent)" : "var(--surface)", cursor: "pointer" }}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>📢 Canal</div>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Só gestor/admin posta, resto só lê</div>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="mb-4">
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{channel.name}</div>
+                {channel.description && <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>{channel.description}</div>}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mb-2">
+              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-faint)" }}>
+                Membros {!membersLoading && `· ${members.length}`}
+              </div>
+            </div>
+
+            {isSynced && (
+              <div className="rounded-md px-3 py-2 mb-2" style={{ background: "var(--surface-alt)", fontSize: 11.5, color: "var(--text-faint)" }}>
+                Este grupo é sincronizado automaticamente por departamento/empresa — a lista de membros é só leitura aqui; quem entra e sai é decidido pelo cadastro na aba Usuários.
+              </div>
+            )}
+
+            {membersLoading ? (
+              <div className="px-1 py-3" style={{ fontSize: 12, color: "var(--text-faint)" }}>Carregando membros…</div>
+            ) : (
+              <div className="flex flex-col mb-3" style={{ maxHeight: 180, overflowY: "auto" }}>
+                {members.map(m => (
+                  <div key={m.user_id} className="w-full flex items-center gap-2.5 px-1 py-1.5">
+                    <Avatar name={m.name} initials={m.initials} bg={m.avatar_bg} size={26} />
+                    <span className="flex-1 truncate" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>
+                      {m.name}{m.user_id === currentUser?.id ? " (você)" : ""}
+                    </span>
+                    {m.is_admin && (
+                      <span
+                        className="shrink-0 rounded-full px-2 py-0.5"
+                        style={{ fontSize: 10, fontWeight: 700, background: "var(--surface-alt)", color: "var(--text-dim)" }}
+                      >
+                        admin
+                      </span>
+                    )}
+                    {canManage && !isSynced && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(m.user_id)}
+                        disabled={memberBusyId === m.user_id}
+                        title="Remover do grupo/canal"
+                        aria-label="Remover"
+                        className="flex items-center justify-center rounded-md shrink-0"
+                        style={{ width: 24, height: 24, background: "none", border: "none", color: "var(--text-faint)", cursor: memberBusyId === m.user_id ? "default" : "pointer" }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {canManage && !isSynced && !membersLoading && (
+              <>
+                <div className="relative mb-2">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-faint)" }} />
+                  <input
+                    value={addQuery}
+                    onChange={e => setAddQuery(e.target.value)}
+                    placeholder="Adicionar pessoa…"
+                    className="w-full py-2 rounded-md border outline-none"
+                    style={{ paddingLeft: 32, paddingRight: 10, fontSize: 12.5, borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+                  />
+                </div>
+                {addQuery.trim() && (
+                  <div className="flex flex-col mb-2" style={{ maxHeight: 160, overflowY: "auto" }}>
+                    {addCandidates.length === 0 ? (
+                      <div className="px-1 py-2" style={{ fontSize: 12, color: "var(--text-faint)" }}>Ninguém encontrado.</div>
+                    ) : addCandidates.map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleAdd(c.id)}
+                        disabled={memberBusyId === c.id}
+                        className="w-full flex items-center gap-2.5 px-2 py-1.5 text-left rounded-md"
+                        style={{ background: "transparent", border: "none", cursor: memberBusyId === c.id ? "default" : "pointer" }}
+                      >
+                        <Avatar name={c.name} initials={c.initials} bg={c.avatarBg} size={26} />
+                        <span className="flex-1 truncate" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>{c.name}</span>
+                        <Plus size={14} style={{ color: "var(--accent)" }} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {error && (
+              <div className="rounded-md px-3 py-2 mt-2" style={{ background: "var(--danger-bg)", color: "var(--danger)", fontSize: 12 }}>{error}</div>
+            )}
+          </>
+        )}
+      </div>
+      {!isDm && (
+        <div className="px-6 py-3 flex items-center justify-between gap-2 border-t" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
+          <button
+            type="button"
+            onClick={handleLeave}
+            disabled={leaving}
+            className="flex items-center gap-1.5 rounded-md px-3 py-2"
+            style={{ fontSize: 12.5, fontWeight: 600, color: "var(--danger)", background: "transparent", border: "1px solid var(--border-strong)", cursor: leaving ? "default" : "pointer" }}
+          >
+            <LogOut size={13} /> Sair
+          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onClose} className="rounded-md px-3 py-2" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-dim)", background: "transparent", border: "1px solid var(--border-strong)", cursor: "pointer" }}>
+              {canManage ? "Cancelar" : "Fechar"}
+            </button>
+            {canManage && (
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving || !name.trim()}
+                className="rounded-md px-4 py-2"
+                style={{ fontSize: 12.5, fontWeight: 700, color: "var(--on-accent)", background: "var(--accent)", border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer", opacity: (saving || !name.trim()) ? 0.6 : 1 }}
+              >
+                {saving ? "Salvando…" : "Salvar"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
@@ -879,6 +1180,7 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
   const {
     channels, dmCandidates, loading, markRead, sendMessage, startDm,
     archiveChannel, unarchiveChannel, createChannel,
+    updateChannel, addMember, removeMember, leaveChannel,
   } = useChat({ userId: currentUser?.id });
   const { uploadAttachment } = useChatAttachments();
   const { stickers, getPublicUrl: getStickerPublicUrl } = useChatStickers();
@@ -886,6 +1188,7 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
   const [mobileShowThread, setMobileShowThread] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [newChannelOpen, setNewChannelOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
   const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const mobileFabRef = useRef(null);
   const [draft, setDraft] = useState("");
@@ -952,7 +1255,7 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
   const filterOptions = useMemo(() => ([
     { value: "todas", label: `Todas · ${filterCounts.todas}` },
     { value: "nao-lidas", label: `Não lidas · ${filterCounts["nao-lidas"]}` },
-    { value: "canais", label: `Canais · ${filterCounts.canais}` },
+    { value: "canais", label: `Grupos e canais · ${filterCounts.canais}` },
     { value: "diretas", label: `Diretas · ${filterCounts.diretas}` },
   ]), [filterCounts]);
 
@@ -965,6 +1268,11 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
 
   const canais = useMemo(() => filteredChannels.filter(c => c.kind === "canal"), [filteredChannels]);
   const diretas = useMemo(() => filteredChannels.filter(c => c.kind === "dm"), [filteredChannels]);
+  // Grupo (interativo) vs Canal (avisos, só leitura pra quem não é gestor/admin) —
+  // mesma lista `canais` (kind === "canal", nome de coluna preservado),
+  // só dividida na hora de renderizar a rail (rename decidido com o Daniel 11/08/2026).
+  const grupos = useMemo(() => canais.filter(c => !c.readOnly), [canais]);
+  const canaisAvisos = useMemo(() => canais.filter(c => c.readOnly), [canais]);
 
   const manager = isManager(currentUser);
   const readOnlyForMe = Boolean(selected?.readOnly) && !manager;
@@ -1287,7 +1595,7 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
                 className="flex-1 flex items-center justify-center gap-1.5 rounded-md py-2 transition-opacity"
                 style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border-strong)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
               >
-                <Hash size={13} /> Canal
+                <Hash size={13} /> Grupo
               </button>
             )}
           </div>
@@ -1349,7 +1657,8 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
                 <div className="px-2 py-3" style={{ fontSize: 12, color: "var(--text-faint)" }}>Nenhuma conversa neste filtro.</div>
               ) : (
                 <>
-                  {railGroup("Canais", canais)}
+                  {railGroup("Grupos", grupos)}
+                  {railGroup("Canais", canaisAvisos)}
                   {railGroup("Diretas", diretas)}
                 </>
               )}
@@ -1400,7 +1709,7 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
                 className="w-full flex items-center gap-2 rounded-md px-2 py-2.5 text-left transition-opacity"
                 style={{ background: "transparent", border: "none", color: "var(--text)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
               >
-                <Hash size={13} /> Canal
+                <Hash size={13} /> Grupo
               </button>
             </ComposerPopover>
           )}
@@ -1418,8 +1727,8 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
               title={channels.length === 0 ? "Nenhuma conversa ainda" : "Selecione uma conversa"}
               description={
                 channels.length === 0
-                  ? "Assim que você fizer parte de um canal ou iniciar uma conversa direta, ela aparece aqui."
-                  : "Escolha um canal ou uma conversa direta na lista ao lado."
+                  ? "Assim que você fizer parte de um grupo ou canal, ou iniciar uma conversa direta, ela aparece aqui."
+                  : "Escolha um grupo, canal ou conversa direta na lista ao lado."
               }
             />
           </div>
@@ -1452,11 +1761,25 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
                   ) : (
                     <>
                       {selected.readOnly && <Lock size={11} />}
-                      {selected.description || "Canal"}
+                      {selected.description || (selected.readOnly ? "Canal" : "Grupo")}
                     </>
                   )}
                 </div>
               </div>
+              {selected.kind !== "dm" && (
+                <button
+                  type="button"
+                  onClick={() => setManageOpen(true)}
+                  title={selected.readOnly ? "Gerenciar canal" : "Gerenciar grupo"}
+                  aria-label={selected.readOnly ? "Gerenciar canal" : "Gerenciar grupo"}
+                  className="flex items-center justify-center rounded-md shrink-0"
+                  style={{ width: 28, height: 28, background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                >
+                  <Settings size={16} />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleToggleArchive}
@@ -1704,6 +2027,18 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
         onClose={() => setNewChannelOpen(false)}
         candidates={dmCandidates}
         onCreate={handleCreateChannel}
+      />
+      <ManageChannelModal
+        open={manageOpen}
+        onClose={() => setManageOpen(false)}
+        channel={selected}
+        currentUser={currentUser}
+        dmCandidates={dmCandidates}
+        updateChannel={updateChannel}
+        addMember={addMember}
+        removeMember={removeMember}
+        leaveChannel={leaveChannel}
+        onLeft={() => { setSelectedId(null); setMobileShowThread(false); }}
       />
     </div>
   );

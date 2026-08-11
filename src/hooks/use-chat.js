@@ -51,7 +51,7 @@ function rowToMessage(r) {
 function channelDisplayName(channel) {
   if (!channel) return "Conversa";
   if (channel.kind === "dm") return channel.dmPeerName || "Conversa";
-  return channel.name || "Canal";
+  return channel.name || (channel.readOnly ? "Canal" : "Grupo");
 }
 
 function messagePreviewLabel(message) {
@@ -239,6 +239,50 @@ export function useChat({ userId } = {}) {
     if (err) { setError(err); fetchChannels(); }
   }, [enabled, userId, fetchChannels]);
 
+  // Gerenciamento de grupo/canal (nome, tipo, membros) — mockup aprovado
+  // 11/08/2026. `chat_can_manage` no backend já resolve quem pode chamar
+  // (gestor da plataforma OU admin daquele grupo); aqui só repassa e
+  // atualiza o estado local pra não esperar o próximo refetch.
+  const updateChannel = useCallback(async ({ channelId, name, description, readOnly } = {}) => {
+    const { error: err } = await supabase.rpc("chat_update_channel", {
+      p_channel_id: channelId,
+      p_name: name ?? null,
+      p_description: description ?? null,
+      p_read_only: readOnly === undefined ? null : readOnly,
+    });
+    if (err) throw err;
+    setChannels(prev => prev.map(c => c.id === channelId
+      ? {
+        ...c,
+        name: name !== undefined && name !== null && name.trim() !== "" ? name.trim() : c.name,
+        description: description !== undefined ? description : c.description,
+        readOnly: readOnly === undefined || readOnly === null ? c.readOnly : Boolean(readOnly),
+      }
+      : c));
+  }, []);
+
+  const addMember = useCallback(async (channelId, memberId) => {
+    const { error: err } = await supabase.rpc("chat_add_member", {
+      p_channel_id: channelId,
+      p_user_id: memberId,
+    });
+    if (err) throw err;
+  }, []);
+
+  const removeMember = useCallback(async (channelId, memberId) => {
+    const { error: err } = await supabase.rpc("chat_remove_member", {
+      p_channel_id: channelId,
+      p_user_id: memberId,
+    });
+    if (err) throw err;
+  }, []);
+
+  const leaveChannel = useCallback(async (channelId) => {
+    const { error: err } = await supabase.rpc("chat_leave_channel", { p_channel_id: channelId });
+    if (err) throw err;
+    setChannels(prev => prev.filter(c => c.id !== channelId));
+  }, []);
+
   // Arquivado = silenciado (decisão do Daniel) — não conta no badge fora da
   // tela de Chat, mesmo com mensagens não lidas.
   const totalUnread = useMemo(
@@ -259,8 +303,12 @@ export function useChat({ userId } = {}) {
     createChannel,
     archiveChannel,
     unarchiveChannel,
+    updateChannel,
+    addMember,
+    removeMember,
+    leaveChannel,
     refetch: fetchChannels,
-  }), [channels, dmCandidates, totalUnread, incomingMessage, loading, error, sendMessage, markRead, startDm, createChannel, archiveChannel, unarchiveChannel, fetchChannels]);
+  }), [channels, dmCandidates, totalUnread, incomingMessage, loading, error, sendMessage, markRead, startDm, createChannel, archiveChannel, unarchiveChannel, updateChannel, addMember, removeMember, leaveChannel, fetchChannels]);
 }
 
 export function useChannelMessages(channelId) {
