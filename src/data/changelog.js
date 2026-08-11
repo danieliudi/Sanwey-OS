@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.46.0",
+    items: [
+      {
+        kind: "novo",
+        text: "No Chat, \"Canal\" virou dois conceitos: Grupo (qualquer membro posta) e Canal (só gestor/admin posta, resto só lê). E agora dá pra gerenciar cada grupo/canal direto pelo ícone de engrenagem no cabeçalho da conversa — mudar nome e tipo, adicionar e remover pessoas, tornar alguém admin, e sair.",
+      },
+    ],
+  },
+  {
     version: "4.45.1",
     items: [
       {

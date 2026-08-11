@@ -283,6 +283,19 @@ export function useChat({ userId } = {}) {
     setChannels(prev => prev.filter(c => c.id !== channelId));
   }, []);
 
+  // Achado do QA (11/08/2026): sem isso, todo grupo com mais de 1 membro
+  // ficava com o criador travado como admin pra sempre — chat_remove_member/
+  // chat_leave_channel bloqueiam sair/remover sendo o único admin, e não
+  // existia nenhum jeito de promover outra pessoa antes disso.
+  const setMemberAdmin = useCallback(async (channelId, memberId, isAdmin) => {
+    const { error: err } = await supabase.rpc("chat_set_member_admin", {
+      p_channel_id: channelId,
+      p_user_id: memberId,
+      p_is_admin: isAdmin,
+    });
+    if (err) throw err;
+  }, []);
+
   // Arquivado = silenciado (decisão do Daniel) — não conta no badge fora da
   // tela de Chat, mesmo com mensagens não lidas.
   const totalUnread = useMemo(
@@ -307,8 +320,9 @@ export function useChat({ userId } = {}) {
     addMember,
     removeMember,
     leaveChannel,
+    setMemberAdmin,
     refetch: fetchChannels,
-  }), [channels, dmCandidates, totalUnread, incomingMessage, loading, error, sendMessage, markRead, startDm, createChannel, archiveChannel, unarchiveChannel, updateChannel, addMember, removeMember, leaveChannel, fetchChannels]);
+  }), [channels, dmCandidates, totalUnread, incomingMessage, loading, error, sendMessage, markRead, startDm, createChannel, archiveChannel, unarchiveChannel, updateChannel, addMember, removeMember, leaveChannel, setMemberAdmin, fetchChannels]);
 }
 
 export function useChannelMessages(channelId) {

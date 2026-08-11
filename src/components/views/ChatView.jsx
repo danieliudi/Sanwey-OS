@@ -886,7 +886,7 @@ function CreateChannelModal({ open, onClose, candidates, onCreate }) {
 // sem os controles de adicionar/remover).
 function ManageChannelModal({
   open, onClose, channel, currentUser, dmCandidates,
-  updateChannel, addMember, removeMember, leaveChannel, onLeft,
+  updateChannel, addMember, removeMember, leaveChannel, setMemberAdmin, onLeft,
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -914,6 +914,11 @@ function ManageChannelModal({
     setMembersLoading(false);
   }, [channelId]);
 
+  // Depende só de `open`/`channelId` (não do objeto `channel` inteiro) de
+  // propósito — achado do QA (11/08/2026): `channels` ganha referência nova
+  // a cada mensagem recebida em QUALQUER canal da plataforma (realtime sem
+  // filtro por canal em use-chat.js), então depender de `channel` reabria
+  // este efeito e resetava nome/descrição digitados no meio da edição.
   useEffect(() => {
     if (!open || !channel) return;
     setName(channel.name || "");
@@ -925,13 +930,17 @@ function ManageChannelModal({
     setMemberBusyId(null);
     setLeaving(false);
     loadRoster();
-  }, [open, channel, loadRoster]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, channelId, loadRoster]);
 
+  // `!membersLoading` no gate — achado do QA: sem isso, trocar rápido de
+  // canal reaproveitava o roster antigo (de outro canal) por um instante e
+  // podia mostrar controles de edição pra quem não administra o canal atual.
   const canManage = useMemo(() => {
-    if (!currentUser) return false;
+    if (membersLoading || !currentUser) return false;
     if (isManager(currentUser)) return true;
     return members.some(m => m.user_id === currentUser.id && m.is_admin);
-  }, [members, currentUser]);
+  }, [members, membersLoading, currentUser]);
 
   const isSynced = Boolean(syncFilter);
 
@@ -970,7 +979,13 @@ function ManageChannelModal({
     }
   };
 
+  // Achado do QA: remover a si mesmo pelo ✕ do próprio card (em vez do botão
+  // "Sair") deixava estado incoerente — chat_remove_member não atualiza
+  // `channels` no hook nem fecha a conversa (só chat_leave_channel faz isso).
+  // O botão ✕ já não aparece na própria linha (ver render abaixo), mas esta
+  // trava fica como reforço caso a função seja chamada por outro caminho.
   const handleRemove = async (userId) => {
+    if (userId === currentUser?.id) { handleLeave(); return; }
     setMemberBusyId(userId);
     setError(null);
     try {
@@ -978,6 +993,19 @@ function ManageChannelModal({
       await loadRoster();
     } catch (e) {
       setError(e?.message || "Não foi possível remover essa pessoa.");
+    } finally {
+      setMemberBusyId(null);
+    }
+  };
+
+  const handleToggleAdmin = async (userId, nextIsAdmin) => {
+    setMemberBusyId(userId);
+    setError(null);
+    try {
+      await setMemberAdmin(channelId, userId, nextIsAdmin);
+      await loadRoster();
+    } catch (e) {
+      setError(e?.message || "Não foi possível atualizar o admin.");
     } finally {
       setMemberBusyId(null);
     }
@@ -1076,7 +1104,22 @@ function ManageChannelModal({
                     <span className="flex-1 truncate" style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>
                       {m.name}{m.user_id === currentUser?.id ? " (você)" : ""}
                     </span>
-                    {m.is_admin && (
+                    {canManage && !isSynced ? (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAdmin(m.user_id, !m.is_admin)}
+                        disabled={memberBusyId === m.user_id}
+                        title={m.is_admin ? "Tirar admin" : "Tornar admin"}
+                        className="shrink-0 rounded-full px-2 py-0.5"
+                        style={{
+                          fontSize: 10, fontWeight: 700, cursor: memberBusyId === m.user_id ? "default" : "pointer", border: "none",
+                          background: m.is_admin ? "var(--surface-alt)" : "transparent",
+                          color: m.is_admin ? "var(--text-dim)" : "var(--text-faint)",
+                        }}
+                      >
+                        {m.is_admin ? "admin" : "tornar admin"}
+                      </button>
+                    ) : m.is_admin && (
                       <span
                         className="shrink-0 rounded-full px-2 py-0.5"
                         style={{ fontSize: 10, fontWeight: 700, background: "var(--surface-alt)", color: "var(--text-dim)" }}
@@ -1084,7 +1127,7 @@ function ManageChannelModal({
                         admin
                       </span>
                     )}
-                    {canManage && !isSynced && (
+                    {canManage && !isSynced && m.user_id !== currentUser?.id && (
                       <button
                         type="button"
                         onClick={() => handleRemove(m.user_id)}
@@ -1180,7 +1223,7 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
   const {
     channels, dmCandidates, loading, markRead, sendMessage, startDm,
     archiveChannel, unarchiveChannel, createChannel,
-    updateChannel, addMember, removeMember, leaveChannel,
+    updateChannel, addMember, removeMember, leaveChannel, setMemberAdmin,
   } = useChat({ userId: currentUser?.id });
   const { uploadAttachment } = useChatAttachments();
   const { stickers, getPublicUrl: getStickerPublicUrl } = useChatStickers();
@@ -1769,6 +1812,7 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
               {selected.kind !== "dm" && (
                 <button
                   type="button"
+                  data-tour="chat-manage-channel"
                   onClick={() => setManageOpen(true)}
                   title={selected.readOnly ? "Gerenciar canal" : "Gerenciar grupo"}
                   aria-label={selected.readOnly ? "Gerenciar canal" : "Gerenciar grupo"}
@@ -2038,6 +2082,7 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
         addMember={addMember}
         removeMember={removeMember}
         leaveChannel={leaveChannel}
+        setMemberAdmin={setMemberAdmin}
         onLeft={() => { setSelectedId(null); setMobileShowThread(false); }}
       />
     </div>

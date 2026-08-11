@@ -82,6 +82,19 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: envie e-mail de verdade pro cliente direto daqui, com templates reutilizáveis e lembrete recorrente — clique na aba \"Email\".",
     version: "4.45.0",
   },
+  // 4.46.0 — igual a "lista-pessoal-automacoes"/"lead-email-tab" acima: o
+  // alvo só existe com um grupo/canal aberto (dentro do cabeçalho da
+  // conversa), não direto na rota "chat". Registrado mesmo assim — o
+  // runtime pula em silêncio se o elemento não estiver montado ainda, e
+  // dispara pra quem já tem uma conversa aberta na 1ª visita depois do
+  // release.
+  {
+    id: "chat-manage-channel",
+    route: "chat",
+    target: '[data-tour="chat-manage-channel"]',
+    text: "Novo: \"Canal\" virou Grupo (todo mundo posta) e Canal (só avisos). Clique na engrenagem pra renomear, trocar o tipo, adicionar/remover pessoas ou sair.",
+    version: "4.46.0",
+  },
   {
     id: "marketing-orcamento",
     route: "marketing-despesas",
