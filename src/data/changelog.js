@@ -24,6 +24,14 @@
 
 export const CHANGELOG = [
   {
+    version: "4.41.0",
+    items: [
+      { kind: "novo", text: "O setor do vendedor passou a valer de verdade: negócio sem responsável agora aparece só para quem atende aquele setor, e o histórico do cliente mostra o que foi feito dentro do seu setor — incluindo por colegas do mesmo time. Gerência e diretoria continuam vendo tudo.", roles: ["consultor", "vendedor", "gerente", "diretoria", "admin"] },
+      { kind: "correcao", text: "O filtro por setor funcionava só na tela: o servidor mandava os negócios dos outros setores junto, e a tela apenas escondia. Agora o limite é aplicado no servidor.", roles: ["admin", "diretoria"] },
+      { kind: "ajuste", text: "Negócio sem setor preenchido continua visível para quem é o responsável e para a gerência — só não aparece para vendedores de outros setores.", roles: ["consultor", "vendedor", "gerente"] },
+    ],
+  },
+  {
     version: "4.40.0",
     items: [
       { kind: "novo", text: "Clientes: a aba Conexões virou Histórico — uma linha do tempo única com tudo que já aconteceu com aquele cliente, atravessando todos os negócios dele: visitas, comentários, amostras, e-mails de abordagem, propostas e casos de pós-venda. Mudanças de etapa e anexos aparecem como pano de fundo, e dá pra filtrar só as interações.", roles: ["consultor", "vendedor", "gerente", "diretoria", "admin"] },

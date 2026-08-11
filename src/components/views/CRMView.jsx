@@ -410,7 +410,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       // Vendedor sees own leads + subordinates' leads
       s = s.filter(l => getLeadOwnerIds(l).some(id => id === user.id || subordinateIds.has(id)));
     }
-    // Sector filter: if user has sectors, only show leads in those sectors (or without sector)
+    // Filtro por setor. ATENÇÃO: desde 10/08/2026 o setor é aplicado também na
+    // RLS (`leads_select` + `current_user_sectors()`), então este filtro deixou
+    // de ser a proteção e passou a ser só refinamento de tela — o servidor já
+    // não manda negócio de outro setor. Não remova achando que é redundante:
+    // ele ainda cobre o caso do gerente/admin, que recebe tudo do banco e usa
+    // o seletor de setor do cabeçalho pra focar num time.
     if (user.sectors?.length && (user.role === "vendedor" || user.role === "consultor")) {
       s = s.filter(l => !l.sector || user.sectors.includes(l.sector));
     }
