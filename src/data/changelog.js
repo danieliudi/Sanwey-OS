@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.43.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Um link de convite ou de \"Esqueci minha senha\" expirado (ou já usado) caía numa tela de login em branco, sem explicação nenhuma. Agora aparece um aviso claro dizendo o que houve e o que fazer.",
+      },
+    ],
+  },
+  {
     version: "4.43.0",
     items: [
       {

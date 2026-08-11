@@ -27,6 +27,21 @@ const authStorage = rememberPref === "false" ? window.sessionStorage : undefined
 // de trabalho sem nunca definir senha — ver use-supabase-auth.js.
 export const cameFromInviteLink = typeof window !== "undefined" && /type=invite/.test(window.location.hash);
 
+// Link de convite/recuperação EXPIRADO ou já usado (ex.: clicado 2x, ou em
+// dois aparelhos) não estabelece sessão — o GoTrue redireciona de volta com
+// "#error=access_denied&error_code=otp_expired&error_description=..." no
+// hash. Até aqui NADA lia esse erro: a pessoa caía numa tela de login em
+// branco, sem explicação nenhuma — o motivo real, do lado do usuário, do
+// "não sei fazer login" reportado pelo Daniel (11/08/2026). Capturado no
+// mesmo ponto síncrono que cameFromInviteLink, antes do supabase-js
+// consumir o hash.
+export const authLinkError = (() => {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  if (!params.get("error")) return null;
+  return { code: params.get("error_code"), description: params.get("error_description") };
+})();
+
 // Safe to export `null` when not configured — screens check `isSupabaseConfigured`
 // before calling any method, and show a setup banner instead.
 export const supabase = isSupabaseConfigured

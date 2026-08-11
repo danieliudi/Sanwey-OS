@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase, isSupabaseConfigured, cameFromInviteLink } from "../lib/supabase";
+import { supabase, isSupabaseConfigured, cameFromInviteLink, authLinkError } from "../lib/supabase";
 import { clearAll as clearOfflineCache } from "./use-offline-cache";
 
 // Loads the current user's profile row (role, companies, avatarBg, initials).
@@ -25,7 +25,10 @@ export function useSupabaseAuth() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
-  const [error, setError] = useState(null);
+  // Pré-popula com o erro do link (se veio um) — sem isso a tela de login
+  // renderizava sem nenhum aviso, e a pessoa não tinha como saber que o
+  // link tinha expirado (ver authLinkError em lib/supabase.js).
+  const [error, setError] = useState(() => (authLinkError ? new Error(authLinkError.description || "Link inválido ou expirado.") : null));
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   // Link de convite não dispara PASSWORD_RECOVERY (só "type=recovery" faz
   // isso) — sem isso, quem aceita convite cai direto no painel de trabalho

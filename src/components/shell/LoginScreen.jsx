@@ -19,7 +19,12 @@ const AUTH_ERROR_TRANSLATIONS = [
   [/new password should be different from the old password/i, "A nova senha deve ser diferente da anterior."],
   [/for security purposes, you can only request this after (\d+) seconds/i, (m) => `Aguarde ${m[1]} segundos antes de tentar de novo.`],
   [/email rate limit exceeded/i,                     "Muitas tentativas — aguarde um pouco antes de tentar de novo."],
-  [/token has expired or is invalid/i,                "O link expirou ou é inválido — solicite um novo."],
+  // GoTrue manda "Email link is invalid or has expired" (não "token has
+  // expired or is invalid" — o padrão antigo abaixo nunca batia com a
+  // mensagem real; achado ao investigar por que ninguém via aviso nenhum
+  // ao clicar num convite expirado). Cobre as duas ordens de palavras.
+  [/(email link is invalid or has expired|token has expired or is invalid)/i,
+    "Esse link expirou ou já foi usado (links de convite valem por 24h, e só funcionam uma vez). Se foi um convite, peça pra um administrador reenviar em Usuários; se foi \"Esqueci minha senha\", solicite de novo."],
 ];
 
 function translateAuthError(message) {
