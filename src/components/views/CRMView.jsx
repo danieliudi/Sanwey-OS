@@ -89,7 +89,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
   const ownerOptions = useMemo(() => {
     return (users || []).filter(u =>
       u.companies?.includes(companyId) &&
-      (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
+      (u.role === "vendedor" || u.role === "gerente" || u.role === "admin")
     );
   }, [users, companyId]);
 
@@ -334,7 +334,6 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // user.role sozinho (cargo principal) fica só de fallback.
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
-  const isConsultor = userRoleList.includes("consultor");
   // Altura disponível até o rodapé da janela, medida ao vivo a partir do
   // topo do board — pra barra de scroll horizontal do Kanban nunca ficar
   // abaixo da dobra, em qualquer tamanho de janela (ver use-available-height.js).
@@ -355,7 +354,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     ((lead.ownerIds || []).includes(user.id) || lead.owner === user.id || lead.createdBy === user.id)
   )), [onDeleteLead, isManager, user.id]);
 
-  // IDs of consultores supervised by this vendedor
+  // IDs of vendedores subordinados a este vendedor (supervisorId apontando pra ele)
   const subordinateIds = useMemo(() => {
     if (user.role !== "vendedor") return new Set();
     return new Set((users || []).filter(u => u.supervisorId === user.id).map(u => u.id));
@@ -403,10 +402,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const companyScopedLeads = useMemo(() => {
     let s = leads;
     if (!isGroupView) s = s.filter(l => l.companyId === activeCompany);
-    if (isConsultor) {
-      // Consultor sees only their own leads (FASE 5: qualquer id em ownerIds, não só o owner escalar)
-      s = s.filter(l => getLeadOwnerIds(l).includes(user.id));
-    } else if (!isManager) {
+    if (!isManager) {
       // Vendedor sees own leads + subordinates' leads
       s = s.filter(l => getLeadOwnerIds(l).some(id => id === user.id || subordinateIds.has(id)));
     }
@@ -416,11 +412,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     // não manda negócio de outro setor. Não remova achando que é redundante:
     // ele ainda cobre o caso do gerente/admin, que recebe tudo do banco e usa
     // o seletor de setor do cabeçalho pra focar num time.
-    if (user.sectors?.length && (user.role === "vendedor" || user.role === "consultor")) {
+    if (user.sectors?.length && user.role === "vendedor") {
       s = s.filter(l => !l.sector || user.sectors.includes(l.sector));
     }
     return s;
-  }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, isConsultor, subordinateIds]);
+  }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, subordinateIds]);
 
   const scopedLeads = useMemo(() => {
     let s = companyScopedLeads;
@@ -458,7 +454,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     return bucket;
   }, [stages, scopedLeads, getSortCriteria]);
 
-  // Roster de vendedores/consultores/gerentes/admin da empresa ativa — não
+  // Roster de vendedores/gerentes/admin da empresa ativa — não
   // "donos dos leads já visíveis" (bug real: com poucos leads atribuídos,
   // o filtro listava só 1 vendedor mesmo com o time inteiro cadastrado).
   // Mesmo escopo de papel usado em QuickAddForm:ownerOptions (:75-80).
@@ -466,7 +462,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     const scoped = (users || [])
       .filter(u =>
         (isGroupView || u.companies?.includes(activeCompany)) &&
-        (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
+        (u.role === "vendedor" || u.role === "gerente" || u.role === "admin")
       )
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     return [

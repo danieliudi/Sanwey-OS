@@ -9,7 +9,7 @@ import { COMERCIAL_ROLES } from "../../utils/viagens";
 
 const MANAGER_ROLES = new Set(["gerente", "admin"]);
 
-// Orquestrador por papel: vendedor/consultor só planejam as próprias
+// Orquestrador por papel: vendedor só planeja as próprias
 // viagens; gerente também planeja as próprias E gerencia o time (por isso
 // aparece nas duas abas); admin só gerencia (não tem viagens próprias).
 export function CRMViagensView({ currentUser, clients, onCreateClient, users, pushNotification, initialSelectedViagemId, onInitialViagemConsumed }) {

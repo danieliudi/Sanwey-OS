@@ -555,7 +555,7 @@ export function CRMViagensRelatoriosView({ currentUser, users }) {
             </div>
             {!((currentUser?.roles?.length ? currentUser.roles : [currentUser?.role]).some(r => COMERCIAL_ROLES.has(r)) || (currentUser?.roles || [currentUser?.role]).includes("admin")) ? (
               <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
-                A importação cria visitas em nome de quem está logado — disponível apenas para usuários com papel comercial (vendedor, consultor ou gerente).
+                A importação cria visitas em nome de quem está logado — disponível apenas para usuários com papel comercial (vendedor ou gerente).
               </div>
             ) : (
               <>

@@ -112,7 +112,7 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, clients = [],
   const ownerOptions = useMemo(() => {
     return (users || []).filter(u =>
       u.companies?.includes(companyId) &&
-      (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
+      (u.role === "vendedor" || u.role === "gerente" || u.role === "admin")
     );
   }, [users, companyId]);
 
@@ -839,7 +839,6 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const isGroupView = activeCompany === "all";
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
-  const isConsultor = userRoleList.includes("consultor");
   // Mesma regra que hoje trava "Editar etapas" na visão agregada de várias
   // empresas — "+ Nova etapa"/drag de coluna herdam essa condição, não só
   // isManager, senão um gerente na visão de grupo ganha um jeito de mexer em
@@ -868,13 +867,11 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const scopedCases = useMemo(() => {
     let s = cases;
     if (!isGroupView) s = s.filter(c => c.companyId === activeCompany);
-    if (isConsultor) {
-      s = s.filter(c => c.ownerIds.includes(user.id));
-    } else if (!isManager) {
+    if (!isManager) {
       s = s.filter(c => c.ownerIds.some(id => id === user.id || subordinateIds.has(id)));
     }
     return s;
-  }, [cases, activeCompany, isGroupView, isManager, isConsultor, subordinateIds, user.id]);
+  }, [cases, activeCompany, isGroupView, isManager, subordinateIds, user.id]);
 
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("posvenda");
   const byStage = useMemo(() => {

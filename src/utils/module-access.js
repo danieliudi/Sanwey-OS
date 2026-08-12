@@ -33,6 +33,7 @@ export const MODULE_GROUPS = [
       { id: "marketing-fornecedores", label: "Fornecedores" },
       { id: "marketing-compras",      label: "Compras" },
       { id: "marketing-despesas",     label: "Despesas" },
+      { id: "marketing-feiras",       label: "Feiras" },
     ],
   },
   {
@@ -55,9 +56,26 @@ export const MODULE_GROUPS = [
   {
     label: "Inteligência",
     modules: [
-      { id: "executive", label: "Executivo" },
-      { id: "insights",  label: "Insights" },
-      { id: "agents",    label: "Agentes" },
+      { id: "executive",   label: "Executivo" },
+      { id: "insights",    label: "Insights" },
+      { id: "agents",      label: "Agentes" },
+      { id: "esg-carbono", label: "ESG & Carbono" },
+      { id: "automations", label: "Automações" },
+    ],
+  },
+  // Páginas que existem no menu de todo mundo. Entraram no registro em
+  // 12/08/2026, junto com a chave global de liga/desliga (module_states) —
+  // antes disso não havia como recolher nenhuma delas, nem por pessoa nem
+  // pra empresa toda. Chat e Meu To-do mantêm o liga/desliga POR PESSOA que
+  // já tinham (profiles.chat_enabled e settings.personalTasksEnabled); o que
+  // entra aqui é a chave da empresa, que é outra coisa.
+  {
+    label: "Pessoal",
+    modules: [
+      { id: "chat",           label: "Chat" },
+      { id: "personal-tasks", label: "Meu To-do" },
+      { id: "meu-rh",         label: "Meu RH" },
+      { id: "tutorials",      label: "Ajuda & Tutoriais" },
     ],
   },
 ];
@@ -115,7 +133,7 @@ export function defaultModulesForRoles(roles) {
 
   if (f.isMarketing) {
     ["marketing-home", "marketing", "marketing-solicitacoes", "marketing-entregas", "marketing-tarefas",
-     "marketing-fornecedores", "marketing-compras", "marketing-despesas"].forEach(m => set.add(m));
+     "marketing-fornecedores", "marketing-compras", "marketing-despesas", "marketing-feiras"].forEach(m => set.add(m));
   }
 
   if (f.isRH) {
@@ -137,8 +155,47 @@ export function defaultModulesForRoles(roles) {
   // current_user_has_module('agents') no banco (migration
   // 20260780_agent_builder_fase1_schema.sql).
   if (f.isManager || f.isRHManager) set.add("agents");
+  if (f.isManager || f.isDiretoria) set.add("esg-carbono");
+  if (f.isManager || f.isRHManager) set.add("automations");
+
+  // Páginas de todo colaborador. Entram por padrão pra todo mundo — o que
+  // muda por pessoa continua sendo decidido fora daqui (chat_enabled,
+  // settings.personalTasksEnabled, ter ficha de colaborador).
+  ["chat", "personal-tasks", "meu-rh", "tutorials"].forEach(m => set.add(m));
 
   return set;
+}
+
+// ── Chave global por página (module_states) ───────────────────────────────
+// Espelho EXATO do portão que roda no banco, no topo de
+// current_user_has_module(). Se mudar aqui, mude lá também.
+//
+// A chave RESTRINGE, nunca AMPLIA: entra como filtro por cima do conjunto
+// que o cargo/exceção já concedeu. Pôr uma página em "liberada" não dá
+// acesso a ninguém que já não teria.
+//
+//   off  → ninguém, nem admin
+//   test → só admin e quem tiver exceção explícita (allow = true) no módulo
+//   live → passa direto, vale a regra de sempre (é também o padrão de quem
+//          não tem linha na tabela)
+export function gateByModuleStates(modules, states, { isAdmin = false, overrides = [] } = {}) {
+  const result = new Set();
+  modules.forEach(id => {
+    const state = (states && states[id]) || "live";
+    if (state === "off") return;
+    if (state === "test") {
+      const isTester = (overrides || []).some(o => o.moduleId === id && o.allow);
+      if (!isAdmin && !isTester) return;
+    }
+    result.add(id);
+  });
+  return result;
+}
+
+// Uma página está "em teste" pra quem está vendo ela agora? Usado só pra
+// decidir se mostra a tarja no topo — o acesso em si já foi resolvido acima.
+export function isModuleInTest(moduleId, states) {
+  return ((states && states[moduleId]) || "live") === "test";
 }
 
 // Aplica os overrides (allow=true força incluir, allow=false força excluir)

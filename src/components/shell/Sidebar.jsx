@@ -93,7 +93,6 @@ const ROLE_LABEL = {
   admin:             "Administrador",
   gerente:           "Gerente Comercial",
   vendedor:          "Vendedor",
-  consultor:         "Consultor",
   marketing:         "Marketing",
   gerente_marketing: "Gerente de Marketing",
   agencia:           "Agência",

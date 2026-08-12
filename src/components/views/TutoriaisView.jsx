@@ -13,7 +13,7 @@ const CHANGELOG_KIND_LABEL = { novo: "Novo", correcao: "Correção", ajuste: "Aj
 const CHANGELOG_KIND_VARIANT = { novo: "secondary", correcao: "success", ajuste: "neutral" };
 
 const ROLE_LABEL = {
-  admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor",
+  admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor",
   marketing: "Marketing", gerente_marketing: "Gerente de Marketing",
   agencia: "Agência", rh: "RH", gerente_rh: "Gerente de RH",
   comex: "Comex", diretoria: "Diretoria", portal: "Portal",

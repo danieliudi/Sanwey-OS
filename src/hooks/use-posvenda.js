@@ -48,7 +48,7 @@ export function usePosvenda({ userId, role, roles } = {}) {
   const [error, setError]   = useState(null);
 
   const roleList = Array.isArray(roles) && roles.length ? roles : (role ? [role] : []);
-  const canWrite = roleList.some(r => ["admin", "gerente", "vendedor", "consultor"].includes(r));
+  const canWrite = roleList.some(r => ["admin", "gerente", "vendedor"].includes(r));
 
   const fetchAll = useCallback(async () => {
     if (!isSupabaseConfigured) return;

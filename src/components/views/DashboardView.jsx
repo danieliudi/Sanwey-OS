@@ -37,7 +37,6 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
   // user.role sozinho (cargo principal) fica só de fallback.
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
-  const isConsultor = userRoleList.includes("consultor");
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
   const accent = companyData?.primary || null;
 
@@ -53,16 +52,14 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
     // usuário é só co-responsável (ownerIds[]) nunca aparecia aqui, mesmo
     // já aparecendo no Kanban do Funil de Vendas (CRMView já usava getLeadOwnerIds
     // em tudo). Achado da auditoria de fricção de 18/07.
-    if (isConsultor) {
-      s = s.filter(l => getLeadOwnerIds(l).includes(user.id));
-    } else if (!isManager) {
+    if (!isManager) {
       s = s.filter(l => getLeadOwnerIds(l).some(id => id === user.id || subordinateIds.has(id)));
     }
-    if (user.sectors?.length && (user.role === "vendedor" || user.role === "consultor")) {
+    if (user.sectors?.length && user.role === "vendedor") {
       s = s.filter(l => !l.sector || user.sectors.includes(l.sector));
     }
     return s;
-  }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, isConsultor, subordinateIds]);
+  }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, subordinateIds]);
 
   const stats = useMemo(() => {
     let pipelineValue = 0, wonValue = 0, wonCount = 0, openCount = 0;
