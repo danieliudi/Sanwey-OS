@@ -11,6 +11,7 @@ import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatBRL } from "../../utils/currency";
 import { csvRow, triggerDownload } from "../../utils/export-csv";
 import { MarginRulesPanel } from "../catalogo/MarginRulesPanel";
+import { VitrineFields } from "../catalogo/VitrineFields";
 
 // Comercial → Catálogo. Padrão "Tabela com filtro" (regra 6 do CLAUDE.md,
 // referência RHFuncionariosView): FilterBar + TableDensityToggle + Exportar
@@ -31,6 +32,11 @@ const CERTIFICACOES = [
   "INMETRO", "ANTT 5998", "NORMAM-05", "ANP", "ISO 9001", "FSSC 22000",
 ];
 
+// As três da tripla homologação. Só aparecem no formulário se o produto for
+// marcado como homologado — e o banco recusa de qualquer jeito (constraint
+// products_certificacao_restrita), então esconder aqui é só cortesia.
+const RESTRITAS = ["INMETRO", "ANTT 5998", "NORMAM-05"];
+
 const UNIDADES = ["un", "kg", "m", "m²", "pç", "cx"];
 
 function emptyForm(companyId) {
@@ -38,7 +44,9 @@ function emptyForm(companyId) {
     company_id: companyId || COMPANY_IDS[0],
     sku: "", name: "", description: "",
     unit: "un", moq: "", preco_tabela: "",
-    certifications: [], active: true,
+    certifications: [], homologado: false, active: true,
+    tagline: "", features: [], specs: [], applications: [],
+    category: "", icon: "", proposed: false,
   };
 }
 
@@ -58,7 +66,8 @@ function Label({ children, hint }) {
   );
 }
 
-function ProductModal({ open, onClose, editing, onSave, companies }) {
+function ProductModal({ open, onClose, editing, onSave, companies, canEditComercial, canEditVitrine }) {
+  const [aba, setAba] = useState("comercial");
   const [form, setForm]   = useState(emptyForm(companies[0]));
   const [saving, setSaving] = useState(false);
   const [err, setErr]     = useState(null);
@@ -75,9 +84,15 @@ function ProductModal({ open, onClose, editing, onSave, companies }) {
           company_id: editing.company_id, sku: editing.sku, name: editing.name,
           description: editing.description || "", unit: editing.unit,
           moq: editing.moq ?? "", preco_tabela: editing.preco_tabela ?? "",
-          certifications: editing.certifications || [], active: editing.active,
+          certifications: editing.certifications || [], homologado: editing.homologado,
+          active: editing.active,
+          tagline: editing.tagline || "", features: editing.features || [],
+          specs: Array.isArray(editing.specs) ? editing.specs : [],
+          applications: editing.applications || [], category: editing.category || "",
+          icon: editing.icon || "", proposed: editing.proposed,
         }
       : emptyForm(companies[0]));
+    setAba(canEditComercial ? "comercial" : "vitrine");
     setErr(null);
   }
   if (!open && seeded !== null) setSeeded(null);
@@ -102,7 +117,15 @@ function ProductModal({ open, onClose, editing, onSave, companies }) {
         moq: form.moq === "" ? null : Number(form.moq),
         preco_tabela: form.preco_tabela === "" ? null : Number(form.preco_tabela),
         certifications: form.certifications,
+        homologado: form.homologado,
         active: form.active,
+        tagline: form.tagline.trim() || null,
+        features: form.features,
+        specs: form.specs,
+        applications: form.applications,
+        category: form.category || null,
+        icon: form.icon || null,
+        proposed: form.proposed,
       });
       onClose();
     } catch (e) {
@@ -115,6 +138,16 @@ function ProductModal({ open, onClose, editing, onSave, companies }) {
   return (
     <Modal open={open} onClose={onClose} title={editing ? "Editar produto" : "Novo produto"} width={520}>
       <div className="space-y-3.5">
+        {/* Duas metades, dois donos: o comercial é do suporte, a vitrine é do
+            Marketing. Quem garante isso é o trigger no banco — aqui só
+            escondemos a caneta de quem não tem. */}
+        <Tabs
+          tabs={[{ id: "comercial", label: "Comercial" }, { id: "vitrine", label: "Vitrine" }]}
+          active={aba}
+          onChange={setAba}
+        />
+
+        {aba === "comercial" && (<>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Empresa *</Label>
@@ -134,12 +167,6 @@ function ProductModal({ open, onClose, editing, onSave, companies }) {
           <Label>Nome *</Label>
           <input style={inputStyle()} value={form.name} placeholder="Sanbag Standard 1000 kg"
                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-        </div>
-
-        <div>
-          <Label>Descrição</Label>
-          <textarea style={{ ...inputStyle(), minHeight: 66, resize: "vertical" }} value={form.description}
-                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -172,7 +199,7 @@ function ProductModal({ open, onClose, editing, onSave, companies }) {
         <div>
           <Label>Certificações</Label>
           <div className="flex flex-wrap gap-1.5">
-            {CERTIFICACOES.map(c => {
+            {CERTIFICACOES.filter(c => form.homologado || !RESTRITAS.includes(c)).map(c => {
               const on = form.certifications.includes(c);
               return (
                 <button key={c} type="button" onClick={() => toggleCert(c)}
@@ -189,11 +216,38 @@ function ProductModal({ open, onClose, editing, onSave, companies }) {
           </div>
         </div>
 
+        <label className="flex items-start gap-2 text-[13px]" style={{ color: "var(--text)" }}>
+          <input type="checkbox" checked={form.homologado} className="mt-0.5"
+                 onChange={() => setForm(f => ({
+                   ...f,
+                   homologado: !f.homologado,
+                   // Desmarcar homologação tem que limpar as três restritas
+                   // junto, senão o banco recusa o save e a pessoa não entende
+                   // por quê — a certificação some da tela mas continua no
+                   // formulário.
+                   certifications: f.homologado
+                     ? f.certifications.filter(c => !RESTRITAS.includes(c))
+                     : f.certifications,
+                 }))} />
+          <span>
+            Homologado
+            <span className="block text-[11px] leading-relaxed" style={{ color: "var(--text-dim)" }}>
+              Tripla homologação INMETRO + ANTT 5998 + NORMAM-05. Sem isso
+              marcado, essas três certificações não podem ser atribuídas.
+            </span>
+          </span>
+        </label>
+
         <label className="flex items-center gap-2 text-[13px]" style={{ color: "var(--text)" }}>
           <input type="checkbox" checked={form.active}
                  onChange={() => setForm(f => ({ ...f, active: !f.active }))} />
           Ativo no catálogo
         </label>
+        </>)}
+
+        {aba === "vitrine" && (
+          <VitrineFields form={form} setForm={setForm} disabled={!canEditVitrine} />
+        )}
 
         {err && (
           <div className="rounded-lg px-3 py-2 text-xs"
@@ -218,7 +272,7 @@ function ProductModal({ open, onClose, editing, onSave, companies }) {
   );
 }
 
-export function CatalogoView({ activeCompany, accessibleCompanies = COMPANY_IDS, canEdit = false, canEditRules = false }) {
+export function CatalogoView({ activeCompany, accessibleCompanies = COMPANY_IDS, canEdit = false, canEditRules = false, canEditVitrine = false }) {
   const { products, loading, stats, createProduct, updateProduct } = useProducts();
   const [tab, setTab]           = useState("produtos");
   const [search, setSearch]     = useState("");
@@ -421,6 +475,8 @@ export function CatalogoView({ activeCompany, accessibleCompanies = COMPANY_IDS,
         editing={editing}
         onSave={handleSave}
         companies={accessibleCompanies}
+        canEditComercial={canEdit}
+        canEditVitrine={canEditVitrine}
       />
 
       {toast && <AppToast title={toast} onDismiss={() => setToast(null)} />}

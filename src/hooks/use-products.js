@@ -11,7 +11,13 @@ import { debounce } from "../utils/debounce";
 // empresas da pessoa) — o hook não tenta adivinhar isso, só propaga o erro
 // quando o banco recusa.
 
-const SELECT = "id, company_id, sku, name, description, unit, moq, preco_tabela, certifications, active, created_at, updated_at";
+const SELECT = [
+  // comercial (suporte)
+  "id, company_id, sku, name, unit, moq, preco_tabela, certifications, homologado, active",
+  // vitrine (marketing)
+  "description, tagline, features, specs, applications, category, icon, proposed",
+  "created_at, updated_at",
+].join(", ");
 
 export function useProducts({ companyId = null, enabled = true } = {}) {
   const [products, setProducts] = useState([]);

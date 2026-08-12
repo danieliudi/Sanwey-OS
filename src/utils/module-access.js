@@ -135,6 +135,10 @@ export function defaultModulesForRoles(roles) {
   if (f.isMarketing) {
     ["marketing-home", "marketing", "marketing-solicitacoes", "marketing-entregas", "marketing-tarefas",
      "marketing-fornecedores", "marketing-compras", "marketing-despesas", "marketing-feiras"].forEach(m => set.add(m));
+    // Marketing mantém a metade "vitrine" do produto (chamada, destaques,
+    // especificações) — o que o Portal B2B mostra pro cliente. Por isso
+    // alcança o Catálogo, mesmo sendo tela do Comercial.
+    set.add("catalogo");
   }
 
   if (f.isRH) {

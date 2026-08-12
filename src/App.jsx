@@ -1460,6 +1460,13 @@ export default function App() {
         { id: "marketing-despesas",       label: "Despesas",     icon: DollarSign },
         { id: "marketing-feiras",         label: "Feiras",       icon: Tent }
       );
+      // Catálogo aparece aqui só pra quem NÃO tem o menu Comercial — o
+      // Marketing mantém a metade "vitrine" do produto (chamada, destaques,
+      // especificações), que é o que o Portal B2B mostra pro cliente. Quem
+      // tem os dois menus já vê o item no Comercial; repetir confundiria.
+      if (isPureMarketing) {
+        mktItems.push({ id: "catalogo", label: "Catálogo", icon: PackageSearch });
+      }
       groups.push({ label: "Marketing", items: mktItems });
     }
 
@@ -2010,7 +2017,9 @@ export default function App() {
               )
           } />
           <Route path={ROUTES.catalogo} element={
-            isAgencia || isPureMarketing || isPureRH
+            /* Marketing NÃO é barrado aqui: mantém a metade vitrine do
+               produto, que é o que o portal mostra pro cliente. */
+            isAgencia || isPureRH
               ? <Navigate to={ROUTES.dashboard} replace />
               : (
                 <CatalogoView
@@ -2021,6 +2030,10 @@ export default function App() {
                      products_write. Vendedor lê pra calcular margem. */
                   canEdit={hasAnyRole(["suporte", "gerente", "admin"])}
                   canEditRules={hasAnyRole(["gerente", "admin"])}
+                  /* Vitrine é do Marketing — o trigger no banco congela o
+                     lado de lá pra quem não é, isto aqui só evita digitar
+                     algo que seria descartado em silêncio. */
+                  canEditVitrine={hasAnyRole(["marketing", "gerente_marketing", "gerente", "admin"])}
                 />
               )
           } />

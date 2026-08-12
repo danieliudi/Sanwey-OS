@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.50.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O produto no Cat\u00e1logo agora tem duas metades, com donos diferentes. A aba Comercial \u00e9 do suporte: c\u00f3digo, unidade, pedido m\u00ednimo, pre\u00e7o de tabela e certifica\u00e7\u00f5es. A aba Vitrine \u00e9 do Marketing: chamada, descri\u00e7\u00e3o, destaques, especifica\u00e7\u00f5es, aplica\u00e7\u00f5es e categoria \u2014 \u00e9 o que o cliente v\u00ea no portal de compras. Cada um enxerga a metade do outro, mas s\u00f3 escreve na sua.",
+        roles: ["admin", "gerente", "suporte", "marketing", "gerente_marketing"],
+      },
+      {
+        kind: "novo",
+        text: "Trava de compliance nas certifica\u00e7\u00f5es: INMETRO, ANTT 5998 e NORMAM-05 s\u00f3 podem ser atribu\u00eddas a produto marcado como homologado. Antes era disciplina de quem preenchia; agora o sistema recusa \u2014 certifica\u00e7\u00e3o errada numa vitrine que o cliente l\u00ea n\u00e3o \u00e9 erro de digita\u00e7\u00e3o.",
+        roles: ["admin", "gerente", "suporte", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "4.49.0",
     items: [
       {
