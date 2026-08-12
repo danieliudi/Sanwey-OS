@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.49.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Comercial \u2192 Cat\u00e1logo: onde os produtos passam a viver, com c\u00f3digo, unidade, pedido m\u00ednimo, certifica\u00e7\u00f5es e o pre\u00e7o de tabela. O pre\u00e7o de tabela \u00e9 mantido pelo suporte comercial e serve de base pro vendedor calcular a margem de cada cliente \u2014 ele n\u00e3o \u00e9 o pre\u00e7o que o cliente paga. Produto sem pre\u00e7o de tabela aparece marcado como incompleto em vez de sumir.",
+        roles: ["admin", "gerente", "suporte", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Cat\u00e1logo \u2192 Regras de margem: a ger\u00eancia define, por empresa, a partir de que margem a tela avisa o vendedor e a partir de qual o sistema recusa. D\u00e1 pra abrir exce\u00e7\u00e3o para um produto espec\u00edfico. O n\u00famero \u00e9 a varia\u00e7\u00e3o sobre o pre\u00e7o de tabela: +20 vende 20% acima, \u221210 concede 10% de desconto.",
+        roles: ["admin", "gerente"],
+      },
+    ],
+  },
+  {
     version: "4.48.0",
     items: [
       {

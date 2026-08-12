@@ -15,6 +15,7 @@ export const MODULE_GROUPS = [
       { id: "crm",                 label: "Funil de Vendas" },
       { id: "posvenda",            label: "Funil de Pós-venda" },
       { id: "clients",             label: "Clientes" },
+      { id: "catalogo",            label: "Catálogo" },
       { id: "signals",             label: "Sinais" },
       { id: "explorer",            label: "Explorador" },
       { id: "crm-viagens",         label: "Viagens & Despesas" },
@@ -127,7 +128,7 @@ export function defaultModulesForRoles(roles) {
   }
 
   if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {
-    ["commercial-overview", "crm", "posvenda", "clients", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
+    ["commercial-overview", "crm", "posvenda", "clients", "catalogo", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
     if (f.isManager) set.add("crossref");
   }
 

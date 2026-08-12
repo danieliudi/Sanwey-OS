@@ -7,7 +7,7 @@ import {
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
-  FlaskConical,
+  FlaskConical, PackageSearch,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -77,6 +77,7 @@ import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { ComexView } from "./components/views/ComexView";
 import { UserManagementView } from "./components/views/UserManagementView";
 import { ClientsManager } from "./components/client/ClientsManager";
+import { CatalogoView } from "./components/views/CatalogoView";
 import { SettingsView } from "./components/views/SettingsView";
 import { AgentActionsView } from "./components/views/AgentActionsView";
 import { FairImportView } from "./components/views/FairImportView";
@@ -1422,6 +1423,7 @@ export default function App() {
           // continua existindo no Funil de Vendas.
           { id: "posvenda",     label: "Funil de Pós-venda", icon: Handshake },
           { id: "clients",      label: "Clientes",   icon: Users },
+          { id: "catalogo",     label: "Catálogo",   icon: PackageSearch },
           ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
           { id: "explorer",     label: "Explorador", icon: Globe2 },
           { id: "crm-viagens",  label: "Viagens & Despesas", icon: Plane },
@@ -2004,6 +2006,21 @@ export default function App() {
                   pushNotification={pushNotification}
                   initialSelectedViagemId={selectedViagemId}
                   onInitialViagemConsumed={() => setSelectedViagemId(null)}
+                />
+              )
+          } />
+          <Route path={ROUTES.catalogo} element={
+            isAgencia || isPureMarketing || isPureRH
+              ? <Navigate to={ROUTES.dashboard} replace />
+              : (
+                <CatalogoView
+                  activeCompany={activeCompany}
+                  accessibleCompanies={accessibleCompanies}
+                  /* Quem mantém o catálogo e o preço de tabela: suporte
+                     comercial, gerente ou admin — mesma regra do RLS em
+                     products_write. Vendedor lê pra calcular margem. */
+                  canEdit={hasAnyRole(["suporte", "gerente", "admin"])}
+                  canEditRules={hasAnyRole(["gerente", "admin"])}
                 />
               )
           } />
