@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.46.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Várias telas (Meu To-do, Funil de Vendas, ESG & Carbono, Funcionários, Comunicação e Cargos & Salários) escondiam cabeçalhos de coluna e filtros inteiros quando a lista estava vazia — parecia página quebrada. Agora a estrutura sempre aparece, só o conteúdo vazio mostra uma mensagem no lugar certo.",
+      },
+    ],
+  },
+  {
     version: "4.46.0",
     items: [
       {
