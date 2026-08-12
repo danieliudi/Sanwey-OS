@@ -29,7 +29,6 @@ const ROLE_TAB_IDS = {
   gerente_marketing:  ["dashboard", "marketing", "marketing-entregas", "marketing-despesas"],
   marketing:          ["dashboard", "marketing", "marketing-entregas", "marketing-despesas"],
   vendedor:           ["dashboard", "crm", "signals", "explorer"],
-  consultor:          ["dashboard", "crm", "signals", "explorer"],
   agencia:            ["marketing", "marketing-entregas"],
   rh:                 ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias"],
   gerente_rh:         ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias"],
@@ -37,7 +36,7 @@ const ROLE_TAB_IDS = {
 
 const ROLE_LABELS = {
   admin: "Administrador", gerente: "Gerente", gerente_marketing: "Ger. Marketing",
-  marketing: "Marketing", vendedor: "Vendedor", consultor: "Consultor", agencia: "Agência",
+  marketing: "Marketing", vendedor: "Vendedor", agencia: "Agência",
   rh: "RH", gerente_rh: "Gerente de RH",
 };
 

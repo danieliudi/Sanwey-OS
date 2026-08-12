@@ -40,7 +40,7 @@ export const NOTIFICATION_GROUPS = [
     id: "meus_leads",
     label: "Meus leads",
     area: "comercial",
-    roles: ["consultor", "vendedor", "gerente", "admin"],
+    roles: ["vendedor", "gerente", "admin"],
     items: [
       { id: "new_lead_assigned", label: "Novo lead atribuído a mim", defaultOn: true },
       { id: "stage_change",      label: "Mudança de etapa nos meus leads", defaultOn: true },
@@ -65,7 +65,7 @@ export const NOTIFICATION_GROUPS = [
     id: "inteligencia",
     label: "Inteligência",
     area: "comercial",
-    roles: ["vendedor", "consultor", "gerente", "admin"],
+    roles: ["vendedor", "gerente", "admin"],
     items: [
       { id: "cross_sell",        label: "Sugestões de cross-sell", defaultOn: true },
       { id: "automation_notify", label: "Alertas de automação nos meus leads", defaultOn: true },
@@ -154,7 +154,7 @@ export const NOTIFICATION_GROUPS = [
     // ver rota "personal-tasks" em App.jsx) — união de todos os papéis da
     // plataforma (mesma lista de ROLE_OPTIONS_ADMIN em UserManagementView.jsx),
     // não só um departamento.
-    roles: ["consultor", "vendedor", "gerente", "marketing", "gerente_marketing", "agencia", "rh", "gerente_rh", "diretoria", "comex", "admin"],
+    roles: ["vendedor", "gerente", "marketing", "gerente_marketing", "agencia", "rh", "gerente_rh", "diretoria", "comex", "admin"],
     items: [
       { id: "task_due_reminder", label: "Tarefa pessoal vencendo hoje", defaultOn: true },
     ],

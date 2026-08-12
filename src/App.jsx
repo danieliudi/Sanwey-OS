@@ -230,7 +230,7 @@ export default function App() {
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
   const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
   // Comex (Importação/Exportação Direta): cargo dedicado, sem carve-out pro
-  // time comercial geral — vendedor/gerente/consultor não enxergam por padrão.
+  // time comercial geral — vendedor/gerente não enxergam por padrão.
   const isComex            = hasAnyRole(["comex", "admin"]);
   const isPureComex        = rolesSubsetOf(["comex"]);
   // Diretoria (reunião com o RH, 20/07): vê tudo da plataforma, escreve nada
@@ -806,7 +806,7 @@ export default function App() {
   // vista, não notifica retroativo).
   const crossSellVistoRef = useRef(null);
   useEffect(() => {
-    if (!hasAnyRole(["vendedor", "consultor", "gerente", "admin"])) return;
+    if (!hasAnyRole(["vendedor", "gerente", "admin"])) return;
     const pendentes = crossReferrals.filter(c => c.status === "pending" || c.status === "active");
     if (crossSellVistoRef.current === null) {
       crossSellVistoRef.current = new Set(pendentes.map(c => c.id));
@@ -1089,7 +1089,7 @@ export default function App() {
     if (id === lastUserIdRef.current) return;
     lastUserIdRef.current = id;
     if (!currentUser) return;
-    if (currentUser.role === "vendedor" || currentUser.role === "consultor") {
+    if (currentUser.role === "vendedor") {
       if (currentUser.companies.length === 1) {
         setActiveCompany(currentUser.companies[0]);
       } else if (activeCompany !== "all" && !currentUser.companies.includes(activeCompany)) {
@@ -1624,7 +1624,7 @@ export default function App() {
       setSection("dashboard");
     }
     // Comex: cargo dedicado, sem carve-out pro time comercial geral —
-    // vendedor/gerente/consultor não acessam mesmo digitando a URL direto.
+    // vendedor/gerente não acessam mesmo digitando a URL direto.
     if (!isComex && !isDiretoria && section === "comex") {
       setSection("dashboard");
     }
@@ -1702,7 +1702,7 @@ export default function App() {
   // path: wait, refresh, or log out.
   if (
     supabaseEnabled &&
-    (currentUser.role === "vendedor" || currentUser.role === "consultor") &&
+    currentUser.role === "vendedor" &&
     (!currentUser.companies || currentUser.companies.length === 0)
   ) {
     return (

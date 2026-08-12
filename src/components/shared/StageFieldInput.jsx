@@ -11,7 +11,7 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 // Bullshit) — ambos os arquivos agora só reexportam este.
 //
 // `companyId` presente = contexto CRM: o tipo "user" filtra por empresa e por
-// papel de venda (vendedor/consultor/gerente/admin). Sem `companyId` (RH,
+// papel de venda (vendedor/gerente/admin). Sem `companyId` (RH,
 // Marketing) o tipo "user" lista todos os usuários recebidos — não existe
 // conceito de "empresa" ou papel de venda nesses domínios.
 export function StageFieldInput({ field, value, onChange, users, companyId, touched = false }) {
@@ -203,7 +203,7 @@ function renderInput({ field, value, onChange, users, companyId }) {
     const visible = companyId
       ? (users || []).filter(u =>
           u.companies?.includes(companyId) &&
-          (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
+          (u.role === "vendedor" || u.role === "gerente" || u.role === "admin")
         )
       : (users || []);
     return (

@@ -168,8 +168,7 @@ export function useLeads({ userId, role, companies } = {}) {
   const canQuery = isSupabaseConfigured && Boolean(userId) && (
     role === "admin" ||
     (role === "gerente" && Array.isArray(companies)) ||
-    (role === "vendedor" && Array.isArray(companies)) ||
-    (role === "consultor" && Array.isArray(companies))
+    (role === "vendedor" && Array.isArray(companies))
   );
 
   const fetchAll = useCallback(async () => {

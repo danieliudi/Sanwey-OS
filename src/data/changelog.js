@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.47.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "O papel \"Consultor\" saiu da plataforma — quem tinha esse papel virou Vendedor. Na prática nada muda no acesso de ninguém: Consultor sempre foi um Vendedor sem equipe embaixo, e quem já era Consultor também já tinha outro papel. Agora, ao cadastrar um Vendedor, o campo \"Supervisor\" (opcional) define quem também enxerga os negócios dele — antes esse campo só aparecia pra Consultor.",
+        roles: ["gerente", "admin"],
+      },
+    ],
+  },
+  {
     version: "4.46.1",
     items: [
       {
@@ -56,17 +66,17 @@ export const CHANGELOG = [
       {
         kind: "novo",
         text: "O Funil de Vendas ganhou uma aba \"Email\" no card do lead: envie um e-mail de verdade pro cliente (com confirmação real de entrega, não só o \"e-mail iniciado\" de antes), usando um template pronto ou escrevendo na hora.",
-        roles: ["vendedor", "consultor", "gerente", "admin"],
+        roles: ["vendedor", "gerente", "admin"],
       },
       {
         kind: "novo",
         text: "Templates de e-mail reutilizáveis: crie o seu (compartilhado com o time ou só seu) com variáveis como {{empresa}} e {{vendedor}}, preenchidas sozinhas ao enviar.",
-        roles: ["vendedor", "consultor", "gerente", "admin"],
+        roles: ["vendedor", "gerente", "admin"],
       },
       {
         kind: "novo",
         text: "Marque \"Repetir a cada N dias\" ao enviar um e-mail e a plataforma cria um lembrete recorrente no seu Meu To-do, vinculado ao lead — nunca mais esquecer um follow-up.",
-        roles: ["vendedor", "consultor", "gerente", "admin"],
+        roles: ["vendedor", "gerente", "admin"],
       },
     ],
   },
@@ -107,12 +117,12 @@ export const CHANGELOG = [
       {
         kind: "novo",
         text: "Viagens & Despesas: agora dá pra registrar \"Evento ou feira\" e \"Outra saída\" além de \"Visita a cliente\" — cliente deixa de ser obrigatório pros dois tipos novos, e \"Evento ou feira\" pode ser vinculado a uma campanha do Relatório de Feiras.",
-        roles: ["vendedor", "consultor", "gerente", "admin"],
+        roles: ["vendedor", "gerente", "admin"],
       },
       {
         kind: "novo",
         text: "Viagens & Despesas: calendário mensal das suas saídas planejadas, ao lado da lista de sempre.",
-        roles: ["vendedor", "consultor", "gerente", "admin"],
+        roles: ["vendedor", "gerente", "admin"],
       },
       {
         kind: "novo",
@@ -174,17 +184,17 @@ export const CHANGELOG = [
   {
     version: "4.41.0",
     items: [
-      { kind: "novo", text: "O setor do vendedor passou a valer de verdade: negócio sem responsável agora aparece só para quem atende aquele setor, e o histórico do cliente mostra o que foi feito dentro do seu setor — incluindo por colegas do mesmo time. Gerência e diretoria continuam vendo tudo.", roles: ["consultor", "vendedor", "gerente", "diretoria", "admin"] },
+      { kind: "novo", text: "O setor do vendedor passou a valer de verdade: negócio sem responsável agora aparece só para quem atende aquele setor, e o histórico do cliente mostra o que foi feito dentro do seu setor — incluindo por colegas do mesmo time. Gerência e diretoria continuam vendo tudo.", roles: ["vendedor", "gerente", "diretoria", "admin"] },
       { kind: "correcao", text: "O filtro por setor funcionava só na tela: o servidor mandava os negócios dos outros setores junto, e a tela apenas escondia. Agora o limite é aplicado no servidor.", roles: ["admin", "diretoria"] },
-      { kind: "ajuste", text: "Negócio sem setor preenchido continua visível para quem é o responsável e para a gerência — só não aparece para vendedores de outros setores.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "ajuste", text: "Negócio sem setor preenchido continua visível para quem é o responsável e para a gerência — só não aparece para vendedores de outros setores.", roles: ["vendedor", "gerente"] },
     ],
   },
   {
     version: "4.40.0",
     items: [
-      { kind: "novo", text: "Clientes: a aba Conexões virou Histórico — uma linha do tempo única com tudo que já aconteceu com aquele cliente, atravessando todos os negócios dele: visitas, comentários, amostras, e-mails de abordagem, propostas e casos de pós-venda. Mudanças de etapa e anexos aparecem como pano de fundo, e dá pra filtrar só as interações.", roles: ["consultor", "vendedor", "gerente", "diretoria", "admin"] },
-      { kind: "novo", text: "Funil de Vendas: iniciar uma abordagem por e-mail e gerar uma proposta agora ficam registrados no negócio e no histórico do cliente. Antes não sobrava nenhum rastro dessas duas ações.", roles: ["consultor", "vendedor", "gerente"] },
-      { kind: "novo", text: "Pós-venda: o caso agora pode ser vinculado direto ao cliente, sem depender de um negócio. Antes o nome do cliente era texto solto e o caso sumia do histórico dele.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "novo", text: "Clientes: a aba Conexões virou Histórico — uma linha do tempo única com tudo que já aconteceu com aquele cliente, atravessando todos os negócios dele: visitas, comentários, amostras, e-mails de abordagem, propostas e casos de pós-venda. Mudanças de etapa e anexos aparecem como pano de fundo, e dá pra filtrar só as interações.", roles: ["vendedor", "gerente", "diretoria", "admin"] },
+      { kind: "novo", text: "Funil de Vendas: iniciar uma abordagem por e-mail e gerar uma proposta agora ficam registrados no negócio e no histórico do cliente. Antes não sobrava nenhum rastro dessas duas ações.", roles: ["vendedor", "gerente"] },
+      { kind: "novo", text: "Pós-venda: o caso agora pode ser vinculado direto ao cliente, sem depender de um negócio. Antes o nome do cliente era texto solto e o caso sumia do histórico dele.", roles: ["vendedor", "gerente"] },
       { kind: "ajuste", text: "Importação de feira: quando o CNPJ da linha bate com um cliente já cadastrado, o negócio nasce vinculado a ele — sem criar cadastro duplicado.", roles: ["gerente"] },
       { kind: "correcao", text: "Corrigido: dados de clientes de uma frente comercial podiam ser consultados por quem não trabalha nela. Agora as duas consultas envolvidas respeitam a mesma regra de empresa do resto da plataforma.", roles: ["admin"] },
     ],
@@ -202,12 +212,12 @@ export const CHANGELOG = [
   {
     version: "4.38.0",
     items: [
-      { kind: "novo", text: "Funil de Vendas e Pós-venda: ao cadastrar um negócio que já vinha sendo negociado fora da plataforma, agora dá pra informar quando a conversa realmente começou. O card para de aparecer como recém-criado nas contagens e na ordenação — deixe em branco e nada muda em relação a antes.", roles: ["consultor", "vendedor", "gerente"] },
-      { kind: "novo", text: "Funil de Vendas: novo bloco de amostras dentro do negócio, pra registrar cada amostra de produto levada ao cliente com o custo dela. O painel soma o total gasto por negócio.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "novo", text: "Funil de Vendas e Pós-venda: ao cadastrar um negócio que já vinha sendo negociado fora da plataforma, agora dá pra informar quando a conversa realmente começou. O card para de aparecer como recém-criado nas contagens e na ordenação — deixe em branco e nada muda em relação a antes.", roles: ["vendedor", "gerente"] },
+      { kind: "novo", text: "Funil de Vendas: novo bloco de amostras dentro do negócio, pra registrar cada amostra de produto levada ao cliente com o custo dela. O painel soma o total gasto por negócio.", roles: ["vendedor", "gerente"] },
       { kind: "novo", text: "CAC médio (custo pra conquistar cada cliente) no Funil de Vendas e no Painel Executivo, somando despesas de viagem e custo de amostras dividido pelos negócios ganhos no período.", roles: ["gerente"] },
-      { kind: "novo", text: "Viagens & Despesas: a calculadora agora monta uma rota com várias paradas e busca a distância sozinha a partir dos endereços — não precisa mais digitar o total de quilômetros. A comparação entre carro, aplicativo e avião continua igual.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "novo", text: "Viagens & Despesas: a calculadora agora monta uma rota com várias paradas e busca a distância sozinha a partir dos endereços — não precisa mais digitar o total de quilômetros. A comparação entre carro, aplicativo e avião continua igual.", roles: ["vendedor", "gerente"] },
       { kind: "ajuste", text: "Dashboards no celular: os cards de indicadores ficaram bem menores e param de exigir rolagem lateral pra ver os que sobravam fora da tela. Vale para Pendências, Marketing, RH, Visão Geral e Painel Executivo. Onde há muitos indicadores, aparecem os principais e o resto abre num toque." },
-      { kind: "ajuste", text: "Funil de Vendas: painel do negócio mais enxuto. Saíram o bloco de unidades (que repetia o de produto logo abaixo) e o de e-mails vinculados (que prometia uma integração com Outlook que nunca existiu); o follow-up virou um botão compacto, sem perder nada do que fazia.", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "ajuste", text: "Funil de Vendas: painel do negócio mais enxuto. Saíram o bloco de unidades (que repetia o de produto logo abaixo) e o de e-mails vinculados (que prometia uma integração com Outlook que nunca existiu); o follow-up virou um botão compacto, sem perder nada do que fazia.", roles: ["vendedor", "gerente"] },
       { kind: "ajuste", text: "Chat: o seletor de ícone do canal passou de 6 para 18 opções, cada uma com uma dica explicando pra que serve." },
       { kind: "correcao", text: "Chat no celular: só dava pra abrir conversa direta — a opção de criar canal não aparecia no botão flutuante. Corrigido." },
       { kind: "correcao", text: "Datas com ano de um ou dois dígitos eram gravadas no século passado sem avisar (digitar \"26\" virava 1926). Corrigido em todos os campos de data da plataforma." },
@@ -222,7 +232,7 @@ export const CHANGELOG = [
   {
     version: "4.37.1",
     items: [
-      { kind: "correcao", text: "Ajuda & Tutoriais: passo a passo do Comercial (Funil de Vendas, Pós-venda, Clientes, Cross-sell, Explorador, Sinais, Viagens & Despesas) reescrito com muito mais detalhe e revisado tela por tela contra o comportamento real do sistema — inclusive uma instrução de prestação de contas que estava invertida (dizia pra desmarcar despesas, na verdade é preciso marcar as que quer enviar).", roles: ["consultor", "vendedor", "gerente"] },
+      { kind: "correcao", text: "Ajuda & Tutoriais: passo a passo do Comercial (Funil de Vendas, Pós-venda, Clientes, Cross-sell, Explorador, Sinais, Viagens & Despesas) reescrito com muito mais detalhe e revisado tela por tela contra o comportamento real do sistema — inclusive uma instrução de prestação de contas que estava invertida (dizia pra desmarcar despesas, na verdade é preciso marcar as que quer enviar).", roles: ["vendedor", "gerente"] },
     ],
   },
   {

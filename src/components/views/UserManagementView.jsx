@@ -33,7 +33,6 @@ const EMPTY_FORM = {
 const EMPTY_INVITE = { email: "", name: "", role: "vendedor", companies: [], sectors: [], supervisorId: "", supplierId: "" };
 
 const ROLE_OPTIONS_BASE = [
-  { value: "consultor",         label: "Consultor" },
   { value: "vendedor",          label: "Vendedor" },
   { value: "gerente",           label: "Gerente Comercial" },
   { value: "marketing",         label: "Marketing" },
@@ -58,7 +57,6 @@ const ROLE_OPTIONS_ADMIN = [
 function roleLabel(role) {
   if (role === "admin")             return "Admin";
   if (role === "gerente")           return "Gerente";
-  if (role === "consultor")         return "Consultor";
   if (role === "marketing")         return "Marketing";
   if (role === "gerente_marketing") return "G. Marketing";
   if (role === "agencia")           return "Agência";
@@ -72,7 +70,6 @@ function roleLabel(role) {
 function roleBadgeVariant(role) {
   if (role === "admin")             return "admin";
   if (role === "gerente")           return "dark";
-  if (role === "consultor")         return "secondary";
   if (role === "marketing")         return "primary";
   if (role === "gerente_marketing") return "primary";
   if (role === "agencia")           return "secondary";
@@ -88,10 +85,10 @@ function isValidEmail(email) {
 }
 
 // Setores só filtram lead pra quem vende de fato (DashboardView/CRMView
-// filtram por user.sectors só quando role é vendedor ou consultor) — pras
-// demais funções o campo não faz nada, então nem faz sentido mostrar.
+// filtram por user.sectors só quando role é vendedor) — pras demais funções
+// o campo não faz nada, então nem faz sentido mostrar.
 function roleUsesSectors(role) {
-  return role === "vendedor" || role === "consultor";
+  return role === "vendedor";
 }
 
 // Fornecedor vinculado só existe pra escopar login de agência a UM fornecedor
@@ -213,7 +210,7 @@ export function UserManagementView({
 
   const save = useCallback(async () => {
     if (!form.name?.trim()) { setModalError("Informe o nome."); return; }
-    const companyRequired = form.role === "vendedor" || form.role === "consultor" || form.role === "gerente";
+    const companyRequired = form.role === "vendedor" || form.role === "gerente";
     if (companyRequired && (!Array.isArray(form.companies) || form.companies.length === 0)) {
       setModalError("Selecione ao menos uma empresa."); return;
     }
@@ -249,8 +246,8 @@ export function UserManagementView({
     // do trigger (local-part do e-mail, ex.: "iudiyano") — achado BUG-08/10
     // da auditoria de QA.
     if (!inviteForm.name.trim()) { setInviteError("Informe o nome da pessoa."); return; }
-    if ((inviteForm.role === "vendedor" || inviteForm.role === "consultor") && inviteForm.companies.length === 0) {
-      setInviteError("Selecione ao menos uma empresa para vendedor/consultor."); return;
+    if (inviteForm.role === "vendedor" && inviteForm.companies.length === 0) {
+      setInviteError("Selecione ao menos uma empresa para vendedor."); return;
     }
     if (users.some(u => (u.email || "").toLowerCase() === email)) {
       setInviteError("Já existe um usuário cadastrado com este e-mail."); return;
@@ -348,7 +345,7 @@ export function UserManagementView({
     setInviteForm(prev => ({ ...prev, sectors: prev.sectors.includes(s) ? prev.sectors.filter(x => x !== s) : [...prev.sectors, s] }));
   }, []);
 
-  const formCompanyRequired = form.role === "vendedor" || form.role === "consultor" || form.role === "gerente";
+  const formCompanyRequired = form.role === "vendedor" || form.role === "gerente";
   const canSave = Boolean(form.name && (!formCompanyRequired || form.companies.length > 0));
   const canManageInvites = supabaseEnabled && Boolean(onCreateInvitation);
 
@@ -386,7 +383,7 @@ export function UserManagementView({
   const confirmedUsers = useMemo(() => users.filter(u => !isPendingInviteUser(u)), [users, isPendingInviteUser]);
   const totalUsers = confirmedUsers.length;
   const managerCount = confirmedUsers.filter(u => u.role === "gerente" || u.role === "admin").length;
-  const sellerCount = confirmedUsers.filter(u => u.role === "vendedor" || u.role === "consultor").length;
+  const sellerCount = confirmedUsers.filter(u => u.role === "vendedor").length;
 
   // Filter
   const q = search.trim().toLowerCase();
@@ -533,7 +530,7 @@ export function UserManagementView({
         <CardGrid density={density}>
           {filteredUsers.map(u => {
             const stats = userStats[u.id] || { total: 0, won: 0, open: 0 };
-            const pending = (u.role === "vendedor" || u.role === "consultor") && (!u.companies || u.companies.length === 0);
+            const pending = u.role === "vendedor" && (!u.companies || u.companies.length === 0);
             const pendingInvite = isPendingInviteUser(u);
             const isSelf = u.id === currentUser?.id;
             const editable = canEdit(u);
@@ -695,10 +692,13 @@ export function UserManagementView({
             </div>
           </div>
           )}
-          {form.role === "consultor" && (
+          {form.role === "vendedor" && (
             <div>
-              <FieldLabel>Supervisor (vendedor)</FieldLabel>
-              <Select value={form.supervisorId || ""} onChange={e => setForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
+              <FieldLabel>Supervisor <span style={{ textTransform: "none", fontWeight: 400 }}>(opcional)</span></FieldLabel>
+              <Select value={form.supervisorId || ""} onChange={e => setForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions.filter(o => o.value !== form.id)} />
+              <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+                Quem supervisiona também enxerga os negócios deste vendedor no Funil de Vendas.
+              </div>
             </div>
           )}
           {(roleUsesSupplier(form.role) || form.additionalRoles.some(roleUsesSupplier)) && (
@@ -834,7 +834,7 @@ export function UserManagementView({
             }} options={roleOptions} />
           </div>
           <div>
-            <FieldLabel>Empresas com acesso {(inviteForm.role === "vendedor" || inviteForm.role === "consultor") && "*"}</FieldLabel>
+            <FieldLabel>Empresas com acesso {inviteForm.role === "vendedor" && "*"}</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
               {COMPANY_IDS.map(id => {
                 const c = COMPANIES[id];
@@ -875,10 +875,13 @@ export function UserManagementView({
             </div>
           </div>
           )}
-          {inviteForm.role === "consultor" && (
+          {inviteForm.role === "vendedor" && (
             <div>
-              <FieldLabel>Supervisor (vendedor)</FieldLabel>
+              <FieldLabel>Supervisor <span style={{ textTransform: "none", fontWeight: 400 }}>(opcional)</span></FieldLabel>
               <Select value={inviteForm.supervisorId || ""} onChange={e => setInviteForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
+              <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+                Quem supervisiona também enxerga os negócios deste vendedor no Funil de Vendas.
+              </div>
             </div>
           )}
           {roleUsesSupplier(inviteForm.role) && (

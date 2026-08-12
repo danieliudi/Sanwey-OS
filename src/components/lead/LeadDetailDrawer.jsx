@@ -267,7 +267,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
     ));
   }, [lead, allLeads, isManager]);
 
-  // Escopo de quem pode ser responsável do card: vendedor/consultor só da
+  // Escopo de quem pode ser responsável do card: vendedor só da
   // mesma empresa do lead (gerente/admin não aparecem aqui — mesmo escopo
   // que já existia pro picker de reatribuição de dono). Usado como `options`
   // do AssigneeMultiSelect (FASE 5) — objetos de usuário crus (id/name/
@@ -275,10 +275,10 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   const sellerOptions = useMemo(() => {
     if (!lead) return [];
     const inScope = (users || [])
-      .filter(u => (u.role === "vendedor" || u.role === "consultor") && Array.isArray(u.companies) && u.companies.includes(lead.companyId));
+      .filter(u => u.role === "vendedor" && Array.isArray(u.companies) && u.companies.includes(lead.companyId));
     // Item 4a: um responsável já atribuído (ex. gerente/admin colocado como
     // dono manualmente) precisa continuar aparecendo como chip mesmo fora do
-    // escopo padrão vendedor/consultor — senão o AssigneeMultiSelect descarta
+    // escopo padrão do vendedor — senão o AssigneeMultiSelect descarta
     // silenciosamente o id (options.find não acha) e o card parece "sem
     // responsável" pra quem só olha o card fechado.
     const assignedIds = getLeadOwnerIds(lead);
@@ -287,7 +287,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   }, [lead, users]);
 
   // Quem pode ser @mencionado nos comentários deste lead — mesmo escopo do
-  // picker de reatribuição de dono acima (vendedor/consultor só da mesma
+  // picker de reatribuição de dono acima (vendedor só da mesma
   // empresa do card; gerente/admin sempre veem tudo).
   const mentionableUsers = useMemo(() => (
     getMentionableUsers(users, { domain: "crm", companyId: lead?.companyId })

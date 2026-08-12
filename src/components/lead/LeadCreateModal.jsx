@@ -122,7 +122,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
     // responsável já na criação, diferente de qualquer outro card já criado.
     const visible = (users || []).filter(u =>
       u.companies?.includes(companyId) &&
-      (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
+      (u.role === "vendedor" || u.role === "gerente" || u.role === "admin")
     );
     return (
       <AssigneeMultiSelect

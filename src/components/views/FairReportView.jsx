@@ -214,10 +214,10 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
   );
 
   // Escopo de leitura. A RLS de `leads` dá visão completa a admin, gerente e
-  // diretoria; vendedor e consultor só enxergam os próprios (ou de
+  // diretoria; vendedor só enxerga os próprios (ou de
   // subordinados). Quem cai no segundo caso vê números REAIS mas PARCIAIS —
   // e sem aviso isso é pior que ver zero, porque parece o total da empresa.
-  // Hoje todo perfil de marketing também carrega vendedor/consultor, então
+  // Hoje todo perfil de marketing também carrega vendedor, então
   // esse caso não é hipotético.
   const roleList = user?.roles?.length ? user.roles : [user?.role].filter(Boolean);
   const hasFullLeadScope = roleList.some(r => ["admin", "gerente", "diretoria"].includes(r));

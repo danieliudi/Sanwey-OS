@@ -4,7 +4,7 @@
 
 import { formatDateBR } from "./date";
 
-export const COMERCIAL_ROLES = new Set(["vendedor", "consultor", "gerente"]);
+export const COMERCIAL_ROLES = new Set(["vendedor", "gerente"]);
 
 // Tipo de saída externa (decidido com o Daniel 11/08/2026) — "visita" é o
 // comportamento original (única opção até aqui, por isso é o default no

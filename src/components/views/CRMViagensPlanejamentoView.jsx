@@ -93,7 +93,7 @@ function monthLabel(mesRef) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-// Vendedor/consultor/gerente não tem SELECT em marketing_campaigns (RLS exige
+// Vendedor/gerente não tem SELECT em marketing_campaigns (RLS exige
 // ser de Marketing) — list_evento_campaigns() é a RPC estreita (só id/nome/
 // company_ids, nunca budget) que dá o mesmo dropdown do Funil de Vendas
 // (OriginCampaignRow) pra quem vincula uma saída externa a uma feira.

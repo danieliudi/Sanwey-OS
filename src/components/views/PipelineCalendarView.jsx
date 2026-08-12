@@ -36,7 +36,7 @@ export function PipelineCalendarView({ leads, onLeadClick }) {
   const [selectedDay, setSelectedDay] = useState(null);
 
   // leads já vem com o escopo completo aplicado pelo CRMView (empresa,
-  // consultor/vendedor/subordinados, setor, filtro de responsável e
+  // vendedor/subordinados, setor, filtro de responsável e
   // favoritos) — ver scopedLeads em CRMView.jsx. Reimplementar escopo aqui
   // já causou um bug real: ignorava o filtro de "vendedor" e o de setor.
 
