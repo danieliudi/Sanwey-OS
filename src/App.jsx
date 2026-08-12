@@ -2052,6 +2052,10 @@ export default function App() {
                   onOpenImport={isManager ? () => setClientRosterImportOpen(true) : undefined}
                   onOpenLead={setSelectedLead}
                   onOpenViagem={(id) => { setSection("crm-viagens"); setSelectedViagemId(id); }}
+                  /* Liberar produto com preço é ato de negociação — vendedor,
+                     gerente ou admin. Suporte vê a aba, mas em leitura: o
+                     preço do cliente não é dele (ver RLS de client_products). */
+                  canReleaseProducts={hasAnyRole(["vendedor", "gerente", "admin"])}
                 />
               )
           } />

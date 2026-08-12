@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.51.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Clientes ganharam a aba \"Produtos & Pre\u00e7os\": \u00e9 onde o vendedor libera o que aquele cliente pode comprar e por quanto. A tela mostra o pre\u00e7o de tabela que o suporte manteve e voc\u00ea p\u00f5e a margem em cima \u2014 d\u00e1 pra digitar dos dois lados, a margem ou o pre\u00e7o final, e o outro se ajusta. Cliente aprovado come\u00e7a sem nada liberado: n\u00e3o existe pre\u00e7o padr\u00e3o, cada produto entra com o pre\u00e7o negociado dele.",
+        roles: ["admin", "gerente", "vendedor", "suporte"],
+      },
+      {
+        kind: "novo",
+        text: "O guarda-corpo de margem come\u00e7a a valer na hora de liberar: se a margem ficar abaixo do patamar de aviso da ger\u00eancia, a tela avisa e deixa salvar; abaixo do m\u00ednimo, o bot\u00e3o desliga e o banco recusa. Pausar um produto guarda o pre\u00e7o negociado \u2014 retomar \u00e9 um clique, sem renegociar.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
     version: "4.50.0",
     items: [
       {

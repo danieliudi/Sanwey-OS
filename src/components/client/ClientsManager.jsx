@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
+import { ClientProductsTab } from "./ClientProductsTab";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { EmptyState } from "../ui/EmptyState";
 import { useClientTimeline } from "../../hooks/use-client-timeline";
@@ -41,7 +42,8 @@ function CategoryTag({ value }) {
   );
 }
 
-export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport, onOpenLead, onOpenViagem }) {
+export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport, onOpenLead, onOpenViagem,
+  canReleaseProducts = false, }) {
   const [query, setQuery] = useState("");
   const [onlyOpportunities, setOnlyOpportunities] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -484,6 +486,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         dealsByClient={dealsByClient}
         onOpenLead={onOpenLead}
         onOpenViagem={onOpenViagem}
+        canReleaseProducts={canReleaseProducts}
       />
 
       {/* Delete confirm */}
@@ -518,10 +521,14 @@ function ClientDetailModal({
   open, onClose, editing, form, setForm, saving, onSave, saveError,
   duplicateMatch, onUseDuplicate,
   activeTab, onTabChange, toggleCompany, inputStyle, onFocusRed, onBlurRed,
-  stats, dealsByClient, onOpenLead, onOpenViagem,
+  stats, dealsByClient, onOpenLead, onOpenViagem, canReleaseProducts = false,
 }) {
+  // "Produtos & Preços" só existe pra cliente já salvo: a liberação é por
+  // client_id, que ainda não existe enquanto o cliente é rascunho na tela.
   const tabs = editing
-    ? [{ id: "dados", label: "Dados" }, { id: "historico", label: "Histórico" }]
+    ? [{ id: "dados", label: "Dados" },
+       { id: "produtos", label: "Produtos & Preços" },
+       { id: "historico", label: "Histórico" }]
     : [{ id: "dados", label: "Dados" }];
   const tab = editing ? activeTab : "dados";
 
@@ -674,6 +681,13 @@ function ClientDetailModal({
           onOpenLead={onOpenLead}
           onOpenViagem={onOpenViagem}
           onClose={onClose}
+        />
+      )}
+      {tab === "produtos" && editing && (
+        <ClientProductsTab
+          clientId={editing.id}
+          companyIds={form.company_ids || editing.company_ids || []}
+          canEdit={canReleaseProducts}
         />
       )}
     </EntityProfileModal>
