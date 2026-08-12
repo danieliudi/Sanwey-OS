@@ -109,17 +109,8 @@ create policy products_read_interno on public.products for select
     or (public.is_comercial_operator() and company_id = any (public.current_user_companies()))
   );
 
--- Cliente só enxerga produto que FOI LIBERADO pra ele e está ativo dos dois lados.
-create policy products_read_cliente on public.products for select
-  using (
-    exists (
-      select 1 from public.client_products cp
-      where cp.product_id = products.id
-        and cp.client_id = public.current_user_client_id()
-        and cp.active
-    )
-    and products.active
-  );
+-- A policy de leitura do cliente vive lá embaixo, na seção 5: ela depende de
+-- `client_products`, que só é criada depois.
 
 create policy products_write on public.products for all
   using (public.current_user_is_admin() or (public.current_user_has_role('gerente') and company_id = any (public.current_user_companies())))
@@ -198,6 +189,20 @@ create policy client_products_interno on public.client_products for all
 -- Cliente lê só a própria linha — nunca o preço de outro cliente.
 create policy client_products_cliente on public.client_products for select
   using (client_id = public.current_user_client_id());
+
+-- Cliente só enxerga produto que FOI LIBERADO pra ele e está ativo dos dois
+-- lados. Fica aqui, e não junto das outras policies de `products`, porque
+-- depende de `client_products` já existir.
+create policy products_read_cliente on public.products for select
+  using (
+    exists (
+      select 1 from public.client_products cp
+      where cp.product_id = products.id
+        and cp.client_id = public.current_user_client_id()
+        and cp.active
+    )
+    and products.active
+  );
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 6. Pedido
