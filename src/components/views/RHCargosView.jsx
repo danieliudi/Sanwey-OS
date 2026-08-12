@@ -729,7 +729,11 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
             <StatCard icon={Building2} value={departmentsCobertos} label="Departamentos cobertos" sublabel={`${departmentsCobertos} de ${RH_DEPARTMENTS.length}`} />
           </div>
 
-          {!loadingCargos && cargos.length > 0 && (
+          {/* Achado do Daniel (12/08/2026): sem cargo cadastrado, a FilterBar
+              inteira (busca + departamento + toggle grade/lista) sumia junto
+              com um EmptyState no lugar — parecia bug. Fica sempre visível
+              (mesmo padrão de RHFornecedoresView, gated só por loading). */}
+          {!loadingCargos && (
             <div className="mb-3">
               <FilterBar
                 search={{ value: cargoSearch, onChange: (e) => setCargoSearch(e.target.value), placeholder: "Buscar cargo…" }}

@@ -359,9 +359,11 @@ export function ESGCarbonoView({ currentUser }) {
 
           {loadingRecords ? (
             <div className="text-sm" style={{ color: "var(--text-dim)" }}>Carregando…</div>
-          ) : records.length === 0 ? (
-            <EmptyState icon={Leaf} title="Nenhum registro de emissão ainda" description="Lance o consumo de combustível/energia em Lançamentos, ou calcule o Escopo 3 a partir de Compras." />
           ) : (
+            // Achado do Daniel (12/08/2026): sem registro nenhum, a tabela
+            // inteira (cabeçalhos incluídos) sumia atrás de um EmptyState —
+            // parecia bug. Cabeçalhos ficam sempre visíveis; só o corpo
+            // mostra a mensagem quando vazio.
             <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
               <table className="w-full text-xs">
                 <thead>
@@ -374,7 +376,13 @@ export function ESGCarbonoView({ currentUser }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {records.slice(0, 30).map(r => (
+                  {records.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-8 text-center" style={{ color: "var(--text-dim)" }}>
+                        Nenhum registro de emissão ainda — lance o consumo de combustível/energia em Lançamentos, ou calcule o Escopo 3 a partir de Compras.
+                      </td>
+                    </tr>
+                  ) : records.slice(0, 30).map(r => (
                     <tr key={r.id} style={{ borderTop: "1px solid var(--border)" }}>
                       <td className="px-3 py-2" style={{ color: "var(--text)" }}>{r.sourceType === "compras" ? "Compra" : "Lançamento manual"} · {formatDateBR(r.createdAt)}</td>
                       <td className="px-3 py-2"><ScopePill scope={r.scope} /></td>
@@ -544,8 +552,6 @@ function LancamentosTab({ activeCompany, activeFactorFor, createRecords, records
         <h3 className="text-sm font-bold mb-2" style={{ color: "var(--text)" }}>Histórico</h3>
         {loadingRecords ? (
           <div className="text-sm" style={{ color: "var(--text-dim)" }}>Carregando…</div>
-        ) : manualRecords.length === 0 ? (
-          <div className="text-xs" style={{ color: "var(--text-faint)" }}>Nenhum lançamento manual ainda.</div>
         ) : (
           <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
             <table className="w-full text-xs">
@@ -558,7 +564,11 @@ function LancamentosTab({ activeCompany, activeFactorFor, createRecords, records
                 </tr>
               </thead>
               <tbody>
-                {manualRecords.slice(0, 20).map(r => (
+                {manualRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-8 text-center" style={{ color: "var(--text-faint)" }}>Nenhum lançamento manual ainda.</td>
+                  </tr>
+                ) : manualRecords.slice(0, 20).map(r => (
                   <tr key={r.id} style={{ borderTop: "1px solid var(--border)" }}>
                     <td className="px-3 py-2" style={{ color: "var(--text)" }}>{formatDateBR(r.createdAt)}</td>
                     <td className="px-3 py-2"><ScopePill scope={r.scope} /></td>

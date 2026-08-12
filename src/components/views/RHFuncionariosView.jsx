@@ -39,7 +39,6 @@ import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
 import { useColaboradorConnections } from "../../hooks/use-colaborador-connections";
 import { RHAttachmentsPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
-import { EmptyState } from "../ui/EmptyState";
 import { Badge } from "../ui/Badge";
 import { Modal } from "../ui/Modal";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -1708,6 +1707,14 @@ export function RHFuncionariosView({
     [filtered, currentPage]
   );
 
+  // Reaproveitado no corpo da tabela desktop e no bloco mobile — mesma
+  // mensagem, sem duplicar o texto/ação "Limpar filtros" em dois lugares.
+  const filteredEmptyNote = filtered.length === 0
+    ? (unifiedRows.length > 0
+      ? { title: "Nenhum resultado pra estes filtros", description: "Nenhum colaborador bate com a busca e os filtros atuais.", showClear: true }
+      : { title: "Nenhum funcionário encontrado", description: "Tente ajustar os filtros", showClear: false })
+    : null;
+
   const toggleBulk = (id) => setBulkSelected((prev) => {
     const next = new Set(prev);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -2040,32 +2047,12 @@ export function RHFuncionariosView({
         </div>
       )}
 
-      {/* Desktop Table */}
+      {/* Desktop Table — achado do Daniel (12/08/2026): filtro sem resultado
+          escondia a tabela inteira (cabeçalhos e cards mobile incluídos)
+          atrás de um EmptyState central — parecia bug. Estrutura fica
+          sempre visível; só o corpo mostra a mensagem quando vazio. */}
       {loading ? (
         <TableSkeleton />
-      ) : filtered.length === 0 ? (
-        unifiedRows.length > 0 ? (
-          <EmptyState
-            icon={Users}
-            title="Nenhum resultado pra estes filtros"
-            description="Nenhum colaborador bate com a busca e os filtros atuais."
-            action={
-              <button
-                onClick={clearFilters}
-                className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
-                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none" }}
-              >
-                Limpar filtros
-              </button>
-            }
-          />
-        ) : (
-          <EmptyState
-            icon={Users}
-            title="Nenhum funcionário encontrado"
-            description="Tente ajustar os filtros"
-          />
-        )
       ) : (
         <>
           {/* Desktop */}
@@ -2107,7 +2094,23 @@ export function RHFuncionariosView({
                 </tr>
               </thead>
               <tbody>
-                {paged.map((u) => {
+                {filteredEmptyNote ? (
+                  <tr>
+                    <td colSpan={1 + FUNC_TABLE_COLS.length} style={{ padding: "32px 16px", textAlign: "center" }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{filteredEmptyNote.title}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{filteredEmptyNote.description}</div>
+                      {filteredEmptyNote.showClear && (
+                        <button
+                          onClick={clearFilters}
+                          className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
+                          style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", marginTop: 10 }}
+                        >
+                          Limpar filtros
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ) : paged.map((u) => {
                   const isChecked = bulkSelected.has(u.id);
                   return (
                   <tr
@@ -2178,7 +2181,21 @@ export function RHFuncionariosView({
 
           {/* Mobile cards */}
           <div className="md:hidden space-y-2">
-            {paged.map((u) => (
+            {filteredEmptyNote ? (
+              <div className="flex flex-col items-center text-center py-10 px-4 rounded-xl border-2 border-dashed" style={{ borderColor: "var(--border)" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{filteredEmptyNote.title}</div>
+                <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{filteredEmptyNote.description}</div>
+                {filteredEmptyNote.showClear && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
+                    style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", marginTop: 10 }}
+                  >
+                    Limpar filtros
+                  </button>
+                )}
+              </div>
+            ) : paged.map((u) => (
               <div
                 key={u.id}
                 onClick={() => (u._hasAccess ? setSelected(u._raw) : setEditingColaborador(u._raw))}

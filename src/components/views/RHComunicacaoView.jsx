@@ -415,9 +415,12 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
         canWrite ? <ComunicadoComposer onSend={enviarComunicado} /> : <EmptyState icon={Megaphone} title="Sem permissão" description="Só a gestão de RH envia comunicados." />
       ) : loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
-      ) : pesquisas.length === 0 ? (
-        <EmptyState icon={ClipboardList} title="Nenhuma pesquisa" description="Crie uma pesquisa anônima ou identificada — o modo é sua escolha na criação." />
       ) : (
+        // Achado do Daniel (12/08/2026): sem nenhuma pesquisa cadastrada, a
+        // busca e os dois filtros abaixo somiam junto com um EmptyState no
+        // lugar — parecia bug. Filtros ficam sempre visíveis; a mensagem de
+        // "nenhuma pesquisa" já existe logo abaixo (pesquisasFiltradas vazio
+        // cobre tanto "zero pesquisas" quanto "zero pra este filtro").
         <>
           <div className="flex items-center gap-2 flex-wrap mb-3">
             <div className="relative" style={{ minWidth: 200 }}>
@@ -452,7 +455,11 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
             </select>
           </div>
           {pesquisasFiltradas.length === 0 ? (
-            <div style={{ fontSize: 13, color: "var(--text-dim)", padding: "24px 0", textAlign: "center" }}>Nenhuma pesquisa encontrada com esses filtros.</div>
+            <div style={{ fontSize: 13, color: "var(--text-dim)", padding: "24px 0", textAlign: "center" }}>
+              {pesquisas.length === 0
+                ? "Nenhuma pesquisa ainda — crie uma pesquisa anônima ou identificada acima."
+                : "Nenhuma pesquisa encontrada com esses filtros."}
+            </div>
           ) : (
         <div className="flex flex-col gap-3" style={{ maxWidth: 720 }}>
           {pesquisasFiltradas.map((p) => {

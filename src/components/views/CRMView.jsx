@@ -1170,21 +1170,22 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
     return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
   };
 
-  if (leads.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3" style={{ color: "var(--text-dim)" }}>
-        <List size={40} strokeWidth={1} />
-        <span className="text-sm">Nenhum lead encontrado</span>
-      </div>
-    );
-  }
-
+  // Achado do Daniel (12/08/2026): antes disto, uma busca/filtro sem
+  // resultado escondia a tabela inteira (cabeçalhos de coluna incluídos)
+  // atrás de uma mensagem central — parecia bug, não "nenhum resultado".
+  // Cabeçalhos ficam sempre visíveis agora; só o corpo mostra a mensagem
+  // (mesmo padrão de PosVendaTableView.jsx).
   return (
     <>
     {/* Mobile: cards empilhados (abaixo de md a tabela de 8 colunas cortava
         Responsável/Última mov. pra fora da tela) */}
     <div className="md:hidden space-y-2">
-      {sorted.map(lead => {
+      {sorted.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 gap-2" style={{ color: "var(--text-dim)" }}>
+          <List size={28} strokeWidth={1} />
+          <span className="text-xs">Nenhum lead encontrado</span>
+        </div>
+      ) : sorted.map(lead => {
         const stage = stageMap[lead.stage];
         const resolvedOwners = getLeadOwnerIds(lead).map(id => users?.get?.(id)).filter(Boolean);
         const companyInfo = isGroupView ? COMPANIES[lead.companyId] : null;
@@ -1293,7 +1294,13 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
           </tr>
         </thead>
         <tbody>
-          {sorted.map((lead, idx) => {
+          {sorted.length === 0 ? (
+            <tr>
+              <td colSpan={TABLE_COLS.length} style={{ padding: "32px 12px", textAlign: "center", color: "var(--text-dim)", fontSize: 13 }}>
+                Nenhum lead encontrado
+              </td>
+            </tr>
+          ) : sorted.map((lead, idx) => {
             const stage = stageMap[lead.stage];
             // FASE 5: resolve todos os responsáveis (owner_ids, com fallback
             // pro owner escalar) contra o Map de usuários pro AvatarStack.
