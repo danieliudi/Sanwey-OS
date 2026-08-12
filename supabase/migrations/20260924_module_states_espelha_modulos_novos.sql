@@ -1,0 +1,22 @@
+-- Espelha em SQL os módulos que entraram no registro em 12/08/2026 junto com
+-- a chave global: esg-carbono, automations, marketing-feiras + as quatro
+-- páginas de todo colaborador (chat, personal-tasks, meu-rh, tutorials).
+-- Aplicada em produção 12/08/2026.
+--
+-- Nenhuma policy RLS chama current_user_has_module() hoje (conferido: 0
+-- ocorrências) — ela é o espelho declarado pra quando isso acontecer. Deixar
+-- os ids novos caindo no `else false` criaria uma divergência silenciosa que
+-- só apareceria na primeira policy que os usasse.
+--
+-- Aproveitando: `diretoria` não existia aqui, embora defaultModulesForRoles
+-- em module-access.js conceda TODOS os módulos pra esse papel desde a
+-- migration 20260756. Divergência anterior, corrigida junto.
+--
+-- O corpo completo aplicado está em produção (fonte de verdade). As mudanças
+-- em relação à versão anterior são apenas:
+--   + v_is_diretoria, com `if v_is_diretoria then return true; end if;`
+--   + 'marketing-feiras' na lista de marketing
+--   + when p_module = 'esg-carbono' then v_is_manager
+--   + when p_module = 'automations' then v_is_manager or v_is_rh_manager
+--   + when p_module = any(array['chat','personal-tasks','meu-rh','tutorials'])
+--       then true

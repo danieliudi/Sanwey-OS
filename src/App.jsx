@@ -7,6 +7,7 @@ import {
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
+  FlaskConical,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -14,7 +15,8 @@ import { usePipelines } from "./hooks/use-pipelines";
 import { DEFAULT_PIPELINE_STAGES } from "./constants/pipelines";
 import { ROUTES, sectionFromPath } from "./constants/routes";
 import { useModuleOverrides } from "./hooks/use-module-overrides";
-import { effectiveModules, ALL_MODULE_IDS } from "./utils/module-access";
+import { useModuleStates } from "./hooks/use-module-states";
+import { effectiveModules, gateByModuleStates, isModuleInTest, ALL_MODULE_IDS, MODULE_LABELS } from "./utils/module-access";
 import { useMarketSignals } from "./hooks/use-market-signals";
 import { usePersistentState } from "./hooks/use-persistent-state";
 import { useCrossReferrals } from "./hooks/use-cross-referrals";
@@ -211,9 +213,17 @@ export default function App() {
   // no menu e trava o acesso direto por URL (ver guard mais abaixo) — ainda
   // não é enforcement de RLS tabela a tabela (ver comentário na migration).
   const { overrides: myModuleOverrides } = useModuleOverrides({ userId: currentUser?.id, enabled: Boolean(currentUser) });
+  // Chave global de liga/desliga por página (Configurações → Módulos). Entra
+  // como filtro POR CIMA do que o cargo/exceção concedeu — restringe, nunca
+  // amplia. Espelhado no banco, dentro de current_user_has_module().
+  const { states: moduleStates } = useModuleStates({ enabled: Boolean(currentUser) });
   const allowedModules = useMemo(
-    () => effectiveModules(currentUserRoles, myModuleOverrides),
-    [currentUserRoles, myModuleOverrides]
+    () => gateByModuleStates(
+      effectiveModules(currentUserRoles, myModuleOverrides),
+      moduleStates,
+      { isAdmin: currentUserRoles.includes("admin"), overrides: myModuleOverrides },
+    ),
+    [currentUserRoles, myModuleOverrides, moduleStates]
   );
 
   const isManagerRole      = hasAnyRole(["gerente", "admin"]);
@@ -1325,17 +1335,23 @@ export default function App() {
   }, [accessibleCompanies, activeCompany]);
 
   const navGroups = useMemo(() => {
+    // Portal e Agência têm shell fixo e saem antes do filtro geral lá
+    // embaixo — mas a chave global tem que valer pra eles também, senão
+    // "Chat desligado" continuaria mostrando Chat pra fora de casa, que é
+    // justamente quem menos deveria ver uma página em obras.
+    const notOff = (items) => items.filter(i => (moduleStates[i.id] || "live") !== "off");
+
     // Portal: só "Meu RH", nada mais — mesmo espírito do isAgencia abaixo.
     if (isPortalOnly) {
       return [
         {
           label: null,
-          items: [
+          items: notOff([
             { id: "meu-rh", label: "Meu RH", icon: Home },
             ...(currentUser?.chatEnabled === false ? [] : [{ id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined }]),
-          ],
+          ]),
         },
-      ];
+      ].filter(g => g.items.length > 0);
     }
 
     // Agência: only Campanhas + Entregas, nothing else.
@@ -1343,12 +1359,12 @@ export default function App() {
       return [
         {
           label: "Marketing",
-          items: [
+          items: notOff([
             { id: "marketing",          label: "Campanhas", icon: Megaphone },
             { id: "marketing-entregas", label: "Entregas",  icon: Package },
-          ],
+          ]),
         },
-      ];
+      ].filter(g => g.items.length > 0);
     }
 
     const groups = [];
@@ -1552,7 +1568,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1655,8 +1671,14 @@ export default function App() {
     if (!isAgencia && !isPortalOnly && ALL_MODULE_IDS.includes(section) && !allowedModules.has(section)) {
       setSection("dashboard");
     }
+    // Página desligada pela chave global: vale até pra Agência/Portal, que
+    // não passam pelo registro de módulos mas também não podem ficar dentro
+    // de uma tela que foi tirada do ar.
+    if ((isAgencia || isPortalOnly) && (moduleStates[section] || "live") === "off") {
+      setSection("dashboard");
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section, allowedModules]);
+  }, [currentUser, isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section, allowedModules, moduleStates]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
@@ -1774,6 +1796,24 @@ export default function App() {
         <OfflineBanner isOnline={isOnline} cacheAge={cacheAge} />
 
         <div className="px-4 py-4 sm:px-6 sm:py-6 lg:py-6 pb-24 lg:pb-6 flex-1 min-w-0">
+        {isModuleInTest(section, moduleStates) && (
+          // Página em teste: quem chegou aqui é admin ou testador marcado à
+          // mão. A tarja existe pra ninguém reportar como bug algo que já se
+          // sabe incompleto — nem tomar decisão com base num número que
+          // ainda não é confiável.
+          <div
+            className="mb-4 rounded-lg border px-3.5 py-2.5 flex items-start gap-2.5"
+            style={{ background: "var(--warning-bg)", borderColor: "color-mix(in srgb, var(--warning) 35%, transparent)" }}
+          >
+            <FlaskConical size={15} style={{ color: "var(--warning)", flex: "none", marginTop: 1 }} />
+            <div className="text-xs leading-relaxed" style={{ color: "var(--warning)" }}>
+              <strong style={{ fontWeight: 700 }}>
+                {MODULE_LABELS[section] || "Esta página"} está em teste.
+              </strong>{" "}
+              Ainda não aparece para a equipe. Os dados podem estar incompletos.
+            </div>
+          </div>
+        )}
         <ErrorBoundary
           fallback={({ error, reset }) => (
             <div className="rounded-xl border p-6 max-w-2xl mx-auto mt-8" style={{ background: "var(--danger-bg)", borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}>

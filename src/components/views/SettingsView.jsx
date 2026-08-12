@@ -3,6 +3,7 @@ import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
   ShieldCheck, Image, Upload, PanelBottom, Menu as MenuIcon, Inbox, Briefcase,
+  ToggleLeft,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { AvatarCropModal } from "../shared/AvatarCropModal";
@@ -15,6 +16,7 @@ import {
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
 import { Tabs } from "../shared/Tabs";
+import { ModuleStatesPanel } from "../settings/ModuleStatesPanel";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useChatStickers } from "../../hooks/use-chat-stickers";
 import { callAI } from "../../hooks/use-ai";
@@ -543,6 +545,9 @@ function buildTabGroups({ isManager, canSeeExecutive, isChatManager, isAdmin, ha
 
   const administracao = [];
   if (hasUsersPanel) administracao.push({ id: "usuarios", label: "Usuários", icon: UserCog });
+  // Liga/desliga global por página. Só admin — é a chave que tira uma tela do
+  // ar pra empresa inteira, inclusive pra gerência.
+  if (isAdmin) administracao.push({ id: "modulos", label: "Módulos", icon: ToggleLeft });
   if (isManager || isAdmin) {
     administracao.push({ id: "seguranca", label: "Segurança & dados", icon: ShieldCheck });
   }
@@ -1886,6 +1891,11 @@ export function SettingsView({
                   <BottomNavPrefsPanel currentUser={currentUser} roles={roles} navGroups={navGroups} />
                 )}
               </div>
+            )}
+
+            {/* ── MÓDULOS (liga/desliga global por página) ── */}
+            {activeTab === "modulos" && isAdmin && (
+              <ModuleStatesPanel />
             )}
 
             {/* ── SEGURANÇA & DADOS ── */}

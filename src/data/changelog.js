@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.48.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Configurações \u2192 M\u00f3dulos: liga e desliga p\u00e1ginas inteiras da plataforma para toda a empresa, sem depender de atualiza\u00e7\u00e3o. Cada p\u00e1gina tem tr\u00eas estados \u2014 Desligada (ningu\u00e9m v\u00ea), Em testes (s\u00f3 admin e quem estiver marcado como exce\u00e7\u00e3o em Usu\u00e1rios) e Liberada (vale a regra de cargo de sempre). Serve pra amadurecer uma tela com dado real antes de treinar a equipe nela. A chave nunca amplia acesso: liberar uma p\u00e1gina n\u00e3o mostra ela pra quem o cargo j\u00e1 n\u00e3o mostrava.",
+        roles: ["admin"],
+      },
+      {
+        kind: "ajuste",
+        text: "Sete p\u00e1ginas que n\u00e3o tinham controle de acesso nenhum entraram no registro de m\u00f3dulos: ESG & Carbono, Automa\u00e7\u00f5es, Feiras (Marketing), Chat, Meu To-do, Meu RH e Ajuda & Tutoriais. Todas entraram liberadas, exatamente como estavam \u2014 ningu\u00e9m perdeu acesso a nada.",
+        roles: ["admin", "gerente"],
+      },
+    ],
+  },
+  {
     version: "4.47.0",
     items: [
       {
