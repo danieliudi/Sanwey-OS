@@ -212,17 +212,25 @@ function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen, blocked })
 }
 
 function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen, blockedIds }) {
-  if (tasks.length === 0) return null;
   return (
     <div className="mb-5">
       <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
         {title} <span style={{ fontWeight: 500, textTransform: "none", letterSpacing: "normal" }}>({tasks.length})</span>
       </div>
-      <div className="flex flex-col gap-2">
-        {tasks.map(t => (
-          <TaskRow key={t.id} task={t} columns={columns} onToggle={onToggle} onMove={onMove} onDelete={onDelete} onOpen={onOpen} blocked={blockedIds?.has(t.id)} />
-        ))}
-      </div>
+      {tasks.length === 0 ? (
+        <div
+          className="flex items-center py-3 px-3 rounded-lg border-2 border-dashed text-xs"
+          style={{ borderColor: "var(--border)", color: "var(--text-dim)", opacity: 0.6 }}
+        >
+          Nenhuma tarefa aqui
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {tasks.map(t => (
+            <TaskRow key={t.id} task={t} columns={columns} onToggle={onToggle} onMove={onMove} onDelete={onDelete} onOpen={onOpen} blocked={blockedIds?.has(t.id)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -652,22 +660,25 @@ export function PersonalTasksView({ currentUser }) {
         <div className="text-sm" style={{ color: "var(--text-dim)" }}>Carregando…</div>
       ) : viewMode === "automacoes" ? (
         <PersonalTaskAutomationsPanel automationsHook={automationsHook} columns={columns} />
-      ) : !hasAnyTask ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <ListChecks size={32} style={{ opacity: 0.4, marginBottom: 10, color: "var(--text-dim)" }} />
-          <div className="text-sm font-medium mb-1" style={{ color: "var(--text)" }}>Nenhuma tarefa ainda</div>
-          <div className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>Crie sua primeira tarefa pessoal.</div>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer" }}
-          >
-            <Plus size={14} />
-            Nova tarefa
-          </button>
-        </div>
       ) : (
         <>
+          {/* Achado do Daniel (12/08/2026): antes disto, uma lista sem
+              nenhuma tarefa escondia o board inteiro atrás de uma mensagem
+              centralizada — parecia bug, não "lista vazia". Mesmo padrão que
+              todo outro Kanban da plataforma já segue (CRMView/MarketingView/
+              EntregasView nunca escondem as colunas por falta de dado): a
+              estrutura (etapas, faixas "Hoje/Esta semana/Sem data", grade da
+              Agenda) sempre aparece; cada coluna/seção já tem seu próprio
+              "Nenhuma tarefa" quando vazia. */}
+          {!hasAnyTask && (
+            <div
+              className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg text-xs"
+              style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}
+            >
+              <ListChecks size={14} style={{ opacity: 0.6 }} />
+              Nenhuma tarefa ainda — clique em "Nova tarefa" pra começar.
+            </div>
+          )}
           <TagFilterBar allTags={allTags} activeTags={activeTags} onToggle={toggleTagFilter} />
           {viewMode === "list" ? (
             <div>
