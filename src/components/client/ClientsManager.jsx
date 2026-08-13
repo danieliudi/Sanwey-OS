@@ -2,6 +2,8 @@ import React, { useMemo, useState } from "react";
 import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
+import { ClientProductsTab } from "./ClientProductsTab";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { EmptyState } from "../ui/EmptyState";
 import { useClientTimeline } from "../../hooks/use-client-timeline";
@@ -15,7 +17,7 @@ import { findClientByCnpj, DuplicateClientError } from "../../utils/client-dedup
 
 const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
-const EMPTY = { name: "", category: "", city: "", state: "", cnpj: "", companyIds: [], notes: "" };
+const EMPTY = { name: "", category: "", city: "", state: "", cnpj: "", companyIds: [], ownerIds: [], notes: "" };
 
 const STAGE_LABELS = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
 
@@ -41,7 +43,8 @@ function CategoryTag({ value }) {
   );
 }
 
-export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport, onOpenLead, onOpenViagem }) {
+export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport, onOpenLead, onOpenViagem,
+  canReleaseProducts = false, vendedores = [], }) {
   const [query, setQuery] = useState("");
   const [onlyOpportunities, setOnlyOpportunities] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -157,7 +160,8 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     setSaveError(null);
     setForm({
       name: c.name || "", category: c.category || "", city: c.city || "",
-      state: c.state || "", cnpj: c.cnpj || "", companyIds: c.companyIds || [], notes: c.notes || "",
+      state: c.state || "", cnpj: c.cnpj || "", companyIds: c.companyIds || [],
+      ownerIds: c.ownerIds || [], notes: c.notes || "",
     });
     setActiveTab(tab);
     setModalOpen(true);
@@ -484,6 +488,8 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         dealsByClient={dealsByClient}
         onOpenLead={onOpenLead}
         onOpenViagem={onOpenViagem}
+        canReleaseProducts={canReleaseProducts}
+        vendedores={vendedores}
       />
 
       {/* Delete confirm */}
@@ -518,10 +524,15 @@ function ClientDetailModal({
   open, onClose, editing, form, setForm, saving, onSave, saveError,
   duplicateMatch, onUseDuplicate,
   activeTab, onTabChange, toggleCompany, inputStyle, onFocusRed, onBlurRed,
-  stats, dealsByClient, onOpenLead, onOpenViagem,
+  stats, dealsByClient, onOpenLead, onOpenViagem, canReleaseProducts = false,
+  vendedores = [],
 }) {
+  // "Produtos & Preços" só existe pra cliente já salvo: a liberação é por
+  // client_id, que ainda não existe enquanto o cliente é rascunho na tela.
   const tabs = editing
-    ? [{ id: "dados", label: "Dados" }, { id: "historico", label: "Histórico" }]
+    ? [{ id: "dados", label: "Dados" },
+       { id: "produtos", label: "Produtos & Preços" },
+       { id: "historico", label: "Histórico" }]
     : [{ id: "dados", label: "Dados" }];
   const tab = editing ? activeTab : "dados";
 
@@ -620,6 +631,23 @@ function ClientDetailModal({
             )}
           </div>
 
+          {/* Vendedor responsável — quem toma conta da conta. É por isso que
+              a coluna existe: decide quem pode liberar produto com preço
+              (RLS de client_products) e, adiante, quem é avisado quando entra
+              pedido. Vazio abre pra qualquer vendedor da empresa, senão a
+              base inteira travaria no dia em que o campo nasceu. */}
+          <div>
+            <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Vendedor responsável
+            </label>
+            <AssigneeMultiSelect
+              value={form.ownerIds || []}
+              onChange={ownerIds => setForm(f => ({ ...f, ownerIds }))}
+              options={vendedores}
+              placeholder="Sem dono — qualquer vendedor pode operar"
+            />
+          </div>
+
           <div>
             <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Observações</label>
             <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
@@ -674,6 +702,13 @@ function ClientDetailModal({
           onOpenLead={onOpenLead}
           onOpenViagem={onOpenViagem}
           onClose={onClose}
+        />
+      )}
+      {tab === "produtos" && editing && (
+        <ClientProductsTab
+          clientId={editing.id}
+          companyIds={form.companyIds?.length ? form.companyIds : (editing.companyIds || [])}
+          canEdit={canReleaseProducts}
         />
       )}
     </EntityProfileModal>

@@ -15,6 +15,7 @@ export const MODULE_GROUPS = [
       { id: "crm",                 label: "Funil de Vendas" },
       { id: "posvenda",            label: "Funil de Pós-venda" },
       { id: "clients",             label: "Clientes" },
+      { id: "catalogo",            label: "Catálogo" },
       { id: "signals",             label: "Sinais" },
       { id: "explorer",            label: "Explorador" },
       { id: "crm-viagens",         label: "Viagens & Despesas" },
@@ -95,6 +96,7 @@ export function computeRoleFlags(roles) {
     isMarketingManager:  hasAnyRole(list, ["gerente_marketing", "admin"]),
     isAgencia:           hasAnyRole(list, ["agencia"]),
     isPortalOnly:        rolesSubsetOf(list, ["portal"]),
+    isPureSuporte:       rolesSubsetOf(list, ["suporte"]),
     isRH:                hasAnyRole(list, ["rh", "gerente_rh", "admin"]),
     isRHManager:         hasAnyRole(list, ["gerente_rh", "admin"]),
     isPureRH:            rolesSubsetOf(list, ["rh", "gerente_rh"]),
@@ -126,14 +128,23 @@ export function defaultModulesForRoles(roles) {
     return set;
   }
 
-  if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {
-    ["commercial-overview", "crm", "posvenda", "clients", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
+  // Suporte comercial "puro" opera pedido e mantém o catálogo — não vende.
+  // Sem funil, sinais nem prospecção: o RLS já limitava o dado, isto enxuga
+  // o menu pra função que a pessoa realmente exerce.
+  if (f.isPureSuporte) {
+    ["clients", "catalogo"].forEach(m => set.add(m));
+  } else if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {
+    ["commercial-overview", "crm", "posvenda", "clients", "catalogo", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
     if (f.isManager) set.add("crossref");
   }
 
   if (f.isMarketing) {
     ["marketing-home", "marketing", "marketing-solicitacoes", "marketing-entregas", "marketing-tarefas",
      "marketing-fornecedores", "marketing-compras", "marketing-despesas", "marketing-feiras"].forEach(m => set.add(m));
+    // Marketing mantém a metade "vitrine" do produto (chamada, destaques,
+    // especificações) — o que o Portal B2B mostra pro cliente. Por isso
+    // alcança o Catálogo, mesmo sendo tela do Comercial.
+    set.add("catalogo");
   }
 
   if (f.isRH) {

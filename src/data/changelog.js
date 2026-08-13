@@ -24,6 +24,66 @@
 
 export const CHANGELOG = [
   {
+    version: "4.52.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Cliente agora tem vendedor respons\u00e1vel. \u00c9 quem pode liberar produto e definir o pre\u00e7o daquela conta \u2014 outro vendedor n\u00e3o mexe. Cliente sem respons\u00e1vel definido continua aberto pra qualquer vendedor da empresa, ent\u00e3o nada trava enquanto voc\u00eas preenchem; quem veio de um neg\u00f3cio do funil j\u00e1 nasceu com o dono daquele neg\u00f3cio. Ger\u00eancia opera qualquer conta.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Quem tem s\u00f3 o cargo de suporte comercial passa a ver no menu Comercial apenas Clientes e Cat\u00e1logo, em vez do m\u00f3dulo inteiro com funil, sinais e prospec\u00e7\u00e3o. O acesso aos dados j\u00e1 era o mesmo \u2014 mudou o menu, que agora reflete a fun\u00e7\u00e3o.",
+        roles: ["admin", "gerente", "suporte"],
+      },
+    ],
+  },
+  {
+    version: "4.51.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Clientes ganharam a aba \"Produtos & Pre\u00e7os\": \u00e9 onde o vendedor libera o que aquele cliente pode comprar e por quanto. A tela mostra o pre\u00e7o de tabela que o suporte manteve e voc\u00ea p\u00f5e a margem em cima \u2014 d\u00e1 pra digitar dos dois lados, a margem ou o pre\u00e7o final, e o outro se ajusta. Cliente aprovado come\u00e7a sem nada liberado: n\u00e3o existe pre\u00e7o padr\u00e3o, cada produto entra com o pre\u00e7o negociado dele.",
+        roles: ["admin", "gerente", "vendedor", "suporte"],
+      },
+      {
+        kind: "novo",
+        text: "O guarda-corpo de margem come\u00e7a a valer na hora de liberar: se a margem ficar abaixo do patamar de aviso da ger\u00eancia, a tela avisa e deixa salvar; abaixo do m\u00ednimo, o bot\u00e3o desliga e o banco recusa. Pausar um produto guarda o pre\u00e7o negociado \u2014 retomar \u00e9 um clique, sem renegociar.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
+    version: "4.50.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O produto no Cat\u00e1logo agora tem duas metades, com donos diferentes. A aba Comercial \u00e9 do suporte: c\u00f3digo, unidade, pedido m\u00ednimo, pre\u00e7o de tabela e certifica\u00e7\u00f5es. A aba Vitrine \u00e9 do Marketing: chamada, descri\u00e7\u00e3o, destaques, especifica\u00e7\u00f5es, aplica\u00e7\u00f5es e categoria \u2014 \u00e9 o que o cliente v\u00ea no portal de compras. Cada um enxerga a metade do outro, mas s\u00f3 escreve na sua.",
+        roles: ["admin", "gerente", "suporte", "marketing", "gerente_marketing"],
+      },
+      {
+        kind: "novo",
+        text: "Trava de compliance nas certifica\u00e7\u00f5es: INMETRO, ANTT 5998 e NORMAM-05 s\u00f3 podem ser atribu\u00eddas a produto marcado como homologado. Antes era disciplina de quem preenchia; agora o sistema recusa \u2014 certifica\u00e7\u00e3o errada numa vitrine que o cliente l\u00ea n\u00e3o \u00e9 erro de digita\u00e7\u00e3o.",
+        roles: ["admin", "gerente", "suporte", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
+    version: "4.49.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Comercial \u2192 Cat\u00e1logo: onde os produtos passam a viver, com c\u00f3digo, unidade, pedido m\u00ednimo, certifica\u00e7\u00f5es e o pre\u00e7o de tabela. O pre\u00e7o de tabela \u00e9 mantido pelo suporte comercial e serve de base pro vendedor calcular a margem de cada cliente \u2014 ele n\u00e3o \u00e9 o pre\u00e7o que o cliente paga. Produto sem pre\u00e7o de tabela aparece marcado como incompleto em vez de sumir.",
+        roles: ["admin", "gerente", "suporte", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Cat\u00e1logo \u2192 Regras de margem: a ger\u00eancia define, por empresa, a partir de que margem a tela avisa o vendedor e a partir de qual o sistema recusa. D\u00e1 pra abrir exce\u00e7\u00e3o para um produto espec\u00edfico. O n\u00famero \u00e9 a varia\u00e7\u00e3o sobre o pre\u00e7o de tabela: +20 vende 20% acima, \u221210 concede 10% de desconto.",
+        roles: ["admin", "gerente"],
+      },
+    ],
+  },
+  {
     version: "4.48.0",
     items: [
       {

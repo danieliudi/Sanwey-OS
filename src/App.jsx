@@ -7,7 +7,7 @@ import {
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
-  FlaskConical,
+  FlaskConical, PackageSearch,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -77,6 +77,7 @@ import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { ComexView } from "./components/views/ComexView";
 import { UserManagementView } from "./components/views/UserManagementView";
 import { ClientsManager } from "./components/client/ClientsManager";
+import { CatalogoView } from "./components/views/CatalogoView";
 import { SettingsView } from "./components/views/SettingsView";
 import { AgentActionsView } from "./components/views/AgentActionsView";
 import { FairImportView } from "./components/views/FairImportView";
@@ -236,6 +237,8 @@ export default function App() {
   // Papel "portal": login sem nenhum cargo operacional (ex.: Engenharia) —
   // acessa só /meu-rh, mesmo espírito do isAgencia acima (guard total).
   const isPortalOnly       = rolesSubsetOf(["portal"]);
+  // Suporte comercial sem outro cargo: menu Comercial enxuto (ver navGroups).
+  const isPureSuporte      = rolesSubsetOf(["suporte"]);
   // RH roles (isRHManager já foi hoisted acima)
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
   const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
@@ -1405,7 +1408,18 @@ export default function App() {
       ],
     });
 
-    if (!isPureMarketing && !isPureRH && !isPureComex) {
+    // Suporte comercial "puro": opera pedido e mantém o catálogo, não vende.
+    // Não precisa de funil, sinais nem prospecção — e o RLS já limitava o
+    // dado, então isto é higiene de menu, não permissão nova.
+    if (isPureSuporte) {
+      groups.push({
+        label: "Comercial",
+        items: [
+          { id: "clients",  label: "Clientes", icon: Users },
+          { id: "catalogo", label: "Catálogo", icon: PackageSearch },
+        ],
+      });
+    } else if (!isPureMarketing && !isPureRH && !isPureComex) {
       groups.push({
         label: "Comercial",
         items: [
@@ -1422,6 +1436,7 @@ export default function App() {
           // continua existindo no Funil de Vendas.
           { id: "posvenda",     label: "Funil de Pós-venda", icon: Handshake },
           { id: "clients",      label: "Clientes",   icon: Users },
+          { id: "catalogo",     label: "Catálogo",   icon: PackageSearch },
           ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
           { id: "explorer",     label: "Explorador", icon: Globe2 },
           { id: "crm-viagens",  label: "Viagens & Despesas", icon: Plane },
@@ -1458,6 +1473,13 @@ export default function App() {
         { id: "marketing-despesas",       label: "Despesas",     icon: DollarSign },
         { id: "marketing-feiras",         label: "Feiras",       icon: Tent }
       );
+      // Catálogo aparece aqui só pra quem NÃO tem o menu Comercial — o
+      // Marketing mantém a metade "vitrine" do produto (chamada, destaques,
+      // especificações), que é o que o Portal B2B mostra pro cliente. Quem
+      // tem os dois menus já vê o item no Comercial; repetir confundiria.
+      if (isPureMarketing) {
+        mktItems.push({ id: "catalogo", label: "Catálogo", icon: PackageSearch });
+      }
       groups.push({ label: "Marketing", items: mktItems });
     }
 
@@ -1568,7 +1590,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isPureSuporte, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -2007,6 +2029,27 @@ export default function App() {
                 />
               )
           } />
+          <Route path={ROUTES.catalogo} element={
+            /* Marketing NÃO é barrado aqui: mantém a metade vitrine do
+               produto, que é o que o portal mostra pro cliente. */
+            isAgencia || isPureRH
+              ? <Navigate to={ROUTES.dashboard} replace />
+              : (
+                <CatalogoView
+                  activeCompany={activeCompany}
+                  accessibleCompanies={accessibleCompanies}
+                  /* Quem mantém o catálogo e o preço de tabela: suporte
+                     comercial, gerente ou admin — mesma regra do RLS em
+                     products_write. Vendedor lê pra calcular margem. */
+                  canEdit={hasAnyRole(["suporte", "gerente", "admin"])}
+                  canEditRules={hasAnyRole(["gerente", "admin"])}
+                  /* Vitrine é do Marketing — o trigger no banco congela o
+                     lado de lá pra quem não é, isto aqui só evita digitar
+                     algo que seria descartado em silêncio. */
+                  canEditVitrine={hasAnyRole(["marketing", "gerente_marketing", "gerente", "admin"])}
+                />
+              )
+          } />
           <Route path={ROUTES.clients} element={
             isAgencia || isPureMarketing || isPureRH
               ? <Navigate to={ROUTES.dashboard} replace />
@@ -2022,6 +2065,13 @@ export default function App() {
                   onOpenImport={isManager ? () => setClientRosterImportOpen(true) : undefined}
                   onOpenLead={setSelectedLead}
                   onOpenViagem={(id) => { setSection("crm-viagens"); setSelectedViagemId(id); }}
+                  /* Liberar produto com preço é ato de negociação — vendedor,
+                     gerente ou admin. Suporte vê a aba, mas em leitura: o
+                     preço do cliente não é dele (ver RLS de client_products). */
+                  canReleaseProducts={hasAnyRole(["vendedor", "gerente", "admin"])}
+                  /* Só quem vende pode ser dono de conta — o campo não deve
+                     oferecer marketing, RH ou suporte. */
+                  vendedores={users.filter(u => (u.roles || []).some(r => ["vendedor", "gerente"].includes(r)))}
                 />
               )
           } />
