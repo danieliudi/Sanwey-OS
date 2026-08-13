@@ -208,10 +208,18 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const audioPath: string | undefined = body.audioPath;
+    // Áudio ainda não gravado no Storage. É o caso da ata iniciada pelo
+    // CLIENTE: ali o negócio a que ela pertence só é escolhido na tela de
+    // conferência, e lead_attachments exige lead_id — ou seja, não há onde
+    // guardar o arquivo ANTES de transcrever. Sem risco de vazamento: quem
+    // manda os bytes é o dono deles, não um caminho apontando pro arquivo
+    // de outra pessoa (que é o que audioPath protege via RLS do Storage).
+    const audioInline: string | undefined = body.audioBase64;
     const textoDigitado: string | undefined = body.text;
-    if (!audioPath && !textoDigitado?.trim()) {
-      return json({ error: 'Envie audioPath ou text.' }, 400);
+    if (!audioPath && !audioInline && !textoDigitado?.trim()) {
+      return json({ error: 'Envie audioPath, audioBase64 ou text.' }, 400);
     }
+    const temAudio = Boolean(audioPath || audioInline);
 
     // Chave: pessoal (mandada pela tela, mesmo mecanismo do ai-assistant)
     // com queda pra chave da empresa nos secrets do projeto.
@@ -221,7 +229,7 @@ Deno.serve(async (req: Request) => {
     const baseModel = p.model   || Deno.env.get('AI_ORG_MODEL');
     // Permite apontar um modelo específico só pro áudio sem trocar o do resto
     // da plataforma — é aqui que entra um Gemini quando o padrão é outro.
-    const model = (audioPath && Deno.env.get('AI_AUDIO_MODEL')) || baseModel;
+    const model = (temAudio && Deno.env.get('AI_AUDIO_MODEL')) || baseModel;
 
     if (!provider || !apiKey || !model) {
       return json({ error: 'IA não configurada. Um admin precisa definir a chave em Configurações, ou os secrets AI_ORG_* no projeto.' }, 400);
@@ -236,7 +244,7 @@ Deno.serve(async (req: Request) => {
     const system = systemPrompt(ctx);
 
     // ── Só texto: qualquer um dos três provedores resolve ────────────────
-    if (!audioPath) {
+    if (!temAudio) {
       const texto = textoDigitado!.trim();
       const out = provider === 'gemini'    ? await viaGemini({ model, apiKey, system, text: texto })
                 : provider === 'openai'    ? await viaOpenAI({ model, apiKey, system, text: texto })
@@ -253,19 +261,32 @@ Deno.serve(async (req: Request) => {
       }, 400);
     }
 
-    // Download com a credencial do usuário: a RLS do Storage é quem autoriza.
-    const { data: file, error: dlErr } = await userClient.storage.from(BUCKET).download(audioPath);
-    if (dlErr || !file) return json({ error: 'Áudio não encontrado ou sem permissão de leitura.' }, 403);
-
-    const bytes = new Uint8Array(await file.arrayBuffer());
+    let bytes: Uint8Array;
+    let tipoBruto: string;
+    if (audioPath) {
+      // Download com a credencial do usuário: a RLS do Storage é quem autoriza.
+      const { data: file, error: dlErr } = await userClient.storage.from(BUCKET).download(audioPath);
+      if (dlErr || !file) return json({ error: 'Áudio não encontrado ou sem permissão de leitura.' }, 403);
+      bytes = new Uint8Array(await file.arrayBuffer());
+      tipoBruto = body.mimeType || file.type || 'audio/webm';
+    } else {
+      try {
+        const bin = atob(audioInline!);
+        bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      } catch {
+        return json({ error: 'Áudio inválido.' }, 400);
+      }
+      tipoBruto = body.mimeType || 'audio/webm';
+    }
     if (bytes.byteLength > MAX_AUDIO_BYTES) {
       return json({ error: 'Áudio longo demais para processar. Grave uma ata mais curta.' }, 413);
     }
-    const mimeType = (body.mimeType || file.type || 'audio/webm').split(';')[0].trim();
+    const mimeType = tipoBruto.split(';')[0].trim();
 
     const out = provider === 'gemini'
       ? await viaGemini({ model, apiKey, system, audio: { base64: toBase64(bytes), mimeType } })
-      : await viaOpenAI({ model, apiKey, system, audio: { bytes, mimeType, filename: audioPath.split('/').pop() || 'ata.webm' } });
+      : await viaOpenAI({ model, apiKey, system, audio: { bytes, mimeType, filename: audioPath?.split('/').pop() || 'ata.webm' } });
 
     return json({ ...out, source: 'audio' });
   } catch (err) {
