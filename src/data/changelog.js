@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.52.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "A tela que aparece por um instante ao abrir o aplicativo no celular mostrava um quadrado preto com listras cortando o s\u00edmbolo da Sanwey. Os \u00edcones tinham fundo transparente, e o celular pinta transparente como preto. Agora o s\u00edmbolo aparece limpo, sobre o mesmo fundo claro do restante da abertura.",
+      },
+    ],
+  },
+  {
     version: "4.52.0",
     items: [
       {
