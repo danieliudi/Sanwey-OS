@@ -10,10 +10,25 @@
 // o nome "Arquivar" pra deixar o uso pretendido claro desde o início. Quem
 // já tinha customizado antes disso (ex.: renomeou pra "Concluído") não é
 // afetado — isto só define o nome de largada pra quem nunca customizou.
+//
+// CORREÇÃO 12/08/2026: aquele ajuste RENOMEOU a etapa final em vez de
+// acrescentar a Arquivar como quarta, então o padrão ficou sem "Concluído" e
+// a última coluna passou a fazer dois papéis — terminar a tarefa e tirá-la
+// da frente, que são momentos diferentes. Agora são quatro, e Arquivar volta
+// a ser a 4ª, como era a intenção original.
+//
+// As DUAS finais são `terminal`. O flag não significa "última coluna": é o
+// que marca a tarefa como concluída pro motor de dependências (ver
+// use-personal-task-dependencies.js). Uma tarefa que chega em "Concluído"
+// precisa destravar quem depende dela na hora — esperar o arquivamento
+// deixaria o dependente bloqueado por uma tarefa que já acabou.
 export const STATUS_COLUMNS = [
-  { id: "a_fazer", name: "A Fazer",   color: "#64748B" },
-  { id: "fazendo", name: "Fazendo",   color: "#D97706" },
-  { id: "feito",   name: "Arquivar",  color: "#16A34A", terminal: true },
+  { id: "a_fazer",   name: "A Fazer",   color: "#64748B" },
+  { id: "fazendo",   name: "Fazendo",   color: "#D97706" },
+  { id: "concluido", name: "Concluído", color: "#16A34A", terminal: true },
+  // Cinza de propósito: arquivar é guardar, não é a vitória — o verde fica
+  // com "Concluído", que é onde a tarefa de fato termina.
+  { id: "feito",     name: "Arquivar",  color: "#64748B", terminal: true },
 ];
 
 export const PERSONAL_TASK_PRIORITIES = [

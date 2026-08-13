@@ -733,7 +733,10 @@ export function PersonalTasksView({ currentUser }) {
         onClose={() => setStagesEditorOpen(false)}
         stages={stagesHook.stages.length > 0
           ? stagesHook.stages
-          : STATUS_COLUMNS.map(c => ({ id: c.id, stageKey: c.id, name: c.name, color: c.color, terminal: c.id === "feito", isFallback: true }))}
+          // `terminal` sai do próprio STATUS_COLUMNS. Estava fixo em
+          // c.id === "feito", o que passava a mentir quando o padrão
+          // ganhou "Concluído" — que também é terminal (12/08/2026).
+          : STATUS_COLUMNS.map(c => ({ id: c.id, stageKey: c.id, name: c.name, color: c.color, terminal: Boolean(c.terminal), isFallback: true }))}
         stagesHook={stagesHook}
         tasks={tasks}
       />
