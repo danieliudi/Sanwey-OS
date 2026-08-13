@@ -14,6 +14,7 @@ export const MODULE_GROUPS = [
       { id: "commercial-overview", label: "Visão Geral" },
       { id: "crm",                 label: "Funil de Vendas" },
       { id: "posvenda",            label: "Funil de Pós-venda" },
+      { id: "pedidos",             label: "Pedidos" },
       { id: "clients",             label: "Clientes" },
       { id: "catalogo",            label: "Catálogo" },
       { id: "signals",             label: "Sinais" },
@@ -132,9 +133,9 @@ export function defaultModulesForRoles(roles) {
   // Sem funil, sinais nem prospecção: o RLS já limitava o dado, isto enxuga
   // o menu pra função que a pessoa realmente exerce.
   if (f.isPureSuporte) {
-    ["clients", "catalogo"].forEach(m => set.add(m));
+    ["pedidos", "clients", "catalogo"].forEach(m => set.add(m));
   } else if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {
-    ["commercial-overview", "crm", "posvenda", "clients", "catalogo", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
+    ["commercial-overview", "crm", "posvenda", "pedidos", "clients", "catalogo", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
     if (f.isManager) set.add("crossref");
   }
 

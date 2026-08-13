@@ -7,7 +7,7 @@ import {
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
-  FlaskConical, PackageSearch,
+  FlaskConical, PackageSearch, ClipboardList,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -78,6 +78,7 @@ import { ComexView } from "./components/views/ComexView";
 import { UserManagementView } from "./components/views/UserManagementView";
 import { ClientsManager } from "./components/client/ClientsManager";
 import { CatalogoView } from "./components/views/CatalogoView";
+import { PedidosView } from "./components/views/PedidosView";
 import { SettingsView } from "./components/views/SettingsView";
 import { AgentActionsView } from "./components/views/AgentActionsView";
 import { FairImportView } from "./components/views/FairImportView";
@@ -1415,6 +1416,7 @@ export default function App() {
       groups.push({
         label: "Comercial",
         items: [
+          { id: "pedidos",  label: "Pedidos",  icon: ClipboardList },
           { id: "clients",  label: "Clientes", icon: Users },
           { id: "catalogo", label: "Catálogo", icon: PackageSearch },
         ],
@@ -1435,6 +1437,7 @@ export default function App() {
           // LeadDetailDrawer.jsx) cria um caso aqui, o negócio original
           // continua existindo no Funil de Vendas.
           { id: "posvenda",     label: "Funil de Pós-venda", icon: Handshake },
+          { id: "pedidos",      label: "Pedidos",    icon: ClipboardList },
           { id: "clients",      label: "Clientes",   icon: Users },
           { id: "catalogo",     label: "Catálogo",   icon: PackageSearch },
           ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
@@ -2026,6 +2029,21 @@ export default function App() {
                   pushNotification={pushNotification}
                   initialSelectedViagemId={selectedViagemId}
                   onInitialViagemConsumed={() => setSelectedViagemId(null)}
+                />
+              )
+          } />
+          <Route path={ROUTES.pedidos} element={
+            isAgencia || isPureMarketing || isPureRH
+              ? <Navigate to={ROUTES.dashboard} replace />
+              : (
+                <PedidosView
+                  clients={clients}
+                  users={users}
+                  accessibleCompanies={accessibleCompanies}
+                  /* Conferir, lançar no Kronosys e mover status é operação —
+                     suporte, vendedor, gerente ou admin. */
+                  canOperate={hasAnyRole(["suporte", "vendedor", "gerente", "admin"])}
+                  currentUser={currentUser}
                 />
               )
           } />
