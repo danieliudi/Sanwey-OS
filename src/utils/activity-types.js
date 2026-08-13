@@ -15,12 +15,16 @@
 
 import {
   GitBranch, StickyNote, MessageCircle, CalendarClock, Mail, FileText,
-  Paperclip, ListChecks, Package, MapPin, Headphones, Activity,
+  Paperclip, ListChecks, Package, MapPin, Headphones, Activity, Mic,
 } from "lucide-react";
 
 export const ACTIVITY_TYPES = {
   // ── Interação com o cliente ────────────────────────────────────────────
   note:               { label: "Nota",              icon: StickyNote,   kind: "interaction" },
+  // Ata ditada logo depois da visita: a IA transcreve e organiza, o vendedor
+  // confere e só então grava (ver AtaVozPanel.jsx). É interação com o
+  // cliente — aconteceu uma conversa de verdade, não um evento de sistema.
+  ata_voz:            { label: "Ata de visita",     icon: Mic,           kind: "interaction" },
   comment:            { label: "Comentário",        icon: MessageCircle, kind: "interaction" },
   follow_up_set:      { label: "Follow-up",         icon: CalendarClock, kind: "interaction" },
   // "iniciado", não "enviado": o mailto: abre no cliente de e-mail do

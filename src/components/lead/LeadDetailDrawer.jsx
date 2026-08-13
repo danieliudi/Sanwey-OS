@@ -27,6 +27,7 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { Modal } from "../ui/Modal";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { ProposalPanel } from "./ProposalPanel";
+import { AtaVozPanel } from "./AtaVozPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
 import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
@@ -1034,6 +1035,10 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                 stageHistory={stageHistory}
                 activities={lead.activities || []}
                 users={users}
+                lead={lead}
+                currentUser={currentUser}
+                onAddActivity={onAddActivity}
+                onUpdate={onUpdate}
               />
             )}
 
@@ -1430,7 +1435,7 @@ function MoveAndCommentsPanel({
   );
 }
 
-function ActivitiesPanel({ stageHistory, activities, users }) {
+function ActivitiesPanel({ stageHistory, activities, users, lead, currentUser, onAddActivity, onUpdate }) {
   // Combina movimentações de etapa + atividades genéricas em uma única timeline.
   const combined = useMemo(() => {
     const items = [];
@@ -1456,17 +1461,34 @@ function ActivitiesPanel({ stageHistory, activities, users }) {
     return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [stageHistory, activities]);
 
+  // Ata por voz abre a aba: o vendedor que acabou de sair da visita não vem
+  // aqui pra ler histórico, vem pra registrar. Fica acima da lista tanto no
+  // estado vazio quanto no cheio (aprovado com o Daniel 13/08/2026).
+  const ata = onAddActivity && lead ? (
+    <AtaVozPanel
+      lead={lead}
+      currentUser={currentUser}
+      onAddActivity={onAddActivity}
+      onUpdate={onUpdate}
+    />
+  ) : null;
+
   if (combined.length === 0) {
     return (
-      <PlaceholderPanel
-        icon={Activity}
-        title="Atividades"
-        hint="Movimentações entre etapas e edições aparecem aqui."
-      />
+      <div className="space-y-3">
+        {ata}
+        <PlaceholderPanel
+          icon={Activity}
+          title="Atividades"
+          hint="Movimentações entre etapas e edições aparecem aqui."
+        />
+      </div>
     );
   }
 
   return (
+    <div className="space-y-3">
+    {ata}
     <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
       <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)" }}>
         Atividades
@@ -1492,6 +1514,34 @@ function ActivitiesPanel({ stageHistory, activities, users }) {
                     moveu para <strong>{toStage?.name || a.to}</strong>
                     {fromStage && <span style={{ color: "var(--text-dim)" }}> (de {fromStage.name})</span>}
                   </div>
+                ) : a.type === "ata_voz" ? (
+                  // Ata rende mais que uma linha: o resumo é o que se lê, mas
+                  // o próximo passo e o concorrente são o que fazem alguém
+                  // agir. Ficam à vista, não escondidos no meta.
+                  <div>
+                    <span style={{ color: "var(--text-dim)" }}>{userName} </span>
+                    registrou uma <strong>ata de visita</strong>
+                    <div className="mt-1.5 px-2.5 py-2 rounded-lg text-[11.5px]"
+                         style={{ background: "var(--surface-alt)", borderLeft: "2px solid var(--accent)", color: "var(--text)", lineHeight: 1.55 }}>
+                      {a.body}
+                    </div>
+                    {(a.meta?.proximoPasso || a.meta?.concorrente) && (
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10.5px]" style={{ color: "var(--text-dim)" }}>
+                        {a.meta?.proximoPasso && (
+                          <span>
+                            Próximo passo: <strong style={{ color: "var(--text)" }}>{a.meta.proximoPasso}</strong>
+                            {a.meta.proximoPassoData && ` · ${formatDateBR(a.meta.proximoPassoData)}`}
+                          </span>
+                        )}
+                        {a.meta?.concorrente && <span>Concorrente: {a.meta.concorrente}</span>}
+                      </div>
+                    )}
+                    {a.meta?.origem === "audio" && (
+                      <div className="text-[9.5px] mt-1" style={{ color: "var(--text-dim)" }}>
+                        Transcrito de áudio — o arquivo original está em Anexos.
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div>
                     <span style={{ color: "var(--text-dim)" }}>{userName} </span>
@@ -1511,6 +1561,7 @@ function ActivitiesPanel({ stageHistory, activities, users }) {
           </li>
         )}
       </ol>
+    </div>
     </div>
   );
 }
