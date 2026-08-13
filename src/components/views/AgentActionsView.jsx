@@ -537,17 +537,29 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
   // agent_id="automation" — agrupar por esse valor cru juntaria agentes de IA
   // diferentes numa seção só; agrupa por automation_id em vez disso, com o
   // nome real da automação como rótulo (automationNamesById, populado via prop).
-  const groupKeyOf = (a) => a.agent_id === "automation" ? `automation:${a.automation_id}` : a.agent_id;
+  //
+  // Sem automation_id é outra coisa: rotina externa (n8n) via
+  // agent-gateway?action=create, que não aceita esse campo — a sugestão nasce
+  // legítima e sem automação por trás. Antes caía no mesmo balde e o
+  // fallback rotulava a seção inteira como "Agente removido"; 19 sugestões
+  // reais de pesquisa de mercado ficaram parecendo lixo de um agente apagado
+  // (achado 13/08/2026). "Agente removido" agora só aparece no caso que
+  // realmente é isso: automation_id preenchido apontando pra automação que
+  // não existe mais.
+  const groupKeyOf = (a) => a.agent_id !== "automation"
+    ? a.agent_id
+    : (a.automation_id ? `automation:${a.automation_id}` : "rotina_externa");
 
   const sectionMetaOverrides = {};
   visibleActions.forEach(a => {
     if (a.agent_id !== "automation") return;
     const key = groupKeyOf(a);
     if (sectionMetaOverrides[key]) return;
+    const externa = !a.automation_id;
     sectionMetaOverrides[key] = {
-      label: automationNamesById.get(a.automation_id) || "Agente removido",
-      sub: "Agente de IA",
-      Icon: Bot,
+      label: externa ? "Pesquisa de Mercado" : (automationNamesById.get(a.automation_id) || "Agente removido"),
+      sub: externa ? "Rotina externa" : "Agente de IA",
+      Icon: externa ? Telescope : Bot,
       color: "var(--accent)",
       bg: "var(--surface-alt)",
       onColor: "var(--on-accent)",

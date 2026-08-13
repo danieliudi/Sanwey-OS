@@ -25,6 +25,13 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "ata-voz-gravar",
+    route: "crm",
+    target: '[data-tour="ata-voz-gravar"]',
+    text: "Novo: acabou de sair de uma visita? Grave um áudio contando o que aconteceu — a IA transcreve, organiza e você confere antes de salvar.",
+    version: "4.54.0",
+  },
+  {
     id: "lista-pessoal-agenda",
     route: "personal-tasks",
     target: '[data-tour="lista-pessoal-agenda"]',

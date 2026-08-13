@@ -24,6 +24,46 @@
 
 export const CHANGELOG = [
   {
+    version: "4.54.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Ata de visita por voz no Funil de Vendas: abra o card do cliente, vá em Atividades e grave um áudio contando como foi a reunião. A IA transcreve, separa o resumo, o próximo passo, a dor, a objeção e o concorrente citado — e mostra tudo para você conferir e corrigir antes de salvar. Nada é gravado sem o seu aceite.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Quando a ata tem um prazo combinado (\"mando a cotação semana que vem\"), o follow-up do card é atualizado sozinho para a data certa. A etapa do funil nunca muda sozinha — mover continua sendo decisão sua.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "O áudio original fica guardado na aba Anexos do card. Se a transcrição entender algo errado, dá para ouvir de novo e corrigir. Sem microfone ou sem sinal? O botão \"escrever à mão\" organiza do mesmo jeito a partir de texto.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
+    version: "4.53.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Time de Agentes: sugestões vindas de rotina externa apareciam todas debaixo de um título dizendo \"Agente removido\", como se fossem sobra de um agente apagado. Eram legítimas — 19 delas, de pesquisa de mercado, ficaram meses paradas por isso. Agora aparecem como \"Pesquisa de Mercado\", e \"Agente removido\" só aparece quando a automação realmente foi excluída.",
+        roles: ["admin", "gerente", "gerente_rh"],
+      },
+      {
+        kind: "novo",
+        text: "Comercial → Sinais deixou de estar vazia: entraram cinco sinais regulatórios que afetam venda — prazo da Anvisa para embalagem de alimento (01/09), transição da NBR 10.004 para resíduo perigoso (31/12), revisão da norma da ANTT, julgamento da Lei de Licenciamento no STF e a nova certificação ABNT de big bags.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Explorador ganhou dez empresas novas para prospectar — e, diferente das que já estavam lá, cada uma tem um motivo datado por trás: fábrica inaugurada, expansão anunciada, licença saindo. O motivo aparece no próprio card.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
     version: "4.53.0",
     items: [
       {
