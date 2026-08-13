@@ -745,6 +745,9 @@ const TIMELINE_KIND_ACTIVITY = {
   posvenda:   "posvenda_case",
   email:      "email_sent",
   proposta:   "proposal_generated",
+  // Ata de visita por voz (4.54.0) — o ícone/rótulo vem de activity-types.js
+  // como todos os outros; o kind 'ata' é o que a RPC devolve.
+  ata:        "ata_voz",
 };
 // Faturamento é marco anual de client_billing_history, não um tipo de
 // activity — por isso é o único que não vem de activity-types.js.
@@ -794,6 +797,16 @@ function timelineDetail(item) {
   }
   if (item.kind === "follow_up" && meta.date) {
     return [`Agendado para ${formatDateBR(meta.date)}`, item.detail].filter(Boolean).join(" · ");
+  }
+  if (item.kind === "ata") {
+    // Seis meses depois, o que resolve não é "houve uma conversa" — é o que
+    // ficou combinado e contra quem se está disputando. Por isso os dois vêm
+    // no meta da RPC e entram aqui, antes do resumo.
+    const passo = meta.proximoPasso
+      ? `Próximo passo: ${meta.proximoPasso}${meta.proximoPassoData ? ` (${formatDateBR(meta.proximoPassoData)})` : ""}`
+      : null;
+    const conc = meta.concorrente ? `Concorrente: ${meta.concorrente}` : null;
+    return [item.detail, passo, conc].filter(Boolean).join(" · ");
   }
   if (item.kind === "amostra") {
     const custo = money(meta.cost);
