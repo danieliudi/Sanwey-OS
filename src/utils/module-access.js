@@ -96,6 +96,7 @@ export function computeRoleFlags(roles) {
     isMarketingManager:  hasAnyRole(list, ["gerente_marketing", "admin"]),
     isAgencia:           hasAnyRole(list, ["agencia"]),
     isPortalOnly:        rolesSubsetOf(list, ["portal"]),
+    isPureSuporte:       rolesSubsetOf(list, ["suporte"]),
     isRH:                hasAnyRole(list, ["rh", "gerente_rh", "admin"]),
     isRHManager:         hasAnyRole(list, ["gerente_rh", "admin"]),
     isPureRH:            rolesSubsetOf(list, ["rh", "gerente_rh"]),
@@ -127,7 +128,12 @@ export function defaultModulesForRoles(roles) {
     return set;
   }
 
-  if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {
+  // Suporte comercial "puro" opera pedido e mantém o catálogo — não vende.
+  // Sem funil, sinais nem prospecção: o RLS já limitava o dado, isto enxuga
+  // o menu pra função que a pessoa realmente exerce.
+  if (f.isPureSuporte) {
+    ["clients", "catalogo"].forEach(m => set.add(m));
+  } else if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {
     ["commercial-overview", "crm", "posvenda", "clients", "catalogo", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
     if (f.isManager) set.add("crossref");
   }

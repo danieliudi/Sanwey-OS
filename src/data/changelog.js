@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.52.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Cliente agora tem vendedor respons\u00e1vel. \u00c9 quem pode liberar produto e definir o pre\u00e7o daquela conta \u2014 outro vendedor n\u00e3o mexe. Cliente sem respons\u00e1vel definido continua aberto pra qualquer vendedor da empresa, ent\u00e3o nada trava enquanto voc\u00eas preenchem; quem veio de um neg\u00f3cio do funil j\u00e1 nasceu com o dono daquele neg\u00f3cio. Ger\u00eancia opera qualquer conta.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Quem tem s\u00f3 o cargo de suporte comercial passa a ver no menu Comercial apenas Clientes e Cat\u00e1logo, em vez do m\u00f3dulo inteiro com funil, sinais e prospec\u00e7\u00e3o. O acesso aos dados j\u00e1 era o mesmo \u2014 mudou o menu, que agora reflete a fun\u00e7\u00e3o.",
+        roles: ["admin", "gerente", "suporte"],
+      },
+    ],
+  },
+  {
     version: "4.51.0",
     items: [
       {

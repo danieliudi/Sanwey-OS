@@ -17,6 +17,7 @@ function rowToClient(r) {
     state: r.state ?? null,
     cnpj: r.cnpj ?? null,
     companyIds: Array.isArray(r.company_ids) ? r.company_ids : [],
+    ownerIds: Array.isArray(r.owner_ids) ? r.owner_ids : [],
     externalCodes: r.external_codes && typeof r.external_codes === "object" ? r.external_codes : {},
     status: r.status || "ativo",
     notes: r.notes ?? null,
@@ -35,6 +36,7 @@ function clientToRow(c, extras = {}) {
     state: c.state ?? null,
     cnpj: c.cnpj ?? null,
     company_ids: Array.isArray(c.companyIds) ? c.companyIds : [],
+    owner_ids: Array.isArray(c.ownerIds) ? c.ownerIds : [],
     external_codes: c.externalCodes && typeof c.externalCodes === "object" ? c.externalCodes : {},
     status: c.status || "ativo",
     notes: c.notes ?? null,
@@ -43,7 +45,7 @@ function clientToRow(c, extras = {}) {
 }
 
 function patchToRow(patch) {
-  const map = { companyIds: "company_ids", createdBy: "created_by", externalCodes: "external_codes" };
+  const map = { companyIds: "company_ids", ownerIds: "owner_ids", createdBy: "created_by", externalCodes: "external_codes" };
   const out = {};
   for (const [k, v] of Object.entries(patch)) out[map[k] || k] = v;
   return out;
