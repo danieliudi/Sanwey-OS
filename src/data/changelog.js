@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.52.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "O Meu To-do voltou a ter quatro etapas: A Fazer, Fazendo, Conclu\u00eddo e Arquivar. O ajuste anterior tinha RENOMEADO a etapa final para \"Arquivar\" em vez de acrescent\u00e1-la como quarta, ent\u00e3o a mesma coluna fazia dois pap\u00e9is \u2014 terminar a tarefa e tir\u00e1-la da frente, que s\u00e3o momentos diferentes. Quem j\u00e1 tinha personalizado as pr\u00f3prias etapas n\u00e3o \u00e9 afetado.",
+      },
+      {
+        kind: "correcao",
+        text: "Tarefa que chega em \"Conclu\u00eddo\" j\u00e1 destrava quem dependia dela, sem precisar esperar o arquivamento.",
+      },
+    ],
+  },
+  {
     version: "4.52.1",
     items: [
       {
