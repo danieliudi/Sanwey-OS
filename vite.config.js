@@ -50,6 +50,14 @@ export default defineConfig({
         display: "standalone",
         background_color: "#FBFBFA",
         theme_color: "#b5000b",
+        // TODOS os ícones são OPACOS, achatados no mesmo #FBFBFA do
+        // background_color acima. Transparência aqui não fica transparente:
+        // Android e iOS compõem sobre PRETO, e a arte tem listras vagadas —
+        // então o splash mostrava um quadrado preto com listras pretas
+        // cortando o símbolo (print do Daniel, 12/08/2026). A correção de
+        // 07/08 tinha resolvido só o slot "maskable", que é o da gaveta de
+        // apps; splash e iOS usam os de baixo. Achatar no tom do splash faz
+        // o quadrado sumir de vez, em vez de trocar preto por branco.
         icons: [
           { src: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
           { src: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
