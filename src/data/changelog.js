@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.53.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Comercial \u2192 Pedidos: o quadro onde o pedido chega, \u00e9 conferido e vira n\u00famero no Kronosys. J\u00e1 serve hoje, sem depender do portal \u2014 o bot\u00e3o \"Novo pedido\" registra o que chega por WhatsApp, e-mail ou telefone, oferecendo s\u00f3 os produtos liberados para aquele cliente, ao pre\u00e7o dele. O total \u00e9 somado pelo sistema, nunca digitado.",
+        roles: ["admin", "gerente", "vendedor", "suporte"],
+      },
+      {
+        kind: "novo",
+        text: "Para confirmar um pedido \u00e9 obrigat\u00f3rio informar o n\u00famero dele no Kronosys. Sem isso o cliente veria \"confirmado\" no portal sem nada por tr\u00e1s no ERP. Voltar um pedido de etapa continua liberado, e cada movimenta\u00e7\u00e3o fica registrada com quem moveu e quando.",
+        roles: ["admin", "gerente", "vendedor", "suporte"],
+      },
+    ],
+  },
+  {
     version: "4.52.2",
     items: [
       {
