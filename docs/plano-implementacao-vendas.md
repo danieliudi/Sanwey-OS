@@ -313,14 +313,15 @@ Ordenado por qual onda cada item destrava.
 | 2 | Liberação de preço em lote por cliente | Onda 2 | mesmo problema, multiplicado por cliente |
 | 3 | Campo do código do cliente no Kronosys na tela | Onda 0 | `clients.external_codes` existe no banco e no hook, sem campo na interface |
 | 4 | Notificação de pedido parado | Onda 3 | hoje é só um banner em tela; `use-notifications.js` não tem nada de pedido — suporte de folga = pedido esquecido |
-| 5 | Configurar transições de etapa do funil | Onda 4 | 0 linhas, motor pronto |
-| 6 | Painel Executivo: Pedidos na faixa de saúde + aba própria | Onda 3 | regra 9 do CLAUDE.md — domínio novo precisa de entrada; a aba "Comercial" hoje lê funil, não pedido |
-| 7 | Spotlights de Catálogo e Pedidos | Onda 3 | regra 12 — `data-tour="pedidos-novo"` e `catalogo-novo-produto` já estão no código, sem entrada em `FEATURE_SPOTLIGHTS`. É o que faz o time achar a tela sozinho |
-| 8 | Tutorial em Ajuda & Tutoriais | Onda 3 | regra 10 — o fluxo muda como o trabalho é feito, não é só um botão novo |
-| 9 | App do portal B2B | Onda 5 | não existe |
-| 10 | Aviso de carrinho abandonado ao vendedor dono | Onda 5 | decidido em 12/08, não construído |
+| 5 | Anexo no card do pedido | Onda 3 | a aba `Anexos` existe no drawer e é só um texto de espera — não recebe arquivo. A OC em PDF do cliente não tem onde morar (achado ao escrever o playbook) |
+| 6 | Configurar transições de etapa do funil | Onda 4 | 0 linhas, motor pronto |
+| 7 | Painel Executivo: Pedidos na faixa de saúde + aba própria | Onda 3 | regra 9 do CLAUDE.md — domínio novo precisa de entrada; a aba "Comercial" hoje lê funil, não pedido |
+| 8 | Spotlights de Catálogo e Pedidos | Onda 3 | regra 12 — `data-tour="pedidos-novo"` e `catalogo-novo-produto` já estão no código, sem entrada em `FEATURE_SPOTLIGHTS`. É o que faz o time achar a tela sozinho |
+| 9 | Tutorial em Ajuda & Tutoriais | Onda 3 | regra 10 — o fluxo muda como o trabalho é feito, não é só um botão novo |
+| 10 | App do portal B2B | Onda 5 | não existe |
+| 11 | Aviso de carrinho abandonado ao vendedor dono | Onda 5 | decidido em 12/08, não construído |
 
-Itens 6, 7 e 8 não são enfeite: são as três regras do CLAUDE.md que existem
+Itens 7, 8 e 9 não são enfeite: são as três regras do CLAUDE.md que existem
 justamente porque entregas anteriores foram ao ar sem elas e ninguém percebeu que
 a novidade existia.
 
@@ -351,7 +352,7 @@ mente.
 - **Diário, 10 min, suporte** — zerar a fila "Enviado".
 - **Semanal, 30 min, gerência + vendedores** — quadro de pedidos e funil, três
   números na mesa: cobertura, ciclo, margem.
-- **Mensal, diretoria** — Painel Executivo (depois do item 6 do backlog).
+- **Mensal, diretoria** — Painel Executivo (depois do item 7 do backlog).
 
 ---
 

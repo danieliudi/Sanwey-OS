@@ -374,12 +374,12 @@
     <div><span class="n">§2</span><span class="t">Quem faz o quê</span><span class="who">todos</span></div>
     <div><span class="n">§3</span><span class="t">A rotina do dia</span><span class="who">todos</span></div>
     <div><span class="n">§4</span><span class="t">Liberar um produto e definir o preço</span><span class="who">vendedor</span></div>
-    <div><span class="n">§5</span><span class="t">As três faixas de margem</span><span class="who">vendedor</span></div>
-    <div><span class="n">§6</span><span class="t">Registrar um pedido</span><span class="who">vendedor · suporte</span></div>
-    <div><span class="n">§7</span><span class="t">Conferir e confirmar</span><span class="who">suporte</span></div>
-    <div><span class="n">§8</span><span class="t">As etapas do quadro</span><span class="who">todos</span></div>
-    <div><span class="n">§9</span><span class="t">Perguntas que vão aparecer</span><span class="who">todos</span></div>
-    <div><span class="n">§10</span><span class="t">O que não fazer</span><span class="who">todos</span></div>
+    <div><span class="n">§5</span><span class="t">Registrar um pedido</span><span class="who">vendedor · suporte</span></div>
+    <div><span class="n">§6</span><span class="t">Conferir e confirmar</span><span class="who">suporte</span></div>
+    <div><span class="n">§7</span><span class="t">As etapas do quadro</span><span class="who">todos</span></div>
+    <div><span class="n">§8</span><span class="t">Perguntas que vão aparecer</span><span class="who">todos</span></div>
+    <div><span class="n">§9</span><span class="t">O que não fazer</span><span class="who">todos</span></div>
+    <div><span class="n">§10</span><span class="t">O que ainda não está no ar</span><span class="who">todos</span></div>
     <div><span class="n">§11</span><span class="t">Cartão de bolso</span><span class="who">destacável</span></div>
   </div>
 
@@ -417,7 +417,7 @@
         <span class="eyebrow red">Como é agora</span>
         <ul class="bullets">
           <li>O preço de cada cliente está gravado. Você libera uma vez e ele fica lá.</li>
-          <li>A margem tem um limite visível na tela, na hora de definir o preço.</li>
+          <li>A margem aparece calculada na tela, na hora de definir o preço.</li>
           <li>O pedido é um card no quadro, com etapa e responsável.</li>
           <li>Quem quiser saber onde está o pedido, abre o quadro e vê.</li>
         </ul>
@@ -524,15 +524,15 @@
       <div class="steps">
         <div class="step">
           <div>
-            <h3>Abrir o quadro de Pedidos e olhar a coluna "Enviado"</h3>
-            <p>Essa coluna é a fila: pedido que chegou e ninguém pegou ainda. O objetivo do dia é deixá-la vazia.
+            <h3>Abrir o quadro de Pedidos e olhar a coluna "Conferência"</h3>
+            <p>É a fila do dia: todo pedido registrado cai aqui. O objetivo é deixá-la vazia até o fim do expediente.
             <span class="screen">Comercial → Pedidos</span></p>
           </div>
         </div>
         <div class="step">
           <div>
-            <h3>Puxar cada um para "Conferência"</h3>
-            <p>Mover para Conferência quer dizer "eu peguei este". A diferença entre as duas colunas é o que faz o quadro ser útil — sem ela, ninguém sabe o que está parado e o que está andando.</p>
+            <h3>Conferir, subir no Kronosys e trazer o número</h3>
+            <p>Um por um. Enquanto o número não estiver no card, o pedido não avança — e é assim de propósito.</p>
           </div>
         </div>
         <div class="step">
@@ -618,8 +618,8 @@
       </div>
       <div class="step">
         <div>
-          <h3>Leia a faixa colorida que aparece embaixo</h3>
-          <p>Ela diz se a margem está dentro do combinado, se a gerência quer ser avisada, ou se está abaixo do mínimo. As três situações estão explicadas na próxima página.</p>
+          <h3>Confira a margem que aparece embaixo</h3>
+          <p>A faixa mostra a margem que aquele preço representa sobre a tabela. Hoje ela é informativa: nenhum limite está configurado, então qualquer preço é aceito.</p>
         </div>
       </div>
       <div class="step">
@@ -630,6 +630,16 @@
       </div>
     </div>
 
+    <div class="card tight">
+      <span class="eyebrow">Como ler a margem</span>
+      <p style="font-size: 8.8pt; line-height: 1.5">
+        A margem é sempre a variação sobre o preço de tabela. <code>+20%</code> é vender 20%
+        acima da tabela · <code>0%</code> é vender na tabela · <code>−10%</code> é conceder
+        10% de desconto. Um eixo só, e o sinal diz o lado. Ela aparece calculada
+        enquanto você digita, e também na coluna "Margem" da lista.
+      </p>
+    </div>
+
     <div class="grid2">
       <div class="note">
         <b>Para mudar o preço depois</b>
@@ -638,83 +648,23 @@
       </div>
       <div class="note">
         <b>Para suspender sem perder a negociação</b>
-        Botão de <strong>pausa</strong> na linha. O produto some da lista do cliente, mas o
-        preço fica guardado — retomar é um clique, não uma nova negociação.
+        Botão de <strong>pausa</strong> na linha. O produto sai da lista de itens que dá para
+        colocar num pedido dele, mas o preço fica guardado — retomar é um clique,
+        não uma nova negociação.
       </div>
     </div>
   </div>
   <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">5</span></div>
 </div>
 
-<!-- ══════════════ 6 · FAIXAS DE MARGEM ══════════════ -->
-<div class="page">
-  <div class="strip"><span class="sec">§5</span><span>AS TRÊS FAIXAS DE MARGEM · VENDEDOR</span><span>PLAYBOOK COMERCIAL</span></div>
-  <div class="body">
-    <div class="opener"><span class="num">05</span><h1>As três faixas<br>de margem</h1></div>
-
-    <div class="card tight">
-      <span class="eyebrow">Como ler o número</span>
-      <p style="font-size: 9pt">
-        A margem é sempre a variação sobre o preço de tabela.
-        <code>+20%</code> é vender 20% acima da tabela · <code>0%</code> é vender na tabela ·
-        <code>−10%</code> é conceder 10% de desconto. Um eixo só, e o sinal diz o lado.
-      </p>
-    </div>
-
-    <div style="display: flex; flex-direction: column; gap: 4mm">
-      <div class="band" style="background: var(--ok-bg); border-left: 1mm solid var(--ok)">
-        <span class="tag" style="color: var(--ok)">Faixa neutra — dentro do combinado</span>
-        <span class="what">"Margem de +18,00%, dentro do combinado."</span>
-        <span class="do dim">Nada a fazer. Clique em Liberar e siga.</span>
-      </div>
-
-      <div class="band" style="background: var(--alerta-bg); border-left: 1mm solid var(--gold)">
-        <span class="tag" style="color: #8A6D1F">Faixa de aviso — a gerência quer saber</span>
-        <span class="what">"Abaixo de +15,00%. A gerência pediu para ser avisada nesse patamar — você pode salvar assim."</span>
-        <span class="do dim">
-          <strong>Você pode salvar.</strong> O aviso não trava nada: ele existe para que a gerência
-          consiga enxergar onde os descontos estão acontecendo. Não precisa pedir autorização
-          para cada um — mas espere que o assunto apareça na reunião semanal.
-        </span>
-      </div>
-
-      <div class="band" style="background: var(--stop-bg); border-left: 1mm solid var(--vermelho)">
-        <span class="tag" style="color: var(--vermelho)">Faixa bloqueada — abaixo do mínimo</span>
-        <span class="what">"Abaixo do mínimo da gerência (−10,00%). Fale com a gerência para revisar a regra."</span>
-        <span class="do dim">
-          <strong>O botão "Liberar" fica desligado.</strong> Não há jeitinho pela tela e não há
-          jeitinho por fora: quem recusa é o banco de dados, por qualquer caminho.
-          Se o negócio realmente exige esse preço, a conversa é com a gerência — ela ajusta a
-          regra, ou abre uma exceção para aquele produto.
-        </span>
-      </div>
-    </div>
-
-    <div class="note stop">
-      <b>Produto sem preço de tabela</b>
-      Se o produto ainda não tem tabela cadastrada, a tela avisa e a margem não é calculada —
-      nem o limite da gerência se aplica. Nesse caso, <strong>peça ao suporte para cadastrar a
-      tabela antes</strong>. Liberar sem tabela funciona, mas você fica sem referência nenhuma
-      e a gerência também.
-    </div>
-
-    <div class="note">
-      <b>Quem define os números</b>
-      O aviso e o mínimo são definidos pela gerência, por empresa, e podem ter exceção por
-      produto. Você não precisa decorar: a tela calcula e avisa enquanto você digita.
-    </div>
-  </div>
-  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">6</span></div>
-</div>
-
 <!-- ══════════════ 7 · REGISTRAR PEDIDO ══════════════ -->
 <div class="page">
-  <div class="strip"><span class="sec">§6</span><span>REGISTRAR UM PEDIDO · VENDEDOR E SUPORTE</span><span>PLAYBOOK COMERCIAL</span></div>
+  <div class="strip"><span class="sec">§5</span><span>REGISTRAR UM PEDIDO · VENDEDOR E SUPORTE</span><span>PLAYBOOK COMERCIAL</span></div>
   <div class="body">
-    <div class="opener"><span class="num">06</span><h1>Registrar um pedido</h1></div>
+    <div class="opener"><span class="num">05</span><h1>Registrar um pedido</h1></div>
     <p class="lead">
-      Serve para o pedido que chegou por WhatsApp, e-mail ou telefone — que hoje é
-      a maioria. Quando o portal entrar no ar, o pedido do cliente cai sozinho no quadro.
+      Todo pedido entra por aqui: o que chegou por WhatsApp, por e-mail ou por
+      telefone. É o caminho único, e é o mesmo para vendedor e suporte.
     </p>
 
     <div class="card">
@@ -738,7 +688,7 @@
       <div class="step">
         <div>
           <h3>Ordem de compra do cliente</h3>
-          <p>Opcional, mas preencha quando o cliente mandar — esse número sai na nota e evita ida e volta depois. O PDF da OC pode ser anexado ao card.</p>
+          <p>Opcional, mas preencha quando o cliente mandar — esse número sai na nota e evita ida e volta depois.</p>
         </div>
       </div>
       <div class="step">
@@ -768,14 +718,14 @@
       quem for conferir.
     </div>
   </div>
-  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">7</span></div>
+  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">6</span></div>
 </div>
 
 <!-- ══════════════ 8 · CONFERIR E CONFIRMAR ══════════════ -->
 <div class="page">
-  <div class="strip"><span class="sec">§7</span><span>CONFERIR E CONFIRMAR · SUPORTE</span><span>PLAYBOOK COMERCIAL</span></div>
+  <div class="strip"><span class="sec">§6</span><span>CONFERIR E CONFIRMAR · SUPORTE</span><span>PLAYBOOK COMERCIAL</span></div>
   <div class="body">
-    <div class="opener"><span class="num">07</span><h1>Conferir e confirmar</h1></div>
+    <div class="opener"><span class="num">06</span><h1>Conferir e confirmar</h1></div>
     <p class="lead">A parte do suporte. É aqui que o pedido deixa de ser um registro e passa a existir no ERP.</p>
 
     <div class="steps">
@@ -823,19 +773,19 @@
       </div>
       <div class="note">
         <b>O que mais tem no card</b>
-        <strong>Dados</strong> traz empresa, origem e quem confirmou. <strong>Anexos</strong> é
-        onde vive a ordem de compra em PDF que o cliente manda.
+        <strong>Dados</strong> traz empresa, origem e quem confirmou — esse carimbo é do
+        sistema, não depende de ninguém preencher.
       </div>
     </div>
   </div>
-  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">8</span></div>
+  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">7</span></div>
 </div>
 
 <!-- ══════════════ 9 · ETAPAS DO QUADRO ══════════════ -->
 <div class="page">
-  <div class="strip"><span class="sec">§8</span><span>AS ETAPAS DO QUADRO</span><span>PLAYBOOK COMERCIAL</span></div>
+  <div class="strip"><span class="sec">§7</span><span>AS ETAPAS DO QUADRO</span><span>PLAYBOOK COMERCIAL</span></div>
   <div class="body">
-    <div class="opener"><span class="num">08</span><h1>As etapas do quadro</h1></div>
+    <div class="opener"><span class="num">07</span><h1>As etapas do quadro</h1></div>
     <p class="lead">O que cada coluna quer dizer, e de quem é a vez.</p>
 
     <div class="card">
@@ -843,8 +793,8 @@
         <div class="stage">
           <div class="bar" style="background: #94A3B8"></div>
           <div><h3>Enviado</h3></div>
-          <div class="meaning"><strong>É fila.</strong> O pedido chegou e ninguém pegou ainda. Hoje só o portal deposita pedidos aqui — quando ele entrar no ar, esta é a coluna que o suporte zera toda manhã.</div>
-          <div class="who">Suporte</div>
+          <div class="meaning"><strong>Fica vazia por enquanto.</strong> Esta coluna é reservada ao pedido que o próprio cliente enviar, e isso ainda não existe. Pedido registrado por vocês nasce direto em Conferência.</div>
+          <div class="who">—</div>
         </div>
         <div class="stage">
           <div class="bar" style="background: #37536E"></div>
@@ -887,21 +837,20 @@
         avisa quantos estão nessa situação.
       </div>
       <div class="note">
-        <b>"Rascunho" não aparece no quadro</b>
-        É o carrinho aberto do cliente no portal, do lado dele. Carrinho abandonado é sinal de
-        venda, não trabalho de conferência — quando o portal entrar, isso vira aviso para o
-        vendedor dono, não card na fila.
+        <b>Voltar de etapa é permitido</b>
+        Nenhuma etapa é porta de mão única e nenhuma exige autorização para voltar. O que fica
+        é o registro de quem moveu e quando, na aba Histórico do card.
       </div>
     </div>
   </div>
-  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">9</span></div>
+  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">8</span></div>
 </div>
 
 <!-- ══════════════ 10 · FAQ ══════════════ -->
 <div class="page">
-  <div class="strip"><span class="sec">§9</span><span>PERGUNTAS QUE VÃO APARECER</span><span>PLAYBOOK COMERCIAL</span></div>
+  <div class="strip"><span class="sec">§8</span><span>PERGUNTAS QUE VÃO APARECER</span><span>PLAYBOOK COMERCIAL</span></div>
   <div class="body">
-    <div class="opener"><span class="num">09</span><h1>Perguntas que<br>vão aparecer</h1></div>
+    <div class="opener"><span class="num">08</span><h1>Perguntas que<br>vão aparecer</h1></div>
 
     <div class="faq">
       <div class="qa">
@@ -955,15 +904,15 @@
       </div>
     </div>
   </div>
-  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">10</span></div>
+  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">9</span></div>
 </div>
 
 <!-- ══════════════ 11 · O QUE NÃO FAZER ══════════════ -->
 <div class="page">
-  <div class="strip"><span class="sec">§10</span><span>O QUE NÃO FAZER</span><span>PLAYBOOK COMERCIAL</span></div>
+  <div class="strip"><span class="sec">§9</span><span>O QUE NÃO FAZER</span><span>PLAYBOOK COMERCIAL</span></div>
   <div class="body">
-    <div class="opener"><span class="num">10</span><h1>O que não fazer</h1></div>
-    <p class="lead">Cinco coisas. Três delas o sistema impede sozinho; duas dependem de você.</p>
+    <div class="opener"><span class="num">09</span><h1>O que não fazer</h1></div>
+    <p class="lead">Quatro coisas. Duas delas o sistema impede sozinho; duas dependem de você.</p>
 
     <div class="dont">
       <div class="dont-item">
@@ -978,13 +927,6 @@
         <div>
           <h3>Tentar digitar um preço diferente na hora do pedido</h3>
           <p>Não existe esse campo. O preço vem do que foi liberado para aquele cliente. Se o valor precisa mudar, ele muda na aba Produtos &amp; Preços, antes.</p>
-        </div>
-      </div>
-      <div class="dont-item">
-        <span class="x">×</span>
-        <div>
-          <h3>Fechar abaixo do mínimo e resolver "por fora"</h3>
-          <p>O bloqueio é do banco de dados, não da tela — não há caminho alternativo. Se o negócio exige esse preço, a gerência ajusta a regra ou abre exceção para aquele produto. É uma conversa de cinco minutos, e ela deixa registro.</p>
         </div>
       </div>
       <div class="dont-item">
@@ -1008,6 +950,61 @@
       Vender por WhatsApp. Continua valendo, continua sendo o canal principal, e a tela tem
       um campo só para dizer que foi assim. Registrar depois não é confessar nada — é como o
       sistema foi desenhado.
+    </div>
+  </div>
+  <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">10</span></div>
+</div>
+
+<!-- ══════════════ 11 · O QUE AINDA NÃO ESTÁ NO AR ══════════════ -->
+<div class="page">
+  <div class="strip"><span class="sec">§10</span><span>O QUE AINDA NÃO ESTÁ NO AR</span><span>PLAYBOOK COMERCIAL</span></div>
+  <div class="body">
+    <div class="opener"><span class="num">10</span><h1>O que ainda<br>não está no ar</h1></div>
+    <p class="lead">
+      Quatro coisas que existem no desenho e ainda não funcionam. Estão aqui para
+      que ninguém procure por elas achando que errou o caminho.
+    </p>
+
+    <div class="card">
+      <span class="eyebrow red">O cliente ainda não faz pedido sozinho</span>
+      <p class="dim" style="font-size: 8.8pt">
+        O portal do cliente não existe ainda. Por isso a coluna <strong>"Enviado"</strong> do
+        quadro fica sempre vazia, e todo pedido entra pela mão de vocês — pelo botão
+        "Novo pedido". Quando o portal entrar, este playbook ganha uma revisão.
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="eyebrow red">A margem ainda não tem limite</span>
+      <p class="dim" style="font-size: 8.8pt">
+        A gerência ainda não definiu os números. Hoje a tela <strong>calcula e mostra</strong> a
+        margem, mas não avisa nem bloqueia nada — qualquer preço é aceito. Quando os limites
+        entrarem, a tela passa a avisar num patamar e a recusar em outro, e vocês serão
+        avisados antes.
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="eyebrow red">O card de pedido ainda não recebe arquivo</span>
+      <p class="dim" style="font-size: 8.8pt">
+        A aba <strong>Anexos</strong> aparece no card, mas ainda não guarda nada. A ordem de
+        compra em PDF que o cliente manda continua onde está hoje — o número dela, esse sim,
+        já vai no campo "Ordem de compra do cliente".
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="eyebrow red">As telas saem aos poucos</span>
+      <p class="dim" style="font-size: 8.8pt">
+        Catálogo e Pedidos são liberados por etapa, pela administração. Se uma delas não estiver
+        no seu menu, é isso — não é erro seu nem falta de permissão. Fale com a gerência para
+        saber quando entra.
+      </p>
+    </div>
+
+    <div class="note ok">
+      <b>O resto deste playbook descreve o que já funciona</b>
+      Tudo que está nas páginas anteriores pode ser feito hoje, do jeito que está escrito.
     </div>
   </div>
   <div class="foot"><span>DOC-SW-PB-01 · Playbook Comercial</span><span class="pg">11</span></div>
@@ -1040,11 +1037,11 @@
           </ul>
         </div>
         <div class="pk">
-          <span class="h">As três faixas de margem</span>
+          <span class="h">Como ler a margem</span>
           <ul>
-            <li><b>Neutra</b> — dentro do combinado, siga.</li>
-            <li><b>Amarela</b> — pode salvar, a gerência vai ver.</li>
-            <li><b>Vermelha</b> — bloqueado, fale com a gerência.</li>
+            <li><b>+20%</b> — vender 20% acima da tabela.</li>
+            <li><b>0%</b> — vender na tabela.</li>
+            <li><b>−10%</b> — conceder 10% de desconto.</li>
           </ul>
         </div>
         <div class="pk">
@@ -1066,15 +1063,15 @@
         <div class="pk">
           <span class="h">As colunas, em duas palavras</span>
           <ul>
-            <li><b>Enviado</b> — fila, ninguém pegou.</li>
-            <li><b>Conferência</b> — alguém está cuidando.</li>
+            <li><b>Conferência</b> — chegou, precisa ser conferido.</li>
             <li><b>Confirmado</b> — está no ERP, com número.</li>
+            <li><b>Enviado</b> — vazia por enquanto (é do portal).</li>
           </ul>
         </div>
         <div class="pk">
           <span class="h">Todo dia</span>
           <ul>
-            <li><b>Suporte</b> — zerar a coluna "Enviado" de manhã.</li>
+            <li><b>Suporte</b> — zerar a coluna "Conferência" no dia.</li>
             <li><b>Vendedor</b> — pedido do dia vira card no dia.</li>
             <li><b>Todos</b> — pedido parado há 3 dias é cliente no escuro.</li>
           </ul>
@@ -1091,7 +1088,7 @@
           <span class="h">Quem resolve o quê</span>
           <ul>
             <li><b>Preço de tabela errado</b> — suporte comercial.</li>
-            <li><b>Margem bloqueada</b> — gerência, e só ela.</li>
+            <li><b>Cliente sem produto liberado</b> — o vendedor dono.</li>
             <li><b>Cliente sem dono</b> — gerência atribui.</li>
           </ul>
         </div>
