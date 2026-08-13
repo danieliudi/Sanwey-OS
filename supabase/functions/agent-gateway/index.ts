@@ -166,8 +166,12 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
     const relevantFor = Array.isArray(payload.relevant_for) && payload.relevant_for.length
       ? payload.relevant_for
       : (action.company_id ? [action.company_id] : []);
+    // CNPJ só com dígitos: as sementes existentes gravam sem máscara, e o
+    // agente devolve nos dois formatos. Misturar quebraria silenciosamente a
+    // dedup por CNPJ na hora de converter semente em cliente (achado 13/08/2026).
+    const cnpjDigits = String(payload.cnpj ?? '').replace(/\D/g, '');
     await admin.from('prospect_seeds').insert({
-      cnpj: payload.cnpj || null,
+      cnpj: cnpjDigits || null,
       company: payload.company,
       razao_social: payload.razao_social || payload.company,
       sector: payload.sector,
