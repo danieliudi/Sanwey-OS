@@ -14,6 +14,7 @@ import { formatDateBR, parseDateInput } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
 import { activityTypeMeta } from "../../utils/activity-types";
 import { findClientByCnpj, DuplicateClientError } from "../../utils/client-dedup";
+import { AtaVozPanel } from "../lead/AtaVozPanel";
 
 const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -44,7 +45,13 @@ function CategoryTag({ value }) {
 }
 
 export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport, onOpenLead, onOpenViagem,
-  canReleaseProducts = false, vendedores = [], }) {
+  canReleaseProducts = false, vendedores = [],
+  /* Ata de visita por voz na aba Histórico (4.54.0) — currentUser pra saber
+     quem gravou, onCreateLead (handleAddLead) pra "Abrir oportunidade" disparar
+     as automações lead_created como qualquer outro lead novo, onAddLeadActivity/
+     onUpdateLead nomeados diferente de `onUpdate` acima de propósito: aquele já
+     é o onSave do CLIENTE, usar o mesmo nome pro lead seria colisão silenciosa. */
+  currentUser, onCreateLead, onAddLeadActivity, onUpdateLead, }) {
   const [query, setQuery] = useState("");
   const [onlyOpportunities, setOnlyOpportunities] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -490,6 +497,10 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         onOpenViagem={onOpenViagem}
         canReleaseProducts={canReleaseProducts}
         vendedores={vendedores}
+        currentUser={currentUser}
+        onCreateLead={onCreateLead}
+        onAddLeadActivity={onAddLeadActivity}
+        onUpdateLead={onUpdateLead}
       />
 
       {/* Delete confirm */}
@@ -526,6 +537,7 @@ function ClientDetailModal({
   activeTab, onTabChange, toggleCompany, inputStyle, onFocusRed, onBlurRed,
   stats, dealsByClient, onOpenLead, onOpenViagem, canReleaseProducts = false,
   vendedores = [],
+  currentUser, onCreateLead, onAddLeadActivity, onUpdateLead,
 }) {
   // "Produtos & Preços" só existe pra cliente já salvo: a liberação é por
   // client_id, que ainda não existe enquanto o cliente é rascunho na tela.
@@ -698,10 +710,15 @@ function ClientDetailModal({
       {tab === "historico" && editing && (
         <ClientTimelinePanel
           clientId={editing.id}
+          client={editing}
           deals={dealsByClient?.get(editing.id) || []}
           onOpenLead={onOpenLead}
           onOpenViagem={onOpenViagem}
           onClose={onClose}
+          currentUser={currentUser}
+          onCreateLead={onCreateLead}
+          onAddLeadActivity={onAddLeadActivity}
+          onUpdateLead={onUpdateLead}
         />
       )}
       {tab === "produtos" && editing && (
@@ -919,9 +936,17 @@ function TimelineItem({ item, isLast, isFuture = false, deals, onOpenLead, onOpe
   );
 }
 
-export function ClientTimelinePanel({ clientId, deals = [], onOpenLead, onOpenViagem, onClose }) {
-  const { items, loading, error } = useClientTimeline(clientId);
+export function ClientTimelinePanel({
+  clientId, client, deals = [], onOpenLead, onOpenViagem, onClose,
+  currentUser, onCreateLead, onAddLeadActivity, onUpdateLead,
+}) {
+  const { items, loading, error, refetch } = useClientTimeline(clientId);
   const [onlyInteractions, setOnlyInteractions] = useState(false);
+
+  // Negócios abertos deste cliente — mesma regra de ETAPAS_TERMINAIS do
+  // AtaVozPanel, é ele quem filtra de novo (aqui só decide SE o painel de
+  // ata é renderizável, não precisa da lista aberta pronta).
+  const podeGravarAta = Boolean(client && currentUser && onCreateLead && onAddLeadActivity);
 
   // Histórico x agendado: visita ainda não realizada entra com ts =
   // data_planejada (data FUTURA). Como a lista é ts DESC, ela aparecia no TOPO
@@ -982,51 +1007,70 @@ export function ClientTimelinePanel({ clientId, deals = [], onOpenLead, onOpenVi
     );
   }
 
+  // Ata por voz no topo — MESMO bloco, vazio ou cheio (achado do Daniel
+  // 13/08/2026: o botão não pode mudar de tamanho ao sair do estado vazio).
+  const ataPanel = podeGravarAta ? (
+    <AtaVozPanel
+      mode="client"
+      client={client}
+      openLeads={deals}
+      currentUser={currentUser}
+      onCreateLead={onCreateLead}
+      onAddActivity={onAddLeadActivity}
+      onUpdate={onUpdateLead}
+      onSaved={refetch}
+    />
+  ) : null;
+
   // Estado vazio honesto: a base está praticamente vazia hoje, então quem
   // abre isto pela primeira vez PRECISA entender que a tela não está
   // quebrada — ela ainda não tem o que mostrar, e o que passa a alimentá-la.
   if (items.length === 0) {
     return (
-      <EmptyState
-        icon={History}
-        title="O histórico deste cliente começa agora"
-        description={
-          <>
-            <p>
-              Nenhum registro deste cliente nas frentes comerciais que você acompanha. Esta
-              linha do tempo se constrói sozinha, conforme o time trabalha — é ela que
-              responde “o que já tentamos com esse cliente?” daqui a um ou dois anos.
-            </p>
-            <p className="mt-2.5">Passam a aparecer aqui, sem ninguém precisar preencher nada:</p>
-            <div className="flex flex-wrap justify-center gap-1.5 mt-2">
-              {["visita", "comentario", "amostra", "follow_up", "email", "proposta", "posvenda"].map(kind => {
-                const { label, icon: Icon } = timelineKindMeta(kind);
-                return (
-                  <span key={kind} className="inline-flex items-center gap-1"
-                    style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
-                             background: "var(--surface-alt)", color: "var(--text-dim)" }}>
-                    <Icon size={11} /> {label}
-                  </span>
-                );
-              })}
-            </div>
-            <p className="mt-2.5" style={{ fontSize: 12, color: "var(--text-faint)" }}>
-              Mudança de etapa e anexo também entram, como pano de fundo — no filtro “Tudo”.
-            </p>
-            {deals.length > 0 && (
-              <p className="mt-2.5" style={{ fontSize: 12 }}>
-                {deals.length === 1 ? "Há 1 negócio vinculado" : `Há ${deals.length} negócios vinculados`} a
-                este cliente, ainda sem nenhum registro de interação.
+      <div className="flex flex-col" style={{ gap: 12 }}>
+        {ataPanel}
+        <EmptyState
+          icon={History}
+          title="O histórico deste cliente começa agora"
+          description={
+            <>
+              <p>
+                Nenhum registro deste cliente nas frentes comerciais que você acompanha. Esta
+                linha do tempo se constrói sozinha, conforme o time trabalha — é ela que
+                responde “o que já tentamos com esse cliente?” daqui a um ou dois anos.
               </p>
-            )}
-          </>
-        }
-      />
+              <p className="mt-2.5">Passam a aparecer aqui, sem ninguém precisar preencher nada:</p>
+              <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+                {["visita", "comentario", "amostra", "follow_up", "email", "proposta", "posvenda"].map(kind => {
+                  const { label, icon: Icon } = timelineKindMeta(kind);
+                  return (
+                    <span key={kind} className="inline-flex items-center gap-1"
+                      style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+                               background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+                      <Icon size={11} /> {label}
+                    </span>
+                  );
+                })}
+              </div>
+              <p className="mt-2.5" style={{ fontSize: 12, color: "var(--text-faint)" }}>
+                Mudança de etapa e anexo também entram, como pano de fundo — no filtro “Tudo”.
+              </p>
+              {deals.length > 0 && (
+                <p className="mt-2.5" style={{ fontSize: 12 }}>
+                  {deals.length === 1 ? "Há 1 negócio vinculado" : `Há ${deals.length} negócios vinculados`} a
+                  este cliente, ainda sem nenhum registro de interação.
+                </p>
+              )}
+            </>
+          }
+        />
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col" style={{ gap: 12 }}>
+      {ataPanel}
       {/* Não prometer completude que o painel não pode entregar: o recorte da
           RPC é por frente comercial (current_user_companies), então um cliente
           pode ter negócio numa frente que este usuário não acompanha. */}

@@ -1,14 +1,14 @@
-import React, { useMemo, useState } from "react";
-import { Mic, Square, Sparkles, Check, X, PencilLine, Loader2, AlertTriangle } from "lucide-react";
+import React, { useMemo, useRef, useState } from "react";
+import { Mic, Square, Sparkles, Check, X, PencilLine, Loader2, AlertTriangle, Circle, CheckCircle2 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
-import { useAudioRecorder, formatRecordingTime, AUDIO_MAX_SECONDS } from "../../hooks/use-audio-recorder";
+import { useAudioRecorder, formatRecordingTime, blobToBase64, AUDIO_MAX_SECONDS } from "../../hooks/use-audio-recorder";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
 
-// Ata de visita por voz — o vendedor sai da reunião, fala um minuto, confere
-// o que a IA entendeu e salva. Aprovado com o Daniel em 13/08/2026 (mockup
-// das 4 telas).
+// Ata de visita por voz — o vendedor fala um minuto, confere o que a IA
+// entendeu e salva. Aprovado com o Daniel em 13/08/2026 (mockup das 4 telas,
+// modo "lead") e 13/08/2026 (mockup das telas de destino, modo "client").
 //
-// Três regras combinadas no mockup, e é por elas que o código é assim:
+// Três regras combinadas nos dois mockups, e é por elas que o código é assim:
 //
 //  1. NADA é gravado sem o aceite. A edge function só devolve um rascunho;
 //     quem escreve no banco é o botão "Salvar ata" desta tela, pelo mesmo
@@ -19,6 +19,21 @@ import { useLeadAttachments } from "../../hooks/use-lead-attachments";
 //  3. A IA NUNCA move o card de etapa. Ela sugere próximo passo e data;
 //     mover no funil continua sendo ato consciente de quem vende.
 //
+// Dois modos, mesmo motor de gravar/organizar/conferir — só o destino do
+// "Salvar" muda:
+//
+//  mode="lead" (LeadDetailDrawer, aba Atividades) — o negócio já existe.
+//    O áudio sobe pro Storage ANTES de chamar a IA (audioPath), porque
+//    lead.id já é conhecido. Salvar grava direto nesse lead.
+//
+//  mode="client" (ClientsManager, aba Histórico) — o negócio ainda não
+//    existe quando a pessoa grava. lead-attachments exige lead_id, então
+//    não há onde subir o áudio antes de saber o destino — a IA recebe o
+//    áudio embutido no corpo (audioBase64) e o arquivo fica só em memória
+//    (pendingAudioRef) até a tela de conferência perguntar "isso é sobre um
+//    negócio já aberto, ou algo novo?" e a pessoa responder. Só então o
+//    áudio sobe, escopado ao lead que a resposta resolveu.
+//
 // O áudio sobe pelo mesmo useLeadAttachments dos outros anexos, então ele
 // aparece sozinho na aba Anexos e continua ouvível se a transcrição errar.
 
@@ -27,6 +42,13 @@ const TEMPERATURAS = [
   { id: "morno",  label: "Morno" },
   { id: "quente", label: "Quente" },
 ];
+
+// Etapas que não contam como "negócio aberto" pro destino da ata — mesma
+// convenção já usada em App.jsx (notificação de ganho/perdido) e em
+// ClientsManager.jsx (statsByClient filtra por "ganho"). Não é um valor
+// configurável por rh_pipeline_stages hoje; replicar essa convenção em vez
+// de inventar uma checagem nova.
+const ETAPAS_TERMINAIS = new Set(["ganho", "perdido"]);
 
 function Lbl({ children, tag }) {
   return (
@@ -47,28 +69,106 @@ const inputStyle = {
   lineHeight: 1.5, resize: "vertical",
 };
 
-export function AtaVozPanel({ lead, currentUser, onAddActivity, onUpdate, onSaved }) {
+// Novo negócio a partir de uma ata sem negócio aberto — mesmo formato que
+// SignalsView.jsx já usa pra "sinal virou lead" (regra 1: não reinventar o
+// shape de um lead novo). Owner vai pra quem gravou a ata (decisão do
+// Daniel, 13/08/2026) — diferente do Sinal, aqui sempre tem alguém na
+// origem, não uma pesquisa automática sem dono óbvio.
+function buildLeadFromClientAta(client, currentUser, draft, resumo) {
+  const now = new Date().toISOString();
+  return {
+    id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    companyId: client.companyIds?.[0] || "industria",
+    company: client.name,
+    razaoSocial: client.name,
+    sector: "",
+    // SEM cnpj de propósito: addLead (use-leads.js) dedupa por CNPJ+empresa e
+    // devolve o registro EXISTENTE em vez de criar um novo. Cliente
+    // estabelecido — que é justamente quem tem ata registrada — quase sempre
+    // já teve algum negócio antigo (ganho ou perdido) com esse mesmo CNPJ.
+    // Preencher aqui faria "Abrir oportunidade" reanexar silenciosamente num
+    // negócio fechado de anos atrás, ao contrário do que a opção promete. O
+    // vínculo de verdade já existe via clientId; o CNPJ do cliente é a fonte
+    // canônica, não precisa duplicar aqui.
+    cnpj: "",
+    city: client.city || "—",
+    state: client.state || "—",
+    address: "",
+    capitalSocial: 0,
+    contactEmail: "",
+    phone: "",
+    situacao: "ATIVA",
+    trigger: "Ata de visita",
+    triggerLabel: "Registro por voz",
+    evidence: resumo,
+    fitScore: 60,
+    quantity: 0,
+    value: 0,
+    probability: 0.1,
+    closeDate: new Date(Date.now() + 60 * 86400000).toISOString(),
+    dateDetected: now,
+    daysAgo: 0,
+    stage: "prospeccao",
+    status: "prospeccao",
+    owner: currentUser?.id || null,
+    urgency: draft.temperatura === "quente" ? "alto" : "medio",
+    decisionMaker: { name: "—", role: "—" },
+    starred: false,
+    notes: [],
+    createdAt: now,
+    lastActivity: now,
+    stageChangedAt: now,
+    clientId: client.id,
+  };
+}
+
+export function AtaVozPanel({
+  mode = "lead",
+  lead, client, openLeads, onCreateLead,
+  currentUser, onAddActivity, onUpdate, onSaved,
+}) {
   const rec = useAudioRecorder();
+  const isClientMode = mode === "client";
+
   // Mesmo hook dos outros anexos do lead: o áudio da ata entra no bucket e na
-  // aba Anexos pelo caminho de sempre, sem storage paralelo — é o que garante
-  // que dê pra ouvir de novo quando a transcrição errar.
-  const { upload: uploadAttachment } = useLeadAttachments(lead?.id);
+  // aba Anexos pelo caminho de sempre, sem storage paralelo. Em modo cliente
+  // `leadId` inicial não existe — `upload()` aceita o id explícito por
+  // chamada, então isso não impede o uso; só o fetch inicial (que lista
+  // anexos de um lead conhecido) fica sem efeito, e não é usado aqui.
+  const { upload: uploadAttachment } = useLeadAttachments(isClientMode ? undefined : lead?.id);
+
   const [phase, setPhase]   = useState("idle"); // idle | processing | review
   const [error, setError]   = useState(null);
   const [typing, setTyping] = useState(false);
   const [texto, setTexto]   = useState("");
   const [draft, setDraft]   = useState(null);
-  const [audioInfo, setAudioInfo] = useState(null); // { path, name, seconds }
+  const [audioInfo, setAudioInfo] = useState(null); // { path, name, seconds } — modo lead
   const [saving, setSaving] = useState(false);
+
+  // Negócios abertos deste cliente (modo client) — sem etapa terminal.
+  const negociosAbertos = useMemo(
+    () => (openLeads || []).filter(l => !ETAPAS_TERMINAIS.has(l.stage)),
+    [openLeads],
+  );
+  // "lead:<id>" ou "novo". Pré-seleciona o primeiro negócio aberto se
+  // existir; senão, "novo" já vem marcado — é o caminho de menor atrito
+  // (mockup aprovado 13/08/2026).
+  const [destino, setDestino] = useState(
+    () => (negociosAbertos[0] ? `lead:${negociosAbertos[0].id}` : "novo"),
+  );
+
+  // Áudio gravado em modo client: fica só em memória até o destino ser
+  // resolvido no Salvar — ver cabeçalho do arquivo.
+  const pendingAudioRef = useRef(null);
 
   const aiConfig = currentUser?.aiConfig;
   const podeIA = isSupabaseConfigured;
 
-  const contexto = useMemo(() => ({
-    company: lead?.company || null,
-    sector:  lead?.sector || null,
-    stage:   lead?.stage || null,
-  }), [lead]);
+  const contexto = useMemo(() => (
+    isClientMode
+      ? { company: client?.name || null }
+      : { company: lead?.company || null, sector: lead?.sector || null, stage: lead?.stage || null }
+  ), [isClientMode, client, lead]);
 
   const chamarIA = async (payload) => {
     const { data, error: err } = await supabase.functions.invoke("crm-ata-voz", {
@@ -103,16 +203,23 @@ export function AtaVozPanel({ lead, currentUser, onAddActivity, onUpdate, onSave
     setPhase("processing");
     setError(null);
     try {
-      // `companyId` em camelCase: o objeto de lead no frontend já vem mapeado
-      // por use-leads.js (rowToLead), não é a linha crua do banco.
-      const anexo = await uploadAttachment(out.file, {
-        leadId: lead.id, companyId: lead.companyId, uploadedBy: currentUser?.id || null,
-      });
-      if (!anexo?.file_path) throw new Error("Não foi possível guardar o áudio.");
-      setAudioInfo({ path: anexo.file_path, name: anexo.file_name, seconds: out.durationSeconds });
-      const res = await chamarIA({
-        audioPath: anexo.file_path, mimeType: out.mimeType, durationSeconds: out.durationSeconds,
-      });
+      let res;
+      if (isClientMode) {
+        // Sem lead_id ainda — manda o áudio embutido; o upload de verdade
+        // acontece no Salvar, quando o destino já foi escolhido.
+        pendingAudioRef.current = { file: out.file, mimeType: out.mimeType, seconds: out.durationSeconds };
+        const audioBase64 = await blobToBase64(out.blob);
+        res = await chamarIA({ audioBase64, mimeType: out.mimeType, durationSeconds: out.durationSeconds });
+      } else {
+        // `companyId` em camelCase: o objeto de lead no frontend já vem
+        // mapeado por use-leads.js (rowToLead), não é a linha crua do banco.
+        const anexo = await uploadAttachment(out.file, {
+          leadId: lead.id, companyId: lead.companyId, uploadedBy: currentUser?.id || null,
+        });
+        if (!anexo?.file_path) throw new Error("Não foi possível guardar o áudio.");
+        setAudioInfo({ path: anexo.file_path, name: anexo.file_name, seconds: out.durationSeconds });
+        res = await chamarIA({ audioPath: anexo.file_path, mimeType: out.mimeType, durationSeconds: out.durationSeconds });
+      }
       setDraft({ ...(res.structured || {}), transcricao: res.transcript || "" });
       setPhase("review");
     } catch (e) {
@@ -138,6 +245,8 @@ export function AtaVozPanel({ lead, currentUser, onAddActivity, onUpdate, onSave
   const descartar = () => {
     setDraft(null); setAudioInfo(null); setTexto(""); setTyping(false);
     setPhase("idle"); setError(null);
+    pendingAudioRef.current = null;
+    setDestino(negociosAbertos[0] ? `lead:${negociosAbertos[0].id}` : "novo");
   };
 
   const salvar = async () => {
@@ -146,25 +255,57 @@ export function AtaVozPanel({ lead, currentUser, onAddActivity, onUpdate, onSave
     setError(null);
     try {
       const resumo = (draft.resumo || "").trim() || "Ata de visita registrada.";
-      await onAddActivity(lead.id, {
+      const metaBase = {
+        transcricao: draft.transcricao || null,
+        proximoPasso: draft.proximo_passo || null,
+        proximoPassoData: draft.proximo_passo_data || null,
+        dor: draft.dor || null,
+        objecao: draft.objecao || null,
+        concorrente: draft.concorrente || null,
+        temperatura: draft.temperatura || null,
+        pessoas: Array.isArray(draft.pessoas) ? draft.pessoas : [],
+      };
+
+      let targetLeadId, targetCompanyId;
+      if (isClientMode) {
+        if (destino === "novo") {
+          const novo = buildLeadFromClientAta(client, currentUser, draft, resumo);
+          const salvo = await onCreateLead(novo);
+          targetLeadId = salvo?.id || novo.id;
+          targetCompanyId = salvo?.companyId || novo.companyId;
+        } else {
+          targetLeadId = destino.slice(5);
+          targetCompanyId = negociosAbertos.find(l => l.id === targetLeadId)?.companyId;
+        }
+      } else {
+        targetLeadId = lead.id;
+      }
+
+      // Modo client: o áudio só sobe agora, escopado ao lead que o destino
+      // resolveu — ver cabeçalho do arquivo.
+      let audioPath = audioInfo?.path || null;
+      let audioSegundos = audioInfo?.seconds || null;
+      const pending = pendingAudioRef.current;
+      if (pending) {
+        const anexo = await uploadAttachment(pending.file, {
+          leadId: targetLeadId, companyId: targetCompanyId, uploadedBy: currentUser?.id || null,
+        });
+        audioPath = anexo?.file_path || null;
+        audioSegundos = pending.seconds;
+      }
+
+      await onAddActivity(targetLeadId, {
         type: "ata_voz",
         userId: currentUser?.id || null,
         userName: currentUser?.name || null,
         body: resumo,
         meta: {
-          transcricao: draft.transcricao || null,
-          proximoPasso: draft.proximo_passo || null,
-          proximoPassoData: draft.proximo_passo_data || null,
-          dor: draft.dor || null,
-          objecao: draft.objecao || null,
-          concorrente: draft.concorrente || null,
-          temperatura: draft.temperatura || null,
-          pessoas: Array.isArray(draft.pessoas) ? draft.pessoas : [],
-          audioPath: audioInfo?.path || null,
-          audioSegundos: audioInfo?.seconds || null,
+          ...metaBase,
+          audioPath,
+          audioSegundos,
           // Marca a origem: quem ler o histórico daqui a um ano precisa saber
           // que este texto passou por transcrição automática.
-          origem: audioInfo ? "audio" : "texto",
+          origem: (audioPath || pending) ? "audio" : "texto",
         },
       });
 
@@ -173,7 +314,7 @@ export function AtaVozPanel({ lead, currentUser, onAddActivity, onUpdate, onSave
       // `nextFollowUp` em camelCase: patchToRow (use-leads.js) é quem traduz
       // pra coluna next_follow_up — mandar snake_case aqui seria ignorado.
       if (draft.proximo_passo_data && onUpdate) {
-        await onUpdate(lead.id, { nextFollowUp: draft.proximo_passo_data });
+        await onUpdate(targetLeadId, { nextFollowUp: draft.proximo_passo_data });
       }
       descartar();
       onSaved?.();
@@ -289,6 +430,51 @@ export function AtaVozPanel({ lead, currentUser, onAddActivity, onUpdate, onSave
           </div>
         </div>
 
+        {/* Destino — só em modo client (mockup "ata-no-cliente", aprovado
+            13/08/2026). Sem negócio aberto, "Abrir oportunidade" já vem
+            marcado. "Só registrar sem negócio" não está aqui — ver nota no
+            cabeçalho do arquivo sobre a lacuna de armazenamento. */}
+        {isClientMode && (
+          <div className="px-3.5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
+            <Lbl>Isso é sobre um negócio já aberto, ou algo novo?</Lbl>
+            <div className="space-y-1.5 mt-1.5">
+              {negociosAbertos.map(l => {
+                const on = destino === `lead:${l.id}`;
+                return (
+                  <button key={l.id} onClick={() => setDestino(`lead:${l.id}`)}
+                          className="w-full flex items-start gap-2 text-left rounded-lg px-2.5 py-2"
+                          style={{ border: `1.5px solid ${on ? "var(--accent)" : "var(--border)"}`, background: on ? "var(--accent-bg, var(--surface-alt))" : "var(--surface)" }}>
+                    {on ? <CheckCircle2 size={14} style={{ color: "var(--accent)", flex: "none", marginTop: 1 }} />
+                        : <Circle size={14} style={{ color: "var(--text-dim)", flex: "none", marginTop: 1 }} />}
+                    <span className="min-w-0">
+                      <span className="text-[12px] font-bold block" style={{ color: "var(--text)" }}>{l.company}</span>
+                      <span className="text-[10.5px]" style={{ color: "var(--text-dim)" }}>
+                        A ata entra na atividade dele — a etapa continua sendo você quem move.
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+              <button onClick={() => setDestino("novo")}
+                      className="w-full flex items-start gap-2 text-left rounded-lg px-2.5 py-2"
+                      style={{ border: `1.5px solid ${destino === "novo" ? "var(--accent)" : "var(--border)"}`, background: destino === "novo" ? "var(--accent-bg, var(--surface-alt))" : "var(--surface)" }}>
+                {destino === "novo" ? <CheckCircle2 size={14} style={{ color: "var(--accent)", flex: "none", marginTop: 1 }} />
+                                     : <Circle size={14} style={{ color: "var(--text-dim)", flex: "none", marginTop: 1 }} />}
+                <span className="min-w-0">
+                  <span className="text-[12px] font-bold" style={{ color: "var(--text)" }}>
+                    Abrir oportunidade
+                  </span>
+                  <span className="text-[10.5px] block" style={{ color: "var(--text-dim)" }}>
+                    {negociosAbertos.length === 0
+                      ? "Nenhum negócio aberto com este cliente hoje. Cria um na 1ª etapa do funil, com o resumo e o próximo passo já preenchidos."
+                      : "Cria um negócio novo na 1ª etapa do funil, já com o resumo e o próximo passo desta ata."}
+                  </span>
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {draft.transcricao && (
           <details className="px-3.5 py-2.5" style={{ borderBottom: "1px solid var(--border)" }}>
             <summary className="text-[11px] cursor-pointer" style={{ color: "var(--accent)" }}>
@@ -324,13 +510,21 @@ export function AtaVozPanel({ lead, currentUser, onAddActivity, onUpdate, onSave
   }
 
   // ── Início ──────────────────────────────────────────────────────────────
+  // Mesma casca, mesmo tamanho de botão em modo lead ou cliente, e em modo
+  // cliente independente de o histórico estar vazio ou populado — quem chama
+  // (LeadDetailDrawer/ClientTimelinePanel) sempre renderiza este bloco antes
+  // do próprio conteúdo, nunca uma versão "compacta" alternativa (achado do
+  // Daniel 13/08/2026: o botão mudava de tamanho ao sair do estado vazio).
   return (
     <div className="rounded-xl px-4 py-5 text-center" style={{ border: "1px dashed var(--border)" }}>
       <Mic size={22} style={{ color: "var(--text-dim)", margin: "0 auto 8px" }} />
-      <p className="text-[13.5px] font-bold m-0" style={{ color: "var(--text)" }}>Registre a visita falando</p>
+      <p className="text-[13.5px] font-bold m-0" style={{ color: "var(--text)" }}>
+        {isClientMode ? "Registre uma conversa falando" : "Registre a visita falando"}
+      </p>
       <p className="text-[11.5px] mt-1 mb-3.5 mx-auto" style={{ color: "var(--text-dim)", maxWidth: "42ch", lineHeight: 1.5 }}>
-        Acabou de sair da reunião? Fale o que aconteceu. A IA transcreve, organiza
-        e você confere antes de salvar.
+        {isClientMode
+          ? "Visita, ligação ou reunião com este cliente — mesmo sem negócio aberto. Fale o que aconteceu; você confere antes de salvar."
+          : "Acabou de sair da reunião? Fale o que aconteceu. A IA transcreve, organiza e você confere antes de salvar."}
       </p>
 
       {(error || rec.error) && (
@@ -344,7 +538,7 @@ export function AtaVozPanel({ lead, currentUser, onAddActivity, onUpdate, onSave
         <div className="text-left">
           <textarea rows={4} style={inputStyle} value={texto} autoFocus
                     onChange={e => setTexto(e.target.value)}
-                    placeholder="Escreva o que aconteceu na visita — a IA organiza do mesmo jeito." />
+                    placeholder="Escreva o que aconteceu — a IA organiza do mesmo jeito." />
           <div className="flex gap-2 mt-2">
             <button onClick={aoEnviarTexto} disabled={!texto.trim()}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold"

@@ -31,6 +31,18 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: acabou de sair de uma visita? Grave um áudio contando o que aconteceu — a IA transcreve, organiza e você confere antes de salvar.",
     version: "4.54.0",
   },
+  // Mesmo componente (AtaVozPanel), mesmo data-tour, rota diferente — a ata
+  // por voz chegou também na aba Histórico do Cliente (4.55.0), pra registrar
+  // conversa mesmo sem negócio aberto. Entrada própria porque o mecanismo
+  // dispara por rota (`route`), não por elemento — só existir um `[data-tour]`
+  // igual na rota "crm" não cobre quem visita "clients" primeiro.
+  {
+    id: "ata-voz-gravar-cliente",
+    route: "clients",
+    target: '[data-tour="ata-voz-gravar"]',
+    text: "Novo: registre uma conversa com este cliente mesmo sem negócio aberto — a IA organiza e pergunta se isso vira uma oportunidade nova.",
+    version: "4.55.0",
+  },
   {
     id: "lista-pessoal-agenda",
     route: "personal-tasks",

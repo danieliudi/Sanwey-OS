@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.55.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Ata de visita por voz chegou também no Cliente: abra o card do cliente, aba Histórico, e grave uma conversa mesmo sem negócio aberto — visita, ligação, o que for. A tela pergunta se é sobre um negócio já aberto ou algo novo; escolhendo \"Abrir oportunidade\", um negócio nasce sozinho na 1ª etapa, já com o resumo e o próximo passo preenchidos, atribuído a quem gravou.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
     version: "4.54.0",
     items: [
       {

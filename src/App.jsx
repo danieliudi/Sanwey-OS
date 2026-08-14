@@ -2090,6 +2090,14 @@ export default function App() {
                   /* Só quem vende pode ser dono de conta — o campo não deve
                      oferecer marketing, RH ou suporte. */
                   vendedores={users.filter(u => (u.roles || []).some(r => ["vendedor", "gerente"].includes(r)))}
+                  /* Ata de visita por voz na aba Histórico (4.54.x) — onCreateLead
+                     é o handleAddLead (dispara automações lead_created como
+                     qualquer negócio novo); onUpdateLead é o `updateLead` local
+                     (com automações field_value), não o updateLeadRemote cru. */
+                  currentUser={currentUser}
+                  onCreateLead={handleAddLead}
+                  onAddLeadActivity={addLeadActivity}
+                  onUpdateLead={updateLead}
                 />
               )
           } />

@@ -144,4 +144,24 @@ export function formatRecordingTime(totalSeconds) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+// Ata iniciada pelo CLIENTE (AtaVozPanel modo "client"): o negócio ainda não
+// existe quando o áudio é gravado, e lead-attachments exige lead_id — não há
+// onde subir o arquivo antes de saber o destino. Por isso esse caminho manda
+// o áudio embutido no corpo da chamada (crm-ata-voz aceita audioBase64) em
+// vez de um caminho no Storage; o upload de verdade só acontece depois, se e
+// quando um lead (existente ou recém-criado) for escolhido como destino.
+export async function blobToBase64(blob) {
+  const buf = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  // Mesmo cuidado do lado do servidor (crm-ata-voz/index.ts, toBase64): btoa
+  // em pedaços, senão String.fromCharCode(...bytes) estoura a pilha num
+  // áudio de alguns MB — que é o tamanho normal de uma ata de alguns minutos.
+  let binary = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
 export default useAudioRecorder;
