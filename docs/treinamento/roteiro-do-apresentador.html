@@ -1,0 +1,305 @@
+<meta charset="utf-8">
+<title>Roteiro do Apresentador — Treinamento Comercial</title>
+<style>
+  :root {
+    --creme:#F9F5F1; --vermelho:#B62D2C; --ink:#2C2C2B; --gold:#B8973A;
+    --gray:#374151; --dim:#6B6A67; --faint:#9CA3AF; --rule:#DFD8D0; --rule-2:#EBE5DE;
+    --branco:#FFFFFF; --gold-bg:#FBF3E2; --ok:#2F6B45; --ok-bg:#EDF3EE; --stop-bg:#F8EBEA;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Inter Variable", Inter, sans-serif; color: var(--ink); font-size: 9.5pt; line-height: 1.5; }
+
+  .page {
+    width: 210mm; height: 297mm; padding: 15mm 17mm 15mm;
+    background: var(--creme); position: relative; overflow: hidden;
+    page-break-after: always; display: flex; flex-direction: column;
+  }
+  .page:last-child { page-break-after: auto; }
+  .mono { font-family: "JetBrains Mono", monospace; }
+
+  .strip {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 2.5mm; margin-bottom: 6mm; border-bottom: 0.4mm solid var(--vermelho);
+    font-family: "JetBrains Mono", monospace; font-size: 7pt; color: var(--dim);
+    letter-spacing: 0.06em; flex: none;
+  }
+  .strip .l { color: var(--vermelho); font-weight: 700; }
+  .foot {
+    position: absolute; left: 17mm; right: 17mm; bottom: 9mm;
+    display: flex; justify-content: space-between;
+    font-family: "JetBrains Mono", monospace; font-size: 7pt; color: var(--faint);
+    letter-spacing: 0.05em; padding-top: 2.5mm; border-top: 0.25mm solid var(--rule);
+  }
+  .foot .pg { color: var(--ink); font-weight: 700; }
+  .body { flex: 1; display: flex; flex-direction: column; gap: 4mm; min-height: 0; }
+
+  h1 { font-size: 22pt; font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; }
+  h2 { font-size: 12pt; font-weight: 650; letter-spacing: -0.012em; }
+  h3 { font-size: 9.8pt; font-weight: 650; }
+  p { font-size: 9.3pt; line-height: 1.5; color: var(--gray); }
+  .lead { font-size: 10.5pt; color: var(--gray); line-height: 1.5; }
+  strong { font-weight: 700; color: var(--ink); }
+  em { font-style: normal; color: var(--vermelho); font-weight: 650; }
+  code { font-family: "JetBrains Mono", monospace; font-size: 8pt; background: var(--rule-2); padding: 0.4mm 1.2mm; border-radius: 1mm; }
+
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: 7pt; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--vermelho); font-weight: 700; display: block; margin-bottom: 2.5mm;
+  }
+  .eyebrow.gray { color: var(--dim); }
+
+  .card { background: var(--branco); border: 0.3mm solid var(--rule); border-radius: 2mm; padding: 4mm 5mm; }
+
+  /* gate */
+  .gate { background: var(--stop-bg); border: 0.6mm solid var(--vermelho); border-radius: 2.5mm; padding: 5mm 6mm; }
+  .gate b { display: block; font-size: 11pt; margin-bottom: 1.5mm; }
+
+  /* checklist */
+  .check { display: flex; flex-direction: column; gap: 0; }
+  .ck {
+    display: grid; grid-template-columns: 5mm 1fr 30mm; gap: 4mm; align-items: start;
+    padding: 2.2mm 0; border-bottom: 0.25mm solid var(--rule);
+  }
+  .ck:last-child { border-bottom: none; }
+  .ck .box { width: 3.4mm; height: 3.4mm; border: 0.4mm solid var(--ink); border-radius: 0.8mm; margin-top: 1mm; }
+  .ck .t { font-size: 9.3pt; line-height: 1.4; }
+  .ck .t b { font-weight: 650; }
+  .ck .w { font-family: "JetBrains Mono", monospace; font-size: 7pt; color: var(--faint); text-transform: uppercase; letter-spacing: 0.06em; text-align: right; padding-top: 0.8mm; }
+
+  /* roteiro por bloco */
+  .blocks { display: flex; flex-direction: column; gap: 3mm; }
+  .blk { background: var(--branco); border: 0.3mm solid var(--rule); border-radius: 2mm; overflow: hidden; }
+  .blk-h {
+    display: flex; align-items: baseline; gap: 4mm; flex-wrap: wrap;
+    padding: 2.3mm 5mm; background: var(--rule-2); border-bottom: 0.3mm solid var(--rule);
+  }
+  .blk-h .sl {
+    font-family: "JetBrains Mono", monospace; font-size: 8pt; font-weight: 700;
+    color: var(--branco); background: var(--vermelho); padding: 0.8mm 2mm; border-radius: 1mm;
+  }
+  .blk-h .nm { font-size: 10.5pt; font-weight: 650; flex: 1; }
+  .blk-h .tm { font-family: "JetBrains Mono", monospace; font-size: 8pt; color: var(--dim); }
+  .blk-b { padding: 3.2mm 5mm; display: flex; flex-direction: column; gap: 2mm; }
+  .say { font-size: 9pt; line-height: 1.4; color: var(--gray); }
+  .say .k { font-family: "JetBrains Mono", monospace; font-size: 7pt; letter-spacing: 0.1em; text-transform: uppercase; color: var(--vermelho); font-weight: 700; display: block; margin-bottom: 1mm; }
+  .say .k.gray { color: var(--dim); }
+
+  .note { border-left: 0.8mm solid var(--gold); background: var(--gold-bg); padding: 3.5mm 5mm; border-radius: 0 2mm 2mm 0; font-size: 9pt; line-height: 1.45; }
+  .note.ok { border-left-color: var(--ok); background: var(--ok-bg); }
+  .note.stop { border-left-color: var(--vermelho); background: var(--stop-bg); }
+  .note b { display: block; margin-bottom: 1mm; }
+
+  ul.b { list-style: none; display: flex; flex-direction: column; gap: 1.8mm; }
+  ul.b li { font-size: 9pt; line-height: 1.4; color: var(--gray); padding-left: 4.5mm; position: relative; }
+  ul.b li::before { content: "—"; position: absolute; left: 0; color: var(--vermelho); }
+  ul.b li b { color: var(--ink); font-weight: 650; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+</style>
+
+<!-- ═══════ 1 · ANTES DA SESSÃO ═══════ -->
+<div class="page">
+  <div class="strip"><span class="l">ROTEIRO DO APRESENTADOR</span><span>NÃO PROJETAR — USO DE QUEM CONDUZ</span><span>TREINAMENTO COMERCIAL</span></div>
+  <div class="body">
+    <h1>Antes da sessão</h1>
+    <p class="lead">
+      Este treinamento foi desenhado para que a sala faça trabalho de verdade, não simulação.
+      Isso só funciona se o sistema já tiver o que os exercícios precisam.
+    </p>
+
+    <div class="gate">
+      <b>Não marque a data antes desta linha estar verde</b>
+      <p style="color: var(--ink)">
+        Os três exercícios escrevem em produção, encadeados: o vendedor libera preço, registra
+        pedido com aquele preço, e o suporte confere aquele pedido. Com o catálogo vazio ou as
+        telas fechadas, o exercício 1 trava no primeiro clique e a sessão vira uma palestra sobre
+        algo que ninguém consegue abrir.
+      </p>
+    </div>
+
+    <div>
+      <span class="eyebrow">Precisa estar pronto — confira item por item</span>
+      <div class="card">
+        <div class="check">
+          <div class="ck"><span class="box"></span><span class="t"><b>Catálogo carregado</b> com os SKUs ativos e o preço de tabela preenchido. Sem isso o exercício 1 não tem o que liberar.</span><span class="w">Onda 0</span></div>
+          <div class="ck"><span class="box"></span><span class="t"><b>Clientes com dono atribuído.</b> Cada vendedor precisa ter clientes seus para usar no exercício.</span><span class="w">Onda 0</span></div>
+          <div class="ck"><span class="box"></span><span class="t"><b>Logins do suporte criados</b> com o papel <code>suporte</code>. Sem eles, o exercício 3 não tem quem faça.</span><span class="w">Onda 0</span></div>
+          <div class="ck"><span class="box"></span><span class="t"><b>Contato e endereço</b> cadastrados nos clientes que serão usados.</span><span class="w">Onda 0</span></div>
+          <div class="ck"><span class="box"></span><span class="t"><b>Módulos Catálogo e Pedidos liberados</b> em Configurações → Módulos. Enquanto estiverem em <code>test</code>, só o admin enxerga as telas — e a sala inteira abre um menu sem elas.</span><span class="w">crítico</span></div>
+          <div class="ck"><span class="box"></span><span class="t"><b>Todo mundo consegue entrar na plataforma</b> — teste o login de cada participante antes, não na hora.</span><span class="w">véspera</span></div>
+          <div class="ck"><span class="box"></span><span class="t"><b>A data de corte decidida</b> e escrita no slide 21, no lugar de <code>[DATA]</code>. Esse slide é o compromisso da sessão; sem data ele não significa nada.</span><span class="w">crítico</span></div>
+          <div class="ck"><span class="box"></span><span class="t"><b>Playbook impresso</b>, um por pessoa. A última página é o cartão de bolso — vale imprimir separada.</span><span class="w">véspera</span></div>
+          <div class="ck"><span class="box"></span><span class="t"><b>O suporte com acesso ao Kronosys</b> na máquina que vai usar na sala.</span><span class="w">véspera</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="note">
+        <b>Sala e equipamento</b>
+        Todo mundo com notebook, projetor ou TV, e internet que aguente a sala inteira usando a
+        plataforma ao mesmo tempo. Os exercícios são feitos na hora, não depois.
+      </div>
+      <div class="note ok">
+        <b>Quantas pessoas</b>
+        Sessão única com vendedores e suporte juntos. Eles precisam ver o trabalho um do outro —
+        o exercício 3 confere os pedidos que os vendedores acabaram de criar, e é esse encadeamento
+        que ensina o processo.
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Roteiro do apresentador · não projetar</span><span class="pg">1</span></div>
+</div>
+
+<!-- ═══════ 2 · ROTEIRO, PARTE 1 ═══════ -->
+<div class="page">
+  <div class="strip"><span class="l">ROTEIRO</span><span>ABERTURA E CONCEITO · SLIDES 1 A 10</span><span>≈ 20 MINUTOS</span></div>
+  <div class="body">
+    <h1 style="font-size: 18pt">Abertura e conceito</h1>
+
+    <div class="blocks">
+      <div class="blk">
+        <div class="blk-h"><span class="sl">1–2</span><span class="nm">Capa e agenda</span><span class="tm">3 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Diga</span>Que a hora tem exercício de verdade, com cliente e pedido reais deles. Que ninguém vai sair com "lição de casa" — o trabalho começa aqui.</p>
+          <p class="say"><span class="k gray">Não faça</span>Não abra pedindo desculpa por "mais um sistema". Isso planta a ideia de que é peso, e a sala inteira escuta o resto por essa lente.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h"><span class="sl">3</span><span class="nm">"O canal não muda. O registro muda."</span><span class="tm">2 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Diga</span>Devagar, e repita a frase. É a única que precisa sobreviver à semana. Deixe claro, já aqui, que <strong>ninguém vai ser cobrado por vender no WhatsApp</strong> — esse é o medo que está na sala desde o convite.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h"><span class="sl">4–6</span><span class="nm">Por que estamos mudando</span><span class="tm">8 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Diga</span>O slide 5 é do ponto de vista deles, não da empresa. Pare nele e <strong>pergunte</strong>: "quantas vezes essa semana vocês pararam para esperar um preço?" Deixe responderem. A resposta deles vale mais que o argumento.</p>
+          <p class="say"><span class="k gray">Observe</span>Se alguém disser "mas eu já sei os preços de cabeça", concorde — e devolva: e quando você está na estrada, ou de férias, quem sabe?</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h"><span class="sl">7–8</span><span class="nm">Dois preços, dois donos</span><span class="tm">5 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Diga</span>É o conceito central da hora. Não passe rápido. Use o exemplo concreto de um produto real: "a tabela dele é X, você vende a Y, a diferença é sua margem — e é o Y que entra no pedido".</p>
+          <p class="say"><span class="k gray">Cuidado</span>É aqui que o suporte pode ouvir "perdi autonomia". Enderece de frente: o suporte não perdeu nada — ele nunca definiu preço de cliente. O que ele ganhou foi um lugar onde o preço de tabela dele é a fonte oficial, em vez de ser respondido de novo a cada mensagem.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h"><span class="sl">9–10</span><span class="nm">Quem faz o quê · as três tarefas</span><span class="tm">2 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Diga</span>Passe rápido: a tabela do slide 9 está no playbook e ninguém precisa memorizar. O slide 10 é só o anúncio de que são três tarefas e nada além disso.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Roteiro do apresentador · não projetar</span><span class="pg">2</span></div>
+</div>
+
+<!-- ═══════ 3 · OS EXERCÍCIOS ═══════ -->
+<div class="page">
+  <div class="strip"><span class="l">ROTEIRO</span><span>OS TRÊS EXERCÍCIOS · SLIDES 11 A 16</span><span>≈ 30 MINUTOS</span></div>
+  <div class="body">
+    <h1 style="font-size: 18pt">Os três exercícios</h1>
+    <p class="lead">É o miolo da sessão. Cada bloco é: <strong>3 minutos mostrando na tela</strong> (projete a plataforma, não o slide) e <strong>7 minutos com eles fazendo</strong>.</p>
+
+    <div class="blocks">
+      <div class="blk">
+        <div class="blk-h"><span class="sl">11–12</span><span class="nm">Liberar produto e preço</span><span class="tm">10 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Mostre ao vivo</span>Faça uma vez, num cliente qualquer. Digite a margem e mostre o preço se ajustando sozinho — e depois o contrário. É o que costuma arrancar o primeiro "ah, entendi".</p>
+          <p class="say"><span class="k gray">Vai acontecer</span></p>
+          <ul class="b">
+            <li><b>"Não acho meu cliente"</b> — está na outra empresa. Confira o seletor no topo.</li>
+            <li><b>"O produto aparece sem preço de tabela"</b> — falta o suporte cadastrar. Anote e siga com outro produto.</li>
+            <li><b>"Não consigo mexer nesse cliente"</b> — a conta tem outro dono. Anote o nome; a gerência resolve depois.</li>
+          </ul>
+          <p class="say"><span class="k">Corte no tempo</span>Sete minutos e siga, mesmo com gente no meio. O resto se termina durante a semana — aqui basta cada um ter feito um.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h"><span class="sl">13–14</span><span class="nm">Registrar um pedido</span><span class="tm">10 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Mostre ao vivo</span>Abra uma conversa de WhatsApp sua, de verdade, e registre aquele pedido na frente deles. Ver o pedido nascer de uma mensagem é o que conecta as duas pontas.</p>
+          <p class="say"><span class="k gray">Vai acontecer</span></p>
+          <ul class="b">
+            <li><b>"Não tem nenhum produto liberado"</b> — é o exercício 1 faltando. Mande voltar e liberar: ensina a dependência entre as duas tarefas melhor que qualquer slide.</li>
+            <li><b>"Onde eu digito o preço?"</b> — pergunta ótima, e vai aparecer. Não existe campo, de propósito. Repita: registrar pedido não é negociar.</li>
+          </ul>
+          <p class="say"><span class="k">Antes de seguir</span>Confirme em voz alta que há pedidos em Conferência. Se ninguém conseguiu registrar, <strong>registre um você mesmo</strong> — o exercício 3 depende de existir card no quadro.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h"><span class="sl">15–16</span><span class="nm">Conferir e confirmar</span><span class="tm">10 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Mostre ao vivo</span>Tente mover um pedido para "Confirmado" <strong>sem</strong> o número do Kronosys, para a sala ver que a opção nem aparece. Depois digite o número e mostre a opção surgindo. Vale mais que explicar.</p>
+          <p class="say"><span class="k">Vire a sala</span>Enquanto o suporte confere, peça aos vendedores que acompanhem o próprio card andando. É o único momento em que os dois lados veem o processo inteiro — não pule.</p>
+          <p class="say"><span class="k gray">Se o Kronosys estiver fora</span>Use um número fictício e diga que é fictício. O que se está treinando é o hábito de trazer o número de volta, não o número em si.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Roteiro do apresentador · não projetar</span><span class="pg">3</span></div>
+</div>
+
+<!-- ═══════ 4 · FECHAMENTO ═══════ -->
+<div class="page">
+  <div class="strip"><span class="l">ROTEIRO</span><span>COMBINADOS E FECHAMENTO · SLIDES 17 A 25</span><span>≈ 10 MINUTOS</span></div>
+  <div class="body">
+    <h1 style="font-size: 18pt">Combinados e fechamento</h1>
+
+    <div class="blocks">
+      <div class="blk">
+        <div class="blk-h"><span class="sl">17–18</span><span class="nm">O quadro e o pedido parado</span><span class="tm">3 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Diga</span>Rápido — eles acabaram de usar o quadro, então já sabem. Só firme a diferença entre as colunas e por que "Enviado" está vazia.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h"><span class="sl">19–20</span><span class="nm">O que o sistema impede · o que depende deles</span><span class="tm">3 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Diga</span>Não passe por cima do último item: fechar no WhatsApp e não registrar é a única coisa que nenhum software impede — e é o que decide se em três meses estamos de volta na planilha. Diga com essas palavras.</p>
+          <p class="say"><span class="k">Termine no verde</span>A nota final do slide 20 desarma o medo: vender por WhatsApp continua valendo. Leia em voz alta — é o que eles ouvem antes do compromisso.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h"><span class="sl">21</span><span class="nm">A data de corte</span><span class="tm">2 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Diga</span>É o único compromisso que a sessão pede. Diga a data, explique que quem aplica é o suporte — não é fiscalização de gerente — e <strong>abra para pergunta antes de seguir</strong>. Se alguém for reclamar, melhor aqui que por fora depois.</p>
+          <p class="say"><span class="k gray">Se a data ainda não estiver decidida</span>Não improvise. Diga que a data sai na semana — e cumpra. Prazo anunciado e não cumprido custa mais que prazo nenhum.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-h"><span class="sl">22–25</span><span class="nm">Pendências, playbook e segunda-feira</span><span class="tm">3 min</span></div>
+        <div class="blk-b">
+          <p class="say"><span class="k">Diga</span>O slide 22 compra credibilidade: mostra que não estamos vendendo mais do que existe. Não pule por parecer negativo — é o oposto.</p>
+          <p class="say"><span class="k">Entregue na mão</span>Distribua o playbook impresso no slide 23, não no fim. Peça que abram no cartão de bolso e digam se falta algo que apareceu hoje.</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <span class="eyebrow">Depois da sessão — no mesmo dia</span>
+      <div class="card">
+        <ul class="b">
+          <li><b>Resolva as pendências que apareceram na sala</b> — produto sem tabela, cliente sem dono, login com problema. No mesmo dia, vira prova de que a sala foi ouvida; na semana seguinte, vira "eu falei e ninguém fez".</li>
+          <li><b>Mande a data de corte por escrito</b>, com o playbook em PDF anexo, para quem esteve e para quem faltou.</li>
+          <li><b>Olhe o quadro no dia seguinte.</b> Zero registro em 24h não é falha de treinamento: é obstáculo prático. Pergunte um a um qual foi.</li>
+          <li><b>Na primeira semana, cobre cobertura, não perfeição.</b> Card torto se corrige; pedido ausente não existe.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Roteiro do apresentador · não projetar</span><span class="pg">4</span></div>
+</div>
