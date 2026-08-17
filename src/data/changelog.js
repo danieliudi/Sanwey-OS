@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.56.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Chegou a Central de Bugs: encontrou algo que não devia acontecer? Reporte pelo item \"Central de Bugs\" no menu — qualquer pessoa pode. Quem administra acompanha em um Kanban (Reportado → Em Análise → Correção Proposta → Corrigido) e aprova ou devolve cada correção proposta antes de ir pro ar.",
+      },
+    ],
+  },
+  {
     version: "4.55.1",
     items: [
       {

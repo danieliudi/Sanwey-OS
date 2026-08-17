@@ -17,14 +17,18 @@ function DiagnosisBox({ report, isAdmin, onApprove, onReject }) {
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
   if (!report.diagnosis) return null;
 
   const handleApprove = async () => {
     setBusy(true);
+    setError(null);
     try {
       await onApprove();
       if (report.pr_url) window.open(report.pr_url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setError(e?.message || "Não foi possível aprovar — tente novamente.");
     } finally {
       setBusy(false);
     }
@@ -32,10 +36,13 @@ function DiagnosisBox({ report, isAdmin, onApprove, onReject }) {
 
   const handleReject = async () => {
     setBusy(true);
+    setError(null);
     try {
       await onReject(rejectReason.trim());
       setShowReject(false);
       setRejectReason("");
+    } catch (e) {
+      setError(e?.message || "Não foi possível devolver — tente novamente.");
     } finally {
       setBusy(false);
     }
@@ -69,6 +76,11 @@ function DiagnosisBox({ report, isAdmin, onApprove, onReject }) {
       )}
       {isAdmin && report.stage === "correcao_proposta" && (
         <>
+          {error && (
+            <div className="mt-2.5 text-[11px] font-medium rounded-md px-2.5 py-1.5" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+              {error}
+            </div>
+          )}
           {!showReject ? (
             <div className="flex gap-2 mt-3">
               <button

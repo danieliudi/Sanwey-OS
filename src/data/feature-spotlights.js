@@ -115,6 +115,13 @@ export const FEATURE_SPOTLIGHTS = [
     version: "4.46.0",
   },
   {
+    id: "central-bugs",
+    route: "dashboard",
+    target: '[data-tour="sidebar-nav-central-bugs"]',
+    text: "Novo: encontrou algo que não devia acontecer? Clique aqui pra reportar um bug — qualquer pessoa pode.",
+    version: "4.56.0",
+  },
+  {
     id: "marketing-orcamento",
     route: "marketing-despesas",
     target: '[data-tour="despesas-abas"]',

@@ -10,6 +10,14 @@ const MODULOS = [
 // Formulário de report de bug — qualquer pessoa da plataforma pode abrir
 // (mockup aprovado 17/08/2026). Linguagem não-técnica de propósito: quem
 // reporta não precisa saber em qual tela/componente técnico o problema mora.
+//
+// Simplificação em relação ao mockup: lá o campo "Onde" se preenchia sozinho
+// quando o formulário abria de dentro da própria tela com o problema. Nesta
+// 1ª leva o único ponto de entrada é a página Central de Bugs (BugsView),
+// não um botão embutido em cada tela — então não existe "tela de origem" pra
+// detectar ainda, e "module" nasce sempre no 1º item da lista, editável pelo
+// usuário. Virar contextual (abrir o form de dentro de qualquer tela e já
+// vir com o módulo certo) fica pra quando/se esse atalho por tela for pedido.
 export function ReportBugModal({ open, onClose, onSubmit }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
