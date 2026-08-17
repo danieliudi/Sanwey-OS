@@ -161,8 +161,9 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     // do razão de protocolo, podendo reverter silenciosamente um número já
     // alterado por outra pessoa nesse meio tempo (achado da auditoria).
     if (!("requestNumber" in patch)) delete row.request_number;
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta entrega.");
     setDeliverables(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
   }, [canWrite, deliverables]);
 
@@ -211,11 +212,13 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
       at:          now,
     };
     const activities = [...(current?.activities || []), activity];
-    const { error: err } = await supabase
+    const { data, error: err } = await supabase
       .from(TABLE)
       .update({ stage, stage_changed_at: now, activities })
-      .eq("id", id);
+      .eq("id", id)
+      .select();
     if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta entrega.");
     setDeliverables(prev =>
       prev.map(d => d.id === id ? { ...d, stage, stageChangedAt: now, activities } : d)
     );
@@ -262,8 +265,9 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     const current = deliverables.find(d => d.id === id);
     if (!current) return;
     const starred = !current.starred;
-    const { error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id).select();
     if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta entrega.");
     setDeliverables(prev => prev.map(d => d.id === id ? { ...d, starred } : d));
   }, [canWrite, deliverables]);
 

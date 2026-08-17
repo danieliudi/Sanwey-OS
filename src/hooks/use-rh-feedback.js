@@ -109,8 +109,9 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     // onde updateColaborador/createPendingCycle estão disponíveis.
     if (data.desfecho !== undefined) patch.desfecho = data.desfecho || null;
     if (data.desfechoMeta !== undefined) patch.desfecho_meta = data.desfechoMeta || {};
-    const { error } = await supabase.from("rh_avaliacoes").update(patch).eq("id", avaliacaoId);
+    const { data: saved, error } = await supabase.from("rh_avaliacoes").update(patch).eq("id", avaliacaoId).select();
     if (error) throw new Error(error.message);
+    if (!saved || saved.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta avaliação.");
     setFeedbacks(prev => prev.map(f => f.id === avaliacaoId ? { ...f, ...patch } : f));
   }, [feedbacks]);
 
@@ -127,14 +128,16 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
   // não por aqui, já que fechar um ciclo exige preencher a nota do gestor.
   const changeFeedbackStage = useCallback(async (id, stage) => {
     const patch = { status: stage, status_changed_at: new Date().toISOString() };
-    const { error } = await supabase.from("rh_avaliacoes").update(patch).eq("id", id);
+    const { data, error } = await supabase.from("rh_avaliacoes").update(patch).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta avaliação.");
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, ...patch } : f));
   }, []);
 
   const updateFeedbackCustomFields = useCallback(async (id, customFields) => {
-    const { error } = await supabase.from("rh_avaliacoes").update({ custom_fields: customFields }).eq("id", id);
+    const { data, error } = await supabase.from("rh_avaliacoes").update({ custom_fields: customFields }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta avaliação.");
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, custom_fields: customFields } : f));
   }, []);
 
@@ -147,8 +150,9 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
   // Leads/Campanhas/Compras).
   const updateFeedbackEvaluators = useCallback(async (id, evaluatorIds) => {
     const evaluatorId = evaluatorIds[0] || null;
-    const { error } = await supabase.from("rh_avaliacoes").update({ evaluator_id: evaluatorId, evaluator_ids: evaluatorIds }).eq("id", id);
+    const { data, error } = await supabase.from("rh_avaliacoes").update({ evaluator_id: evaluatorId, evaluator_ids: evaluatorIds }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta avaliação.");
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, evaluator_id: evaluatorId, evaluator_ids: evaluatorIds } : f));
   }, []);
 
@@ -162,8 +166,9 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     const current = feedbacks.find(f => f.id === id);
     if (!current) return;
     const nextActivities = [...(Array.isArray(current.activities) ? current.activities : []), entry];
-    const { error } = await supabase.from("rh_avaliacoes").update({ activities: nextActivities }).eq("id", id);
+    const { data, error } = await supabase.from("rh_avaliacoes").update({ activities: nextActivities }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta avaliação.");
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, activities: nextActivities } : f));
   }, [feedbacks]);
 
@@ -172,8 +177,9 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     if (!current) return;
     const nextActivities = (Array.isArray(current.activities) ? current.activities : [])
       .map(a => (a.id === activityId ? { ...a, ...patch } : a));
-    const { error } = await supabase.from("rh_avaliacoes").update({ activities: nextActivities }).eq("id", id);
+    const { data, error } = await supabase.from("rh_avaliacoes").update({ activities: nextActivities }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta avaliação.");
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, activities: nextActivities } : f));
   }, [feedbacks]);
 

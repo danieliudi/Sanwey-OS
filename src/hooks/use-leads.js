@@ -282,12 +282,20 @@ export function useLeads({ userId, role, companies } = {}) {
     const dbPatch = patchToRow(patch);
     // Optimistic update
     setRemoteLeads(prev => prev.map(l => l.id === id ? { ...l, ...patch } : l));
-    const { error: err } = await supabase.from("leads").update(dbPatch).eq("id", id);
+    const { data, error: err } = await supabase.from("leads").update(dbPatch).eq("id", id).select();
     if (err) {
       setError(err);
       // Rollback by refetching
       fetchAll();
       throw err;
+    }
+    if (!data || data.length === 0) {
+      // RLS bloqueou a gravação (0 linhas afetadas) sem devolver erro —
+      // sem o .select() acima isso passava como sucesso silencioso.
+      const blocked = new Error("Não foi possível salvar — sem permissão pra editar este negócio.");
+      setError(blocked);
+      fetchAll();
+      throw blocked;
     }
   }, [setFallbackLeads, fetchAll]);
 

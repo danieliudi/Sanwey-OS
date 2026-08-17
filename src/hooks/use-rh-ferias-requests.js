@@ -48,14 +48,16 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
   // approvedBy/approvedAt são preenchidos só ao entrar em aprovado/recusado.
   const changeStatus = useCallback(async (id, status, extra = {}) => {
     const patch = { status, status_changed_at: new Date().toISOString(), ...extra };
-    const { error } = await supabase.from(TABLE).update(patch).eq("id", id);
+    const { data, error } = await supabase.from(TABLE).update(patch).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar este pedido de férias.");
     setRequests(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
   }, []);
 
   const updateCustomFields = useCallback(async (id, customFields) => {
-    const { error } = await supabase.from(TABLE).update({ custom_fields: customFields }).eq("id", id);
+    const { data, error } = await supabase.from(TABLE).update({ custom_fields: customFields }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar este pedido de férias.");
     setRequests(prev => prev.map(r => r.id === id ? { ...r, custom_fields: customFields } : r));
   }, []);
 
@@ -93,8 +95,9 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
     const current = requests.find(r => r.id === id);
     if (!current) return;
     const nextActivities = [...(Array.isArray(current.activities) ? current.activities : []), entry];
-    const { error } = await supabase.from(TABLE).update({ activities: nextActivities }).eq("id", id);
+    const { data, error } = await supabase.from(TABLE).update({ activities: nextActivities }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar este pedido de férias.");
     setRequests(prev => prev.map(r => r.id === id ? { ...r, activities: nextActivities } : r));
   }, [requests]);
 
@@ -103,8 +106,9 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
     if (!current) return;
     const nextActivities = (Array.isArray(current.activities) ? current.activities : [])
       .map(a => (a.id === activityId ? { ...a, ...patch } : a));
-    const { error } = await supabase.from(TABLE).update({ activities: nextActivities }).eq("id", id);
+    const { data, error } = await supabase.from(TABLE).update({ activities: nextActivities }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar este pedido de férias.");
     setRequests(prev => prev.map(r => r.id === id ? { ...r, activities: nextActivities } : r));
   }, [requests]);
 

@@ -1050,6 +1050,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       const sent = await sendRhEmail("ferias_aprovadas", req, colaborador, { APPROVED_BY: currentUser?.name || currentUser?.email || "" });
       if (!sent) alert(`Aprovação registrada, mas o e-mail de notificação não pôde ser enviado a ${colaborador?.fullName || "o colaborador"}.`);
       return true;
+    } catch (e) {
+      setBoardError(`Erro ao aprovar: ${e?.message || "tente novamente."}`);
+      return false;
     } finally {
       setBusyId(null);
     }
@@ -1104,6 +1107,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
     try {
       await changeStatus(req.id, stageKey);
       return true;
+    } catch (e) {
+      setBoardError(e?.message || "Não foi possível mover — tente novamente.");
+      return false;
     } finally {
       setBusyId(null);
     }

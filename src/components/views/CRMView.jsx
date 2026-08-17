@@ -558,7 +558,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       return;
     }
     setStageError(null);
-    onStageChange(leadId, targetStageId);
+    Promise.resolve(onStageChange(leadId, targetStageId)).catch((e) => {
+      setStageError(e?.message || "Não foi possível mover o negócio — tente novamente.");
+    });
   }, [scopedLeads, leads, stageFields, stages, pipelines, onStageChange, pipelineTransitions]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3) — mesma fonte

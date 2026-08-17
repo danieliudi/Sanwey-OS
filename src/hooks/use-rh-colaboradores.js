@@ -150,15 +150,17 @@ export function useRHColaboradores({ userId, enabled = true } = {}) {
       merged.desligamentoDate = new Date().toISOString().slice(0, 10);
     }
     const dbPatch = colaboradorToRow(merged, { updated_at: new Date().toISOString() });
-    const { error } = await supabase.from("rh_colaboradores").update(dbPatch).eq("id", id);
+    const { data, error } = await supabase.from("rh_colaboradores").update(dbPatch).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar este colaborador.");
     setColaboradores(prev => prev.map(c => c.id === id ? merged : c));
   }, [colaboradores]);
 
   const changeOnboardingStage = useCallback(async (id, stage) => {
     const patch = { onboarding_stage: stage, onboarding_stage_changed_at: new Date().toISOString() };
-    const { error } = await supabase.from("rh_colaboradores").update(patch).eq("id", id);
+    const { data, error } = await supabase.from("rh_colaboradores").update(patch).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar este colaborador.");
     setColaboradores(prev => prev.map(c => c.id === id ? { ...c, onboardingStage: stage, onboardingStageChangedAt: patch.onboarding_stage_changed_at } : c));
   }, []);
 

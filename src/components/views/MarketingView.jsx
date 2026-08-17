@@ -789,7 +789,12 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const handleStageChange = useCallback(async (campaignId, toStage) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     const prev = campaign ? { ...campaign } : null;
-    await changeStage(campaignId, toStage);
+    try {
+      await changeStage(campaignId, toStage);
+    } catch (e) {
+      setStageError(e?.message || `Não foi possível mover "${campaign?.name || "a campanha"}" — tente novamente.`);
+      return;
+    }
     if (campaign) {
       fireAutomations({ ...campaign, stage: toStage }, prev, "stage_change");
     }

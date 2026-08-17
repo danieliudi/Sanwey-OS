@@ -736,7 +736,12 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
       return false;
     }
     setStageError(null);
-    await changeStage(itemId, toStage);
+    try {
+      await changeStage(itemId, toStage);
+    } catch (e) {
+      setStageError(e?.message || `Não foi possível mover "${item.title}" — tente novamente.`);
+      return false;
+    }
     return true;
   }, [tasks, stageFields, changeStage]);
 

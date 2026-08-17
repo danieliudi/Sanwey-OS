@@ -828,7 +828,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     }
     setStageError(null);
     const prev = { ...item };
-    await changeStage(itemId, toStage);
+    try {
+      await changeStage(itemId, toStage);
+    } catch (e) {
+      setStageError(e?.message || `Não foi possível mover "${item.title}" — tente novamente.`);
+      return false;
+    }
     // Automações (ex.: "Encaminhado à Agência" → atribuir agência como
     // responsável) — fire-and-forget, mesmo padrão do handleStageChange de
     // Campanhas (MarketingView.jsx): não bloqueia a mudança de etapa já

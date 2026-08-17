@@ -1471,7 +1471,9 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
       return;
     }
     setMoveError(null);
-    changeFeedbackStage(id, stage);
+    changeFeedbackStage(id, stage).catch((e) => {
+      setMoveError(e?.message || "Não foi possível mover — tente novamente.");
+    });
     // Se veio do drawer aberto desse feedback: fecha agora (sinal visual de
     // que moveu) e reabre já na etapa nova, em vez de só trocar o conteúdo
     // por baixo do drawer aberto.

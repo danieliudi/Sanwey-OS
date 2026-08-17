@@ -1256,7 +1256,12 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
       return;
     }
     setMoveError(null);
-    await changeOnboardingStage(id, stage);
+    try {
+      await changeOnboardingStage(id, stage);
+    } catch (e) {
+      setMoveError(e?.message || `Não foi possível mover "${colaborador.fullName}" — tente novamente.`);
+      return;
+    }
     if (stage === "integracao") {
       await autoAssignTreinamentos(colaborador);
     }

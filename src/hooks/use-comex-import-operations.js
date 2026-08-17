@@ -132,8 +132,9 @@ export function useComexImportOperations({ userId, role, roles } = {}) {
     if (!current) return;
     const merged = { ...current, ...patch };
     const row = operationToRow(merged);
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta operação.");
     setOperations(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
   }, [canWrite, operations]);
 
@@ -172,11 +173,13 @@ export function useComexImportOperations({ userId, role, roles } = {}) {
       at:          now,
     };
     const activities = [...(current?.activities || []), activity];
-    const { error: err } = await supabase
+    const { data, error: err } = await supabase
       .from(TABLE)
       .update({ stage, stage_changed_at: now, activities })
-      .eq("id", id);
+      .eq("id", id)
+      .select();
     if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta operação.");
     setOperations(prev =>
       prev.map(o => o.id === id ? { ...o, stage, stageChangedAt: now, activities } : o)
     );
@@ -187,8 +190,9 @@ export function useComexImportOperations({ userId, role, roles } = {}) {
     const current = operations.find(o => o.id === id);
     if (!current) return;
     const starred = !current.starred;
-    const { error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id).select();
     if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta operação.");
     setOperations(prev => prev.map(o => o.id === id ? { ...o, starred } : o));
   }, [canWrite, operations]);
 

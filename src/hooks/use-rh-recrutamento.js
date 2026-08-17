@@ -118,8 +118,9 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
   }, [userId]);
 
   const updateVaga = useCallback(async (id, patch) => {
-    const { error } = await supabase.from("rh_vagas").update(patch).eq("id", id);
+    const { data, error } = await supabase.from("rh_vagas").update(patch).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta vaga.");
     setVagas(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
   }, []);
 
@@ -214,8 +215,9 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
   // (RHDetailDrawerShell) sem precisar de um método dedicado por coluna,
   // no mesmo espírito do updateVaga acima.
   const updateAplicacao = useCallback(async (id, patch) => {
-    const { error } = await supabase.from("rh_aplicacoes").update(patch).eq("id", id);
+    const { data, error } = await supabase.from("rh_aplicacoes").update(patch).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta candidatura.");
     setAplicacoes(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
   }, []);
 
@@ -224,8 +226,9 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
     // Não trava mais no id fixo "reprovado" — qualquer etapa customizada
     // marcada como "lost" no editor de etapas passa motivo do mesmo jeito.
     if (motivoReprovacao !== undefined) patch.motivo_reprovacao = motivoReprovacao || null;
-    const { error } = await supabase.from("rh_aplicacoes").update(patch).eq("id", aplicacaoId);
+    const { data, error } = await supabase.from("rh_aplicacoes").update(patch).eq("id", aplicacaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta candidatura.");
     setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, ...patch } : a));
   }, []);
 
@@ -238,21 +241,32 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
     const ids = [...new Set(aplicacaoIds)].filter(Boolean);
     if (!ids.length) return { movidos: 0, emails: 0, semEmail: 0, emailOk: false };
 
-    // 1) Move em lote pra etapa de reprovação (quando informada).
+    // 1) Move em lote pra etapa de reprovação (quando informada). movidasIds
+    // é a fonte da verdade pro resto da função — RLS pode bloquear parte do
+    // lote sem devolver erro, então nunca reusar `ids` (o pedido original)
+    // pra estado local, contagem de retorno ou envio de e-mail depois daqui.
+    let movidasIds = new Set(ids);
     if (lostStageKey) {
       const patch = { etapa_pipeline: lostStageKey, stage_changed_at: new Date().toISOString() };
       if (motivo !== undefined) patch.motivo_reprovacao = motivo || null;
-      const { error } = await supabase.from("rh_aplicacoes").update(patch).in("id", ids);
+      const { data: movidas, error } = await supabase.from("rh_aplicacoes").update(patch).in("id", ids).select("id");
       if (error) throw new Error(error.message);
-      setAplicacoes(prev => prev.map(a => ids.includes(a.id) ? { ...a, ...patch } : a));
+      movidasIds = new Set((movidas || []).map(r => r.id));
+      setAplicacoes(prev => prev.map(a => movidasIds.has(a.id) ? { ...a, ...patch } : a));
+      if (movidasIds.size < ids.length) {
+        console.warn(`[use-rh-recrutamento] reprovação em massa: ${ids.length - movidasIds.size} de ${ids.length} não tinham permissão de edição.`);
+      }
     }
+    const movidasList = [...movidasIds];
 
-    // 2) Coleta e-mails únicos dos candidatos selecionados (filtra sem e-mail)
-    // — usado só pra UI (contagem/aviso de "sem e-mail"); o BCC que de fato
-    // sai é re-derivado no servidor a partir de `aplicacaoIds` (ver abaixo).
+    // 2) Coleta e-mails únicos dos candidatos que REALMENTE foram movidos
+    // (filtra sem e-mail) — usado só pra UI (contagem/aviso de "sem
+    // e-mail"); o BCC que de fato sai é re-derivado no servidor a partir de
+    // `aplicacaoIds` (ver abaixo), então esse array também precisa ser só
+    // dos movidos — senão quem ficou bloqueado por RLS ainda recebe o
+    // e-mail de reprovação sem ter sido de fato reprovado.
     const emailById = new Map(candidatosPool.map(c => [c.id, c.email]));
-    const idSet = new Set(ids);
-    const selected = aplicacoes.filter(a => idSet.has(a.id));
+    const selected = aplicacoes.filter(a => movidasIds.has(a.id));
     const emails = [...new Set(selected.map(a => emailById.get(a.candidate_id)).filter(Boolean))];
     const semEmail = selected.filter(a => !emailById.get(a.candidate_id)).length;
 
@@ -269,7 +283,7 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
             type: "candidato_reprovado",
             to: "noreply@sanwey.com.br",
             bcc: emails,
-            aplicacaoIds: ids,
+            aplicacaoIds: movidasList,
             variables: { VAGA_TITLE: vagaTitle || "—" },
           },
         });
@@ -279,7 +293,7 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
         console.warn("[use-rh-recrutamento] reprovação em massa: e-mail falhou:", e);
       }
     }
-    return { movidos: ids.length, emails: emailOk ? emails.length : 0, semEmail, emailOk };
+    return { movidos: movidasIds.size, emails: emailOk ? emails.length : 0, semEmail, emailOk };
   }, [aplicacoes, candidatosPool]);
 
   // Avanço em massa (Onda 2, item 5): move N aplicações pra uma etapa qualquer
@@ -289,32 +303,39 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
     const ids = [...new Set(aplicacaoIds)].filter(Boolean);
     if (!ids.length || !stageKey) return { movidos: 0 };
     const patch = { etapa_pipeline: stageKey, stage_changed_at: new Date().toISOString() };
-    const { error } = await supabase.from("rh_aplicacoes").update(patch).in("id", ids);
+    const { data: movidas, error } = await supabase.from("rh_aplicacoes").update(patch).in("id", ids).select("id");
     if (error) throw new Error(error.message);
-    setAplicacoes(prev => prev.map(a => ids.includes(a.id) ? { ...a, ...patch } : a));
-    return { movidos: ids.length };
+    const movidasIds = new Set((movidas || []).map(r => r.id));
+    setAplicacoes(prev => prev.map(a => movidasIds.has(a.id) ? { ...a, ...patch } : a));
+    if (movidasIds.size < ids.length) {
+      console.warn(`[use-rh-recrutamento] avanço em massa: ${ids.length - movidasIds.size} de ${ids.length} não tinham permissão de edição.`);
+    }
+    return { movidos: movidasIds.size };
   }, []);
 
   // Marca a aplicação como contratada (usado após converter o candidato em
   // funcionário) — dá sinal durável de "já contratado" e trava a 2ª conversão.
   const markHired = useCallback(async (aplicacaoId) => {
     const when = new Date().toISOString();
-    const { error } = await supabase.from("rh_aplicacoes").update({ hired_at: when }).eq("id", aplicacaoId);
+    const { data, error } = await supabase.from("rh_aplicacoes").update({ hired_at: when }).eq("id", aplicacaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta candidatura.");
     setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, hired_at: when } : a));
   }, []);
 
   const addNote = useCallback(async (aplicacaoId, note) => {
     const current = aplicacoes.find(a => a.id === aplicacaoId);
     const notes = [...(current?.notes || []), note];
-    const { error } = await supabase.from("rh_aplicacoes").update({ notes }).eq("id", aplicacaoId);
+    const { data, error } = await supabase.from("rh_aplicacoes").update({ notes }).eq("id", aplicacaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta candidatura.");
     setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, notes } : a));
   }, [aplicacoes]);
 
   const changeRating = useCallback(async (aplicacaoId, rating) => {
-    const { error } = await supabase.from("rh_aplicacoes").update({ rating }).eq("id", aplicacaoId);
+    const { data, error } = await supabase.from("rh_aplicacoes").update({ rating }).eq("id", aplicacaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta candidatura.");
     setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, rating } : a));
   }, []);
 

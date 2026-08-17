@@ -1121,6 +1121,9 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
     try {
       await changeStage(op.id, stageKey);
       return true;
+    } catch (e) {
+      setBoardError(e?.message || "Não foi possível mover — tente novamente.");
+      return false;
     } finally {
       setBusyId(null);
     }

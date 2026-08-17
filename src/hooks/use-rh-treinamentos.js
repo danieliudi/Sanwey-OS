@@ -73,8 +73,9 @@ export function useRHTreinamentos({ userId } = {}) {
       // 20260729, mas o guarda continua valendo p/ qualquer rejeição futura).
       const persistidos = [];
       for (const a of paraVencer) {
-        const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ status: "vencido", status_changed_at: now }).eq("id", a.id);
+        const { data: savedRows, error } = await supabase.from("rh_treinamento_atribuicoes").update({ status: "vencido", status_changed_at: now }).eq("id", a.id).select();
         if (error) { console.warn("Falha ao marcar treinamento como vencido:", a.id, error.message); continue; }
+        if (!savedRows || savedRows.length === 0) { console.warn("Falha ao marcar treinamento como vencido (sem permissão):", a.id); continue; }
         persistidos.push(a.id);
       }
       if (persistidos.length > 0) {
@@ -114,8 +115,9 @@ export function useRHTreinamentos({ userId } = {}) {
     // board (a reciclagem intencional, que emite novo comprovante, é o
     // reciclarAtribuicao abaixo).
     if (stage === "pendente") { patch.data_conclusao = null; }
-    const { error } = await supabase.from("rh_treinamento_atribuicoes").update(patch).eq("id", atribuicaoId);
+    const { data, error } = await supabase.from("rh_treinamento_atribuicoes").update(patch).eq("id", atribuicaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta atribuição.");
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, ...patch } : a));
   }, []);
 
@@ -140,21 +142,24 @@ export function useRHTreinamentos({ userId } = {}) {
     };
     const nextActivities = [...(Array.isArray(current?.activities) ? current.activities : []), entry];
     const patch = { status: "pendente", data_conclusao: null, certificado_url: null, status_changed_at: now, activities: nextActivities };
-    const { error } = await supabase.from("rh_treinamento_atribuicoes").update(patch).eq("id", atribuicaoId);
+    const { data, error } = await supabase.from("rh_treinamento_atribuicoes").update(patch).eq("id", atribuicaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta atribuição.");
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, ...patch } : a));
   }, [atribuicoes, userId]);
 
   const updateAtribuicaoCertificado = useCallback(async (atribuicaoId, url) => {
     const value = url?.trim() || null;
-    const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ certificado_url: value }).eq("id", atribuicaoId);
+    const { data, error } = await supabase.from("rh_treinamento_atribuicoes").update({ certificado_url: value }).eq("id", atribuicaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta atribuição.");
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, certificado_url: value } : a));
   }, []);
 
   const updateAtribuicaoCustomFields = useCallback(async (atribuicaoId, customFields) => {
-    const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ custom_fields: customFields }).eq("id", atribuicaoId);
+    const { data, error } = await supabase.from("rh_treinamento_atribuicoes").update({ custom_fields: customFields }).eq("id", atribuicaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta atribuição.");
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, custom_fields: customFields } : a));
   }, []);
 
@@ -162,8 +167,9 @@ export function useRHTreinamentos({ userId } = {}) {
     const current = atribuicoes.find(a => a.id === atribuicaoId);
     if (!current) return;
     const nextActivities = [...(Array.isArray(current.activities) ? current.activities : []), entry];
-    const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ activities: nextActivities }).eq("id", atribuicaoId);
+    const { data, error } = await supabase.from("rh_treinamento_atribuicoes").update({ activities: nextActivities }).eq("id", atribuicaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta atribuição.");
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, activities: nextActivities } : a));
   }, [atribuicoes]);
 
@@ -172,8 +178,9 @@ export function useRHTreinamentos({ userId } = {}) {
     if (!current) return;
     const nextActivities = (Array.isArray(current.activities) ? current.activities : [])
       .map(a => (a.id === activityId ? { ...a, ...patch } : a));
-    const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ activities: nextActivities }).eq("id", atribuicaoId);
+    const { data, error } = await supabase.from("rh_treinamento_atribuicoes").update({ activities: nextActivities }).eq("id", atribuicaoId).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta atribuição.");
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, activities: nextActivities } : a));
   }, [atribuicoes]);
 
@@ -184,8 +191,9 @@ export function useRHTreinamentos({ userId } = {}) {
   }, []);
 
   const updateTreinamento = useCallback(async (id, patch) => {
-    const { error } = await supabase.from("rh_treinamentos").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
+    const { data, error } = await supabase.from("rh_treinamentos").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar este treinamento.");
     setTreinamentos(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
   }, []);
 

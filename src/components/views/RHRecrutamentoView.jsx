@@ -1777,7 +1777,7 @@ function CandidatoDrawer({
   // botão quanto no drag-and-drop (ver handleCandDrop na view principal).
   // Antes usava alert() nativo — bloqueante, e trava sessões automatizadas/
   // headless sem handler de diálogo. Banner inline não bloqueia nada.
-  const requestStageChange = (stageKey) => {
+  const requestStageChange = async (stageKey) => {
     const missing = getMissingRequiredFields(customFields, candidato.customFields || {});
     if (missing.length > 0) {
       setMoveError(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
@@ -1791,9 +1791,18 @@ function CandidatoDrawer({
     setMoveError(null);
     const target = stages.find((s) => s.stageKey === stageKey);
     if (target?.lost) { setPendingLostStage(stageKey); setReprovando(true); return; }
-    onStageChange(candidato.id, stageKey);
+    setSavingStage(true);
+    try {
+      await onStageChange(candidato.id, stageKey);
+    } catch (e) {
+      setMoveError(e?.message || `Não foi possível mover "${candidato.name}" — tente novamente.`);
+      return;
+    } finally {
+      setSavingStage(false);
+    }
     // Fecha o drawer agora (sinal visual de que moveu) e reabre já na etapa
     // nova — em vez de só trocar o conteúdo por baixo do drawer aberto.
+    // Só chega aqui se onStageChange não lançou (write realmente persistiu).
     if (onStageMoved) { onClose(); onStageMoved(candidato.id); }
   };
 
@@ -1806,6 +1815,8 @@ function CandidatoDrawer({
       setMotivoReprovacao("");
       setPendingLostStage(null);
       if (onStageMoved) { onClose(); onStageMoved(candidato.id); }
+    } catch (e) {
+      setMoveError(e?.message || `Não foi possível reprovar "${candidato.name}" — tente novamente.`);
     } finally {
       setSavingStage(false);
     }
@@ -2924,7 +2935,9 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
       return false;
     }
     setVagaMoveError(null);
-    changeVagaStage(id, newStage);
+    changeVagaStage(id, newStage).catch((e) => {
+      setVagaMoveError(e?.message || `Não foi possível mover "${vaga.title}" — tente novamente.`);
+    });
     return true;
   };
   const handleVagaStageChange = (id, newStage) => {
@@ -2996,7 +3009,9 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
       setPendingReprovacaoDrop({ aplicacaoId: id, stageKey: newStage, stageName: targetStage.name });
       return;
     }
-    changeStage(id, newStage);
+    changeStage(id, newStage).catch((e) => {
+      setCandMoveError(e?.message || `Não foi possível mover "${candidato.name}" — tente novamente.`);
+    });
   };
   // Bulk "Mover para…" com a MESMA validação do movimento individual
   // (attemptCandStageChange acima): quem tem campo obrigatório vazio ou
@@ -3036,7 +3051,12 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   };
   const confirmReprovacaoDrop = async (motivo) => {
     if (!pendingReprovacaoDrop) return;
-    await changeStage(pendingReprovacaoDrop.aplicacaoId, pendingReprovacaoDrop.stageKey, motivo);
+    try {
+      await changeStage(pendingReprovacaoDrop.aplicacaoId, pendingReprovacaoDrop.stageKey, motivo);
+    } catch (e) {
+      setCandMoveError(e?.message || "Não foi possível reprovar — tente novamente.");
+      return;
+    }
     setPendingReprovacaoDrop(null);
   };
 

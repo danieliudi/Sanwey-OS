@@ -136,8 +136,9 @@ export function useMarketingTasks({ userId, role, roles, campaignId } = {}) {
     if (!current) return;
     const merged = { ...current, ...patch };
     const row = taskToRow(merged);
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta tarefa.");
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
   }, [canWrite, tasks]);
 
@@ -177,11 +178,13 @@ export function useMarketingTasks({ userId, role, roles, campaignId } = {}) {
       at:          now,
     };
     const activities = [...(current?.activities || []), activity];
-    const { error: err } = await supabase
+    const { data, error: err } = await supabase
       .from(TABLE)
       .update({ stage, stage_changed_at: now, activities })
-      .eq("id", id);
+      .eq("id", id)
+      .select();
     if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta tarefa.");
     setTasks(prev =>
       prev.map(t => t.id === id ? { ...t, stage, stageChangedAt: now, activities } : t)
     );
@@ -192,8 +195,9 @@ export function useMarketingTasks({ userId, role, roles, campaignId } = {}) {
     const current = tasks.find(t => t.id === id);
     if (!current) return;
     const starred = !current.starred;
-    const { error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id).select();
     if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta tarefa.");
     setTasks(prev => prev.map(t => t.id === id ? { ...t, starred } : t));
   }, [canWrite, tasks]);
 

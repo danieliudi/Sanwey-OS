@@ -24,6 +24,20 @@
 
 export const CHANGELOG = [
   {
+    version: "4.55.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Campanhas: comentário digitado pela Agência não estava sendo salvo — a caixa de comentário aparecia ativa mas a permissão de escrita não cobre esse papel no card de Campanha. Agora a caixa fica corretamente desabilitada, em vez de fingir que aceitou o comentário.",
+        roles: ["agencia", "marketing", "gerente_marketing"],
+      },
+      {
+        kind: "correcao",
+        text: "Correção de fundo em vários quadros (Funil de Vendas, RH, Comex, Compras, Marketing): uma edição sem permissão podia ser tratada como salva mesmo sem ter gravado nada no banco. Agora qualquer edição bloqueada mostra um erro claro, em vez de aparentar sucesso.",
+      },
+    ],
+  },
+  {
     version: "4.55.0",
     items: [
       {

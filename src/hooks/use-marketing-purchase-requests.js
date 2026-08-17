@@ -186,11 +186,17 @@ export function useMarketingPurchaseRequests({ enabled = true } = {}) {
     }
     const row = purchaseToRow(effectivePatch);
     setPurchases(prev => prev.map(p => p.id === id ? { ...p, ...effectivePatch } : p));
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) {
       setError(err.message || String(err));
       fetchAll();
       throw err;
+    }
+    if (!data || data.length === 0) {
+      const blocked = "Não foi possível salvar — sem permissão pra editar esta solicitação.";
+      setError(blocked);
+      fetchAll();
+      throw new Error(blocked);
     }
   }, [fetchAll]);
 
