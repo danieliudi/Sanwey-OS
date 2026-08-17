@@ -24,6 +24,44 @@
 
 export const CHANGELOG = [
   {
+    version: "4.57.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Menu lateral agora sinaliza com um ícone de frasco as páginas que estão em teste — só quem já enxerga essas páginas (admin ou testador marcado) vê o sinal, ninguém mais.",
+        roles: ["admin"],
+      },
+    ],
+  },
+  {
+    version: "4.56.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "Modais com formulário mais longo (ex.: Novo produto do Catálogo) podiam cortar o fim do conteúdo em vez de rolar — corrigido no componente compartilhado, então vale pra qualquer modal da plataforma que passe por isso.",
+      },
+    ],
+  },
+  {
+    version: "4.56.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Time de Agentes: aprovar uma sugestão de Sinal de Mercado, Prospecção ou Sourcing interno podia travar com um erro — a sugestão ficava marcada como aprovada, mas o sinal/prospect nunca era publicado de verdade. Corrigido; as aprovações que já tinham ficado nesse limbo foram republicadas.",
+        roles: ["admin", "gerente"],
+      },
+    ],
+  },
+  {
+    version: "4.56.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Chegou a Central de Bugs: encontrou algo que não devia acontecer? Reporte pelo item \"Central de Bugs\" no menu — qualquer pessoa pode. Quem administra acompanha em um Kanban (Reportado → Em Análise → Correção Proposta → Corrigido) e aprova ou devolve cada correção proposta antes de ir pro ar.",
+      },
+    ],
+  },
+  {
     version: "4.55.1",
     items: [
       {

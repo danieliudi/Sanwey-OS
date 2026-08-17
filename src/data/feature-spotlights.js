@@ -115,6 +115,13 @@ export const FEATURE_SPOTLIGHTS = [
     version: "4.46.0",
   },
   {
+    id: "central-bugs",
+    route: "dashboard",
+    target: '[data-tour="sidebar-nav-central-bugs"]',
+    text: "Novo: encontrou algo que não devia acontecer? Clique aqui pra reportar um bug — qualquer pessoa pode.",
+    version: "4.56.0",
+  },
+  {
     id: "marketing-orcamento",
     route: "marketing-despesas",
     target: '[data-tour="despesas-abas"]',
@@ -150,6 +157,16 @@ export const FEATURE_SPOTLIGHTS = [
   // assim não há garantia de que "Gestão" seja a rota visitada primeiro no
   // sentido do mecanismo (que dispara ao entrar na ROTA, não na aba). Coberto
   // pelo changelog.
+  //
+  // 4.57.0 — ícone de "página em teste" no menu lateral: DECIDIDO PULAR o
+  // spotlight. Dois motivos, não só um: (1) é admin-only por natureza (o
+  // ícone só existe pra quem já vê itens em `moduleStates === "test"` —
+  // hoje só admin/testador marcado), não é uma feature que a base geral de
+  // usuários precise ser avisada; (2) o alvo é condicional a QUAL item está
+  // em teste num dado momento — pode não haver nenhum (mecanismo ancora num
+  // elemento fixo por rota, não serve bem pra "o item X, quando X varia").
+  // Coberto pelo changelog 4.57.0 (com `roles: ["admin"]`, já restrito a
+  // quem o ícone realmente afeta).
 ];
 
 export default FEATURE_SPOTLIGHTS;

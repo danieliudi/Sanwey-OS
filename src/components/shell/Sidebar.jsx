@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { LogOut, ChevronDown, ChevronLeft, GripVertical } from "lucide-react";
+import { LogOut, ChevronDown, ChevronLeft, GripVertical, FlaskConical } from "lucide-react";
+import { isModuleInTest } from "../../utils/module-access";
 import { COMPANIES } from "../../constants/companies";
 
 const STORAGE_KEY = "sidebar_collapsed_groups";
@@ -100,7 +101,7 @@ const ROLE_LABEL = {
   gerente_rh:        "Gerente de RH",
 };
 
-export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAdmin = false, onLogout, mobileOpen, onMobileClose, onNewLead, forceExpanded = false }) {
+export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAdmin = false, onLogout, mobileOpen, onMobileClose, onNewLead, forceExpanded = false, moduleStates = {} }) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(loadCollapsed);
   const [order, setOrder] = useState(loadOrder);
@@ -393,6 +394,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
                     icon={item.icon}
                     label={item.label}
                     badge={item.badge}
+                    inTest={isModuleInTest(item.id, moduleStates)}
                     active={section === item.id}
                     onClick={() => handleNavClick(item.id)}
                     rail={rail}
@@ -506,7 +508,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
 // ponto da linha (inclusive no próprio ícone) continua navegando na hora,
 // sem nenhum gesto/atraso extra atrapalhando. Modo trilho (só ícones) é
 // exceção: sem espaço pra alça separada, o ícone em si volta a ser a alça.
-function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
+function NavItem({ id, icon: Icon, label, badge, inTest, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
   const [hovered, setHovered] = useState(false);
   // Âncora do tooltip em coordenadas de viewport. O balão era absolute
   // (left:100%) dentro do <nav>, mas o nav tem overflowX:hidden pro scroll
@@ -599,9 +601,28 @@ function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOv
               }}
             />
           )}
+          {/* Página em teste (mockup aprovado 17/08/2026): mesmo ponto do
+              badge acima, só que no canto oposto e cor âmbar — só existe
+              pra quem já vê o item (admin/testador, filtro já resolvido
+              antes de chegar em navGroups), então não vaza acesso novo. */}
+          {rail && inTest && (
+            <span
+              title="Em teste — só você vê assim"
+              style={{
+                position: "absolute", top: -3, left: -3,
+                width: 7, height: 7, borderRadius: "50%",
+                background: "var(--warning)", border: "1.5px solid var(--surface-alt)",
+              }}
+            />
+          )}
         </span>
       )}
       {!rail && <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
+      {!rail && inTest && (
+        <span title="Em teste — só você vê assim" style={{ flexShrink: 0, display: "flex", color: "var(--warning)", opacity: 0.9 }}>
+          <FlaskConical size={13} strokeWidth={2.2} />
+        </span>
+      )}
       {!rail && badge != null && (
         <span
           style={{

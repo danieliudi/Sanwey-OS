@@ -49,7 +49,13 @@ export function Modal({ open, onClose, title, children, width = 560 }) {
             <X size={18} />
           </button>
         </div>
-        <div className="overflow-y-auto">{children}</div>
+        {/* flex-1 + min-h-0: sem min-h-0, um item de flex-column por padrão
+            não encolhe abaixo da altura do próprio conteúdo (min-height:auto
+            do flexbox) — em modal com conteúdo alto (ex.: "Novo produto" do
+            Catálogo, 2 abas + campos), isso empurrava a caixa além dos
+            max-h-[90vh] do pai, que tem overflow-hidden: o fim do formulário
+            (botões Cancelar/Salvar) ficava cortado em vez de rolar. */}
+        <div className="overflow-y-auto flex-1 min-h-0">{children}</div>
       </div>
     </div>,
     document.body
