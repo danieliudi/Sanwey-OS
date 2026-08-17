@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.57.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Menu lateral agora sinaliza com um ícone de frasco as páginas que estão em teste — só quem já enxerga essas páginas (admin ou testador marcado) vê o sinal, ninguém mais.",
+        roles: ["admin"],
+      },
+    ],
+  },
+  {
     version: "4.56.2",
     items: [
       {

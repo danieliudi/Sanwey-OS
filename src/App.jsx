@@ -1802,6 +1802,7 @@ export default function App() {
         onMobileClose={() => setSidebarMobileOpen(false)}
         onNewLead={() => { setSection("crm"); navigate(ROUTES.crm); setCrmAutoCreate(true); }}
         forceExpanded={onboardingTour.active}
+        moduleStates={moduleStates}
       />
 
       <div className="flex flex-col min-w-0 app-content-shell" style={{ minHeight: "100vh", overflowX: "clip" }}>
