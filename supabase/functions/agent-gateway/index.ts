@@ -133,8 +133,13 @@ async function notifyVagaResponsibleIfApproved(admin: any, action: any) {
     created_by: null,
   }));
 
-  await admin.from('notifications').insert(rows).catch(() => {});
   // fire-and-forget: falha ao notificar não desfaz a aprovação já gravada.
+  // O builder do supabase-js só é "thenable" (não implementa .catch próprio)
+  // até virar uma Promise de verdade via await — por isso try/catch aqui,
+  // não `.insert(...).catch(...)` (jogava "...catch is not a function").
+  try {
+    await admin.from('notifications').insert(rows);
+  } catch (_e) { /* ignorado de propósito */ }
 }
 
 // Sinais de Mercado / Prospecção (Explorador) — a pesquisa real (Rotina
@@ -149,15 +154,17 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
   if (action.action_type === 'sugestao_sinal_mercado') {
     const companyId = action.company_id || payload.company_id;
     if (!companyId || !payload.title || !payload.excerpt || !payload.source) return;
-    await admin.from('market_signals').insert({
-      company_id: companyId,
-      source: payload.source,
-      title: payload.title,
-      excerpt: payload.excerpt,
-      url: payload.url || null,
-      urgency: payload.urgency || 'medio',
-      created_by: 'agente_pesquisa_mercado',
-    }).catch(() => {});
+    try {
+      await admin.from('market_signals').insert({
+        company_id: companyId,
+        source: payload.source,
+        title: payload.title,
+        excerpt: payload.excerpt,
+        url: payload.url || null,
+        urgency: payload.urgency || 'medio',
+        created_by: 'agente_pesquisa_mercado',
+      });
+    } catch (_e) { /* ignorado de propósito */ }
     return;
   }
 
@@ -170,19 +177,21 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
     // agente devolve nos dois formatos. Misturar quebraria silenciosamente a
     // dedup por CNPJ na hora de converter semente em cliente (achado 13/08/2026).
     const cnpjDigits = String(payload.cnpj ?? '').replace(/\D/g, '');
-    await admin.from('prospect_seeds').insert({
-      cnpj: cnpjDigits || null,
-      company: payload.company,
-      razao_social: payload.razao_social || payload.company,
-      sector: payload.sector,
-      state: payload.state,
-      city: payload.city || null,
-      size: payload.size || 'Mid-Market',
-      relevant_for: relevantFor,
-      evidence: payload.evidence || null,
-      source: 'agente_pesquisa_mercado',
-      fit_score: payload.fit_score ?? 65,
-    }).catch(() => {});
+    try {
+      await admin.from('prospect_seeds').insert({
+        cnpj: cnpjDigits || null,
+        company: payload.company,
+        razao_social: payload.razao_social || payload.company,
+        sector: payload.sector,
+        state: payload.state,
+        city: payload.city || null,
+        size: payload.size || 'Mid-Market',
+        relevant_for: relevantFor,
+        evidence: payload.evidence || null,
+        source: 'agente_pesquisa_mercado',
+        fit_score: payload.fit_score ?? 65,
+      });
+    } catch (_e) { /* ignorado de propósito */ }
   }
 }
 

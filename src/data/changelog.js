@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.56.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Time de Agentes: aprovar uma sugestão de Sinal de Mercado, Prospecção ou Sourcing interno podia travar com um erro — a sugestão ficava marcada como aprovada, mas o sinal/prospect nunca era publicado de verdade. Corrigido; as aprovações que já tinham ficado nesse limbo foram republicadas.",
+        roles: ["admin", "gerente"],
+      },
+    ],
+  },
+  {
     version: "4.56.0",
     items: [
       {
