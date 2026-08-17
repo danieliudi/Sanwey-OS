@@ -1813,6 +1813,7 @@ export function CampaignDetailDrawer({
         mentionableUsers={mentionableUsers}
         onAddComment={onAddComment}
         onUpdateComment={onUpdateComment}
+        disabled={!canWrite}
       />
 
       {/* AI move link */}
