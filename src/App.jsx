@@ -7,7 +7,7 @@ import {
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
-  FlaskConical, PackageSearch, ClipboardList,
+  FlaskConical, PackageSearch, ClipboardList, Bug,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -103,6 +103,7 @@ import { RHOnboardingView } from "./components/views/RHOnboardingView";
 import { RHTreinamentosView } from "./components/views/RHTreinamentosView";
 import { RHFeedbackView } from "./components/views/RHFeedbackView";
 import { RHFeriasView } from "./components/views/RHFeriasView";
+import { BugsView } from "./components/views/BugsView";
 import { RHCargosView } from "./components/views/RHCargosView";
 import { RHComunicacaoView } from "./components/views/RHComunicacaoView";
 import { RHBemEstarView } from "./components/views/RHBemEstarView";
@@ -1583,6 +1584,11 @@ export default function App() {
       label: null,
       items: [
         { id: "tutorials", label: "Ajuda & Tutoriais", icon: LifeBuoy },
+        // Central de Bugs (mockup aprovado 17/08/2026): reportar é aberto a
+        // todo mundo, por isso o item de menu não tem gate de cargo — só a
+        // tela de triagem completa (board) é isAdmin-only, decidido dentro
+        // de BugsView.jsx.
+        { id: "central-bugs", label: "Central de Bugs", icon: Bug },
       ],
     });
 
@@ -2100,6 +2106,9 @@ export default function App() {
                   onUpdateLead={updateLead}
                 />
               )
+          } />
+          <Route path={ROUTES["central-bugs"]} element={
+            <BugsView currentUser={currentUser} isAdmin={isAdmin} />
           } />
           <Route path={ROUTES.agents} element={
             (isManager || isRHManager)

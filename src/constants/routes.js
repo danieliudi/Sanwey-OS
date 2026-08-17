@@ -33,6 +33,7 @@ export const ROUTES = {
   users:             "/usuarios",
   settings:          "/configuracoes",
   tutorials:         "/ajuda",
+  "central-bugs":    "/central-bugs",
   marketing:                  "/marketing",
   "marketing-home":           "/marketing/inicio",
   "marketing-entregas":       "/marketing/entregas",
