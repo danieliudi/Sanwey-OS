@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.56.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "Modais com formulário mais longo (ex.: Novo produto do Catálogo) podiam cortar o fim do conteúdo em vez de rolar — corrigido no componente compartilhado, então vale pra qualquer modal da plataforma que passe por isso.",
+      },
+    ],
+  },
+  {
     version: "4.56.1",
     items: [
       {
