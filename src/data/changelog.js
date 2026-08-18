@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.58.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "O aviso guiado que aponta pra um item novo do menu podia escurecer a tela inteira sem mostrar nada, quando esse item estava fora da área visível do menu (precisando rolar) — corrigido pra rolar até o item antes de destacá-lo.",
+      },
+    ],
+  },
+  {
     version: "4.58.0",
     items: [
       {

@@ -43,6 +43,13 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
       const el = document.querySelector(spotlight.target);
       if (!el) { setRect(null); return; }
       const r = el.getBoundingClientRect();
+      // Rede de segurança além do scrollIntoView em attach(): se o alvo
+      // continuar fora da viewport por qualquer motivo (contêiner que não
+      // rola, aba escondida), não escurece a tela inteira sem um recorte
+      // visível pra explicar — melhor não mostrar nada do que parecer que a
+      // página travou atrás de algo.
+      const onScreen = r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+      if (!onScreen) { setRect(null); return; }
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom });
     };
 
@@ -52,6 +59,15 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
       if (disposed) return;
       if (orphanTimer) { clearTimeout(orphanTimer); orphanTimer = null; }
       attachedTarget = target;
+      // O alvo pode existir no DOM mas estar rolado pra fora da área visível
+      // do próprio contêiner (ex.: item baixo na lista da Sidebar, que rola
+      // por dentro) — getBoundingClientRect() ainda devolve uma posição
+      // "real", só que fora da viewport. Sem isso, o recorte do spotlight
+      // nascia fora da tela enquanto o box-shadow gigante continuava
+      // escurecendo a tela inteira (achado real do Daniel, 18/08/2026) —
+      // parecia a página inteira "travada" atrás de algo, sem nenhum
+      // recorte visível pra explicar.
+      target.scrollIntoView({ block: "nearest", behavior: "auto" });
       recalc();
       target.addEventListener("click", handleTargetClick);
       ro = new ResizeObserver(recalc);
