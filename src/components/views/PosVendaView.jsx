@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X, AlertCircle, ExternalLink, Settings, LayoutGrid, TrendingUp, List, CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { exportPosVendaCasesToCSV } from "../../utils/export-csv";
@@ -30,6 +30,8 @@ import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDr
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { usePosvenda } from "../../hooks/use-posvenda";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { formatK } from "../../utils/currency";
@@ -990,6 +992,16 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   // novo e mudança de etapa apareçam no drawer sem precisar reabrir.
   const selectedCase = selectedCaseId ? cases.find(c => c.id === selectedCaseId) : null;
 
+  // Badge de "não lido" — kase.notes guarda entradas no formato de activity
+  // do RH (createdBy/type/createdAt, ver RHDetailDrawerShell), por isso usa
+  // hasUnreadRHComment em vez de hasUnreadNotesComment (que espera authorId).
+  const { viewedAt: caseViewedAt, markViewed: markCaseViewed } = useRecordViews("posvenda_cases", user?.id);
+  const getCaseUnread = useCallback(
+    (kase) => hasUnreadRHComment({ id: kase.id, activities: kase.notes }, caseViewedAt, user?.id),
+    [caseViewedAt, user?.id]
+  );
+  useEffect(() => { if (selectedCaseId) markCaseViewed(selectedCaseId); }, [selectedCaseId]);
+
   const handleAddActivity = useCallback(async (entry) => {
     const current = cases.find(c => c.id === selectedCaseId);
     if (!current) return;
@@ -1143,6 +1155,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
               deleteLabel="Excluir caso"
               deleteConfirmMessage="Excluir este caso de pós-venda? Não pode ser desfeito."
               agingDays={daysInStage(caseAgeRef(kase))}
+              unread={getCaseUnread(kase)}
               showMoveOptions
             >
               <PosVendaCardBody kase={kase} owners={resolveOwners(kase.ownerIds)} sourceLead={leadsById.get(kase.leadId)} onOpenLead={onOpenLead} />
@@ -1264,6 +1277,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                             deleteLabel="Excluir caso"
                             deleteConfirmMessage="Excluir este caso de pós-venda? Não pode ser desfeito."
                             agingDays={daysInStage(caseAgeRef(kase))}
+                            unread={getCaseUnread(kase)}
                             showMoveOptions={false}
                           >
                             <PosVendaCardBody kase={kase} owners={resolveOwners(kase.ownerIds)} sourceLead={leadsById.get(kase.leadId)} onOpenLead={onOpenLead} />

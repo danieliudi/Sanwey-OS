@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.60.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Tarefas de Marketing ganhou o botão \"Exportar CSV\", igual aos outros 16 boards que já têm.",
+        roles: ["admin", "gerente_marketing", "marketing"],
+      },
+      {
+        kind: "ajuste",
+        text: "Pós-venda agora mostra o indicador de comentário não lido no card, igual aos outros boards com comentários.",
+        roles: ["admin", "gerente", "vendedor", "suporte"],
+      },
+    ],
+  },
+  {
     version: "4.59.3",
     items: [
       {

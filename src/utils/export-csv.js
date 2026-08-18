@@ -320,4 +320,21 @@ export function exportDeliverablesToCSV(deliverables, { stages, filename } = {})
   triggerDownload(filename || `sanwey-entregas-${today}.csv`, csv);
 }
 
+export function exportMarketingTasksToCSV(tasks, { stages, usersById, campaignsById, priorityLabels, filename } = {}) {
+  const header = ["Título", "Campanha", "Responsáveis", "Prioridade", "Prazo", "Etapa", "Empresas", "Criado em"];
+  const rows = (tasks || []).map(t => [
+    t.title || "",
+    (t.campaignId && campaignsById?.get(t.campaignId)?.name) || "",
+    (t.assigneeIds || []).map(id => usersById?.get(id)?.name).filter(Boolean).join(", "),
+    priorityLabels?.find(p => p.id === t.priority)?.label || t.priority || "",
+    formatDate(t.deadline),
+    (stages || []).find(s => s.id === t.stage)?.name || t.stage || "",
+    (t.companyIds || []).map(id => COMPANIES[id]?.short || id).join(", "),
+    formatDate(t.createdAt),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-tarefas-marketing-${today}.csv`, csv);
+}
+
 export default exportLeadsToCSV;
