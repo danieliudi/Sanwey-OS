@@ -246,12 +246,13 @@ export function useMarketingPurchaseRequests({ enabled = true } = {}) {
 
   // Aprovação/rejeição passam pela RPC (gate de gerente_marketing/admin
   // aplicado no servidor, ver approve_purchase_request/reject_purchase_request).
-  const approvePurchase = useCallback(async (id, responsibleId, supplierId) => {
+  const approvePurchase = useCallback(async (id, responsibleId, supplierId, totalValue) => {
     if (!isSupabaseConfigured) return;
     const { data, error: err } = await supabase.rpc("approve_purchase_request", {
       p_id: id,
       p_responsible_id: responsibleId || null,
       p_supplier_id: supplierId || null,
+      p_total_value: totalValue ?? null,
     });
     if (err) throw err;
     const row = rowToPurchase(data);

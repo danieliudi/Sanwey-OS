@@ -84,7 +84,7 @@ function ExpenseItemRow({ row, onChange, onRemove }) {
           value={row.description}
           onChange={e => onChange({ description: e.target.value })}
           className="flex-1 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
-          style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+          style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
           onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
           onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
         />
@@ -108,7 +108,7 @@ function ExpenseItemRow({ row, onChange, onRemove }) {
           value={row.quantity}
           onChange={e => onChange({ quantity: e.target.value })}
           className="text-xs rounded-lg border px-2 py-1.5 outline-none"
-          style={{ width: 56, borderColor: "var(--border-strong)", color: "var(--text)" }}
+          style={{ width: 56, borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
           onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
           onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
         />
@@ -119,7 +119,7 @@ function ExpenseItemRow({ row, onChange, onRemove }) {
             value={row.unitValue}
             onChange={v => onChange({ unitValue: v })}
             className="w-full text-xs rounded-lg border px-2.5 py-1.5 outline-none"
-            style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
             onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
             onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
           />
@@ -354,7 +354,7 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
             value={form.description}
             onChange={e => set("description", e.target.value)}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-            style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
             onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
             onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
           />
@@ -407,7 +407,7 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
               value={form.category}
               onChange={e => set("category", e.target.value)}
               className="flex-1 text-sm rounded-xl border outline-none px-3 py-2"
-              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
             >
               {/* MANUAL_ (não EXPENSE_CATEGORIES): "Compra de Marketing" é
                   categoria de sistema, criada pelo trigger a partir do board de
@@ -425,7 +425,7 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
               value={form.status}
               onChange={e => set("status", e.target.value)}
               className="flex-1 text-sm rounded-xl border outline-none px-3 py-2"
-              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
             >
               <option value="pendente">Pendente</option>
               <option value="pago">Pago</option>
@@ -448,7 +448,7 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
                 onChange={e => set("dueDate", e.target.value)}
                 title="Vencimento"
                 className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-                style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)" }}
+                style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)", background: "var(--surface)" }}
                 onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
                 onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
               />
@@ -461,7 +461,7 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
                   value={form.amount}
                   onChange={v => set("amount", v)}
                   className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-                  style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+                  style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
                   onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
                   onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
                 />
@@ -472,7 +472,7 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
                 onChange={e => set("dueDate", e.target.value)}
                 title="Vencimento"
                 className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
-                style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)" }}
+                style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)", background: "var(--surface)" }}
                 onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
                 onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
               />
@@ -524,7 +524,7 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
               value={form.invoiceDate}
               onChange={e => set("invoiceDate", e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "var(--border-strong)", color: form.invoiceDate ? "var(--text)" : "var(--text-dim)" }}
+              style={{ borderColor: "var(--border-strong)", color: form.invoiceDate ? "var(--text)" : "var(--text-dim)", background: "var(--surface)" }}
               onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
               onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
             />
@@ -597,7 +597,7 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
             onChange={e => set("notes", e.target.value)}
             rows={2}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-            style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
             onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
             onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
           />
@@ -971,7 +971,7 @@ function BudgetFormModal({ initial, budgets = [], defaultYear, onSave, onClose }
               value={form.periodYear}
               onChange={e => set("periodYear", e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
               onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
               onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
             />
@@ -985,7 +985,7 @@ function BudgetFormModal({ initial, budgets = [], defaultYear, onSave, onClose }
               value={form.amount}
               onChange={v => set("amount", v)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
               onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
               onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
             />
@@ -1033,7 +1033,7 @@ function BudgetFormModal({ initial, budgets = [], defaultYear, onSave, onClose }
             onChange={e => set("notes", e.target.value)}
             rows={2}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-            style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
             onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
             onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
           />

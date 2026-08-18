@@ -181,7 +181,13 @@ export function PurchaseRequestDetailDrawer({
   const [savingQuotes, setSavingQuotes] = useState(false);
   const [quotesError,  setQuotesError]  = useState(null);
   const [quotesSaved,  setQuotesSaved]  = useState(false);
-  const [winnerSupplierId, setWinnerSupplierId] = useState("");
+  // Índice em quoteOptions, não supplierId: o mesmo fornecedor pode aparecer
+  // em mais de um slot de cotação (2 propostas do mesmo fornecedor, valores
+  // diferentes) — identificar só por supplierId gerava <option> com key/value
+  // duplicados e, pior, deixava o servidor sem saber qual das duas linhas
+  // era a vencedora de verdade (achado real: "more than one row returned by
+  // a subquery used as an expression" ao aprovar, 18/08/2026).
+  const [winnerIndex, setWinnerIndex] = useState("");
 
   // Vazio por padrão — quem aprova (frequentemente o admin/Daniel) não é
   // necessariamente quem vai executar a compra; sem isso o dropdown já
@@ -376,7 +382,19 @@ export function PurchaseRequestDetailDrawer({
     setActionLoading(true);
     setActionError(null);
     try {
-      await approvePurchase(purchase.id, approveResponsible || null, purchase.stage === "cotacao" ? (winnerSupplierId || null) : null);
+      // Resolve pelo ÍNDICE escolhido, não por supplierId — o mesmo
+      // fornecedor pode ter mais de uma cotação salva (ver comentário no
+      // useState de winnerIndex), então supplierId sozinho não identifica
+      // qual valor foi de fato escolhido.
+      const chosenQuote = purchase.stage === "cotacao" && winnerIndex !== ""
+        ? quoteOptions[Number(winnerIndex)]
+        : null;
+      await approvePurchase(
+        purchase.id,
+        approveResponsible || null,
+        chosenQuote?.supplierId || null,
+        chosenQuote?.value != null ? Number(chosenQuote.value) : null,
+      );
       onClose();
       onStageMoved?.(purchase.id);
     } catch (err) {
@@ -855,7 +873,7 @@ export function PurchaseRequestDetailDrawer({
     </>
   );
 
-  const canApproveNow = isCotacao ? (quoteOptions.length === 0 || Boolean(winnerSupplierId)) : true;
+  const canApproveNow = isCotacao ? (quoteOptions.length === 0 || winnerIndex !== "") : true;
 
   const right = (
     <>
@@ -883,12 +901,13 @@ export function PurchaseRequestDetailDrawer({
 
           {isCotacao && quoteOptions.length > 0 && (
             <FieldRow label="Fornecedor vencedor">
-              <select value={winnerSupplierId} onChange={e => setWinnerSupplierId(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
+              <select value={winnerIndex} onChange={e => setWinnerIndex(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
                 <option value="">Selecione…</option>
-                {quoteOptions.filter(q => q.supplierId).map(q => {
+                {quoteOptions.map((q, idx) => {
+                  if (!q.supplierId) return null;
                   const s = suppliers.find(sup => sup.id === q.supplierId);
                   return (
-                    <option key={q.supplierId} value={q.supplierId}>
+                    <option key={idx} value={idx}>
                       {s?.name || q.supplierId}{q.value != null ? ` — ${formatBRL(Number(q.value))}` : ""}
                     </option>
                   );
