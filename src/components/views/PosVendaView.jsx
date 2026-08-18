@@ -380,22 +380,29 @@ function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, user
           />
         )}
       </div>
-      <div>
-        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Valor</div>
-        <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{formatK(kase.value)}</div>
-      </div>
-      <div>
-        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Responsáveis</div>
-        {owners.length > 0 ? <AvatarStack users={owners} size={22} max={4} /> : <span className="text-sm" style={{ color: "var(--text-dim)" }}>—</span>}
-      </div>
-      <div>
-        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Empresa</div>
-        <div className="text-sm" style={{ color: "var(--text)" }}>{COMPANIES[kase.companyId]?.short || kase.companyId || "—"}</div>
-      </div>
-      <div>
-        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Nesta etapa há</div>
-        <div className="text-sm" style={{ color: "var(--text)" }}>
-          {kase.stageChangedAt ? `${days} dia${days !== 1 ? "s" : ""}` : "—"}
+      {/* Valor/Responsáveis/Empresa/Nesta etapa há: 4 campos curtos de
+          valor único que empilhavam sozinhos — pareados em grid 2 colunas
+          pra aproveitar a largura extra da coluna esquerda (340px, 18/08/2026,
+          ver SplitPanelDrawer.jsx). Mesmo gap (12px) já usado no arquivo
+          (ex.: grid do QuickAddCaseModal em telas irmãs como EntregasView). */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Valor</div>
+          <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{formatK(kase.value)}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Responsáveis</div>
+          {owners.length > 0 ? <AvatarStack users={owners} size={22} max={4} /> : <span className="text-sm" style={{ color: "var(--text-dim)" }}>—</span>}
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Empresa</div>
+          <div className="text-sm" style={{ color: "var(--text)" }}>{COMPANIES[kase.companyId]?.short || kase.companyId || "—"}</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Nesta etapa há</div>
+          <div className="text-sm" style={{ color: "var(--text)" }}>
+            {kase.stageChangedAt ? `${days} dia${days !== 1 ? "s" : ""}` : "—"}
+          </div>
         </div>
       </div>
       {sourceLead && (
