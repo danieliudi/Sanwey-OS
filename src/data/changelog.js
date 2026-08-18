@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.59.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "No Funil de Vendas, abrir \"Perguntar à IA\" não esmaecia o botão \"+ Nova oportunidade\" ao fundo — mesma causa do fix do card de detalhe, agora corrigida também aqui.",
+      },
+    ],
+  },
+  {
     version: "4.59.2",
     items: [
       {
