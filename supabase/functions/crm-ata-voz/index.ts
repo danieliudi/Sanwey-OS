@@ -28,16 +28,6 @@ const CORS = {
 const BUCKET = 'lead-attachments';
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024; // teto do envio inline dos provedores
 
-// Mesma função de redação do reverse-geocode/distance-matrix/ai-provider —
-// a Gemini API só aceita a chave via query param `key=`, e uma falha de rede
-// do Deno inclui a URL completa (chave junto) na mensagem do erro.
-function redact(value: unknown, apiKey?: string): string {
-  let text = typeof value === 'string' ? value : String(value);
-  text = text.replace(/([?&]key=)[^&\s)"']+/gi, '$1REDACTED');
-  if (apiKey) text = text.split(apiKey).join('REDACTED');
-  return text;
-}
-
 // O esquema que a IA tem que devolver. Vive aqui, e não no frontend, pra que
 // a tela de conferência e o prompt nunca saiam de sincronia.
 const SCHEMA_HINT = `{
@@ -84,59 +74,6 @@ function parseModelJson(raw: string): Record<string, unknown> {
   const last = s.lastIndexOf('}');
   if (first !== -1 && last > first) s = s.slice(first, last + 1);
   return JSON.parse(s);
-}
-
-function toBase64(bytes: Uint8Array): string {
-  // btoa em pedaços: String.fromCharCode(...bytes) estoura a pilha em
-  // arquivo de alguns MB, que é justamente o tamanho de uma ata de 5 min.
-  let binary = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
-
-// ── Gemini: lê o áudio direto, uma chamada faz transcrição e estruturação ──
-async function viaGemini(opts: {
-  model: string; apiKey: string; system: string;
-  audio?: { base64: string; mimeType: string }; text?: string;
-}): Promise<{ transcript: string; structured: Record<string, unknown> }> {
-  const parts: Record<string, unknown>[] = [];
-  if (opts.audio) {
-    parts.push({ text: 'Transcreva o áudio e devolva o JSON pedido. Inclua também o campo extra "transcricao" com a transcrição literal do que foi falado.' });
-    parts.push({ inline_data: { mime_type: opts.audio.mimeType, data: opts.audio.base64 } });
-  } else {
-    parts.push({ text: `Relato do vendedor:\n\n${opts.text}\n\nDevolva o JSON pedido.` });
-  }
-
-  let r: Response;
-  try {
-    r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: opts.system }] },
-          contents: [{ role: 'user', parts }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
-        }),
-      },
-    );
-  } catch (e) {
-    // Mesma causa raiz já corrigida em reverse-geocode/distance-matrix: falha
-    // de rede do Deno inclui a URL completa (chave da Gemini junto, ela só
-    // aceita `?key=` na query string) na mensagem do erro.
-    throw new Error(redact(e instanceof Error ? e.message : String(e), opts.apiKey));
-  }
-  const d = await r.json();
-  if (!r.ok) throw new Error(redact(d?.error?.message || 'Erro do Gemini', opts.apiKey));
-  const raw = d?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || '';
-  const obj = parseModelJson(raw);
-  const transcript = String(obj.transcricao ?? opts.text ?? '');
-  delete obj.transcricao;
-  return { transcript, structured: obj };
 }
 
 // ── OpenAI: Whisper transcreve, depois o modelo de texto estrutura ─────────
@@ -245,8 +182,8 @@ Deno.serve(async (req: Request) => {
     const provider = (p.provider || Deno.env.get('AI_ORG_PROVIDER') || '').toLowerCase();
     const apiKey   = p.apiKey   || Deno.env.get('AI_ORG_API_KEY');
     const baseModel = p.model   || Deno.env.get('AI_ORG_MODEL');
-    // Permite apontar um modelo específico só pro áudio sem trocar o do resto
-    // da plataforma — é aqui que entra um Gemini quando o padrão é outro.
+    // Permite apontar um modelo específico só pro áudio (ex.: gpt-4o-mini-transcribe)
+    // sem trocar o modelo padrão do resto da plataforma.
     const model = (temAudio && Deno.env.get('AI_AUDIO_MODEL')) || baseModel;
 
     if (!provider || !apiKey || !model) {
@@ -261,21 +198,22 @@ Deno.serve(async (req: Request) => {
     };
     const system = systemPrompt(ctx);
 
-    // ── Só texto: qualquer um dos três provedores resolve ────────────────
+    // ── Só texto: OpenAI ou Anthropic resolvem ───────────────────────────
     if (!temAudio) {
       const texto = textoDigitado!.trim();
-      const out = provider === 'gemini'    ? await viaGemini({ model, apiKey, system, text: texto })
-                : provider === 'openai'    ? await viaOpenAI({ model, apiKey, system, text: texto })
+      const out = provider === 'openai'    ? await viaOpenAI({ model, apiKey, system, text: texto })
                 : provider === 'anthropic' ? await viaAnthropic({ model, apiKey, system, text: texto })
                 : null;
-      if (!out) return json({ error: `Provedor de IA desconhecido: ${provider}` }, 400);
+      if (!out) return json({ error: provider === 'gemini' ? 'Gemini não é mais um provedor suportado. Use Anthropic ou OpenAI.' : `Provedor de IA desconhecido: ${provider}` }, 400);
       return json({ ...out, source: 'texto' });
     }
 
-    // ── Com áudio: precisa de um provedor que leia som ──────────────────
-    if (provider === 'anthropic') {
+    // ── Com áudio: só a OpenAI (Whisper) recebe som hoje ─────────────────
+    if (provider !== 'openai') {
       return json({
-        error: 'O provedor configurado (Anthropic) não recebe áudio. Configure AI_AUDIO_MODEL com um modelo Gemini, ou escreva a ata em texto.',
+        error: provider === 'anthropic'
+          ? 'O provedor configurado (Anthropic) não recebe áudio — escreva a ata em texto, ou peça a um admin pra configurar a OpenAI.'
+          : 'Gemini não é mais um provedor suportado. Configure a OpenAI pra transcrição por voz, ou escreva a ata em texto.',
       }, 400);
     }
 
@@ -302,9 +240,7 @@ Deno.serve(async (req: Request) => {
     }
     const mimeType = tipoBruto.split(';')[0].trim();
 
-    const out = provider === 'gemini'
-      ? await viaGemini({ model, apiKey, system, audio: { base64: toBase64(bytes), mimeType } })
-      : await viaOpenAI({ model, apiKey, system, audio: { bytes, mimeType, filename: audioPath?.split('/').pop() || 'ata.webm' } });
+    const out = await viaOpenAI({ model, apiKey, system, audio: { bytes, mimeType, filename: audioPath?.split('/').pop() || 'ata.webm' } });
 
     return json({ ...out, source: 'audio' });
   } catch (err) {

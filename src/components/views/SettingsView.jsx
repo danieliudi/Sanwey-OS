@@ -1515,7 +1515,7 @@ export function SettingsView({
                     <label className="text-xs font-semibold block mb-2" style={{ color: "var(--text-dim)" }}>
                       Provedor de IA
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       {AI_PROVIDERS.map(p => (
                         <button
                           key={p.id}

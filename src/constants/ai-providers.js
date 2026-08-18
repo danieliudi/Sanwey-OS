@@ -1,3 +1,8 @@
+// Gemini removido de propósito (18/08/2026, decisão com o Daniel): é o único
+// dos três provedores cujo plano GRATUITO da API pode usar prompt/resposta
+// pra melhorar o produto do Google (treino) — Anthropic e OpenAI não treinam
+// com dado de API, pago ou não. Ver também o bloqueio espelhado no backend
+// (callAIProvider em ai-assistant/agent-runner, viaGemini em crm-ata-voz).
 export const AI_PROVIDERS = [
   {
     id: 'openai',
@@ -18,16 +23,6 @@ export const AI_PROVIDERS = [
     ],
     keyPlaceholder: 'sk-ant-...',
     keyHint: 'Obtenha em console.anthropic.com/settings/keys',
-  },
-  {
-    id: 'gemini',
-    name: 'Google Gemini',
-    models: [
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (recomendado)' },
-      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
-    ],
-    keyPlaceholder: 'AIza...',
-    keyHint: 'Obtenha em aistudio.google.com/app/apikey',
   },
 ];
 

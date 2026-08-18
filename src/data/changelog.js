@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.60.2",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Removido o Google Gemini das opções de IA (assistente, Gravar ata e agentes) — o plano gratuito da API dele pode usar seus dados pra treinar modelo do Google, diferente de Anthropic e OpenAI, que nunca treinam com dado de API. Quem tinha chave pessoal do Gemini precisa reconectar com outro provedor em Configurações → Integrações de IA.",
+      },
+    ],
+  },
+  {
     version: "4.60.1",
     items: [
       {
