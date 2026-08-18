@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.59.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "No modo escuro, os campos do formulário \"Nova despesa\" (e do teto de orçamento, em Despesas) ficavam com texto quase invisível — corrigido.",
+      },
+      {
+        kind: "correcao",
+        text: "Aprovar uma cotação em Compras podia falhar com um erro técnico quando o mesmo fornecedor tinha mais de uma proposta registrada — corrigido.",
+      },
+    ],
+  },
+  {
     version: "4.59.0",
     items: [
       {
