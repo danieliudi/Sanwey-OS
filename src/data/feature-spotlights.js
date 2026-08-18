@@ -28,8 +28,14 @@ export const FEATURE_SPOTLIGHTS = [
     id: "ata-voz-gravar",
     route: "crm",
     target: '[data-tour="ata-voz-gravar"]',
-    text: "Novo: acabou de sair de uma visita? Grave um áudio contando o que aconteceu — a IA transcreve, organiza e você confere antes de salvar.",
-    version: "4.54.0",
+    // Texto atualizado + versão subida em 17/08/2026 (check-in de visita):
+    // o botão passou a sempre anexar localização (sem opção de tirar) e a
+    // reconhecer/oferecer vínculo com uma visita já planejada em Viagens —
+    // mudança de comportamento de um botão que quem já usa a plataforma
+    // não ia necessariamente notar sozinho, mesmo critério que justificou
+    // a entrada original.
+    text: "Novo: acabou de sair de uma visita? Grave um áudio contando o que aconteceu — sua localização é sempre anexada, e se havia uma visita planejada em Viagens pra esse cliente, a ata já oferece vincular.",
+    version: "4.58.0",
   },
   // Mesmo componente (AtaVozPanel), mesmo data-tour, rota diferente — a ata
   // por voz chegou também na aba Histórico do Cliente (4.55.0), pra registrar
@@ -40,8 +46,8 @@ export const FEATURE_SPOTLIGHTS = [
     id: "ata-voz-gravar-cliente",
     route: "clients",
     target: '[data-tour="ata-voz-gravar"]',
-    text: "Novo: registre uma conversa com este cliente mesmo sem negócio aberto — a IA organiza e pergunta se isso vira uma oportunidade nova.",
-    version: "4.55.0",
+    text: "Novo: registre uma conversa com este cliente mesmo sem negócio aberto — sua localização é sempre anexada, e a ata reconhece visitas já planejadas em Viagens pra vincular.",
+    version: "4.58.0",
   },
   {
     id: "lista-pessoal-agenda",
@@ -157,6 +163,14 @@ export const FEATURE_SPOTLIGHTS = [
   // assim não há garantia de que "Gestão" seja a rota visitada primeiro no
   // sentido do mecanismo (que dispara ao entrar na ROTA, não na aba). Coberto
   // pelo changelog.
+  //
+  // 4.58.0 — botão "Buscar" (CNPJ) + campo Endereço no cadastro de Cliente:
+  // DECIDIDO PULAR o spotlight. Diferente do check-in de visita (que muda
+  // comportamento por trás de um botão já familiar, "Gravar ata" — por isso
+  // esse sim ganhou spotlight acima), aqui o campo "Endereço" e o botão
+  // "Buscar" ao lado do CNPJ são visíveis e autoexplicativos assim que a
+  // pessoa abre a tela de editar/criar Cliente — não há nada "escondido"
+  // que só um aviso resolveria. Coberto pelo changelog 4.58.0.
   //
   // 4.57.0 — ícone de "página em teste" no menu lateral: DECIDIDO PULAR o
   // spotlight. Dois motivos, não só um: (1) é admin-only por natureza (o

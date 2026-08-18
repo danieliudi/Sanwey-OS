@@ -16,6 +16,7 @@ function rowToClient(r) {
     city: r.city ?? null,
     state: r.state ?? null,
     cnpj: r.cnpj ?? null,
+    address: r.address ?? null,
     companyIds: Array.isArray(r.company_ids) ? r.company_ids : [],
     ownerIds: Array.isArray(r.owner_ids) ? r.owner_ids : [],
     externalCodes: r.external_codes && typeof r.external_codes === "object" ? r.external_codes : {},
@@ -35,6 +36,7 @@ function clientToRow(c, extras = {}) {
     city: c.city ?? null,
     state: c.state ?? null,
     cnpj: c.cnpj ?? null,
+    address: c.address ?? null,
     company_ids: Array.isArray(c.companyIds) ? c.companyIds : [],
     owner_ids: Array.isArray(c.ownerIds) ? c.ownerIds : [],
     external_codes: c.externalCodes && typeof c.externalCodes === "object" ? c.externalCodes : {},
@@ -138,8 +140,16 @@ export function useClients({ userId } = {}) {
       return;
     }
     setRemoteClients(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
-    const { error: err } = await supabase.from("clients").update(patchToRow(patch)).eq("id", id);
+    // .select() + checagem de vazio: sem isso, um UPDATE bloqueado pela RLS
+    // (clients_update) volta error:null e data:[] — silenciosamente não
+    // grava nada, mas a tela otimista já mostrou como salvo. Mesmo padrão
+    // já aplicado nos outros hooks de update da plataforma.
+    const { data, error: err } = await supabase.from("clients").update(patchToRow(patch)).eq("id", id).select();
     if (err) { setError(err); fetchAll(); throw err; }
+    if (!data || data.length === 0) {
+      fetchAll();
+      throw new Error("Não foi possível salvar as alterações do cliente — verifique suas permissões.");
+    }
   }, [setFallbackClients, fetchAll]);
 
   const deleteClient = useCallback(async (id) => {

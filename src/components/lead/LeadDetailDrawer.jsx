@@ -1536,6 +1536,23 @@ function ActivitiesPanel({ stageHistory, activities, users, lead, currentUser, o
                         {a.meta?.concorrente && <span>Concorrente: {a.meta.concorrente}</span>}
                       </div>
                     )}
+                    {/* Check-in de visita (17/08/2026): localização sempre
+                        anexada + vínculo com a visita planejada em Viagens,
+                        mesmo padrão "Label: valor" das linhas acima. */}
+                    {(a.meta?.location || a.meta?.viagemLabel) && (
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10.5px]" style={{ color: "var(--text-dim)" }}>
+                        {a.meta?.location && (
+                          <span>
+                            Local:{" "}
+                            <a href={`https://www.google.com/maps/search/?api=1&query=${a.meta.location.lat},${a.meta.location.lng}`}
+                               target="_blank" rel="noreferrer" style={{ color: "var(--text)", fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 2 }}>
+                              {a.meta.location.address || `${Number(a.meta.location.lat).toFixed(4)}, ${Number(a.meta.location.lng).toFixed(4)}`}
+                            </a>
+                          </span>
+                        )}
+                        {a.meta?.viagemLabel && <span>Visita planejada: {a.meta.viagemLabel}</span>}
+                      </div>
+                    )}
                     {a.meta?.origem === "audio" && (
                       <div className="text-[9.5px] mt-1" style={{ color: "var(--text-dim)" }}>
                         Transcrito de áudio — o arquivo original está em Anexos.

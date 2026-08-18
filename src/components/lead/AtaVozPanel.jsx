@@ -1,8 +1,9 @@
 import React, { useMemo, useRef, useState } from "react";
-import { Mic, Square, Sparkles, Check, X, PencilLine, Loader2, AlertTriangle, Circle, CheckCircle2 } from "lucide-react";
+import { Mic, Square, Sparkles, Check, X, PencilLine, Loader2, AlertTriangle, Circle, CheckCircle2, MapPin, Briefcase } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAudioRecorder, formatRecordingTime, blobToBase64, AUDIO_MAX_SECONDS } from "../../hooks/use-audio-recorder";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
+import { formatDateBR, parseDateInput } from "../../utils/date";
 
 // Ata de visita por voz — o vendedor fala um minuto, confere o que a IA
 // entendeu e salva. Aprovado com o Daniel em 13/08/2026 (mockup das 4 telas,
@@ -164,6 +165,118 @@ export function AtaVozPanel({
   const aiConfig = currentUser?.aiConfig;
   const podeIA = isSupabaseConfigured;
 
+  // Check-in de visita (17/08/2026, 3 rodadas de mockup aprovadas): GPS é
+  // SEMPRE anexado à ata — não existe opção de remover na UI. "Sempre"
+  // aqui é sobre a interface, não sobre forçar o navegador: se a permissão
+  // for negada ou a API não existir, a ata salva do mesmo jeito (nunca
+  // trava o fluxo por causa disso) e tentamos de novo na próxima gravação.
+  // geoStatus: idle | capturing | ok | denied | unsupported.
+  const [geo, setGeo] = useState(null); // { lat, lng, accuracy }
+  const [geoStatus, setGeoStatus] = useState("idle");
+  const [geoAddress, setGeoAddress] = useState(null); // endereço legível, via reverse-geocode — pode nunca resolver
+  const [tripMatches, setTripMatches] = useState([]); // crm_viagem_registros candidatos a vincular
+  const [tripId, setTripId] = useState(null); // registro escolhido, ou null = nenhuma
+
+  // Token de sessão de captura — incrementado toda vez que uma gravação nova
+  // começa (ou é cancelada/descartada). getCurrentPosition/reverse-geocode/
+  // busca de viagem são assíncronos e não têm como ser abortados de verdade;
+  // sem isso, cancelar uma gravação e gravar de novo rapidamente podia deixar
+  // uma resposta tardia da tentativa ANTERIOR sobrescrever geo/tripId da
+  // tentativa atual (achado real de QA — corrida confirmada, não hipotética).
+  // Cada chamada assíncrona guarda o valor no momento em que começou e só
+  // aplica o resultado se `captureSessionRef.current` ainda for o mesmo.
+  const captureSessionRef = useRef(0);
+  // Guarda contra duplo clique em "Gravar ata": sem isso, dois cliques
+  // rápidos disparavam duas capturas de GPS e duas buscas de viagem em
+  // paralelo antes de `rec.recording` virar true (achado real de QA).
+  const startingRef = useRef(false);
+
+  // Cliente desta ata pra fins de match com Viagens — em modo client é o
+  // próprio `client`; em modo lead, o negócio pode ou não ter clientId
+  // (nem todo lead antigo tem cliente vinculado).
+  const resolvedClientId = isClientMode ? (client?.id || null) : (lead?.clientId || null);
+
+  const reverseGeocode = async (coords, session) => {
+    try {
+      const { data } = await supabase.functions.invoke("reverse-geocode", {
+        body: { lat: coords.lat, lng: coords.lng },
+      });
+      if (captureSessionRef.current !== session) return; // sessão trocou — descarta resposta tardia
+      if (data?.address) setGeoAddress(data.address);
+    } catch {
+      // Sem endereço legível — a Localização continua com coordenada + link
+      // de mapa, nunca bloqueia (mesmo espírito das outras integrações com
+      // o Google que a plataforma já tem).
+    }
+  };
+
+  const capturarLocalizacao = (session) => {
+    setGeo(null);
+    setGeoAddress(null);
+    if (!navigator.geolocation) { setGeoStatus("unsupported"); return; }
+    setGeoStatus("capturing");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (captureSessionRef.current !== session) return;
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+        setGeo(coords);
+        setGeoStatus("ok");
+        reverseGeocode(coords, session);
+      },
+      () => { if (captureSessionRef.current === session) setGeoStatus("denied"); },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+    // Rede de segurança: alguns navegadores/dispositivos não disparam nem
+    // sucesso nem erro dentro do `timeout` acima (bug real de plataforma,
+    // não hipotético — apontado na revisão de QA). Sem isso, "Salvar ata"
+    // (desabilitado enquanto geoStatus==="capturing") ficaria travado pra
+    // sempre — pior que simplesmente não ter localização. Usa a forma
+    // funcional do setState pra nunca depender de closure obsoleta.
+    setTimeout(() => {
+      if (captureSessionRef.current !== session) return;
+      setGeoStatus(atual => (atual === "capturing" ? "denied" : atual));
+    }, 18000);
+  };
+
+  // Visita planejada em Viagens pra este mesmo cliente/vendedor — só entra
+  // como candidata tipo "visita" (não "evento"), status ainda não cancelado.
+  // Auto-seleciona só quando a mais próxima é de fato próxima (diferença de
+  // até 1 dia) E ainda está "planejado" — uma visita já marcada "realizado"
+  // por uma ata anterior pode continuar candidata (pra listar no seletor,
+  // caso seja um 2º contato de verdade no mesmo dia), mas nunca é
+  // auto-selecionada, pra não sobrescrever silenciosamente o registro de
+  // uma ata anterior (achado real de QA).
+  const buscarVisitaPlanejada = async (session) => {
+    setTripMatches([]);
+    setTripId(null);
+    if (!resolvedClientId || !currentUser?.id || !isSupabaseConfigured) return;
+    try {
+      const { data, error: err } = await supabase
+        .from("crm_viagem_registros")
+        .select("id, data_planejada, destino_planejado, status, cliente_nome")
+        .eq("vendedor_id", currentUser.id)
+        .eq("client_id", resolvedClientId)
+        .eq("tipo", "visita")
+        .in("status", ["planejado", "realizado"])
+        .order("data_planejada", { ascending: false });
+      if (err) throw err;
+      if (captureSessionRef.current !== session) return; // sessão trocou — descarta resposta tardia
+      // parseDateInput, não `new Date(string)` direto: data_planejada é uma
+      // coluna `date` ("AAAA-MM-DD") do Postgres — new Date() interpretaria
+      // como meia-noite UTC e "voltaria" um dia em fusos negativos, podendo
+      // errar o threshold de auto-vínculo perto da borda (achado real de QA).
+      const hojeMs = Date.now();
+      const comDistancia = (data || [])
+        .map(r => ({ ...r, diffDias: Math.abs((parseDateInput(r.data_planejada).getTime() - hojeMs) / 86400000) }))
+        .sort((a, b) => a.diffDias - b.diffDias);
+      setTripMatches(comDistancia);
+      const melhor = comDistancia[0];
+      setTripId(melhor && melhor.diffDias <= 1 && melhor.status === "planejado" ? melhor.id : null);
+    } catch {
+      // tripMatches/tripId já foram zerados no início da função.
+    }
+  };
+
   const contexto = useMemo(() => (
     isClientMode
       ? { company: client?.name || null }
@@ -247,6 +360,12 @@ export function AtaVozPanel({
     setPhase("idle"); setError(null);
     pendingAudioRef.current = null;
     setDestino(negociosAbertos[0] ? `lead:${negociosAbertos[0].id}` : "novo");
+    setGeo(null); setGeoStatus("idle"); setGeoAddress(null);
+    setTripMatches([]); setTripId(null);
+    // Invalida qualquer captura de GPS/busca de viagem ainda em voo desta
+    // tentativa — uma resposta tardia não pode mais escrever em cima do
+    // próximo "Gravar ata".
+    captureSessionRef.current += 1;
   };
 
   const salvar = async () => {
@@ -294,6 +413,22 @@ export function AtaVozPanel({
         audioSegundos = pending.seconds;
       }
 
+      const location = geo ? {
+        lat: geo.lat, lng: geo.lng, accuracy: geo.accuracy,
+        address: geoAddress || null,
+        capturedAt: new Date().toISOString(),
+      } : null;
+
+      // Snapshot do rótulo da visita vinculada (não só o id) — pros dois
+      // feeds de atividade (LeadDetailDrawer/ClientsManager) mostrarem
+      // "12/08 — Química Amparo SA" sem precisar de um join a mais só pra
+      // renderizar o card. Mesmo espírito do snapshot de campos por etapa
+      // já usado no Histórico do funil.
+      const tripSelecionada = tripId ? tripMatches.find(t => t.id === tripId) : null;
+      const viagemLabel = tripSelecionada
+        ? `${formatDateBR(tripSelecionada.data_planejada)} — ${tripSelecionada.destino_planejado || tripSelecionada.cliente_nome || "visita"}`
+        : null;
+
       await onAddActivity(targetLeadId, {
         type: "ata_voz",
         userId: currentUser?.id || null,
@@ -306,8 +441,43 @@ export function AtaVozPanel({
           // Marca a origem: quem ler o histórico daqui a um ano precisa saber
           // que este texto passou por transcrição automática.
           origem: (audioPath || pending) ? "audio" : "texto",
+          // Check-in de visita: localização sempre anexada (null só se o
+          // navegador negou/não suportou) e o vínculo com a visita
+          // planejada em Viagens, quando o vendedor confirmou uma.
+          location,
+          viagemRegistroId: tripId || null,
+          viagemLabel,
         },
       });
+
+      // Vincular a uma visita planejada também marca ela como realizada em
+      // Viagens (decidido com o Daniel 17/08/2026) — reaproveita o mesmo
+      // shape de campos que marcarRealizado (use-crm-viagens.js) já grava;
+      // chamada direta aqui em vez de instanciar o hook inteiro só por essa
+      // escrita (evitaria puxar fetch + subscription realtime da lista
+      // completa de viagens só pra uma atualização pontual). Falha aqui
+      // NUNCA derruba o salvamento da ata, que já aconteceu — é um bônus,
+      // não a ação principal.
+      if (tripId) {
+        try {
+          const { data: upd } = await supabase
+            .from("crm_viagem_registros")
+            .update({
+              status: "realizado",
+              destino_realizado: geoAddress || (geo ? `${geo.lat}, ${geo.lng}` : null),
+              resumo_realizado: resumo,
+              data_realizada: new Date().toISOString().slice(0, 10),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", tripId)
+            .select();
+          if (!upd || upd.length === 0) {
+            console.warn("[AtaVozPanel] visita vinculada não foi marcada como realizada (RLS ou registro removido)");
+          }
+        } catch (e) {
+          console.warn("[AtaVozPanel] falha ao marcar visita vinculada como realizada:", e?.message || e);
+        }
+      }
 
       // Só o follow-up é escrito de volta no lead, e só se a IA achou data.
       // Etapa do funil não se move sozinha (regra 3 do cabeçalho).
@@ -336,13 +506,21 @@ export function AtaVozPanel({
           <span style={{ width: 9, height: 9, borderRadius: 99, background: "var(--accent)", display: "inline-block" }} />
           {formatRecordingTime(rec.seconds)}
         </p>
-        <p className="text-[11px] mt-1 mb-4" style={{ color: "var(--text-dim)" }}>
+        <p className="text-[11px] mt-1 mb-3" style={{ color: "var(--text-dim)" }}>
           {perto
             ? `Gravando — para sozinho em ${AUDIO_MAX_SECONDS - rec.seconds}s`
             : "Gravando — fale naturalmente, não precisa de roteiro"}
         </p>
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] mb-3"
+             style={{ background: "var(--surface)", border: "1px solid var(--border)", color: geoStatus === "denied" || geoStatus === "unsupported" ? "var(--text-faint)" : "var(--text-dim)" }}>
+          <MapPin size={12} style={{ flexShrink: 0 }} />
+          {(geoStatus === "capturing" || geoStatus === "idle") && "Capturando localização…"}
+          {geoStatus === "ok" && "Localização capturada"}
+          {geoStatus === "denied" && "Permissão negada"}
+          {geoStatus === "unsupported" && "Sem suporte a localização"}
+        </div>
         <div className="flex gap-2 justify-center">
-          <button onClick={rec.cancel}
+          <button onClick={() => { rec.cancel(); descartar(); }}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border"
                   style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}>
             <X size={13} /> Cancelar
@@ -379,6 +557,69 @@ export function AtaVozPanel({
           <span className="text-[12px] font-bold" style={{ color: "var(--text)" }}>O que entendi da sua ata</span>
           <span className="text-[10.5px] ml-auto" style={{ color: "var(--text-dim)" }}>confira antes de salvar</span>
         </div>
+
+        <div className="px-3.5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
+          <Lbl tag="sempre anexada">Localização</Lbl>
+          {(geoStatus === "ok" || geoStatus === "capturing") && (
+            <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2" style={{ border: "1px solid var(--border)", background: "var(--surface-alt)" }}>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-none" style={{ background: "var(--accent-bg, var(--surface-alt))", color: "var(--accent)" }}>
+                <MapPin size={14} />
+              </div>
+              <div className="min-w-0">
+                {geoStatus === "capturing" && <span className="text-[12px] font-semibold" style={{ color: "var(--text-dim)" }}>Localizando…</span>}
+                {geoStatus === "ok" && (
+                  <>
+                    <div className="text-[12px] font-semibold" style={{ color: "var(--text)" }}>
+                      {geoAddress || `${geo.lat.toFixed(4)}, ${geo.lng.toFixed(4)}`}
+                    </div>
+                    <div className="text-[10.5px] mt-0.5" style={{ color: "var(--text-faint)" }}>
+                      {geoAddress && <span className="font-mono">{geo.lat.toFixed(4)}, {geo.lng.toFixed(4)} · </span>}
+                      precisão ~{Math.round(geo.accuracy)}m ·{" "}
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${geo.lat},${geo.lng}`} target="_blank" rel="noreferrer" style={{ color: "var(--text-faint)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                        ver no mapa
+                      </a>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          {(geoStatus === "denied" || geoStatus === "unsupported" || geoStatus === "idle") && (
+            <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "var(--text-faint)" }}>
+              <MapPin size={12} style={{ flexShrink: 0 }} />
+              {geoStatus === "unsupported" && "Este navegador não suporta localização — a ata é salva assim mesmo"}
+              {geoStatus === "denied" && "Navegador negou a permissão — a ata é salva assim mesmo"}
+              {geoStatus === "idle" && "Sem localização — só é capturada ao gravar por voz"}
+            </div>
+          )}
+        </div>
+
+        {tripMatches.length > 0 && (
+          <div className="px-3.5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
+            <Lbl tag={tripId ? "vinculado" : null}>Visita planejada</Lbl>
+            <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2" style={{ border: "1px solid var(--border)", background: "var(--surface-alt)" }}>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-none" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
+                <Briefcase size={14} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-semibold" style={{ color: "var(--text)" }}>
+                  {tripId ? "Vincular a esta visita planejada" : "Escolha uma visita planejada, se for o caso"}
+                </div>
+                <div className="text-[10.5px] mt-0.5" style={{ color: "var(--text-faint)" }}>achamos pelo cliente + data</div>
+              </div>
+              <select value={tripId || ""} onChange={e => setTripId(e.target.value || null)}
+                      className="rounded-lg border px-2 py-1.5 text-[11px] flex-none" style={{ ...inputStyle, width: "auto" }}>
+                <option value="">Nenhuma</option>
+                {tripMatches.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {formatDateBR(t.data_planejada)} — {t.destino_planejado || t.cliente_nome || "visita"}
+                    {t.status === "realizado" ? " (já realizada)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         <div className="px-3.5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
           <Lbl>Resumo</Lbl>
@@ -493,9 +734,9 @@ export function AtaVozPanel({
         )}
 
         <div className="px-3.5 py-2.5 flex items-center gap-2 flex-wrap" style={{ background: "var(--surface-alt)" }}>
-          <button onClick={salvar} disabled={saving}
+          <button onClick={salvar} disabled={saving || geoStatus === "capturing"}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold"
-                  style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving ? 0.6 : 1 }}>
+                  style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || geoStatus === "capturing") ? 0.6 : 1 }}>
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />} Salvar ata
           </button>
           <button onClick={descartar} disabled={saving}
@@ -503,7 +744,9 @@ export function AtaVozPanel({
                   style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}>
             Descartar
           </button>
-          <span className="text-[10.5px] ml-auto" style={{ color: "var(--text-dim)" }}>nada foi gravado ainda</span>
+          <span className="text-[10.5px] ml-auto" style={{ color: "var(--text-dim)" }}>
+            {geoStatus === "capturing" ? "aguardando localização…" : "nada foi gravado ainda"}
+          </span>
         </div>
       </div>
     );
@@ -555,7 +798,19 @@ export function AtaVozPanel({
       ) : (
         <>
           <button
-            onClick={async () => { setError(null); await rec.start(); }}
+            onClick={async () => {
+              if (startingRef.current || rec.recording) return; // duplo clique — já em andamento
+              startingRef.current = true;
+              try {
+                setError(null);
+                const session = ++captureSessionRef.current;
+                capturarLocalizacao(session);
+                buscarVisitaPlanejada(session);
+                await rec.start();
+              } finally {
+                startingRef.current = false;
+              }
+            }}
             disabled={!podeIA || !rec.supported}
             data-tour="ata-voz-gravar"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold"
@@ -564,12 +819,28 @@ export function AtaVozPanel({
             <Mic size={14} /> Gravar ata
           </button>
           <div className="mt-2">
-            <button onClick={() => setTyping(true)}
-                    className="inline-flex items-center gap-1 text-[11px]"
-                    style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer" }}>
+            <button
+              onClick={() => {
+                // Se "Gravar ata" tinha acabado de ser clicado (prompt de
+                // permissão do navegador ainda aberto) e a pessoa trocou pra
+                // "escrever à mão" antes de `rec.start()` resolver, a captura
+                // de GPS/visita já disparada ficava "no ar" — invalida a
+                // sessão pra ela nunca preencher/travar o Salvar desta ata
+                // digitada (achado real de QA).
+                captureSessionRef.current += 1;
+                setGeo(null); setGeoStatus("idle"); setGeoAddress(null);
+                setTripMatches([]); setTripId(null);
+                setTyping(true);
+              }}
+              className="inline-flex items-center gap-1 text-[11px]"
+              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer" }}>
               <PencilLine size={11} /> ou escrever à mão
             </button>
           </div>
+          <p className="flex items-center justify-center gap-1 mt-3 mb-0" style={{ fontSize: 10.5, fontWeight: 600, color: "var(--text-faint)" }}>
+            <MapPin size={11} style={{ flexShrink: 0 }} />
+            Sua localização é sempre registrada com esta ata
+          </p>
           {!rec.supported && (
             <p className="text-[10.5px] mt-2 mb-0" style={{ color: "var(--text-dim)" }}>
               Este navegador não grava áudio — use "escrever à mão".

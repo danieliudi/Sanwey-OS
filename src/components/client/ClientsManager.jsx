@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
 import { ClientProductsTab } from "./ClientProductsTab";
@@ -7,6 +7,7 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { EmptyState } from "../ui/EmptyState";
 import { useClientTimeline } from "../../hooks/use-client-timeline";
+import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { CLIENT_CATEGORIES, clientCategoryLabel, clientCategoryColor } from "../../constants/client-categories";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -18,7 +19,7 @@ import { AtaVozPanel } from "../lead/AtaVozPanel";
 
 const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
-const EMPTY = { name: "", category: "", city: "", state: "", cnpj: "", companyIds: [], ownerIds: [], notes: "" };
+const EMPTY = { name: "", category: "", city: "", state: "", cnpj: "", address: "", companyIds: [], ownerIds: [], notes: "" };
 
 const STAGE_LABELS = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
 
@@ -167,7 +168,8 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     setSaveError(null);
     setForm({
       name: c.name || "", category: c.category || "", city: c.city || "",
-      state: c.state || "", cnpj: c.cnpj || "", companyIds: c.companyIds || [],
+      state: c.state || "", cnpj: c.cnpj || "", address: c.address || "",
+      companyIds: c.companyIds || [],
       ownerIds: c.ownerIds || [], notes: c.notes || "",
     });
     setActiveTab(tab);
@@ -539,6 +541,46 @@ function ClientDetailModal({
   vendedores = [],
   currentUser, onCreateLead, onAddLeadActivity, onUpdateLead,
 }) {
+  // Preenchimento automático via CNPJ (17/08/2026) — reaproveita a mesma
+  // edge function/hook que o Explorador já usa pra prospecção de leads
+  // (cnpj-lookup / useCnpjLookup), só que aqui o alvo é o próprio form de
+  // Cliente. Só preenche endereço/cidade/UF que estiverem VAZIOS — nunca
+  // sobrescreve o que a pessoa já digitou à mão.
+  const { loading: cnpjLoading, error: cnpjError, lookup: cnpjLookupFn, reset: cnpjReset } = useCnpjLookup();
+  const [cnpjFilled, setCnpjFilled] = useState(false);
+
+  // ClientDetailModal nunca desmonta entre um cliente e outro (ClientsManager
+  // sempre o renderiza, só o Modal interno decide mostrar/esconder) — sem
+  // isso, o resultado/erro da busca de CNPJ de um cliente "vazava" visualmente
+  // pro próximo cliente aberto, mesmo sem nenhuma busca nova ter acontecido
+  // pra ele. Achado real de QA.
+  useEffect(() => {
+    cnpjReset();
+    setCnpjFilled(false);
+  }, [open, editing?.id, cnpjReset]);
+
+  // BrasilAPI (via cnpj-lookup) devolve "—" como placeholder de UI quando não
+  // tem o dado, e `city` chega como "Município/UF" combinado — escrever isso
+  // direto no cadastro (que trata city/state como campos atômicos, exibidos
+  // concatenados "Cidade / UF") duplicava a UF e podia gravar "—" como cidade
+  // real. Achado real de QA.
+  const cleanLookupValue = (v) => (v && v !== "—" ? v : "");
+  const runCnpjLookup = async () => {
+    const digits = (form.cnpj || "").replace(/\D/g, "");
+    if (digits.length !== 14) return;
+    setCnpjFilled(false);
+    const data = await cnpjLookupFn(digits);
+    if (!data) return;
+    const cidadeLimpa = cleanLookupValue(data.city).split("/")[0].trim();
+    setForm(f => ({
+      ...f,
+      address: f.address || cleanLookupValue(data.address),
+      city: f.city || cidadeLimpa,
+      state: f.state || cleanLookupValue(data.state),
+    }));
+    setCnpjFilled(true);
+  };
+
   // "Produtos & Preços" só existe pra cliente já salvo: a liberação é por
   // client_id, que ainda não existe enquanto o cliente é rascunho na tela.
   const tabs = editing
@@ -582,11 +624,30 @@ function ClientDetailModal({
             </div>
             <div>
               <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>CNPJ</label>
-              <input value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))}
-                placeholder="00.000.000/0000-00"
-                className="w-full rounded-lg border px-3 py-2 text-sm" style={{ ...inputStyle, borderColor: duplicateMatch ? "var(--danger)" : inputStyle.borderColor }} onFocus={onFocusRed} onBlur={onBlurRed} />
+              <div className="flex gap-1.5 items-start">
+                <input value={form.cnpj}
+                  onChange={e => { setForm(f => ({ ...f, cnpj: e.target.value })); setCnpjFilled(false); cnpjReset(); }}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); runCnpjLookup(); } }}
+                  placeholder="00.000.000/0000-00"
+                  className="flex-1 min-w-0 rounded-lg border px-3 py-2 text-sm" style={{ ...inputStyle, borderColor: duplicateMatch ? "var(--danger)" : inputStyle.borderColor }} onFocus={onFocusRed} onBlur={onBlurRed} />
+                <button type="button" onClick={runCnpjLookup}
+                  disabled={cnpjLoading || (form.cnpj || "").replace(/\D/g, "").length !== 14}
+                  title="Buscar endereço/cidade na Receita a partir do CNPJ"
+                  className="rounded-lg px-2.5 py-2 text-xs font-semibold flex items-center gap-1.5 flex-shrink-0"
+                  style={{ background: "var(--text)", color: "var(--surface)", border: "none", opacity: (cnpjLoading || (form.cnpj || "").replace(/\D/g, "").length !== 14) ? 0.5 : 1, cursor: (cnpjLoading || (form.cnpj || "").replace(/\D/g, "").length !== 14) ? "not-allowed" : "pointer" }}>
+                  {cnpjLoading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                  {cnpjLoading ? "Buscando…" : "Buscar"}
+                </button>
+              </div>
             </div>
           </div>
+
+          {cnpjError && (
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "8px 10px", fontSize: 11.5, display: "flex", alignItems: "flex-start", gap: 6 }}>
+              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>{cnpjError.message || String(cnpjError)}</span>
+            </div>
+          )}
 
           {duplicateMatch && (
             <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "10px 12px", fontSize: 12, display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -619,6 +680,19 @@ function ClientDetailModal({
                 {BR_STATES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Endereço</label>
+            <input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+              placeholder="Rua, número, bairro…"
+              className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} onFocus={onFocusRed} onBlur={onBlurRed} />
+            {cnpjFilled && (
+              <p className="mt-1 flex items-center gap-1" style={{ fontSize: 10.5, color: "var(--text-faint)" }}>
+                <CheckCircle2 size={11} style={{ color: "var(--success)", flexShrink: 0 }} />
+                Preenchido pela busca de CNPJ — ainda editável à mão
+              </p>
+            )}
           </div>
 
           <div>
@@ -823,7 +897,13 @@ function timelineDetail(item) {
       ? `Próximo passo: ${meta.proximoPasso}${meta.proximoPassoData ? ` (${formatDateBR(meta.proximoPassoData)})` : ""}`
       : null;
     const conc = meta.concorrente ? `Concorrente: ${meta.concorrente}` : null;
-    return [item.detail, passo, conc].filter(Boolean).join(" · ");
+    // Check-in de visita (17/08/2026): sem link clicável aqui — este feed é
+    // uma única linha de texto plano (ver timelineDetail acima), não tem
+    // mecanismo de campo/pill como o feed do negócio no LeadDetailDrawer.
+    const local = meta.location?.address
+      || (meta.location ? `${Number(meta.location.lat).toFixed(4)}, ${Number(meta.location.lng).toFixed(4)}` : null);
+    const viagem = meta.viagemLabel ? `Visita planejada: ${meta.viagemLabel}` : null;
+    return [item.detail, passo, conc, local, viagem].filter(Boolean).join(" · ");
   }
   if (item.kind === "amostra") {
     const custo = money(meta.cost);
