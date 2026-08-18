@@ -192,6 +192,15 @@ export const FEATURE_SPOTLIGHTS = [
   // (menos scroll pra ver a mesma informação), notado passivamente ao abrir
   // qualquer card, sem elemento único e clicável pra apontar. Coberto pelo
   // changelog 4.59.0.
+  //
+  // 4.60.1 — título editável (lápis) em Vaga e Candidato (RH Recrutamento):
+  // DECIDIDO PULAR o spotlight. Mesmo componente `EditableTitle` já em uso
+  // desde 29/07/2026 em Campanhas/Entregas/Tarefas/Compras (nunca ganhou
+  // spotlight próprio, decidido antes desta regra existir) — aqui é
+  // extensão de padrão já conhecido pra mais 2 boards, não um fluxo novo. O
+  // lápis fica sempre visível ao lado do título (não escondido atrás de
+  // hover/menu), então já se autoexplica ao abrir qualquer card de
+  // Vaga/Candidato. Coberto pelo changelog 4.60.1.
 ];
 
 export default FEATURE_SPOTLIGHTS;

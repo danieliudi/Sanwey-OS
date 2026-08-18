@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.60.1",
+    items: [
+      {
+        kind: "novo",
+        text: "Título de Vaga e de Candidato agora é editável direto no card, igual a Campanhas/Entregas/Tarefas/Compras — sem precisar abrir o formulário completo só pra corrigir um nome.",
+        roles: ["admin", "gerente", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "4.60.0",
     items: [
       {
