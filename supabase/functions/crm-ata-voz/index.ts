@@ -28,6 +28,16 @@ const CORS = {
 const BUCKET = 'lead-attachments';
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024; // teto do envio inline dos provedores
 
+// Mesma função de redação do reverse-geocode/distance-matrix/ai-provider —
+// a Gemini API só aceita a chave via query param `key=`, e uma falha de rede
+// do Deno inclui a URL completa (chave junto) na mensagem do erro.
+function redact(value: unknown, apiKey?: string): string {
+  let text = typeof value === 'string' ? value : String(value);
+  text = text.replace(/([?&]key=)[^&\s)"']+/gi, '$1REDACTED');
+  if (apiKey) text = text.split(apiKey).join('REDACTED');
+  return text;
+}
+
 // O esquema que a IA tem que devolver. Vive aqui, e não no frontend, pra que
 // a tela de conferência e o prompt nunca saiam de sincronia.
 const SCHEMA_HINT = `{
@@ -100,20 +110,28 @@ async function viaGemini(opts: {
     parts.push({ text: `Relato do vendedor:\n\n${opts.text}\n\nDevolva o JSON pedido.` });
   }
 
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: opts.system }] },
-        contents: [{ role: 'user', parts }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
-      }),
-    },
-  );
+  let r: Response;
+  try {
+    r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: opts.system }] },
+          contents: [{ role: 'user', parts }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+        }),
+      },
+    );
+  } catch (e) {
+    // Mesma causa raiz já corrigida em reverse-geocode/distance-matrix: falha
+    // de rede do Deno inclui a URL completa (chave da Gemini junto, ela só
+    // aceita `?key=` na query string) na mensagem do erro.
+    throw new Error(redact(e instanceof Error ? e.message : String(e), opts.apiKey));
+  }
   const d = await r.json();
-  if (!r.ok) throw new Error(d?.error?.message || 'Erro do Gemini');
+  if (!r.ok) throw new Error(redact(d?.error?.message || 'Erro do Gemini', opts.apiKey));
   const raw = d?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || '';
   const obj = parseModelJson(raw);
   const transcript = String(obj.transcricao ?? opts.text ?? '');

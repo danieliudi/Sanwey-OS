@@ -7,6 +7,19 @@
 
 export type AIMessage = { role: string; content: string };
 
+// A Gemini API só aceita a chave via query param `key=` (mesma limitação já
+// documentada/corrigida em reverse-geocode/distance-matrix) — se o fetch
+// falhar a nível de rede (DNS, timeout, conexão recusada), o TypeError do
+// Deno inclui a URL completa, chave junto, e essa mensagem sobe direto pro
+// catch de quem chamou callAIProvider. Redige antes de propagar. OpenAI e
+// Anthropic mandam a chave em header, não em URL — não precisam disso.
+function redact(value: unknown, apiKey?: string): string {
+  let text = typeof value === "string" ? value : String(value);
+  text = text.replace(/([?&]key=)[^&\s)"']+/gi, "$1REDACTED");
+  if (apiKey) text = text.split(apiKey).join("REDACTED");
+  return text;
+}
+
 // Achado #11 do roteiro de treinamento de RH (31/07/2026): erro de IA em 6+
 // telas era o texto cru do provider repassado direto ao usuário — igual pra
 // "sem cota/crédito" (algo real, avisar admin) e qualquer outro erro. Isso
@@ -59,17 +72,22 @@ export async function callAIProvider(opts: {
   if (provider === "gemini") {
     const sys = messages.find((m) => m.role === "system");
     const msgs = messages.filter((m) => m.role !== "system");
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: msgs.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
-          ...(sys ? { systemInstruction: { parts: [{ text: sys.content }] } } : {}),
-        }),
-      }
-    );
+    let r: Response;
+    try {
+      r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: msgs.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+            ...(sys ? { systemInstruction: { parts: [{ text: sys.content }] } } : {}),
+          }),
+        }
+      );
+    } catch (e) {
+      throw new Error(redact(e instanceof Error ? e.message : String(e), apiKey));
+    }
     const d = await r.json();
     if (!r.ok) throw new Error(friendlyProviderError(d.error?.message || "Gemini error", "Gemini"));
     return d.candidates?.[0]?.content?.parts?.[0]?.text || "";
