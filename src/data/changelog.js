@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.60.3",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Quando a empresa configura uma chave de IA própria, a seção \"Minha chave pessoal\" em Configurações trava sozinha pra quem não é admin/gerente — evita cada pessoa conectando a própria conta de IA por conta própria, sem passar pelo mesmo provedor confiável da empresa.",
+      },
+    ],
+  },
+  {
     version: "4.60.2",
     items: [
       {
