@@ -27,15 +27,18 @@ export const FEATURE_SPOTLIGHTS = [
   {
     id: "ata-voz-gravar",
     route: "crm",
-    target: '[data-tour="ata-voz-gravar"]',
-    // Texto atualizado + versão subida em 17/08/2026 (check-in de visita):
-    // o botão passou a sempre anexar localização (sem opção de tirar) e a
-    // reconhecer/oferecer vínculo com uma visita já planejada em Viagens —
-    // mudança de comportamento de um botão que quem já usa a plataforma
-    // não ia necessariamente notar sozinho, mesmo critério que justificou
-    // a entrada original.
-    text: "Novo: acabou de sair de uma visita? Grave um áudio contando o que aconteceu — sua localização é sempre anexada, e se havia uma visita planejada em Viagens pra esse cliente, a ata já oferece vincular.",
-    version: "4.58.0",
+    // Alvo trocado em 18/08/2026 (redesenho do drawer): "Gravar ata" saiu de
+    // dentro da aba Atividades (onde só existia depois de rolar + trocar de
+    // aba) e virou um botão fixo no header do card, que abre a gravação como
+    // painel flutuante — o `data-tour="ata-voz-gravar"` antigo só existe hoje
+    // se esse painel já estiver aberto, então deixou de ser um alvo válido
+    // pro spotlight (nunca dispararia sozinho). Versão subida porque é
+    // mudança de comportamento de um botão que quem já usa a plataforma não
+    // ia necessariamente notar sozinho — mesmo critério da atualização
+    // anterior desta entrada (check-in de visita, 17/08/2026).
+    target: '[data-tour="ata-voz-gravar-header"]',
+    text: "Novo: \"Gravar ata\" agora fica fixo aqui no topo do card — clique pra registrar por voz de qualquer aba, sem precisar rolar até Atividades.",
+    version: "4.59.0",
   },
   // Mesmo componente (AtaVozPanel), mesmo data-tour, rota diferente — a ata
   // por voz chegou também na aba Histórico do Cliente (4.55.0), pra registrar
@@ -181,6 +184,14 @@ export const FEATURE_SPOTLIGHTS = [
   // elemento fixo por rota, não serve bem pra "o item X, quando X varia").
   // Coberto pelo changelog 4.57.0 (com `roles: ["admin"]`, já restrito a
   // quem o ícone realmente afeta).
+  //
+  // 4.59.0 — colunas mais largas nos cards/modais de detalhe (Vendas,
+  // Pós-venda, Entregas, Campanhas, Compras, Tarefas de Marketing, Lista
+  // Pessoal, Comex, RH): DECIDIDO PULAR o spotlight. Não é uma capacidade
+  // nova que alguém precise "descobrir" clicando em algo — é layout ambiente
+  // (menos scroll pra ver a mesma informação), notado passivamente ao abrir
+  // qualquer card, sem elemento único e clicável pra apontar. Coberto pelo
+  // changelog 4.59.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;

@@ -24,6 +24,24 @@
 
 export const CHANGELOG = [
   {
+    version: "4.59.0",
+    items: [
+      {
+        kind: "novo",
+        text: "\"Gravar ata\" ganhou um botão fixo no topo do card do Funil de Vendas — abre por cima de qualquer aba, sem precisar rolar até Atividades pra achar.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Cards/modais de detalhe (Funil de Vendas, Pós-venda, Entregas, Campanhas, Compras, Tarefas de Marketing, Lista Pessoal, Comex e RH) ficaram mais largos, com menos rolagem pra ver a mesma informação.",
+      },
+      {
+        kind: "correcao",
+        text: "E-mail de contato muito longo no Funil de Vendas estourava a largura da lateral em vez de cortar com reticências — corrigido.",
+      },
+    ],
+  },
+  {
     version: "4.58.1",
     items: [
       {
