@@ -24,6 +24,26 @@
 
 export const CHANGELOG = [
   {
+    version: "4.58.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Ata de Visita agora sempre anexa sua localização (endereço legível, não só a coordenada) — sem opção de tirar depois. Se o navegador negar a permissão, a ata salva normalmente mesmo assim.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Se você já tinha uma visita planejada em Viagens pra esse cliente, a Ata de Visita reconhece e oferece vincular — ao salvar, a visita já é marcada como realizada, sem precisar repetir isso lá.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Cadastro de Cliente ganhou o campo Endereço, com um botão \"Buscar\" que preenche Endereço/Cidade/UF a partir do CNPJ (mesma busca que já existia em Explorador) quando esses campos estiverem vazios.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
     version: "4.57.0",
     items: [
       {

@@ -378,8 +378,20 @@ export function useLeads({ userId, role, companies } = {}) {
   }, [leads, updateLead]);
 
   const addLeadActivity = useCallback(async (leadId, activity) => {
-    const lead = leads.find(l => l.id === leadId);
-    if (!lead) return;
+    let lead = leads.find(l => l.id === leadId);
+    if (!lead) {
+      // O lead pode ter acabado de ser criado nesta mesma chamada (ex.:
+      // Ata de Visita → "Abrir oportunidade") e ainda não ter chegado no
+      // `leads` local — addLeadActivity é uma prop fechada no render
+      // anterior ao clique, então nenhum await interno a essa função
+      // reflete o novo item antes dela rodar. Sem este fallback, a
+      // atividade (resumo, transcrição, localização, vínculo de viagem)
+      // sumia em silêncio — achado real de QA, não hipotético.
+      if (!isSupabaseConfigured) return;
+      const { data, error: fetchErr } = await supabase.from("leads").select("*").eq("id", leadId).maybeSingle();
+      if (fetchErr || !data) return;
+      lead = rowToLead(data);
+    }
     // Gera o id ANTES de decidir online/offline — mesmo precedente de
     // LeadCreateModal.jsx (crypto.randomUUID() no cliente), garante que a
     // entrada enfileirada localmente e a que aparece otimisticamente na tela
