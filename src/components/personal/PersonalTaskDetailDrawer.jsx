@@ -523,21 +523,23 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
 
   const left = (
     <>
-      <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Prazo</div>
-        <div className="text-xs font-bold mt-0.5" style={{ color: "var(--text)" }}>
-          {task.dueDate ? `${formatDateBR(task.dueDate)}${task.dueTime ? ` · ${task.dueTime}` : ""}` : "Sem prazo"}
-        </div>
-      </div>
-
-      {task.recurrence && task.recurrence !== "none" && (
+      <div style={{ display: "grid", gridTemplateColumns: (task.recurrence && task.recurrence !== "none") ? "1fr 1fr" : "1fr", gap: 10 }}>
         <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Repete</div>
+          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Prazo</div>
           <div className="text-xs font-bold mt-0.5" style={{ color: "var(--text)" }}>
-            {RECURRENCE_OPTIONS.find(r => r.id === task.recurrence)?.label}
+            {task.dueDate ? `${formatDateBR(task.dueDate)}${task.dueTime ? ` · ${task.dueTime}` : ""}` : "Sem prazo"}
           </div>
         </div>
-      )}
+
+        {task.recurrence && task.recurrence !== "none" && (
+          <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Repete</div>
+            <div className="text-xs font-bold mt-0.5" style={{ color: "var(--text)" }}>
+              {RECURRENCE_OPTIONS.find(r => r.id === task.recurrence)?.label}
+            </div>
+          </div>
+        )}
+      </div>
 
       {task.tags?.length > 0 && (
         <div>

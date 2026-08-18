@@ -1595,22 +1595,24 @@ export function CampaignDetailDrawer({
             <ApplyEventChecklistButton campaign={campaign} currentUser={currentUser} />
           )}
 
-          <Field label="Responsável interno">
-            {isAgencia
-              ? <AvatarStack users={resolvedOwners} size={20} max={3} />
-              : (
-                <AssigneeMultiSelect
-                  value={ownerIds}
-                  onChange={ids => set("ownerIds", ids)}
-                  options={users.filter(u => ["marketing","gerente_marketing","admin"].includes(u.role))}
-                  placeholder="Nenhum responsável"
-                />
-              )}
-          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Responsável interno">
+              {isAgencia
+                ? <AvatarStack users={resolvedOwners} size={20} max={3} />
+                : (
+                  <AssigneeMultiSelect
+                    value={ownerIds}
+                    onChange={ids => set("ownerIds", ids)}
+                    options={users.filter(u => ["marketing","gerente_marketing","admin"].includes(u.role))}
+                    placeholder="Nenhum responsável"
+                  />
+                )}
+            </Field>
 
-          <Field label="Responsável pela Execução">
-            {isAgencia ? <ReadValue value={get("execResponsible")} /> : <EditInput value={get("execResponsible")} onChange={v => set("execResponsible", v)} placeholder="Nome do responsável pela execução" />}
-          </Field>
+            <Field label="Responsável pela Execução">
+              {isAgencia ? <ReadValue value={get("execResponsible")} /> : <EditInput value={get("execResponsible")} onChange={v => set("execResponsible", v)} placeholder="Nome do responsável pela execução" />}
+            </Field>
+          </div>
 
           <Field label="Link UTM">
             {isAgencia

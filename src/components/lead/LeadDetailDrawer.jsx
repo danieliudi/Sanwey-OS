@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, MapPin, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, Linkedin, Newspaper, MessageSquareWarning, Search,
-  Check, Trash2, Mail,
+  Check, Trash2, Mail, Mic,
   Clock, GitBranch, CalendarClock, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
   File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake,
@@ -62,6 +62,11 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   const [sendingToPosvenda, setSendingToPosvenda] = useState(false);
   const [posvendaError, setPosvendaError] = useState(null);
   const [posvendaSent, setPosvendaSent] = useState(false);
+  // Gravar ata como painel flutuante (Opção B do mockup, aprovada pelo Daniel
+  // 18/08/2026) — antes vivia só dentro da aba Atividades, agora um botão no
+  // header do drawer abre por cima, de qualquer aba, sem trocar de contexto.
+  // A ata continua aparecendo na lista de Atividades depois de salva.
+  const [ataFloatingOpen, setAtaFloatingOpen] = useState(false);
 
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
@@ -585,6 +590,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   );
 
   return (
+    <>
     <SplitPanelDrawer
       onClose={onClose}
       onDelete={canDelete ? () => onDelete(lead.id) : undefined}
@@ -593,6 +599,16 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
         <div className="flex items-center gap-2">
           <CompanyTag companyId={lead.companyId} />
           <UrgencyTag urgency={lead.urgency} />
+          {onAddActivity && (
+            <button
+              onClick={() => setAtaFloatingOpen(true)}
+              data-tour="ata-voz-gravar-header"
+              className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer shrink-0"
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none" }}
+            >
+              <Mic size={13} /> Gravar ata
+            </button>
+          )}
         </div>
       )}
       left={(
@@ -646,7 +662,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                     style={{ color: lead.contactEmail ? "var(--text)" : "var(--text-dim)", background: "transparent", border: "none" }}
                   >
                     <Mail size={13} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
-                    <span className={`truncate ${lead.contactEmail ? "" : "italic"}`}>
+                    <span className={`flex-1 min-w-0 truncate ${lead.contactEmail ? "" : "italic"}`}>
                       {lead.contactEmail || "Adicionar e-mail"}
                     </span>
                   </button>
@@ -1035,10 +1051,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                 stageHistory={stageHistory}
                 activities={lead.activities || []}
                 users={users}
-                lead={lead}
-                currentUser={currentUser}
-                onAddActivity={onAddActivity}
-                onUpdate={onUpdate}
+                canRecordAta={Boolean(onAddActivity)}
               />
             )}
 
@@ -1232,6 +1245,20 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
         />
       )}
     />
+    {onAddActivity && (
+      <Modal open={ataFloatingOpen} onClose={() => setAtaFloatingOpen(false)} title="Gravar ata" width={640}>
+        <div className="p-4">
+          <AtaVozPanel
+            lead={lead}
+            currentUser={currentUser}
+            onAddActivity={onAddActivity}
+            onUpdate={onUpdate}
+            onSaved={() => setAtaFloatingOpen(false)}
+          />
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }
 
@@ -1435,7 +1462,7 @@ function MoveAndCommentsPanel({
   );
 }
 
-function ActivitiesPanel({ stageHistory, activities, users, lead, currentUser, onAddActivity, onUpdate }) {
+function ActivitiesPanel({ stageHistory, activities, users, canRecordAta }) {
   // Combina movimentações de etapa + atividades genéricas em uma única timeline.
   const combined = useMemo(() => {
     const items = [];
@@ -1461,26 +1488,13 @@ function ActivitiesPanel({ stageHistory, activities, users, lead, currentUser, o
     return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [stageHistory, activities]);
 
-  // Ata por voz abre a aba: o vendedor que acabou de sair da visita não vem
-  // aqui pra ler histórico, vem pra registrar. Fica acima da lista tanto no
-  // estado vazio quanto no cheio (aprovado com o Daniel 13/08/2026).
-  const ata = onAddActivity && lead ? (
-    <AtaVozPanel
-      lead={lead}
-      currentUser={currentUser}
-      onAddActivity={onAddActivity}
-      onUpdate={onUpdate}
-    />
-  ) : null;
-
   if (combined.length === 0) {
     return (
       <div className="space-y-3">
-        {ata}
         <PlaceholderPanel
           icon={Activity}
           title="Atividades"
-          hint="Movimentações entre etapas e edições aparecem aqui."
+          hint={canRecordAta ? "Movimentações entre etapas e edições aparecem aqui — grave uma ata pelo botão no topo do card." : "Movimentações entre etapas e edições aparecem aqui."}
         />
       </div>
     );
@@ -1488,7 +1502,6 @@ function ActivitiesPanel({ stageHistory, activities, users, lead, currentUser, o
 
   return (
     <div className="space-y-3">
-    {ata}
     <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
       <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)" }}>
         Atividades
