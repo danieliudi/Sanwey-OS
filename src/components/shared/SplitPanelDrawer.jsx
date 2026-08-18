@@ -57,7 +57,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
 
   return (
     <div
-      className="fixed inset-0 z-40 flex lg:items-center lg:justify-center lg:p-6"
+      className="fixed inset-0 z-50 flex lg:items-center lg:justify-center lg:p-6"
       style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
       role="dialog"
       aria-modal="true"

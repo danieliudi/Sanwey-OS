@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.59.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "O botão flutuante \"+ Nova oportunidade\" (e equivalentes de outros boards) ficava sobreposto ao card de detalhe aberto, tampando parte do formulário — corrigido.",
+      },
+    ],
+  },
+  {
     version: "4.59.1",
     items: [
       {
