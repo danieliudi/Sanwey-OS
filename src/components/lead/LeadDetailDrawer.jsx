@@ -429,7 +429,15 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   // previous render") ao abrir o drawer pela primeira vez.
   const researchLinks = useMemo(() => {
     if (!lead) return [];
-    const name = lead.company;
+    // Achado do Daniel (19/08/2026): "Pesquisar empresa" buscava por
+    // lead.company (o "título" do card, texto livre, pode ser algo como
+    // "teste" — ver regra 1 do CLAUDE.md: Funil de Vendas não usa
+    // EditableTitle justamente porque o título aqui é o Cliente vinculado,
+    // não texto solto) em vez do nome do Cliente de fato ligado ao negócio
+    // (exibido no painel esquerdo). Prioriza o cliente vinculado; cai pro
+    // texto do card só como fallback pra negócio ainda sem cliente ligado.
+    const linkedClient = lead.clientId ? clients.find(c => c.id === lead.clientId) : null;
+    const name = linkedClient?.name || lead.company;
     const nameEnc = encodeURIComponent(name);
     const queryEnc = encodeURIComponent(`${name} ${lead.cnpj || ""}`.trim());
     return [
@@ -438,7 +446,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
       { id: "news", label: "Google News", icon: Newspaper, href: `https://news.google.com/search?q=${nameEnc}&hl=pt-BR` },
       { id: "reclameaqui", label: "Reclame Aqui", icon: MessageSquareWarning, href: `https://www.reclameaqui.com.br/busca/?q=${nameEnc}` },
     ];
-  }, [lead]);
+  }, [lead, clients]);
 
   if (!lead || !company) return null;
 
