@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Check, X as XIcon } from "lucide-react";
+import { Check, X as XIcon, AlertTriangle } from "lucide-react";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { CompanyTag } from "../ui/CompanyTag";
 import { AvatarStack } from "../shared/AvatarStack";
@@ -8,6 +8,8 @@ import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
 import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
+import { recentCompetitorMention } from "../../utils/competitor-alert";
+import { computeFitScore } from "../../utils/pipeline-metrics";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -54,6 +56,8 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
 
   const currentStage = stages?.find(s => s.id === lead.stage);
   const daysInStage = daysFromDate(lead.stageChangedAt);
+  const competitorMention = useMemo(() => recentCompetitorMention(lead.activities), [lead.activities]);
+  const fitScore = useMemo(() => computeFitScore(lead), [lead]);
   const probDisplay = lead.probability > 1
     ? Math.round(lead.probability)
     : Math.round(lead.probability * 100);
@@ -126,9 +130,19 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
             completeness={completeness}
             completenessSize={30}
             muted={isTerminal}
-          />
+          >
+            {competitorMention && (
+              <span
+                title={`Concorrente citado: ${competitorMention.name} (${formatDateBR(competitorMention.at)})`}
+                className="inline-flex items-center justify-center rounded-full"
+                style={{ width: 16, height: 16, background: "var(--amber-bg)", color: "var(--amber)", opacity: terminalAccentOpacity(isTerminal) }}
+              >
+                <AlertTriangle size={9} strokeWidth={2.5} />
+              </span>
+            )}
+          </KanbanCardStatusChips>
           <span className="inline-flex" style={{ opacity: terminalAccentOpacity(isTerminal) }}>
-            <FitScoreCircle score={lead.fitScore} size={30} />
+            <FitScoreCircle score={fitScore} size={30} />
           </span>
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu

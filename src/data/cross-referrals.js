@@ -1,3 +1,5 @@
+import { computeFitScore } from "../utils/pipeline-metrics";
+
 // Synthetic seeds — same as v3. These are advisory suggestions (not derived
 // from leads), kept so they can be approved/rejected individually.
 export const SYNTHETIC_CROSS_SUGGESTIONS = [
@@ -51,7 +53,7 @@ export function computeOverlaps(leads) {
         presentIn: uniqueCompanies,
         leads: ls.map(l => ({
           id: l.id, companyId: l.companyId, owner: l.owner, value: l.value,
-          stage: l.stage, fitScore: l.fitScore,
+          stage: l.stage, fitScore: computeFitScore(l),
         })),
         totalValue: ls.reduce((s, l) => s + l.value, 0),
         type: "overlap",

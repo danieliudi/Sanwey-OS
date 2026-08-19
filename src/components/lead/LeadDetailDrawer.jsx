@@ -5,7 +5,8 @@ import {
   Check, Trash2, Mail, Mic,
   Clock, GitBranch, CalendarClock, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
-  File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake,
+  File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake, BookOpen,
+  MessageCircle,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -21,6 +22,11 @@ import { formatDateBR, closeDateUrgencyStyle, toLocalISODate, localDateInputToIS
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
+import { useDocumentLibrary, useLeadDocumentRefs } from "../../hooks/use-document-library";
+import { CATEGORY_LABELS } from "../views/DocumentLibraryView";
+import { useWhatsappConversation } from "../../hooks/use-whatsapp-conversations";
+import { FilterBar } from "../shared/FilterBar";
+import { Card, CardGrid } from "../shared/Card";
 import { useLeadChecklists } from "../../hooks/use-lead-checklists";
 import { useLeadSamples } from "../../hooks/use-lead-samples";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -31,6 +37,10 @@ import { AtaVozPanel } from "./AtaVozPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
 import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
+import { useClientContacts } from "../../hooks/use-client-contacts";
+import { recentCompetitorMention } from "../../utils/competitor-alert";
+import { computeFitScore } from "../../utils/pipeline-metrics";
+import { evaluateConditionGroups } from "../../utils/condition-operators";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields, EMAIL_PATTERN } from "../../utils/field-validation";
 import { CommentsPanel } from "../shared/CommentsPanel";
@@ -147,6 +157,18 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
 
   const moveToStage = useCallback(async (toStage) => {
     if (!lead || !toStage) return;
+    // Gate de etapa por valor (19/08/2026, achado do QA multi-lente): o
+    // painel "Mover para" já pré-filtra moveTargets escondendo destinos com
+    // condição não atendida (linha ~486), mas isso sozinho é só affordance —
+    // sem essa 2ª checagem aqui, um moveTargets desatualizado (stale closure,
+    // customFields mudou entre renders) deixaria a transição passar sem o
+    // gate ser avaliado de novo. Mesma defesa dupla que attemptStageChange já
+    // tem em CRMView.jsx.
+    const gate = pipelineTransitions?.getTransitionCondition?.(lead.companyId, lead.stage, toStage);
+    if (gate && !evaluateConditionGroups(gate, lead.customFields || {})) {
+      setMoveError("Não dá pra mover: esta transição exige uma condição específica de campo, ainda não atendida.");
+      return;
+    }
     // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
     // (estático ou condicional) vazio — antes disso "required" era só o
     // asterisco visual, confirmado ao vivo que não travava nada. Antes usava
@@ -188,7 +210,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
       onClose();
       onStageMoved(lead.id);
     }
-  }, [lead, onUpdate, onStageMoved, onClose, customDefs, customValuesByKey]);
+  }, [lead, onUpdate, onStageMoved, onClose, customDefs, customValuesByKey, pipelineTransitions]);
 
   useEffect(() => {
     if (!lead) return;
@@ -411,6 +433,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   const decisionMakerName = lead?.decisionMaker?.name || "—";
   const decisionMakerRole = lead?.decisionMaker?.role || "—";
   const firstName = (decisionMakerName && decisionMakerName !== "—") ? decisionMakerName.split(" ")[0] : "time";
+  const competitorMention = useMemo(() => recentCompetitorMention(lead?.activities), [lead?.activities]);
 
   // Normalize probability for display (handle both 0–1 and 0–100 formats)
   const probDisplay = lead
@@ -464,11 +487,17 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   // Restringe "Mover para" às transições configuradas em Comercial
   // > Editar etapas (mesma regra que já bloqueia o drag-and-drop no Kanban,
   // ver CRMView.jsx) — sem regra configurada pra empresa/etapa, permanece
-  // aberto (todas as etapas), preservando o comportamento anterior.
-  const moveTargets = companyStages.filter(s =>
-    s.id !== lead.stage &&
-    (!pipelineTransitions || pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, s.id))
-  );
+  // aberto (todas as etapas), preservando o comportamento anterior. Gate de
+  // etapa por valor (18/08/2026) segue o mesmo espírito: destino com
+  // condição não atendida simplesmente não aparece como opção, em vez de um
+  // botão que erra ao clicar — mesmo padrão já usado aqui pra transição
+  // desabilitada pela matriz.
+  const moveTargets = companyStages.filter(s => {
+    if (s.id === lead.stage) return false;
+    if (pipelineTransitions && !pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, s.id)) return false;
+    const gate = pipelineTransitions?.getTransitionCondition?.(lead.companyId, lead.stage, s.id);
+    return !gate || evaluateConditionGroups(gate, lead.customFields || {});
+  });
 
   const handleCopyDraft = () => {
     if (navigator.clipboard?.writeText) {
@@ -599,6 +628,19 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
         <div className="flex items-center gap-2">
           <CompanyTag companyId={lead.companyId} />
           <UrgencyTag urgency={lead.urgency} />
+          {/* Alerta de concorrente (18/08/2026) — Fase 1: só destaca o que a
+              Ata de voz já captura em meta.concorrente, sem scan de texto
+              livre ainda (ver src/utils/competitor-alert.js). */}
+          {competitorMention && (
+            <span
+              title={`Concorrente citado: ${competitorMention.name} — ${formatDateBR(competitorMention.at)}`}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold"
+              style={{ background: "var(--amber-bg)", color: "var(--amber)" }}
+            >
+              <MessageSquareWarning size={11} strokeWidth={2.5} />
+              {competitorMention.name}
+            </span>
+          )}
           {onAddActivity && (
             <button
               onClick={() => setAtaFloatingOpen(true)}
@@ -619,7 +661,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                 <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
                   Cliente
                 </div>
-                <div className="hidden lg:block"><FitScoreCircle score={lead.fitScore} size={40} /></div>
+                <div className="hidden lg:block"><FitScoreCircle score={computeFitScore(lead)} size={40} /></div>
               </div>
               <ClientSelector
                 value={lead.clientId}
@@ -803,16 +845,28 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
               </div>
             )}
 
-            {/* Decisor — só ocupa espaço quando há dado real; sem isso
-                sobravam duas linhas de "—" sem utilidade (achado do Daniel). */}
+            {/* Contato inicial (histórico) — era rotulado "Decisor", mas
+                virou snapshot congelado do que foi digitado na captação
+                desse negócio (comitê de compra 18/08/2026): não tem como
+                virar client_contacts sem migração de dado, e um negócio
+                fechado antigo pode não bater com o comitê atual do cliente.
+                Só ocupa espaço quando há dado real (achado do Daniel). */}
             {decisionMakerName !== "—" && (
               <div className="min-w-0">
+                <div className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-dim)" }}>
+                  Contato inicial (histórico)
+                </div>
                 <div className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{decisionMakerName}</div>
                 {decisionMakerRole !== "—" && (
                   <div className="text-xs truncate" style={{ color: "var(--text-dim)" }}>{decisionMakerRole}</div>
                 )}
               </div>
             )}
+
+            {/* Comitê de compra — lê direto de client_contacts (cadastro do
+                cliente, aba "Contatos"), read-only aqui: edição vive só no
+                cadastro do cliente, pra não duplicar UI de CRUD. */}
+            <ClientCommitteeSection clientId={lead.clientId} />
             {(lead.size || lead.phone) && (
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "var(--text-dim)" }}>
                 {lead.size && <span>Porte: <span style={{ color: "var(--text)", fontWeight: 600 }}>{lead.size}</span></span>}
@@ -1043,6 +1097,11 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
             {/* ── Tab: Email ── */}
             {sideTab === "email" && (
               <EmailPanel lead={lead} currentUser={currentUser} onAddActivity={onAddActivity} initialDraft={emailPrefill} />
+            )}
+
+            {/* ── Tab: WhatsApp (Fase 1, dormente — ver docs/design-spec-whatsapp-fase1.md) ── */}
+            {sideTab === "whatsapp" && (
+              <WhatsAppPanel leadId={lead.id} />
             )}
 
             {/* ── Tab: Atividades ── */}
@@ -1314,6 +1373,36 @@ function InfoTile({ label, value }) {
   );
 }
 
+// Comitê de compra (18/08/2026) — lista read-only dos contatos ativos do
+// cliente vinculado (client_contacts, cadastro em Clientes → Contatos).
+// Read-only aqui de propósito: editar vive só no cadastro do cliente, pra
+// não duplicar UI de CRUD num painel de lead que já é denso.
+function ClientCommitteeSection({ clientId }) {
+  const { rows, loading } = useClientContacts(clientId);
+  const ativos = rows.filter(c => c.active);
+  if (!clientId || loading || ativos.length === 0) return null;
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-dim)" }}>
+        Comitê de compra
+      </div>
+      <div className="space-y-1.5">
+        {ativos.map(c => (
+          <div key={c.id} className="flex items-center gap-2 min-w-0">
+            <span className="font-semibold text-xs truncate" style={{ color: "var(--text)" }}>{c.name}</span>
+            {c.job_title && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0"
+                    style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+                {c.job_title}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Side-tab system ─────────────────────────────────────────────────────────
 
 const SIDE_TAB_HINTS = {
@@ -1323,6 +1412,7 @@ const SIDE_TAB_HINTS = {
 const SIDE_TABS = [
   { id: "form",         label: "Form",        icon: FileText },
   { id: "email",        label: "Email",       icon: Mail },
+  { id: "whatsapp",     label: "WhatsApp",    icon: MessageCircle },
   { id: "atividades",   label: "Atividades",  icon: Activity },
   { id: "historico",    label: "Histórico",   icon: History },
   { id: "ia",           label: "IA",          icon: Sparkles },
@@ -1985,8 +2075,11 @@ function SamplesPanel({ leadId, companyColor, currentUser }) {
 
 function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
   const { attachments, loading, uploading, error, upload, remove, getSignedUrl } = useLeadAttachments(leadId);
+  const { documents: libraryDocs, getSignedUrl: getLibrarySignedUrl } = useDocumentLibrary();
+  const { refs: libraryRefs, loading: refsLoading, attach: attachLibraryDoc, detach: detachLibraryDoc } = useLeadDocumentRefs(leadId);
   const [dragOver, setDragOver] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const inputRef = useRef(null);
 
   const doUpload = useCallback(async (file) => {
@@ -2003,14 +2096,39 @@ function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
     if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   }, [handleFiles]);
 
-  const handleDownload = useCallback(async (att) => {
-    setDownloadingId(att.id);
+  // Mescla anexo próprio (lead_attachments) + referência da biblioteca
+  // (lead_document_refs, nunca copia o arquivo — ver use-document-library.js)
+  // numa lista só, mais recente primeiro. Badge "Biblioteca" distingue os dois.
+  const mergedItems = useMemo(() => {
+    const own = attachments.map(a => ({
+      kind: "own", id: a.id, label: a.file_name, file_size: a.file_size,
+      mime_type: a.mime_type, created_at: a.created_at, file_path: a.file_path, raw: a,
+    }));
+    const lib = libraryRefs
+      .filter(r => r.document_library)
+      .map(r => ({
+        kind: "library", id: r.id, label: r.document_library.title, file_size: null,
+        mime_type: r.document_library.mime_type, created_at: r.created_at,
+        file_path: r.document_library.file_path, expiresAt: r.document_library.expires_at, raw: r,
+      }));
+    return [...own, ...lib].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }, [attachments, libraryRefs]);
+
+  const alreadyAttachedIds = useMemo(
+    () => new Set(libraryRefs.map(r => r.document_library_id)),
+    [libraryRefs]
+  );
+
+  const handleDownload = useCallback(async (item) => {
+    setDownloadingId(item.id);
     try {
-      const url = await getSignedUrl(att.file_path);
+      const url = item.kind === "library"
+        ? await getLibrarySignedUrl(item.file_path)
+        : await getSignedUrl(item.file_path);
       if (!url) return;
       const a = document.createElement("a");
       a.href = url;
-      a.download = att.file_name;
+      a.download = item.label;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
       document.body.appendChild(a);
@@ -2019,7 +2137,11 @@ function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
     } finally {
       setDownloadingId(null);
     }
-  }, [getSignedUrl]);
+  }, [getSignedUrl, getLibrarySignedUrl]);
+
+  const handleAttachFromLibrary = useCallback(async (documentLibraryId) => {
+    await attachLibraryDoc(documentLibraryId, currentUser?.id || null);
+  }, [attachLibraryDoc, currentUser]);
 
   return (
     <div className="space-y-3">
@@ -2068,6 +2190,16 @@ function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
         />
       </div>
 
+      <button
+        type="button"
+        data-tour="lead-anexar-biblioteca"
+        onClick={() => setPickerOpen(true)}
+        className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold rounded-lg border py-2 transition-colors"
+        style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+      >
+        <BookOpen size={13} /> Anexar da biblioteca
+      </button>
+
       {error && (
         <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <AlertCircle size={13} className="shrink-0 mt-0.5" />
@@ -2075,64 +2207,248 @@ function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
         </div>
       )}
 
-      {loading && (
+      {(loading || refsLoading) && (
         <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Carregando…</div>
       )}
 
-      {!loading && attachments.length === 0 && (
+      {!loading && !refsLoading && mergedItems.length === 0 && (
         <div className="text-xs text-center py-2 italic" style={{ color: "var(--text-dim)" }}>
           Nenhum arquivo anexado ainda.
         </div>
       )}
 
-      {attachments.length > 0 && (
+      {mergedItems.length > 0 && (
         <div className="space-y-1.5">
-          {attachments.map(att => (
-            <div
-              key={att.id}
-              className="flex items-center gap-2.5 p-2.5 rounded-lg border"
-              style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-            >
+          {mergedItems.map(item => {
+            const expired = item.expiresAt && new Date(item.expiresAt) < new Date();
+            return (
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}
+                key={`${item.kind}-${item.id}`}
+                className="flex items-center gap-2.5 p-2.5 rounded-lg border"
+                style={{ background: "var(--surface)", borderColor: "var(--border)" }}
               >
-                <FileIcon mimeType={att.mime_type} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
-                  {att.file_name}
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}
+                >
+                  <FileIcon mimeType={item.mime_type} />
                 </div>
-                <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
-                  {formatBytes(att.file_size)}
-                  {att.created_at && (
-                    <> · {new Date(att.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</>
-                  )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <div className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
+                      {item.label}
+                    </div>
+                    {item.kind === "library" && (
+                      <span
+                        className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+                      >
+                        Biblioteca
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[10px] mt-0.5" style={{ color: expired ? "var(--danger)" : "var(--text-dim)" }}>
+                    {item.kind === "own" ? formatBytes(item.file_size) : (expired ? `Vencido em ${formatDateBR(item.expiresAt)}` : "Da biblioteca")}
+                    {item.created_at && (
+                      <> · {new Date(item.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</>
+                    )}
+                  </div>
                 </div>
+                <button
+                  onClick={() => handleDownload(item)}
+                  disabled={downloadingId === item.id}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                  title="Baixar arquivo"
+                  aria-label="Baixar arquivo"
+                >
+                  <Download size={13} />
+                </button>
+                <button
+                  onClick={() => item.kind === "library" ? detachLibraryDoc(item.id) : remove(item.raw)}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                  title={item.kind === "library" ? "Remover referência (o documento continua na biblioteca)" : "Remover arquivo"}
+                  aria-label={item.kind === "library" ? "Remover referência" : "Remover arquivo"}
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
-              <button
-                onClick={() => handleDownload(att)}
-                disabled={downloadingId === att.id}
-                className="p-1.5 rounded-lg transition-colors"
-                style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                title="Baixar arquivo"
-                aria-label="Baixar arquivo"
-              >
-                <Download size={13} />
-              </button>
-              <button
-                onClick={() => remove(att)}
-                className="p-1.5 rounded-lg transition-colors"
-                style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                title="Remover arquivo"
-                aria-label="Remover arquivo"
-              >
-                <Trash2 size={13} />
-              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {pickerOpen && (
+        <LibraryPickerModal
+          companyId={companyId}
+          documents={libraryDocs}
+          alreadyAttachedIds={alreadyAttachedIds}
+          onAttach={handleAttachFromLibrary}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+const DOCUMENT_LIBRARY_CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS).map(([id, label]) => ({ value: id, label }));
+
+function LibraryPickerModal({ companyId, documents, alreadyAttachedIds, onAttach, onClose }) {
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selected, setSelected] = useState(() => new Set());
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const available = useMemo(
+    () => documents.filter(d => (d.company_ids || []).includes(companyId) && !alreadyAttachedIds.has(d.id)),
+    [documents, companyId, alreadyAttachedIds]
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return available.filter(d => {
+      if (categoryFilter !== "all" && d.category !== categoryFilter) return false;
+      if (q && !(d.title || "").toLowerCase().includes(q) && !(d.tags || []).some(t => t.toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [available, search, categoryFilter]);
+
+  const toggle = (id) => setSelected(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  const handleConfirm = async () => {
+    if (selected.size === 0) { onClose(); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      await Promise.all(Array.from(selected).map(id => onAttach(id)));
+      onClose();
+    } catch (err) {
+      setError(err.message || "Erro ao anexar documento.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Anexar da biblioteca" width={520}>
+      <div className="p-5 space-y-3">
+        <FilterBar
+          search={{ value: search, onChange: e => setSearch(e.target.value), placeholder: "Buscar por título ou tag…" }}
+          filters={[{
+            id: "category",
+            value: categoryFilter,
+            onChange: e => setCategoryFilter(e.target.value),
+            label: "Categoria",
+            options: [{ value: "all", label: "Todas as categorias" }, ...DOCUMENT_LIBRARY_CATEGORY_OPTIONS],
+          }]}
+        />
+        <div style={{ maxHeight: 360, overflowY: "auto" }}>
+          {filtered.length === 0 ? (
+            <div className="text-xs text-center py-6 italic" style={{ color: "var(--text-dim)" }}>
+              {available.length === 0 ? "Nenhum documento da biblioteca disponível pra esta empresa." : "Nenhum resultado pra estes filtros."}
+            </div>
+          ) : (
+            <CardGrid density="list">
+              {filtered.map(d => (
+                <label key={d.id} style={{ display: "block", cursor: "pointer" }}>
+                  <Card
+                    density="list"
+                    interactive={false}
+                    icon={<FileText size={14} />}
+                    title={d.title}
+                    meta={CATEGORY_LABELS[d.category] || d.category}
+                    headerAction={
+                      <input
+                        type="checkbox"
+                        checked={selected.has(d.id)}
+                        onChange={() => toggle(d.id)}
+                        style={{ width: 16, height: 16, accentColor: "var(--accent)", cursor: "pointer" }}
+                      />
+                    }
+                  />
+                </label>
+              ))}
+            </CardGrid>
+          )}
+        </div>
+        {error && (
+          <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{error}</div>
+        )}
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
+          <button type="button" onClick={handleConfirm} disabled={saving || selected.size === 0}
+            className="px-4 py-2 rounded-lg text-sm font-semibold"
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving || selected.size === 0 ? 0.6 : 1 }}>
+            {saving ? "Anexando…" : `Anexar${selected.size > 0 ? ` (${selected.size})` : ""}`}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ── WhatsApp panel (Fase 1, dormente) ─────────────────────────────────────────
+// Só leitura — sem número dedicado aprovado no Meta Business Manager nem
+// template homologado, não há como enviar nada de verdade ainda (ver
+// docs/design-spec-whatsapp-fase1.md). A aba existe pronta pra popular
+// quando o webhook real (Fase 2) chegar; até lá, mostra o estado vazio.
+function WhatsAppPanel({ leadId }) {
+  const { conversation, messages, loading } = useWhatsappConversation(leadId);
+
+  if (loading) {
+    return <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Carregando…</div>;
+  }
+
+  if (!conversation) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-8 text-center">
+        <MessageCircle size={22} style={{ color: "var(--text-dim)" }} />
+        <div className="text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma conversa ainda.</div>
+        <div className="text-[11px] max-w-[220px]" style={{ color: "var(--text-dim)" }}>
+          A integração com WhatsApp ainda está em teste — esta aba fica pronta pra mostrar a conversa assim que estiver ativa.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs px-1">
+        <span style={{ color: "var(--text-dim)" }}>{conversation.phone_number}</span>
+        <span style={{ color: conversation.opt_in ? "var(--text)" : "var(--warning)" }}>
+          {conversation.opt_in ? "Opt-in confirmado" : "Sem opt-in"}
+        </span>
+      </div>
+      {messages.length === 0 ? (
+        <div className="text-xs text-center py-4 italic" style={{ color: "var(--text-dim)" }}>Nenhuma mensagem ainda.</div>
+      ) : (
+        <div className="space-y-1.5">
+          {messages.map(m => (
+            <div
+              key={m.id}
+              className="text-xs p-2.5 rounded-lg"
+              style={{
+                background: m.direction === "outbound" ? "var(--surface-alt)" : "var(--surface)",
+                border: "1px solid var(--border)",
+                marginLeft: m.direction === "outbound" ? 24 : 0,
+                marginRight: m.direction === "outbound" ? 0 : 24,
+              }}
+            >
+              <div style={{ color: "var(--text)" }}>{m.body}</div>
+              <div className="text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>
+                {new Date(m.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+              </div>
             </div>
           ))}
         </div>

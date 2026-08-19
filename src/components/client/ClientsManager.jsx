@@ -3,6 +3,7 @@ import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, Messag
 import { Modal } from "../ui/Modal";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
 import { ClientProductsTab } from "./ClientProductsTab";
+import { ClientContactsTab } from "./ClientContactsTab";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { EmptyState } from "../ui/EmptyState";
@@ -586,6 +587,7 @@ function ClientDetailModal({
   const tabs = editing
     ? [{ id: "dados", label: "Dados" },
        { id: "produtos", label: "Produtos & Preços" },
+       { id: "contatos", label: "Contatos" },
        { id: "historico", label: "Histórico" }]
     : [{ id: "dados", label: "Dados" }];
   const tab = editing ? activeTab : "dados";
@@ -799,6 +801,12 @@ function ClientDetailModal({
         <ClientProductsTab
           clientId={editing.id}
           companyIds={form.companyIds?.length ? form.companyIds : (editing.companyIds || [])}
+          canEdit={canReleaseProducts}
+        />
+      )}
+      {tab === "contatos" && editing && (
+        <ClientContactsTab
+          clientId={editing.id}
           canEdit={canReleaseProducts}
         />
       )}

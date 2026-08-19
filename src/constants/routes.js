@@ -28,6 +28,7 @@ export const ROUTES = {
   presidency:        "/presidencia",
   "funnel-history":  "/historico-funil",
   "pipeline-builder":"/pipeline-builder",
+  "document-library":"/biblioteca-de-documentos",
   automations:       "/automacoes",
   "fair-import":     "/importar-feira",
   users:             "/usuarios",

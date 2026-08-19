@@ -193,6 +193,42 @@ export const FEATURE_SPOTLIGHTS = [
   // qualquer card, sem elemento único e clicável pra apontar. Coberto pelo
   // changelog 4.59.0.
   //
+  {
+    id: "document-library-nav",
+    route: "dashboard",
+    target: '[data-tour="sidebar-nav-document-library"]',
+    text: "Novo: a Biblioteca de Documentos guarda certificado, datasheet e ficha técnica reutilizáveis — clique aqui pra ver.",
+    version: "4.61.0",
+  },
+  {
+    id: "proposal-line-items",
+    route: "crm",
+    target: '[data-tour="proposal-line-items"]',
+    text: "Novo: monte a lista de itens (modelo, quantidade, preço) antes de gerar a proposta — clique em \"Adicionar item\".",
+    version: "4.61.0",
+  },
+  // 4.61.0 — leva de 7 features do Funil de Vendas (comitê de compra, gate
+  // de etapa por valor, alerta de concorrente, fit_score, WhatsApp fase 1):
+  // DECIDIDO PULAR spotlight nas 5, cada uma por motivo próprio, coberto
+  // pelo changelog 4.61.0 em todos os casos:
+  //   - Comitê de compra: a leitura (o que aparece no negócio) é passiva,
+  //     sem elemento clicável; a edição de verdade vive na aba "Contatos"
+  //     dentro do MODAL do cliente — mesma situação já registrada pra
+  //     "Histórico"/"Conexões" em 4.40.0 acima (sem alvo estável na rota).
+  //   - Gate de etapa por valor: o ícone de filtro que abre o editor de
+  //     condição vive dentro do modal "Editar etapas do pipeline", não numa
+  //     rota — mesmo caso do calendário de time em 4.43.0 acima.
+  //   - Alerta de concorrente: badge ambiente (aparece sozinho quando há
+  //     menção recente), nada pra "clicar aqui e descobrir" — mesmo
+  //     critério das colunas mais largas em 4.59.0 acima.
+  //   - fit_score: o número/badge é passivo; a única ação nova (ordenar por
+  //     Fit) é uma opção a mais dentro de um menu de ordenação que já
+  //     existia antes desta leva, não um elemento novo pra apontar.
+  //   - WhatsApp fase 1: propositalmente dormente ("cria, mas deixa em
+  //     teste ainda") — nada funciona ainda (sem envio/recebimento);
+  //     anunciar com spotlight uma aba que não faz nada seria pior que só
+  //     deixar quem abrir um negócio notar sozinho.
+  //
   // 4.60.1 — título editável (lápis) em Vaga e Candidato (RH Recrutamento):
   // DECIDIDO PULAR o spotlight. Mesmo componente `EditableTitle` já em uso
   // desde 29/07/2026 em Campanhas/Entregas/Tarefas/Compras (nunca ganhou

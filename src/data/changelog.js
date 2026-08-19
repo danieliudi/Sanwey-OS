@@ -24,6 +24,46 @@
 
 export const CHANGELOG = [
   {
+    version: "4.61.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O campo único de \"Decisor\" no Funil de Vendas virou Comitê de Compra: cadastre quantos contatos o cliente tiver (compras, técnico, financeiro...) em Clientes → aba Contatos, em vez de um nome só.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Etapas do funil agora podem exigir uma condição de campo pra liberar o avanço (ex.: só permite mover se o valor for maior que X) — configure em Funil de Vendas → Editar etapas, no ícone de filtro ao lado de cada etapa de destino.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Nova tela \"Biblioteca de Documentos\" (menu Comercial): cadastre certificado, datasheet e ficha técnica uma vez e anexe em quantos negócios precisar — acesse também de dentro de um negócio, na aba Anexos → \"Anexar da biblioteca\".",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "A aba \"PDF\" de cada negócio ganhou uma tabela de itens: adicione modelo, quantidade e preço unitário — a proposta gerada por IA e o PDF já usam os valores reais em vez de \"[a definir]\".",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Negócio com menção a concorrente numa atividade recente (últimos 60 dias) mostra um aviso no card e no topo do detalhe, pra não passar batido.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "O indicador de prioridade (Fit Score) no Funil de Vendas voltou a calcular de verdade — combina aderência de segmento, valor do negócio e tempo parado — e já dá pra ordenar o quadro por ele.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Uma aba \"WhatsApp\" apareceu nos negócios do Funil de Vendas — ainda em teste, sem envio nem recebimento ativo (depende de aprovação de número no Meta Business Manager). Por enquanto só mostra \"Nenhuma conversa ainda\".",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
     version: "4.60.3",
     items: [
       {

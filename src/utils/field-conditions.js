@@ -6,22 +6,13 @@
 // Condição: { fieldKey, operator, value } | null. null = sem condição (o
 // campo é sempre visível; "exigir" cai de volta pro `required` estático).
 
+import { matchOperator } from "./condition-operators";
+
 export function evalFieldCondition(condition, valuesByKey) {
   if (!condition?.fieldKey) return true;
   const actual = String(valuesByKey?.[condition.fieldKey] ?? "");
   const expected = String(condition.value ?? "");
-  switch (condition.operator) {
-    case "eq":            return actual === expected;
-    case "neq":            return actual !== expected;
-    case "contains":       return actual.toLowerCase().includes(expected.toLowerCase());
-    case "gt":             return parseFloat(actual) > parseFloat(expected);
-    case "lt":             return parseFloat(actual) < parseFloat(expected);
-    case "gte":            return parseFloat(actual) >= parseFloat(expected);
-    case "lte":            return parseFloat(actual) <= parseFloat(expected);
-    case "is_empty":       return actual.trim() === "";
-    case "is_not_empty":   return actual.trim() !== "";
-    default:               return actual === expected;
-  }
+  return matchOperator(actual, condition.operator, expected);
 }
 
 // field: { fieldKey, required, visibleIf, requiredIf, ... } (shape de

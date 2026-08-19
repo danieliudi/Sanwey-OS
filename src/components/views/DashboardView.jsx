@@ -23,7 +23,7 @@ import { logExport } from "../../utils/log-export";
 import { greetingFor } from "../../utils/greeting";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { useDashboardWidgetPrefs } from "../../hooks/use-dashboard-widget-prefs";
-import { isStale, daysIdle, getLeadOwnerIds } from "../../utils/pipeline-metrics";
+import { isStale, daysIdle, getLeadOwnerIds, computeFitScore } from "../../utils/pipeline-metrics";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 const CLOSING_HORIZON_DAYS = 7;
@@ -65,8 +65,9 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
     let pipelineValue = 0, wonValue = 0, wonCount = 0, openCount = 0;
     let fitSum = 0, fitCount70 = 0, newCount = 0;
     for (const l of scopedLeads) {
-      fitSum += l.fitScore;
-      if (l.fitScore >= 70) fitCount70++;
+      const fs = computeFitScore(l);
+      fitSum += fs;
+      if (fs >= 70) fitCount70++;
       if (daysSince(l.negotiationStartedAt || l.createdAt) <= 2) newCount++;
       if (l.stage === "ganho") { wonValue += l.value; wonCount++; }
       if (!TERMINAL.has(l.stage)) { pipelineValue += l.value; openCount++; }
