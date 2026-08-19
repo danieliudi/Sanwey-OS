@@ -66,6 +66,34 @@ Regras que não podem ser quebradas:
 - Responda com o JSON puro, sem cercas de código e sem texto antes ou depois.`;
 }
 
+// GAP 3 (18/08/2026): mesma máscara de CPF do ai-assistant/_shared/ai-provider.ts
+// — este arquivo não importa de lá (chama fetch direto pros providers, sem
+// passar por callAIProvider), então a função é duplicada aqui. Só mascara o
+// texto mandado pro modelo de ESTRUTURAÇÃO (segundo passo) — o áudio em si
+// já foi mandado inteiro pro Whisper transcrever, isso é inerente à feature
+// (não dá pra mascarar antes de existir texto). A transcrição devolvida pro
+// vendedor conferir na tela continua completa, sem máscara — é dado do
+// próprio sistema, protegido por RLS, não um prompt saindo pra fora.
+function isValidCPF(digits: string): boolean {
+  if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(digits[i], 10) * (10 - i);
+  let check1 = 11 - (sum % 11);
+  if (check1 >= 10) check1 = 0;
+  if (check1 !== parseInt(digits[9], 10)) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(digits[i], 10) * (11 - i);
+  let check2 = 11 - (sum % 11);
+  if (check2 >= 10) check2 = 0;
+  return check2 === parseInt(digits[10], 10);
+}
+
+function maskCPF(text: string): string {
+  let masked = text.replace(/\d{3}\.\d{3}\.\d{3}-\d{2}/g, (m) => (isValidCPF(m.replace(/\D/g, "")) ? "[CPF removido]" : m));
+  masked = masked.replace(/\b\d{11}\b/g, (m) => (isValidCPF(m) ? "[CPF removido]" : m));
+  return masked;
+}
+
 function parseModelJson(raw: string): Record<string, unknown> {
   let s = (raw || '').trim();
   // Modelos às vezes devolvem cercado por ```json apesar da instrução.
@@ -109,7 +137,7 @@ async function viaOpenAI(opts: {
       max_tokens: 1200,
       messages: [
         { role: 'system', content: opts.system },
-        { role: 'user', content: `Relato do vendedor:\n\n${transcript}\n\nDevolva o JSON pedido.` },
+        { role: 'user', content: `Relato do vendedor:\n\n${maskCPF(transcript)}\n\nDevolva o JSON pedido.` },
       ],
     }),
   });
@@ -129,7 +157,7 @@ async function viaAnthropic(opts: {
       model: opts.model,
       max_tokens: 1200,
       system: opts.system,
-      messages: [{ role: 'user', content: `Relato do vendedor:\n\n${opts.text}\n\nDevolva o JSON pedido.` }],
+      messages: [{ role: 'user', content: `Relato do vendedor:\n\n${maskCPF(opts.text)}\n\nDevolva o JSON pedido.` }],
     }),
   });
   const d = await r.json();
@@ -160,6 +188,11 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: userErr } = await userClient.auth.getUser();
   if (userErr || !userData?.user) return json({ error: 'Unauthorized' }, 401);
 
+  // GAP 2 (18/08/2026): mesma trilha de auditoria mínima do ai-assistant/
+  // agent-runner — só metadados, nunca conteúdo. Sem prompt/completion_tokens
+  // aqui (Whisper não devolve usage) e sem `role` (esta function não recebe
+  // roles, só o JWT do vendedor) — o resto do formato é o mesmo.
+  const t0 = Date.now();
   try {
     const body = await req.json();
     const audioPath: string | undefined = body.audioPath;
@@ -205,6 +238,10 @@ Deno.serve(async (req: Request) => {
                 : provider === 'anthropic' ? await viaAnthropic({ model, apiKey, system, text: texto })
                 : null;
       if (!out) return json({ error: provider === 'gemini' ? 'Gemini não é mais um provedor suportado. Use Anthropic ou OpenAI.' : `Provedor de IA desconhecido: ${provider}` }, 400);
+      console.log(JSON.stringify({
+        event: 'crm_ata_voz_call', user_id: userData.user.id, crm_module: 'crm_visitas',
+        provider, execution_status: 'ok', latency_ms: Date.now() - t0, at: new Date().toISOString(),
+      }));
       return json({ ...out, source: 'texto' });
     }
 
@@ -242,8 +279,16 @@ Deno.serve(async (req: Request) => {
 
     const out = await viaOpenAI({ model, apiKey, system, audio: { bytes, mimeType, filename: audioPath?.split('/').pop() || 'ata.webm' } });
 
+    console.log(JSON.stringify({
+      event: 'crm_ata_voz_call', user_id: userData.user.id, crm_module: 'crm_visitas',
+      provider, execution_status: 'ok', latency_ms: Date.now() - t0, at: new Date().toISOString(),
+    }));
     return json({ ...out, source: 'audio' });
   } catch (err) {
+    console.log(JSON.stringify({
+      event: 'crm_ata_voz_call', user_id: userData.user.id, crm_module: 'crm_visitas',
+      provider: null, execution_status: 'error', latency_ms: Date.now() - t0, at: new Date().toISOString(),
+    }));
     const message = err instanceof Error ? err.message : String(err);
     // JSON malformado do modelo é o erro mais provável em produção — vale
     // uma mensagem que diz o que fazer, não o stack do parser.
