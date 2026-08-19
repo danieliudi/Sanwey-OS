@@ -12,8 +12,57 @@ Metodologia.........: revisão de código (377 arquivos em src/, 24 edge functio
                       produção (pg_policy, pg_proc, pg_trigger, storage.buckets),
                       Supabase Security Advisors, npm audit, e verificação de
                       deriva repo-vs-produção.
-Natureza............: auditoria SOMENTE-LEITURA. Nenhuma migration foi aplicada,
-                      nenhuma policy alterada, nenhum dado modificado.
+Natureza............: auditoria SOMENTE-LEITURA na sessão original. Nenhuma
+                      migration foi aplicada, nenhuma policy alterada, nenhum
+                      dado modificado NA SESSÃO EM QUE ESTE RELATÓRIO FOI
+                      ESCRITO — ver nota de atualização abaixo.
+
+================================================================================
+ATUALIZAÇÃO — 19/08/2026, sessão seguinte: correções aplicadas
+================================================================================
+Numa segunda sessão no mesmo dia, com aprovação explícita do Daniel, os
+seguintes achados foram CORRIGIDOS e já não refletem o estado atual de
+produção — o resto deste documento permanece como registro histórico do que
+foi encontrado, não como status atual:
+
+  [AL-01] Corrigido — csvCell (export-csv.js) neutraliza injeção de fórmula.
+  [AL-04] Corrigido e deployado — delete-user valida cargo/empresa do alvo.
+  [AC-02] Corrigido — sanwey-crm-mcp, analyze-lead e check-document-
+          legibility commitadas ao repositório (analyze-lead segue ativa em
+          produção, marcada como órfã — decisão de apagá-la ainda pendente).
+  [AL-06] Corrigido e aplicado em produção — profiles_delete/update checam
+          roles[]. NOTA DE RETIFICAÇÃO: a versão original deste achado
+          generalizava a correção às policies de `invitations` também —
+          errado. `invitations.role` não tem `roles[]` irmã (um convite
+          propõe um único cargo), então `role <> 'admin'` já estava correto
+          ali e não foi alterado.
+  [BX-02] Corrigido e aplicado — chat_profile_matches_filter ganhou
+          search_path explícito. Confirmado via get_advisors: 152 → 151.
+  [MD-08] Corrigido — netlify.toml ganhou HSTS, Permissions-Policy,
+          Cross-Origin-Opener-Policy e CSP em Report-Only.
+  [IN-02] Corrigido — react-router-dom atualizado para 7.18.2.
+
+Achados novos, encontrados na auditoria FUNCIONAL da sessão seguinte (ver
+docs/auditoria-funcional-ux-2026-08-19.txt §9) e também já corrigidos:
+  [F-13] CRÍTICO — prospect_seeds sem escopo nenhum (USING enabled=true),
+         legível por qualquer conta autenticada, inclusive agência externa.
+  [F-14] ALTO — agencia_sees_supplier() fail-open fazia a agência externa
+         ver mais entregas que a própria gerente de Marketing.
+  [F-02] ALTO — trigger sync_profile_to_colaborador sem guarda de cargo.
+  [F-15] ALTO — vendedor sem roster de colegas (roster de 1 pessoa).
+
+NÃO corrigidos nesta passada — seguem como estavam:
+  [AL-05] xlsx sem correção — cdn.sheetjs.com fora da política de rede do
+          ambiente de execução; upgrade de vite (5→8) testado e revertido
+          por ser salto de 3 majors com avisos de depreciação na config
+          atual.
+  [AC-01] "Acesso por módulo" continua sem contraparte no banco — decisão de
+          produto pendente (virar controle real vs. renomear a UI).
+  [MD-09] Leaked password protection segue desligado — é config do painel
+          Auth, fora do alcance de uma migration.
+  [BX-01] REVOKE em massa do EXECUTE de anon sobre funções não-públicas —
+          não aplicado, lista de 52 funções precisa de mapeamento cuidadoso.
+  Todo o resto do plano de ação (§7) segue pendente como estava.
 
 --------------------------------------------------------------------------------
 SUMÁRIO EXECUTIVO

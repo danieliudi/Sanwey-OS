@@ -34,6 +34,62 @@ O que isso NÃO impediu:
 
 O §7 lista, item a item, tudo que ficou sem teste.
 
+================================================================================
+ATUALIZAÇÃO — 19/08/2026, sessão seguinte: correções aplicadas
+================================================================================
+Com aprovação explícita do Daniel, os achados abaixo foram corrigidos —
+código verificado em navegador contra o build real, migrations aplicadas em
+produção e reconferidas por simulação de RLS. O resto deste documento
+permanece como registro do que foi encontrado, não como status atual.
+
+  [F-01] Parcialmente — a CAUSA (seletor de empresa sem "montemor" em
+         UserManagementView) segue sem decisão do Daniel (regra 5: schema/
+         produto). Continua bloqueado como estava.
+  [F-02] Corrigido e aplicado — guarda de cargo no trigger + linha da
+         Beehave removida de rh_colaboradores (21 → 20).
+  [F-04] Corrigido — as 3 páginas públicas distinguem carregando / erro de
+         rede / não encontrado, com timeout de 10s e "Tentar de novo".
+         BÔNUS encontrado ao corrigir: BemEstarPublicaForm tinha um
+         Promise.all sem try/catch — falha de rede virava unhandled
+         rejection e travava em loading pra sempre, nem caía no estado de
+         "indisponível" que o F-04 original já descrevia como problema.
+  [F-05] Parcialmente — use-profiles troca select(*) por colunas explícitas
+         (aplicado). NÃO resolve o payload de avatar_url em base64 — mover
+         foto pro Storage requer decisão sobre bucket, segue pendente.
+  [F-13] CRÍTICO, corrigido e aplicado — prospect_seeds escopado por
+         empresa. Verificado: agência externa caiu de 45 para 0 linhas.
+  [F-14] Corrigido e aplicado — agencia_sees_supplier() fail-closed.
+         Efeito colateral avisado ao Daniel antes de aplicar: a agência
+         externa perde acesso às 13 entregas sem campanha vinculada (era
+         exatamente essa lacuna, ligada ao F-09, que abria a válvula).
+  [F-15] Corrigido e aplicado — vendedor vê roster da própria empresa.
+         Verificado: 1 → 13 perfis visíveis para um vendedor sem
+         subordinados.
+  [N-03] Corrigido — /captura/sanwey aceita alias pra "industria".
+         Verificado em navegador: renderiza o formulário, não mais "link
+         inválido".
+  [U-01] Corrigido — botão de idioma tirado da tabulação (tabIndex=-1,
+         aria-disabled). Decisão de implementar/remover de vez continua
+         pendente — só a acessibilidade foi corrigida, não o produto.
+  [U-03][U-04] Corrigidos — título e badge de MarketingRequestForm
+         acompanham a categoria e deixam de anunciar só "Sanwey".
+
+NÃO corrigidos nesta passada:
+  [F-06][F-07][F-08][F-09][F-10][F-11][F-16][F-17][F-18] — seguem como
+  estavam. F-07 (dedupe rh_colaboradores) e a limpeza de §7.4 continuam
+  exigindo decisão humana sobre qual linha manter em cada duplicata — não
+  são migrations que dá pra aplicar às cegas.
+  [N-01][N-02] — 9 rotas fora do registro de módulo e a página 404 seguem
+  pendentes; N-01 especificamente NÃO foi tratado por precaução: adicionar
+  'presidency'/'users' ao registro de módulos pode BLOQUEAR acesso de quem
+  hoje entra livremente, dependendo de como effectiveModules() calcula o
+  default por cargo — precisa de análise própria antes de mexer, não é uma
+  correção mecânica.
+  [U-02][U-05] — seguem como estavam.
+
+  Big Bag Insights: análise e mockup de integração em andamento na mesma
+  sessão desta atualização — ver anexo separado quando publicado.
+
 --------------------------------------------------------------------------------
 SUMÁRIO
 --------------------------------------------------------------------------------
