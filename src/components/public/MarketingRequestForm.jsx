@@ -266,10 +266,16 @@ export default function MarketingRequestForm({ defaultCategory = "material" }) {
               marginBottom: 14,
             }}
           >
-            Marketing · Sanwey
+            {/* Achado U-03/U-04 da auditoria funcional (19/08/2026): rótulo e
+                badge ficavam fixos em "Marketing · Sanwey"/"Solicitar ao
+                Marketing" mesmo na rota de Compra e mesmo o formulário
+                atendendo Sanwey, Resibag e Monte Mor — "Sanwey" sozinho
+                sugeria a página errada pra quem solicitava das outras duas
+                unidades. */}
+            Marketing · Grupo Sanwey
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#201a1a", margin: "0 0 6px", letterSpacing: "-0.02em" }}>
-            Solicitar ao Marketing
+            {category === "compra" ? "Solicitar Compra" : "Solicitar ao Marketing"}
           </h1>
           <p style={{ color: "#5c5f60", fontSize: 14, margin: 0, lineHeight: 1.55 }}>
             O que você precisa? Escolha o tipo abaixo — o formulário se ajusta automaticamente.

@@ -36,6 +36,14 @@ export default function JobApplicationForm() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(null);
+  // Achado F-04 da auditoria funcional (19/08/2026): antes, erro de rede e
+  // "slug não corresponde a vaga nenhuma" caíam no MESMO estado (vaga=null)
+  // — um candidato em conexão instável recebia "vaga não encontrada" quando
+  // o problema era só a rede, e sem timeout o spinner ficava girando pra
+  // sempre se a promise nunca resolvesse. loadError distingue os dois casos;
+  // reloadKey permite tentar de novo sem recarregar a página inteira.
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     document.title = "Trabalhe conosco — Grupo Sanwey";
@@ -43,15 +51,22 @@ export default function JobApplicationForm() {
 
   useEffect(() => {
     let active = true;
+    setVaga(undefined);
+    setLoadError(false);
     if (!isSupabaseConfigured) { setVaga(null); return; }
+    const timeoutId = setTimeout(() => {
+      if (active) setLoadError(true);
+    }, 10000);
     (async () => {
       const { data, error: err } = await supabase.rpc("get_vaga_publica", { p_slug: slug });
+      clearTimeout(timeoutId);
       if (!active) return;
-      if (err || !data || data.length === 0) { setVaga(null); return; }
+      if (err) { setLoadError(true); return; }
+      if (!data || data.length === 0) { setVaga(null); return; }
       setVaga(data[0]);
     })();
-    return () => { active = false; };
-  }, [slug]);
+    return () => { active = false; clearTimeout(timeoutId); };
+  }, [slug, reloadKey]);
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -123,6 +138,27 @@ export default function JobApplicationForm() {
       setSubmitting(false);
     }
   };
+
+  if (loadError) {
+    return (
+      <ShellCard>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", padding: "24px 0" }}>
+          <AlertCircle size={28} color={ACCENT} />
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Não conseguimos carregar agora</h1>
+          <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 340, margin: 0 }}>
+            Verifique sua conexão e tente de novo. Se persistir, a vaga pode ter sido preenchida ou encerrada.
+          </p>
+          <button
+            type="button"
+            onClick={() => setReloadKey(k => k + 1)}
+            style={{ padding: "10px 18px", borderRadius: 10, background: ACCENT, color: "#FFF", fontSize: 14, fontWeight: 700, border: "none", cursor: "pointer" }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      </ShellCard>
+    );
+  }
 
   if (vaga === undefined) {
     return (

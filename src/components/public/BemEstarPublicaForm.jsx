@@ -33,25 +33,42 @@ export default function BemEstarPublicaForm() {
   // passo 2 (horário) aparecer — o link só "libera" a agenda depois de nome
   // completo + e-mail + celular, pedido explícito do Daniel.
   const [step, setStep] = useState("contato"); // "contato" | "horario"
+  // Achado F-04 (mesmo padrão de JobApplicationForm/PesquisaPublicaForm):
+  // erro de rede caía no mesmo texto de "sessão indisponível", sem timeout
+  // o spinner girava pra sempre, e o Promise.all sem try/catch fazia
+  // qualquer falha de rede virar unhandled rejection — nem chegava a setar
+  // sessao=null, ficava preso em loading pra sempre.
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => { document.title = "Bem-estar — Grupo Sanwey"; }, []);
 
   useEffect(() => {
     let active = true;
+    setSessao(undefined);
+    setLoadError(false);
     if (!isSupabaseConfigured) { setSessao(null); return; }
+    const timeoutId = setTimeout(() => { if (active) setLoadError(true); }, 10000);
     (async () => {
-      const [{ data, error: err }, { data: hData }] = await Promise.all([
-        supabase.rpc("get_bemestar_sessao_publica", { p_id: id }),
-        supabase.rpc("get_bemestar_horarios_disponiveis", { p_id: id }),
-      ]);
-      if (!active) return;
-      const row = Array.isArray(data) ? data[0] : data;
-      if (err || !row) { setSessao(null); return; }
-      setSessao(row);
-      setHorarios(hData || []);
+      try {
+        const [{ data, error: err }, { data: hData }] = await Promise.all([
+          supabase.rpc("get_bemestar_sessao_publica", { p_id: id }),
+          supabase.rpc("get_bemestar_horarios_disponiveis", { p_id: id }),
+        ]);
+        clearTimeout(timeoutId);
+        if (!active) return;
+        if (err) { setLoadError(true); return; }
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) { setSessao(null); return; }
+        setSessao(row);
+        setHorarios(hData || []);
+      } catch {
+        clearTimeout(timeoutId);
+        if (active) setLoadError(true);
+      }
     })();
-    return () => { active = false; };
-  }, [id]);
+    return () => { active = false; clearTimeout(timeoutId); };
+  }, [id, reloadKey]);
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -96,6 +113,18 @@ export default function BemEstarPublicaForm() {
 
   const temHorariosLivres = useMemo(() => horarios.some((h) => h.disponivel), [horarios]);
 
+  if (loadError) {
+    return (
+      <Shell>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", padding: "24px 0" }}>
+          <AlertCircle size={28} color={ACCENT} />
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Não conseguimos carregar agora</h1>
+          <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 340, margin: 0 }}>Verifique sua conexão e tente de novo.</p>
+          <button type="button" onClick={() => setReloadKey(k => k + 1)} style={{ padding: "10px 18px", borderRadius: 10, background: ACCENT, color: "#FFF", fontSize: 14, fontWeight: 700, border: "none", cursor: "pointer" }}>Tentar de novo</button>
+        </div>
+      </Shell>
+    );
+  }
   if (sessao === undefined) {
     return <Shell><div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}><Loader2 size={24} className="animate-spin" style={{ color: ACCENT }} /></div></Shell>;
   }

@@ -136,14 +136,21 @@ function LoginFioBackground() {
 // ── Language selector (cosmético por enquanto) ─────────────────────────────
 
 function LangSelector() {
+  // Achado U-01 da auditoria funcional (19/08/2026): botão sem onClick, mas
+  // com todo o vocabulário visual de um dropdown funcional (chevron, hover),
+  // e era o PRIMEIRO item da tabulação do login — quem navega por teclado
+  // batia num controle morto antes mesmo do campo de e-mail. Correção
+  // mínima de acessibilidade só (tabIndex/aria/cursor) — decisão de
+  // implementar i18n de verdade ou remover o botão fica pro mockup.
   return (
     <button
       type="button"
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
-      onMouseEnter={e => { e.currentTarget.style.background = "#F8F4EF"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
-      title="Idioma (em breve)"
+      tabIndex={-1}
+      aria-disabled="true"
+      disabled
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors"
+      style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)", cursor: "not-allowed" }}
+      title="Idioma — em breve"
     >
       <Globe size={13} style={{ color: "var(--text-dim)" }} />
       Português (BR)
