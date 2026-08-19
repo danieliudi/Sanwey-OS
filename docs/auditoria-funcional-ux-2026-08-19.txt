@@ -43,23 +43,35 @@ cliente, funcionário, usuário e solicitação existem como ilhas, e em um caso
 provado uma unidade inteira do Grupo (Monte Mor) está invisível para o time
 que precisa atendê-la.
 
-Os cinco que eu levaria primeiro:
+Os que eu levaria primeiro:
 
-  F-01 CRÍTICO  Solicitações de Monte Mor são invisíveis para o Marketing.
-                2 pedidos reais, aprovados, que a gerente de Marketing não
-                consegue abrir. PROVADO com a sessão real dela.
+  F-13 CRÍTICO  A lista de prospecção comercial (45 empresas-alvo com CNPJ,
+                fit_score e o racional de cada uma) é legível por QUALQUER
+                conta autenticada — inclusive pela agência de marketing
+                EXTERNA. A policy é `USING (enabled = true)`, sem escopo.
+  F-01 CRÍTICO  A frente de Monte Mor inteira é invisível para o Marketing:
+                2 solicitações reais aprovadas E as 2 entregas que elas
+                geraram. A agência externa vê essas entregas; a gerente de
+                Marketing da Sanwey, não.
+  F-14 ALTO     A agência externa enxerga MAIS entregas (15/15) que a gerente
+                de Marketing (13/15) — a função de escopo é fail-open quando
+                a entrega não tem campanha, que é o caso de 13 das 15.
+  F-15 ALTO     Vendedor não enxerga nenhum colega (roster de 1 pessoa).
+                Isso desliga @menção, escolha de responsável, AvatarStack e
+                transferência de lead — sem nenhuma mensagem de erro.
   F-02 ALTO     "Funcionários" do RH é a lista de todo mundo que já criou
-                conta — inclusive a agência externa Beehave, como funcionário
-                ATIVO. 21 colaboradores para 14 pessoas reais.
-  F-03 ALTO     Cargo, departamento, frente e salário estão NULOS em ~100%
-                das linhas. Todo relatório, filtro e automação de RH que
-                agrupa por esses campos opera sobre o vazio.
+                conta — inclusive a agência externa, como funcionário ATIVO.
+                21 colaboradores para 14 pessoas reais.
+  F-03 ALTO     Cargo, departamento, frente e salário NULOS em ~100% das
+                linhas. Relatórios de RH e o Chat automático operam no vazio.
   F-04 ALTO     3 páginas públicas ficam em spinner infinito se a rede
                 falhar, e erro de rede é exibido como "vaga não encontrada".
   F-05 MÉDIO    Fotos de perfil em base64 dentro da tabela: 524 KB baixados
                 em toda tela que lista usuários, hoje, com só 3 fotos.
 
-CONTAGEM: 1 crítico, 6 altos, 11 médios, 9 baixos, 6 não-testáveis.
+CONTAGEM: 2 críticos, 10 altos, 13 médios, 9 baixos, 6 não-testáveis.
+(§9 foi acrescentado numa 2ª rodada, com a matriz de visibilidade por papel —
+achados F-13 a F-18 e uma correção ao F-01.)
 
 ================================================================================
 §1. CONEXÕES ENTRE ENTIDADES (clientes, funcionários, usuários)
@@ -98,10 +110,19 @@ Logo: é possível CRIAR uma solicitação para uma unidade à qual é impossív
 DAR ACESSO. O registro nasce órfão por construção. Só admin enxerga (porque
 `current_user_is_admin()` curto-circuita o predicado).
 
-AGRAVANTE — o vínculo quebra pela metade: as entregas geradas por essas duas
-solicitações SÃO visíveis (13 de 13 entregas aparecem para a Tatiane). O time
-vê a tarefa a executar, mas não consegue abrir a solicitação que a originou —
-sem briefing, sem solicitante, sem prazo original.
+AGRAVANTE (corrigido na 2ª rodada — ver §9): o problema é PIOR do que uma
+solicitação escondida. As duas ENTREGAS geradas por esses pedidos também são
+invisíveis para a gerente de Marketing:
+
+  Tatiane (gerente_marketing) enxerga .... 13 de 15 entregas
+  As 2 que faltam ........................ "Divulgação de vaga Eletricista"
+                                           "Divulgação de Vagas Auxiliar de Limpeza"
+                                           (ambas company_ids = {montemor})
+
+Ou seja: a frente de trabalho de Monte Mor inteira — pedido E execução — não
+existe na tela de quem deveria executá-la. E, pelo achado F-14 (§9), a agência
+EXTERNA Beehave enxerga as 15 de 15, incluindo essas duas. A agência de fora vê
+o trabalho de Monte Mor que a gerente de Marketing da Sanwey não vê.
 
 CORREÇÃO (escolher uma, é decisão sua):
   a) Se Monte Mor deve ser atendida pelo Marketing: incluir "montemor" no
@@ -586,6 +607,10 @@ Registrados para não serem desfeitos:
 ================================================================================
 
 AGORA (impacto alto, esforço baixo)
+ 0. [F-13] Escopar `prospect_seeds` — hoje a agência externa lê a lista de
+           contas-alvo do Grupo inteira. É a correção mais urgente do
+           relatório. [SCHEMA]
+ 0b.[F-14] Tornar `agencia_sees_supplier` fail-closed. [SCHEMA]
  1. [F-01] Liberar "montemor" no seletor de empresa de UserManagementView
            (linhas 656 e 839) e conceder a unidade a quem atende Marketing.
            Desbloqueia 2 pedidos reais parados desde julho.
@@ -610,10 +635,200 @@ ESTE MÊS
 11. [F-06] Mapa canônico de tradução entre COMPANY_IDS e RH_FRENTES.
 12. [N-01] Decidir e registrar quais das 9 rotas órfãs devem ser gateáveis.
 13. [N-02] Página 404 (precisa de mockup — regra 3).
-14. [F-08/F-09/F-10] Sessão com usuários reais para entender por que os
+14. [F-15] Roster básico visível ao vendedor (VIEW pública com id, nome,
+           iniciais, avatar, empresa). Destrava @menção, responsável e
+           AvatarStack de uma vez. [SCHEMA]
+15. [F-18] Decidir o destino do papel `diretoria`: cadastrar alguém ou
+           remover as 70 policies órfãs.
+16. [F-17] Chat: adicionar membros aos canais e preencher `department` — hoje
+           o módulo só funciona para o admin.
+17. [F-08/F-09/F-10] Sessão com usuários reais para entender por que os
            caminhos cliente→negócio, campanha→entrega e semente→cliente não
            são percorridos. Isso é pesquisa de produto, não correção de bug —
            e é onde está o maior ganho da plataforma hoje.
+
+
+================================================================================
+§9. SEGUNDA RODADA — MATRIZ DE VISIBILIDADE POR PAPEL (19/08/2026)
+================================================================================
+NOTA DE MÉTODO: esta seção NÃO exigiu credencial de ninguém. A visibilidade de
+cada papel foi obtida simulando a sessão no banco:
+
+    set local role authenticated;
+    set local request.jwt.claims = '{"sub":"<id do usuario>"}';
+
+Ou seja, dá para responder "o que fulano enxerga" para QUALQUER usuário, sem
+senha. A limitação que permanece é outra: prints da interface autenticada
+seguem impossíveis por causa do bloqueio de rede (§7.1) — e nenhum usuário
+adicional resolveria isso.
+
+MATRIZ (linhas visíveis por papel; total real entre parênteses no cabeçalho):
+
+  tabela                 admin  ger.RH  ger.MKT  vendedor  agência(externa)
+  ---------------------- -----  ------  -------  --------  ----------------
+  leads            (1)       1       0        -         0         0
+  clients         (15)      15       0        -         7         0
+  profiles        (14)      14       2        -         1         4
+  rh_colaboradores(21)      21      21        -         0         0
+  rh_candidatos    (3)       3       3        -         0         0
+  marketing_requests (7)     7       0        5         0         0
+  marketing_deliverables(15)15       0       13         0        15   <<<
+  marketing_campaigns (2)    2       0        2         0         -
+  market_signals  (10)      10      10        -         4        10   <<<
+  prospect_seeds  (45)      45      45        -        45        45   <<<
+  agent_actions   (29)      29      29        -         0         0
+  chat_channels    (3)       3       0        -         0         0   <<<
+
+Os "<<<" marcam os quatro achados abaixo.
+
+--------------------------------------------------------------------------------
+[F-13] CRÍTICO — Lista de prospecção comercial visível a QUALQUER conta,
+       inclusive à agência externa
+--------------------------------------------------------------------------------
+Policy em produção:
+
+    prospect_seeds_read_authenticated   USING (enabled = true)
+
+Nenhum escopo. Nem por empresa, nem por papel, nem por dono. Todos os 5 papéis
+testados leem as 45 sementes — inclusive a Beehave, que é uma AGÊNCIA DE
+MARKETING EXTERNA, e um vendedor que não deveria ver alvos de outra frente.
+
+O que está exposto em cada semente: razão social, CNPJ, setor, UF, cidade,
+porte, `fit_score` e o campo `evidence` (o racional de por que a empresa é
+alvo). Isso é a lista de contas-alvo do Grupo, com a priorização junto.
+
+ASSUMO UM ERRO MEU: isto é achado de SEGURANÇA e passou batido na auditoria de
+19/08. Minha varredura procurou policies com o predicado literal `true`, e
+`enabled = true` não casou com o padrão. A varredura estava estreita demais.
+
+CORREÇÃO: escopar por empresa, no mesmo molde de `market_signals`:
+    USING (enabled = true AND (current_user_is_admin()
+           OR relevant_for && current_user_companies()))
+e excluir explicitamente papéis externos (agencia/cliente/fornecedor).
+[SCHEMA — precisa da sua confirmação]
+
+--------------------------------------------------------------------------------
+[F-14] ALTO — A agência externa vê MAIS entregas que a gerente de Marketing
+--------------------------------------------------------------------------------
+Números medidos: Beehave 15/15. Tatiane (gerente_marketing) 13/15.
+
+CAUSA — a função de escopo tem duas válvulas de escape, e as duas estão abertas:
+
+    CREATE FUNCTION agencia_sees_supplier(p_supplier_id uuid) ... AS $$
+      SELECT current_user_role() = 'agencia'
+        AND ( p_supplier_id IS NULL                                    -- (1)
+           OR (SELECT supplier_id FROM profiles WHERE id=auth.uid()) IS NULL  -- (2)
+           OR (SELECT supplier_id FROM profiles WHERE id=auth.uid()) = p_supplier_id );
+    $$
+
+O `p_supplier_id` vem de `marketing_campaigns.supplier_id` da campanha da
+entrega. Como 13 das 15 entregas NÃO têm campanha (achado F-09), o subselect
+devolve NULL, a válvula (1) abre, e a agência vê tudo. A válvula (2) faz o
+mesmo para qualquer agência sem fornecedor vinculado.
+
+F-09 deixa de ser só "hierarquia não usada": a ausência de campanha é o que
+desliga o controle de acesso das entregas. Os dois achados são o mesmo bug.
+
+Detalhe extra: a função usa `current_user_role()` (coluna escalar legada) em
+vez de `roles[]` — mesma deriva descrita no achado MD-11 do relatório de
+segurança.
+
+CORREÇÃO: inverter o padrão para fail-closed — sem fornecedor identificado,
+a agência NÃO vê:
+    SELECT current_user_role() = 'agencia'
+      AND p_supplier_id IS NOT NULL
+      AND (SELECT supplier_id FROM profiles WHERE id=auth.uid()) = p_supplier_id;
+[SCHEMA]
+
+--------------------------------------------------------------------------------
+[F-15] ALTO — Vendedor não enxerga nenhum colega (roster de 1 pessoa)
+--------------------------------------------------------------------------------
+Medido: Mario Augusto (vendedor) vê 1 perfil — o dele.
+
+A policy `profiles_select` dá ao vendedor apenas `id = auth.uid()` mais os
+`current_user_subordinate_ids()`. Sem subordinados, o roster tem 1 linha.
+
+O QUE ISSO QUEBRA NA PRÁTICA (tudo consome o mesmo roster de useProfiles):
+  • @menção em comentário — não há ninguém para mencionar
+  • escolher responsável por lead/tarefa — lista só com ele mesmo
+  • AvatarStack (7+ telas) — sempre um avatar só
+  • transferir/compartilhar um lead com colega — impossível pela interface
+  • qualquer filtro "por vendedor" — uma opção só
+
+É provavelmente a maior lacuna funcional silenciosa da plataforma: nada dá
+erro, as telas só ficam vazias, e quem usa conclui que "não tem esse recurso".
+
+CORREÇÃO: adicionar ao `profiles_select` um ramo que permita ao vendedor ver
+o roster básico (id, nome, iniciais, avatar, empresa) dos colegas da mesma
+empresa — sem expor e-mail, salário ou dados pessoais. Hoje a policy é tudo
+ou nada porque `profiles` mistura identidade e dado sensível; uma VIEW pública
+com as 5 colunas do roster resolve sem afrouxar a tabela. [SCHEMA]
+
+--------------------------------------------------------------------------------
+[F-16] ALTO — A gerente de RH vê 2 perfis de 14, mas vê a prospecção comercial
+       inteira
+--------------------------------------------------------------------------------
+Medido para tatiane.coelho (gerente_rh + rh):
+  profiles ............... 2 de 14   (só ela e a outra pessoa de RH)
+  rh_colaboradores ....... 21 de 21  (correto)
+  prospect_seeds ......... 45 de 45  (não deveria)
+  market_signals ......... 10 de 10  (não deveria)
+  agent_actions .......... 29 de 29  (não deveria)
+
+O escopo está exatamente invertido em relação à função dela: enxerga tudo do
+Comercial, e quase nada do cadastro de usuários das pessoas que administra.
+
+O RH consegue trabalhar em `rh_colaboradores` (21 linhas), mas qualquer tela
+que cruze colaborador com a CONTA da pessoa — quem já acessou, qual papel,
+qual empresa no sistema — vem vazia. Some isso ao achado F-11 (convite
+pendente indistinguível) e o RH não tem como saber quem de fato entrou.
+
+--------------------------------------------------------------------------------
+[F-17] MÉDIO — O Chat só existe para o admin
+--------------------------------------------------------------------------------
+chat_channels visíveis: admin 3 · gerente_rh 0 · vendedor 0 · agência 0.
+Total de membros de canal na plataforma: 5.
+
+Combina com F-03 (department NULO em 14/14 perfis): o canal com sincronização
+automática filtra por departamento e não casa ninguém, e os canais manuais não
+tiveram membros adicionados. O módulo está no ar e é inoperante para todos
+menos uma pessoa.
+
+--------------------------------------------------------------------------------
+[F-18] MÉDIO — O papel "diretoria" não existe em nenhum usuário, mas 70
+       policies e uma rota inteira foram construídas para ele
+--------------------------------------------------------------------------------
+  usuários com 'diretoria' em roles ......... 0
+  policies que referenciam 'diretoria' ...... 70
+  rota dedicada ............................. `presidency`
+
+A visão de Presidência/Diretoria — leitura ampla de clientes, leads,
+atividades, colaboradores, férias, movimentações, avaliações, candidatos,
+entregas e ações de agente — está implementada no banco em 70 policies e
+não é alcançável por ninguém hoje.
+
+Ou a diretoria nunca foi cadastrada (e o recurso está pronto, só faltou dar o
+papel a alguém), ou o papel foi abandonado e as 70 policies são peso morto que
+toda auditoria futura vai reanalisar. Vale decidir — é barato nos dois
+sentidos, e hoje é ambíguo.
+
+--------------------------------------------------------------------------------
+RESPOSTA DIRETA: PRECISO DE OUTRO USUÁRIO?
+--------------------------------------------------------------------------------
+NÃO para visibilidade de dados. A simulação de RLS cobre qualquer papel sem
+credencial, e foi assim que os achados F-13 a F-18 saíram.
+
+SIM, mas nenhum usuário resolve, para o que falta: os prints da interface
+autenticada dependem de acesso de REDE ao Supabase, que este ambiente bloqueia.
+Continuam sem verificação visual: arrastar card no Kanban, drawers, guardrail
+de transição de etapa, exportação CSV real, upload, Realtime, PWA offline,
+tour guiado e dark mode.
+
+Para fechar essa parte, o caminho é um destes:
+  a) rodar a auditoria num ambiente com egresso liberado para *.supabase.co;
+  b) você rodar `npm run dev` localmente e me mandar os prints das telas que
+     quiser auditar — eu já sei exatamente o que procurar em cada uma;
+  c) me dar acesso a um ambiente de homologação com dados de teste.
 
 ================================================================================
 FIM DO RELATÓRIO
