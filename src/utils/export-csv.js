@@ -21,7 +21,14 @@ function resolveStageLabel(lead, pipelines) {
 
 export function csvCell(v) {
   if (v === null || v === undefined) return "";
-  const s = String(v);
+  let s = String(v);
+  // Neutraliza injeção de fórmula (OWASP CSV Injection): "=", "+", "-", "@",
+  // TAB ou CR no início da célula fazem Excel/Sheets tratar o conteúdo como
+  // fórmula ao abrir. Prefixo de apóstrofo força leitura como texto sem
+  // alterar o valor exibido. Dado de origem pública (captura de lead,
+  // candidatura) chega sem sanitização nenhuma — a defesa tem que ficar na
+  // exportação, não na entrada.
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   if (s.includes(";") || s.includes("\"") || s.includes("\n") || s.includes("\r")) {
     return `"${s.replace(/"/g, "\"\"")}"`;
   }

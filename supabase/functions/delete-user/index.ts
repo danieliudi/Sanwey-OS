@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     // com admin/gerente como cargo ADICIONAL toma 403 indevido aqui.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, roles")
+      .select("role, roles, companies")
       .eq("id", userData.user.id)
       .single();
     const profileRoles: string[] = Array.isArray(profile?.roles) && profile.roles.length
@@ -61,6 +61,41 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Não é possível remover a própria conta" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Achado ALTO da auditoria de segurança (19/08/2026): a checagem acima só
+    // valida QUEM está pedindo, nunca QUEM está sendo apagado — um
+    // gerente_marketing/gerente_rh conseguia excluir a conta do admin, ou de
+    // qualquer empresa, porque a função roda com service_role e ignora a RLS
+    // de `profiles_delete`. Espelha aqui o mesmo predicado que já protege a
+    // tabela: admin apaga qualquer um; gerente só apaga não-admin de empresa
+    // em comum.
+    const isCallerAdmin = profileRoles.includes("admin");
+    if (!isCallerAdmin) {
+      const { data: target } = await supabase
+        .from("profiles")
+        .select("roles, companies")
+        .eq("id", user_id)
+        .maybeSingle();
+      if (!target) {
+        return new Response(JSON.stringify({ error: "Usuário não encontrado" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const targetRoles: string[] = Array.isArray(target.roles) ? target.roles : [];
+      if (targetRoles.includes("admin")) {
+        return new Response(JSON.stringify({ error: "Sem permissão para remover uma conta admin" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const callerCompanies: string[] = Array.isArray(profile?.companies) ? profile.companies : [];
+      const targetCompanies: string[] = Array.isArray(target.companies) ? target.companies : [];
+      const sharesCompany = targetCompanies.some((c) => callerCompanies.includes(c));
+      if (!sharesCompany) {
+        return new Response(JSON.stringify({ error: "Sem permissão para remover usuário de outra empresa" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Tenta apagar o registro de RH vinculado (rh_colaboradores.profile_id

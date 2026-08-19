@@ -11,10 +11,25 @@
   to = "/index.html"
   status = 200
 
-# Headers de segurança básicos.
+# Headers de segurança. Achado MD-08 da auditoria de segurança de 19/08/2026:
+# faltavam CSP/HSTS/Permissions-Policy. CSP entra em Content-Security-Policy-
+# Report-Only por ora — só reporta violação no console, não bloqueia nada —
+# pra dar tempo de confirmar contra o app real em produção antes de virar
+# bloqueio de verdade (troca pra "Content-Security-Policy" quando validado).
+# connect-src cobre Supabase (dados/auth/Realtime/Storage) e as duas APIs de
+# IA chamadas direto do navegador no caminho de chave pessoal (BYOLLM,
+# src/hooks/use-ai.js) — Anthropic só é chamada a partir da edge function,
+# nunca do browser, por isso fica de fora. geolocation/microphone/camera
+# ficam liberados só pra própria origem: GPS do check-in de visita
+# (AtaVozPanel), microfone da Ata por Voz e câmera da captura de documento
+# (DocumentCaptureModal) dependem dos três.
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Permissions-Policy = "geolocation=(self), microphone=(self), camera=(self), payment=()"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://generativelanguage.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
