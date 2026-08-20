@@ -224,6 +224,16 @@ export function ExecutiveDashboard({
   // vendedor aqui (diferente do Funil de Vendas): soma tudo que a RLS já
   // deixou visível pro usuário atual, mesmo espírito de `totals` acima (que
   // também não filtra por vendedor). Ver src/utils/cac.js.
+  //
+  // Achado 20/08/2026: os dois hooks abaixo (despesas/amostras) viviam mais
+  // adiante no arquivo, depois deste useMemo — como são const/let, ficam em
+  // "temporal dead zone" até a linha da declaração rodar, e o useMemo já
+  // tenta ler viagemDespesas/leadSamplesAll na primeira renderização, antes
+  // de chegar lá. Resultado: "Cannot access ... before initialization",
+  // painel inteiro quebrado. Só busca despesas/amostras quando a área
+  // Comercial está visível pro usuário atual.
+  const { despesas: viagemDespesas } = useCRMDespesas({ enabled: showComercialArea });
+  const { samples: leadSamplesAll } = useAllLeadSamples({ enabled: showComercialArea });
   const cac = useMemo(() => {
     if (!showComercialArea) return null;
     const cutoff = periodCutoff(period);
@@ -291,10 +301,6 @@ export function ExecutiveDashboard({
   const { operations: comexExports, loading: loadingComexExports } = useComexExportOperations({});
   const { cases: posvendaCases, loading: loadingPosvenda } = usePosvenda({});
   const { registros: viagens, loading: loadingViagens } = useCRMViagens({});
-  // CAC (aba Comercial → Visão geral) — só busca despesas/amostras quando a
-  // área Comercial está visível pro usuário atual. Ver src/utils/cac.js.
-  const { despesas: viagemDespesas } = useCRMDespesas({ enabled: showComercialArea });
-  const { samples: leadSamplesAll } = useAllLeadSamples({ enabled: showComercialArea });
   const { records: esgRecords, loading: loadingEsgRecords } = useEsgEmissionRecords({});
   const { factors: esgFactors, loading: loadingEsgFactors } = useEsgEmissionFactors();
   const { reports: esgReports, loading: loadingEsgReports } = useEsgReports({});
