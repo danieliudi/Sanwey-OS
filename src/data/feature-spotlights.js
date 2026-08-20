@@ -27,15 +27,18 @@ export const FEATURE_SPOTLIGHTS = [
   {
     id: "ata-voz-gravar",
     route: "crm",
-    target: '[data-tour="ata-voz-gravar"]',
-    // Texto atualizado + versão subida em 17/08/2026 (check-in de visita):
-    // o botão passou a sempre anexar localização (sem opção de tirar) e a
-    // reconhecer/oferecer vínculo com uma visita já planejada em Viagens —
-    // mudança de comportamento de um botão que quem já usa a plataforma
-    // não ia necessariamente notar sozinho, mesmo critério que justificou
-    // a entrada original.
-    text: "Novo: acabou de sair de uma visita? Grave um áudio contando o que aconteceu — sua localização é sempre anexada, e se havia uma visita planejada em Viagens pra esse cliente, a ata já oferece vincular.",
-    version: "4.58.0",
+    // Alvo trocado em 18/08/2026 (redesenho do drawer): "Gravar ata" saiu de
+    // dentro da aba Atividades (onde só existia depois de rolar + trocar de
+    // aba) e virou um botão fixo no header do card, que abre a gravação como
+    // painel flutuante — o `data-tour="ata-voz-gravar"` antigo só existe hoje
+    // se esse painel já estiver aberto, então deixou de ser um alvo válido
+    // pro spotlight (nunca dispararia sozinho). Versão subida porque é
+    // mudança de comportamento de um botão que quem já usa a plataforma não
+    // ia necessariamente notar sozinho — mesmo critério da atualização
+    // anterior desta entrada (check-in de visita, 17/08/2026).
+    target: '[data-tour="ata-voz-gravar-header"]',
+    text: "Novo: \"Gravar ata\" agora fica fixo aqui no topo do card — clique pra registrar por voz de qualquer aba, sem precisar rolar até Atividades.",
+    version: "4.59.0",
   },
   // Mesmo componente (AtaVozPanel), mesmo data-tour, rota diferente — a ata
   // por voz chegou também na aba Histórico do Cliente (4.55.0), pra registrar
@@ -181,6 +184,59 @@ export const FEATURE_SPOTLIGHTS = [
   // elemento fixo por rota, não serve bem pra "o item X, quando X varia").
   // Coberto pelo changelog 4.57.0 (com `roles: ["admin"]`, já restrito a
   // quem o ícone realmente afeta).
+  //
+  // 4.59.0 — colunas mais largas nos cards/modais de detalhe (Vendas,
+  // Pós-venda, Entregas, Campanhas, Compras, Tarefas de Marketing, Lista
+  // Pessoal, Comex, RH): DECIDIDO PULAR o spotlight. Não é uma capacidade
+  // nova que alguém precise "descobrir" clicando em algo — é layout ambiente
+  // (menos scroll pra ver a mesma informação), notado passivamente ao abrir
+  // qualquer card, sem elemento único e clicável pra apontar. Coberto pelo
+  // changelog 4.59.0.
+  //
+  {
+    id: "document-library-nav",
+    route: "dashboard",
+    target: '[data-tour="sidebar-nav-document-library"]',
+    text: "Novo: a Biblioteca de Documentos guarda certificado, datasheet e ficha técnica reutilizáveis — clique aqui pra ver.",
+    version: "4.61.0",
+  },
+  {
+    id: "proposal-line-items",
+    route: "crm",
+    target: '[data-tour="proposal-line-items"]',
+    text: "Novo: monte a lista de itens (modelo, quantidade, preço) antes de gerar a proposta — clique em \"Adicionar item\".",
+    version: "4.61.0",
+  },
+  // 4.61.0 — leva de 7 features do Funil de Vendas (comitê de compra, gate
+  // de etapa por valor, alerta de concorrente, fit_score, WhatsApp fase 1):
+  // DECIDIDO PULAR spotlight nas 5, cada uma por motivo próprio, coberto
+  // pelo changelog 4.61.0 em todos os casos:
+  //   - Comitê de compra: a leitura (o que aparece no negócio) é passiva,
+  //     sem elemento clicável; a edição de verdade vive na aba "Contatos"
+  //     dentro do MODAL do cliente — mesma situação já registrada pra
+  //     "Histórico"/"Conexões" em 4.40.0 acima (sem alvo estável na rota).
+  //   - Gate de etapa por valor: o ícone de filtro que abre o editor de
+  //     condição vive dentro do modal "Editar etapas do pipeline", não numa
+  //     rota — mesmo caso do calendário de time em 4.43.0 acima.
+  //   - Alerta de concorrente: badge ambiente (aparece sozinho quando há
+  //     menção recente), nada pra "clicar aqui e descobrir" — mesmo
+  //     critério das colunas mais largas em 4.59.0 acima.
+  //   - fit_score: o número/badge é passivo; a única ação nova (ordenar por
+  //     Fit) é uma opção a mais dentro de um menu de ordenação que já
+  //     existia antes desta leva, não um elemento novo pra apontar.
+  //   - WhatsApp fase 1: propositalmente dormente ("cria, mas deixa em
+  //     teste ainda") — nada funciona ainda (sem envio/recebimento);
+  //     anunciar com spotlight uma aba que não faz nada seria pior que só
+  //     deixar quem abrir um negócio notar sozinho.
+  //
+  // 4.60.1 — título editável (lápis) em Vaga e Candidato (RH Recrutamento):
+  // DECIDIDO PULAR o spotlight. Mesmo componente `EditableTitle` já em uso
+  // desde 29/07/2026 em Campanhas/Entregas/Tarefas/Compras (nunca ganhou
+  // spotlight próprio, decidido antes desta regra existir) — aqui é
+  // extensão de padrão já conhecido pra mais 2 boards, não um fluxo novo. O
+  // lápis fica sempre visível ao lado do título (não escondido atrás de
+  // hover/menu), então já se autoexplica ao abrir qualquer card de
+  // Vaga/Candidato. Coberto pelo changelog 4.60.1.
 ];
 
 export default FEATURE_SPOTLIGHTS;

@@ -26,6 +26,7 @@ import { useLeadFormConfig } from "../../hooks/use-lead-form-config";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
+import { evaluateConditionGroups } from "../../utils/condition-operators";
 import { formatK, formatBRL } from "../../utils/currency";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
 import { useAllLeadSamples } from "../../hooks/use-lead-samples";
@@ -34,7 +35,7 @@ import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
 import { AppToast } from "../shared/AppToast";
-import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
+import { getLeadOwnerIds, computeFitScore } from "../../utils/pipeline-metrics";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadLeadComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
@@ -447,6 +448,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       bucket[s.id].leads = sortKanbanItems(bucket[s.id].leads, getSortCriteria(s.id), {
         deadline: l => l.closeDate,
         value: l => l.value,
+        fit: l => computeFitScore(l),
         name: l => l.company,
         createdAt: l => l.negotiationStartedAt || l.createdAt,
       });
@@ -541,6 +543,16 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     // configuração de transições, igual ao handleDrop.
     if (pipelineTransitions && !pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, targetStageId)) {
       setStageError(`Não dá pra mover "${lead.company}": transição de etapa não permitida pela configuração do funil.`);
+      return;
+    }
+    // Gate de etapa por valor (18/08/2026) — além de allowed/bloqueado, uma
+    // transição pode exigir que um campo da etapa de origem tenha um valor
+    // específico (ex.: "Certificação ANP = Aprovada"). Mesmo motor de
+    // condições das automações (evaluateConditionGroups), aplicado contra
+    // customFields do lead — field referencia field_key da etapa atual.
+    const gateCondition = pipelineTransitions?.getTransitionCondition?.(lead.companyId, lead.stage, targetStageId);
+    if (gateCondition && !evaluateConditionGroups(gateCondition, lead.customFields || {})) {
+      setStageError(`Não dá pra mover "${lead.company}": esta transição exige uma condição específica de campo, ainda não atendida.`);
       return;
     }
     // Campo obrigatório trava AVANÇAR, não VOLTAR (ver isStageRegression) —
@@ -899,7 +911,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                       <KanbanColumnSortMenu
                         criteria={getSortCriteria(stage.id)}
                         onChange={(v) => setSortCriteria(stage.id, v)}
-                        options={["recent", "deadline", "value", "alpha"]}
+                        options={["recent", "deadline", "value", "fit", "alpha"]}
                       />
                       {isManager && (
                         <button
@@ -1139,7 +1151,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
         case "company":   va = a.company?.toLowerCase() || ""; vb = b.company?.toLowerCase() || ""; break;
         case "stage":     va = stageMap[a.stage]?.name || a.stage || ""; vb = stageMap[b.stage]?.name || b.stage || ""; break;
         case "value":     va = a.value || 0; vb = b.value || 0; break;
-        case "fitScore":  va = a.fitScore || 0; vb = b.fitScore || 0; break;
+        case "fitScore":  va = computeFitScore(a) || 0; vb = computeFitScore(b) || 0; break;
         case "sector":    va = a.sector?.toLowerCase() || ""; vb = b.sector?.toLowerCase() || ""; break;
         case "owner": {
           // `users` é um Map (useUsersById) — ordena pelo primeiro responsável
@@ -1160,7 +1172,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
       return 0;
     });
     return arr;
-  }, [leads, sortCol, sortDir, stageMap, users]);
+  }, [leads, sortCol, sortDir, stageMap, users, stages]);
 
   const fmt = (iso) => {
     if (!iso) return "—";
@@ -1187,6 +1199,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
         const stage = stageMap[lead.stage];
         const resolvedOwners = getLeadOwnerIds(lead).map(id => users?.get?.(id)).filter(Boolean);
         const companyInfo = isGroupView ? COMPANIES[lead.companyId] : null;
+        const fitScore = computeFitScore(lead);
         return (
           <div
             key={lead.id}
@@ -1235,17 +1248,17 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
             </div>
             <div className="flex items-center justify-between gap-2 mt-2 text-xs" style={{ color: "var(--text-dim)" }}>
               <div className="flex items-center gap-2 min-w-0">
-                {lead.fitScore > 0 && (
+                {fitScore > 0 && (
                   <span
                     style={{
                       padding: "1px 5px",
                       borderRadius: 4,
                       fontWeight: 700,
-                      background: lead.fitScore >= 80 ? "var(--success-bg)" : lead.fitScore >= 50 ? "var(--warning-bg)" : "var(--danger-bg)",
-                      color: lead.fitScore >= 80 ? "var(--success)" : lead.fitScore >= 50 ? "var(--warning)" : "var(--danger)",
+                      background: fitScore >= 80 ? "var(--success-bg)" : fitScore >= 50 ? "var(--warning-bg)" : "var(--danger-bg)",
+                      color: fitScore >= 80 ? "var(--success)" : fitScore >= 50 ? "var(--warning)" : "var(--danger)",
                     }}
                   >
-                    {lead.fitScore}
+                    {fitScore}
                   </span>
                 )}
                 <span className="truncate">{lead.sector || "—"}</span>
@@ -1305,6 +1318,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
             const resolvedOwners = getLeadOwnerIds(lead).map(id => users?.get?.(id)).filter(Boolean);
             const isHovered = hoveredRow === lead.id;
             const companyInfo = isGroupView ? COMPANIES[lead.companyId] : null;
+            const fitScore = computeFitScore(lead);
             return (
               <tr
                 key={lead.id}
@@ -1374,17 +1388,17 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                 </td>
                 {/* Fit Score */}
                 <td style={{ padding: "10px 12px" }}>
-                  {lead.fitScore > 0 ? (
+                  {fitScore > 0 ? (
                     <span style={{
                       display: "inline-block",
                       padding: "2px 6px",
                       borderRadius: 4,
                       fontSize: 11,
                       fontWeight: 700,
-                      background: lead.fitScore >= 80 ? "var(--success-bg)" : lead.fitScore >= 50 ? "var(--warning-bg)" : "var(--danger-bg)",
-                      color: lead.fitScore >= 80 ? "var(--success)" : lead.fitScore >= 50 ? "var(--warning)" : "var(--danger)",
+                      background: fitScore >= 80 ? "var(--success-bg)" : fitScore >= 50 ? "var(--warning-bg)" : "var(--danger-bg)",
+                      color: fitScore >= 80 ? "var(--success)" : fitScore >= 50 ? "var(--warning)" : "var(--danger)",
                     }}>
-                      {lead.fitScore}
+                      {fitScore}
                     </span>
                   ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
                 </td>

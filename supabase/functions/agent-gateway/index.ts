@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { timingSafeEqual } from 'https://deno.land/std@0.168.0/crypto/timing_safe_equal.ts';
 
 // ============================================================
 // agent-gateway — Edge Function
@@ -195,6 +196,48 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
   }
 }
 
+// GAP 1 (18/08/2026, análise de segurança de IA/agentes com o Daniel): antes,
+// os 5 agentes (sdr_q/scout/cadencia/sentinela/cross) compartilhavam UM
+// secret (AGENT_GATEWAY_KEY) e o agent_id vinha auto-declarado no corpo da
+// requisição — qualquer chamador de posse da chave podia se passar por
+// qualquer um dos 5, sem vínculo criptográfico nenhum entre credencial e
+// identidade. Corrigido com 1 secret por agente (AGENT_GATEWAY_KEY_<AGENTE>)
+// — agent_id passa a vir de QUAL credencial bateu, nunca do corpo.
+// AGENT_GATEWAY_KEY (secret antigo) continua aceito em paralelo durante o
+// rollout (agentes do n8n ainda não migrados pra chave própria), mas
+// autentica como "legacy_unverified" — nunca como o agent_id que o corpo
+// declarar, pra não reabrir o mesmo furo por baixo do rollout.
+const AGENT_SECRETS: Record<string, string | undefined> = {
+  sdr_q:     Deno.env.get('AGENT_GATEWAY_KEY_SDR_Q'),
+  scout:     Deno.env.get('AGENT_GATEWAY_KEY_SCOUT'),
+  cadencia:  Deno.env.get('AGENT_GATEWAY_KEY_CADENCIA'),
+  sentinela: Deno.env.get('AGENT_GATEWAY_KEY_SENTINELA'),
+  cross:     Deno.env.get('AGENT_GATEWAY_KEY_CROSS'),
+};
+const LEGACY_AGENT_KEY = Deno.env.get('AGENT_GATEWAY_KEY');
+
+function timingSafeEqualStr(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const aBytes = enc.encode(a);
+  const bBytes = enc.encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  return timingSafeEqual(aBytes, bBytes);
+}
+
+// Devolve o agent_id derivado de QUAL secret bateu — nunca aceita agent_id
+// vindo do chamador. null se nenhuma credencial configurada bater.
+function resolveAgentIdFromKey(agentKey: string | null): string | null {
+  if (!agentKey) return null;
+  for (const [agentId, secret] of Object.entries(AGENT_SECRETS)) {
+    if (secret && timingSafeEqualStr(agentKey, secret)) return agentId;
+  }
+  if (LEGACY_AGENT_KEY && timingSafeEqualStr(agentKey, LEGACY_AGENT_KEY)) {
+    console.log(JSON.stringify({ event: 'agent_gateway_legacy_key_used', at: new Date().toISOString() }));
+    return 'legacy_unverified';
+  }
+  return null;
+}
+
 Deno.serve(async (req: Request) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -209,9 +252,9 @@ Deno.serve(async (req: Request) => {
   // ----------------------------------------------------------
   const agentKey = req.headers.get('x-agent-key');
   const authorization = req.headers.get('authorization');
-  const expectedKey = Deno.env.get('AGENT_GATEWAY_KEY');
 
-  const isAgentKey = Boolean(agentKey && expectedKey && agentKey === expectedKey);
+  const verifiedAgentId = resolveAgentIdFromKey(agentKey);
+  const isAgentKey = Boolean(verifiedAgentId);
 
   const adminClient = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -258,18 +301,17 @@ Deno.serve(async (req: Request) => {
         const body = await req.json();
 
         // Validação mínima
-        const required = ['agent_id', 'action_type', 'title'];
+        const required = ['action_type', 'title'];
         for (const f of required) {
           if (!body[f]) return json({ error: `Campo obrigatório ausente: ${f}` }, 400);
         }
 
-        const validAgents = ['sdr_q', 'scout', 'cadencia', 'sentinela', 'cross'];
-        if (!validAgents.includes(body.agent_id)) {
-          return json({ error: `agent_id inválido. Valores aceitos: ${validAgents.join(', ')}` }, 400);
-        }
-
         const record = {
-          agent_id:     body.agent_id,
+          // agent_id vem de QUAL credencial autenticou esta chamada (ver
+          // resolveAgentIdFromKey acima) — nunca do corpo, que era o furo do
+          // GAP 1: qualquer chamador com a chave compartilhada podia se
+          // declarar como qualquer um dos 5 agentes.
+          agent_id:     verifiedAgentId,
           action_type:  body.action_type,
           lead_id:      body.lead_id      ?? null,
           company_id:   body.company_id   ?? null,
@@ -298,7 +340,7 @@ Deno.serve(async (req: Request) => {
             type:       'agent_suggestion',
             title:      body.title,
             content:    body.summary ?? null,
-            metadata:   { agent_id: body.agent_id, action_id: data.id },
+            metadata:   { agent_id: verifiedAgentId, action_id: data.id },
           });
         }
 

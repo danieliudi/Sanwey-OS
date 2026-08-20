@@ -3,6 +3,7 @@
 // Agora cada etapa tem o seu SLA configurável no editor de etapas do Funil de Vendas.
 
 import { DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
+import { CANONICAL_SECTORS } from "../constants/taxonomy";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const DEFAULT_SLA_DAYS = 14;
@@ -49,6 +50,55 @@ export function daysIdle(lead) {
   const ts = new Date(ref).getTime();
   if (Number.isNaN(ts)) return 0;
   return Math.max(0, Math.floor((Date.now() - ts) / MS_PER_DAY));
+}
+
+// Fit score (18/08/2026, gap real levantado no doc Zoho — "pontuar por fit
+// de segmento + urgência regulatória"; revisado 19/08/2026 depois de QA
+// multi-lente apontar que a 1ª versão media outra coisa — "saúde do
+// negócio" (probabilidade da etapa + completude do cadastro), não "fit do
+// cliente" como a spec pedia). Fórmula agora segue os 3 sinais que
+// docs/design-spec-fit-score.md realmente listou:
+//   40% fit de segmento — setor do lead bate com o núcleo de negócio da
+//       empresa vendedora (CANONICAL_SECTORS, `src/constants/taxonomy.js`):
+//       pra Resibag o núcleo é "Resíduos"; pra qualquer outra empresa do
+//       Grupo (Sanbag) é o resto da lista. Sem setor preenchido, zero.
+//   30% valor do negócio, normalizado contra REFERENCE_DEAL_CEILING —
+//       faixa de referência pra escalar o score, NÃO um teto real de
+//       negócio; ajustável sem schema novo, mas o valor em si (R$200k) é
+//       um chute inicial que precisa validação do Daniel com dado
+//       histórico real assim que houver volume pra calibrar.
+//   30% recência de atividade (`daysIdle`, decai linearmente até 60 dias
+//       parado) — mesmo sinal "tempo parado" que a spec pediu.
+// "Urgência regulatória" (4º sinal da spec, prazo de certificação) fica de
+// fora por ora — a spec já registrava isso como "a confirmar" (nenhum
+// pipeline_stage_fields hoje cobre um campo de prazo de adequação de forma
+// consistente entre etapas); não é uma correção deste QA, e não teria como
+// entrar sem inventar um campo customizado primeiro.
+// Não depende mais de companyStages/probabilidade de etapa — elimina de
+// raiz o bug encontrado no mesmo QA (vários call-sites em "Todas as
+// empresas" passavam o pipeline de UMA empresa fixa pra leads de outras).
+// Sem chamada de IA — ao contrário de Prospecção/Recrutamento (scoring de
+// registro frio que ninguém olhou ainda), aqui o vendedor já está
+// trabalhando o negócio ativamente; o ganho de rodar IA por lead é menor e
+// o custo (latência + tokens) é maior.
+const RESIBAG_CORE_SECTORS = ["Resíduos"];
+const SANBAG_CORE_SECTORS = CANONICAL_SECTORS.filter(s => !RESIBAG_CORE_SECTORS.includes(s));
+const REFERENCE_DEAL_CEILING = 200000; // R$ 200k — ver comentário acima
+
+export function computeFitScore(lead) {
+  if (!lead) return 0;
+
+  const coreSectors = lead.companyId === "resibag" ? RESIBAG_CORE_SECTORS : SANBAG_CORE_SECTORS;
+  const segmentFit = !lead.sector ? 0 : (coreSectors.includes(lead.sector) ? 100 : 40);
+
+  const value = Number(lead.value) || 0;
+  const valueFit = value <= 0 ? 0 : Math.min(100, (value / REFERENCE_DEAL_CEILING) * 100);
+
+  const idle = daysIdle(lead);
+  const freshness = Math.max(0, 100 - (idle / 60) * 100);
+
+  const score = segmentFit * 0.4 + valueFit * 0.3 + freshness * 0.3;
+  return Math.round(Math.max(0, Math.min(100, score)));
 }
 
 // Forecast ponderado: value × probability / 100 da etapa atual.

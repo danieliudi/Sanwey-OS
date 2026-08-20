@@ -3,7 +3,7 @@ import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
   ShieldCheck, Image, Upload, PanelBottom, Menu as MenuIcon, Inbox, Briefcase,
-  ToggleLeft,
+  ToggleLeft, Lock,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { AvatarCropModal } from "../shared/AvatarCropModal";
@@ -20,6 +20,7 @@ import { ModuleStatesPanel } from "../settings/ModuleStatesPanel";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useChatStickers } from "../../hooks/use-chat-stickers";
 import { callAI } from "../../hooks/use-ai";
+import { useOrgAIStatus } from "../../hooks/use-org-ai-status";
 import { friendlyAiErrorMessage } from "../../utils/ai-errors";
 import { useBottomNavPrefs, BOTTOM_NAV_MAX_SHORTCUTS } from "../../hooks/use-bottom-nav-prefs";
 import { getRoleTabs, flattenNavGroups } from "../shell/MobileBottomNav";
@@ -569,6 +570,15 @@ export function SettingsView({
   // (e só mexe n)o próprio recorte de widgets do Painel Executivo lá dentro.
   const canSeeExecutive = isManager || isMarketingManager || isRHManager || isComexManager;
   const isChatManager = isChatManagerUser(currentUser);
+  // Trava automática de "Minha chave pessoal" (18/08/2026, decisão com o
+  // Daniel): assim que a chave da empresa existir, ninguém abaixo de
+  // admin/gerente precisa (nem deveria) trazer conta própria de IA — ver
+  // mockup "chave-mestra-ia". useOrgAIStatus() já é público (qualquer
+  // usuário autenticado consegue checar configured/provider, nunca a
+  // chave), diferente do orgAiStatus admin-only mais abaixo (que também
+  // mostra o secret faltando).
+  const orgAIStatus = useOrgAIStatus();
+  const canManageOwnAIKey = isAdmin || canSeeExecutive || !orgAIStatus.configured;
   const [activeTab, setActiveTab] = useState("perfil");
   const tabGroups = useMemo(
     () => buildTabGroups({
@@ -1491,9 +1501,15 @@ export function SettingsView({
                 </Section>
               )}
               {integTab === "ia" && (
-              <Section title="Minha chave pessoal" description="Opcional. Se preenchida, tem prioridade sobre a chave da empresa nos recursos de IA da plataforma.">
+              <Section
+                title="Minha chave pessoal"
+                description={canManageOwnAIKey
+                  ? "Opcional. Se preenchida, tem prioridade sobre a chave da empresa nos recursos de IA da plataforma."
+                  : "Sua empresa já configurou uma chave de IA — você não precisa (nem consegue) conectar uma conta própria."}
+              >
                 <div className="space-y-5">
-                  {/* Status badge */}
+                  {/* Status badge — sempre visível, mesmo travado, pra quem
+                      já tinha chave pessoal de antes poder desconectar. */}
                   {currentUser?.aiConfig?.provider && (
                     <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
                       <CheckCircle2 size={13} />
@@ -1510,12 +1526,31 @@ export function SettingsView({
                     </div>
                   )}
 
+                  {!canManageOwnAIKey && (
+                    <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Lock size={15} style={{ color: "var(--text-dim)" }} />
+                        <span className="text-xs font-bold" style={{ color: "var(--text)" }}>Minha chave pessoal</span>
+                      </div>
+                      <p className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                        Sua empresa já configurou uma chave de IA — você não precisa (nem consegue) conectar uma conta própria. Fale com um admin se precisar de algo diferente.
+                      </p>
+                      <span
+                        className="inline-flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-1 rounded-full mt-2.5"
+                        style={{ background: "var(--success-bg)", color: "var(--success)" }}
+                      >
+                        <CheckCircle2 size={12} /> Usando a chave da empresa ({orgAIStatus.provider})
+                      </span>
+                    </div>
+                  )}
+
+                  {canManageOwnAIKey && (<>
                   {/* Provider picker */}
                   <div>
                     <label className="text-xs font-semibold block mb-2" style={{ color: "var(--text-dim)" }}>
                       Provedor de IA
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       {AI_PROVIDERS.map(p => (
                         <button
                           key={p.id}
@@ -1668,6 +1703,7 @@ export function SettingsView({
                       {aiSaveFeedback.msg}
                     </div>
                   )}
+                  </>)}
                 </div>
               </Section>
               )}

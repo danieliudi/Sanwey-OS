@@ -35,6 +35,34 @@ function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 }
 
+// GAP 2 (18/08/2026): wrapper fino em volta de callAIProvider só pra
+// centralizar a trilha de auditoria (mesmo padrão do logToolCall de
+// sanwey-crm-mcp) nos 6 pontos de chamada de IA desta function — nunca loga
+// conteúdo de prompt/resposta, só metadados.
+async function callAIProviderLogged(
+  opts: { provider: string; model: string; apiKey: string; messages: { role: string; content: string }[]; maxTokens?: number },
+  ctx: { userId: string | null; role: string | null; module: string }
+): Promise<string> {
+  const t0 = Date.now();
+  try {
+    const { content, usage } = await callAIProvider(opts);
+    console.log(JSON.stringify({
+      event: "agent_runner_ai_call", user_id: ctx.userId, role: ctx.role, crm_module: ctx.module,
+      provider: opts.provider, execution_status: "ok", latency_ms: Date.now() - t0,
+      prompt_tokens: usage.promptTokens, completion_tokens: usage.completionTokens,
+      at: new Date().toISOString(),
+    }));
+    return content;
+  } catch (err) {
+    console.log(JSON.stringify({
+      event: "agent_runner_ai_call", user_id: ctx.userId, role: ctx.role, crm_module: ctx.module,
+      provider: opts.provider, execution_status: "error", latency_ms: Date.now() - t0,
+      at: new Date().toISOString(),
+    }));
+    throw err;
+  }
+}
+
 // Fase 2 (Vaga parada — Recrutamento) e Fase 3 (Sourcing interno — banco de
 // talentos): mesma function, 3 módulos. Cada automação já carrega seu
 // próprio `module`; o sweep varre todos de uma vez e o loop abaixo decide
@@ -322,13 +350,13 @@ async function runSweep(admin: any) {
         }, action.suggestedAction);
 
         try {
-          const raw = await callAIProvider({
+          const raw = await callAIProviderLogged({
             provider: providerConfig.provider,
             model: providerConfig.model,
             apiKey: providerConfig.apiKey,
             messages: [{ role: "system", content: system }, { role: "user", content: user }],
             maxTokens: 600,
-          });
+          }, { userId: null, role: "cron", module: automation.module });
           const draft = parseDraftJson(raw);
           const title = draft.title || `Vaga parada: ${vaga.title} (${dias}d)`;
           const summary = draft.recommended_action || `Vaga "${vaga.title}" parada há ${dias} dia(s) sem avançar de etapa.`;
@@ -399,13 +427,13 @@ async function runSweep(admin: any) {
         })));
 
         try {
-          const raw = await callAIProvider({
+          const raw = await callAIProviderLogged({
             provider: providerConfig.provider,
             model: providerConfig.model,
             apiKey: providerConfig.apiKey,
             messages: [{ role: "system", content: system }, { role: "user", content: user }],
             maxTokens: 800,
-          });
+          }, { userId: null, role: "cron", module: automation.module });
           const parsed = parseDraftJson(raw) as any;
           const matches: Array<{ candidato_id: string; justificativa: string }> = Array.isArray(parsed.matches) ? parsed.matches : [];
           const poolById = new Map(pool.map((c: any) => [c.id, c]));
@@ -475,13 +503,13 @@ async function runSweep(admin: any) {
       }, action.followUpDays, action.suggestedAction);
 
       try {
-        const raw = await callAIProvider({
+        const raw = await callAIProviderLogged({
           provider: providerConfig.provider,
           model: providerConfig.model,
           apiKey: providerConfig.apiKey,
           messages: [{ role: "system", content: system }, { role: "user", content: user }],
           maxTokens: 600,
-        });
+        }, { userId: null, role: "cron", module: automation.module });
         const draft = parseDraftJson(raw);
 
         const isEmail = action.draftType !== "aviso_interno";
@@ -532,11 +560,12 @@ async function runSweep(admin: any) {
 
 // ── Preview (assistente guiado, passo 5) ────────────────────────────────────
 
-async function runPreview(admin: any, body: any, userId: string) {
+async function runPreview(admin: any, body: any, userId: string, roles: string[]) {
   const rule = body.rule || {};
   const trigger = rule.trigger || {};
   const action = (rule.thenActions || [])[0] || {};
   if (action.type !== "suggest_with_ai") return json({ error: "Ação da automação precisa ser 'suggest_with_ai'" }, 400);
+  const previewCtx = { userId, role: roles[0] || null, module: rule.module || "rh-fornecedores" };
 
   // Preview usa a chave de QUEM ESTÁ TESTANDO (a sessão autenticada), não a
   // do dono do agente — o agente pode nem ter sido salvo ainda. Comum aos
@@ -574,13 +603,13 @@ async function runPreview(admin: any, body: any, userId: string) {
     }, action.suggestedAction);
 
     try {
-      const raw = await callAIProvider({
+      const raw = await callAIProviderLogged({
         provider: providerConfig.provider,
         model: providerConfig.model,
         apiKey: providerConfig.apiKey,
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
         maxTokens: 600,
-      });
+      }, previewCtx);
       const draft = parseDraftJson(raw);
       return json({
         usandoExemplo,
@@ -640,13 +669,13 @@ async function runPreview(admin: any, body: any, userId: string) {
     }, promptPool);
 
     try {
-      const raw = await callAIProvider({
+      const raw = await callAIProviderLogged({
         provider: providerConfig.provider,
         model: providerConfig.model,
         apiKey: providerConfig.apiKey,
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
         maxTokens: 800,
-      });
+      }, previewCtx);
       const parsed = parseDraftJson(raw) as any;
       const matches: Array<{ candidato_id: string; justificativa: string }> = Array.isArray(parsed.matches) ? parsed.matches : [];
       const poolById = new Map(promptPool.map((c) => [c.id, c]));
@@ -702,13 +731,13 @@ async function runPreview(admin: any, body: any, userId: string) {
   }, action.followUpDays, action.suggestedAction);
 
   try {
-    const raw = await callAIProvider({
+    const raw = await callAIProviderLogged({
       provider: providerConfig.provider,
       model: providerConfig.model,
       apiKey: providerConfig.apiKey,
       messages: [{ role: "system", content: system }, { role: "user", content: user }],
       maxTokens: 600,
-    });
+    }, previewCtx);
     const draft = parseDraftJson(raw);
     const isEmail = action.draftType !== "aviso_interno";
     return json({
@@ -761,7 +790,7 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({}));
     if (body.action === "preview") {
-      return await runPreview(admin, body, userData.user.id);
+      return await runPreview(admin, body, userData.user.id, roles);
     }
     return json({ error: `Ação desconhecida: ${body.action}` }, 400);
   } catch (err) {

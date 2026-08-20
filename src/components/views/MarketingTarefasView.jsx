@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom";
 import {
   Plus, X, ListTodo, Star, Filter, Settings2, AlertCircle, LayoutGrid, TrendingUp,
-  List, CalendarDays, ChevronLeft, ChevronRight,
+  List, CalendarDays, ChevronLeft, ChevronRight, Download,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
@@ -16,6 +16,7 @@ import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
+import { exportMarketingTasksToCSV } from "../../utils/export-csv";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { localDateInputToISOString, formatDateBR, parseDateInput } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
@@ -834,6 +835,17 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" iconOnlyMobile />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
+          {/* Export CSV */}
+          <button
+            onClick={() => exportMarketingTasksToCSV(filtered, { stages: kanbanStages, usersById, campaignsById, priorityLabels: DELIVERABLE_PRIORITIES })}
+            title="Exportar CSV"
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+          >
+            <Download size={13} />
+            Exportar CSV
+          </button>
           {canWrite && (
             <button
               onClick={() => setQuickAddStage(kanbanStages[0]?.id)}

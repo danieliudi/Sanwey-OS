@@ -15,6 +15,13 @@ import { StageNavigator, StageMoveRegistryContext } from "./StageNavigator";
 // StageMoveRegistryContext), então guardrails de transição continuam nos
 // chamadores. Desktop (lg+) fica intacto.
 //
+// Larguras (18/08/2026, pedido do Daniel após reportar scroll excessivo no
+// drawer do Funil de Vendas): 300/300/1152 → 340/320/1400, aplicado como
+// padrão global — os 24 chamadores deste shell ganham o alívio junto, não só
+// Vendas/Pós-venda. Centro cresce mais que as laterais (552px → 740px, +34%
+// vs. +13%/+7%) de propósito: era a coluna mais espremida em conteúdo real
+// (formulário da etapa) e continua sendo a área principal.
+//
 // onDelete (opcional): botão de excluir no header, com confirmação inline —
 // mesmo padrão do LeadDetailDrawer (Trash2 → "Confirmar exclusão"/"Cancelar"),
 // pra dar paridade de exclusão aos kanbans de RH que usam este shell.
@@ -50,13 +57,13 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
 
   return (
     <div
-      className="fixed inset-0 z-40 flex lg:items-center lg:justify-center lg:p-6"
+      className="fixed inset-0 z-50 flex lg:items-center lg:justify-center lg:p-6"
       style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-6xl lg:rounded-2xl lg:max-h-[92vh]"
+        className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-[1400px] lg:rounded-2xl lg:max-h-[92vh]"
         style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)", overflow: "hidden", height: "100%" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -116,7 +123,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
         <StageMoveRegistryContext.Provider value={moveRegistry}>
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
             <aside
-              className="w-full lg:w-[300px] lg:flex-none lg:shrink-0 lg:overflow-y-auto border-b lg:border-b-0 lg:border-r"
+              className="w-full lg:w-[340px] lg:flex-none lg:shrink-0 lg:overflow-y-auto border-b lg:border-b-0 lg:border-r"
               style={{ borderColor: "var(--border)" }}
             >
               {left && (
@@ -141,7 +148,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
               {center}
             </main>
             <aside
-              className="w-full lg:w-[300px] lg:flex-none lg:shrink-0 lg:overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 space-y-4"
+              className="w-full lg:w-[320px] lg:flex-none lg:shrink-0 lg:overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 space-y-4"
               style={{ borderColor: "var(--border)" }}
             >
               {right}

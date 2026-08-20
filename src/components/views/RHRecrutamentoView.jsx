@@ -47,6 +47,7 @@ import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHManagerLinks } from "../../hooks/use-rh-manager-links";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { EditableTitle } from "../shared/EditableTitle";
 import { MobileTableCards } from "../shared/MobileTableCards";
 import { QRCodeButton } from "../shared/QRCodeButton";
 import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
@@ -989,7 +990,7 @@ function VagaKanbanColumn({
 function VagaDrawer({
   vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onClose, onVerCandidatos,
   customFields, onCustomFieldChange, onAddActivity, onUpdateActivity, currentUser, users, moveError, notifyMentions, onUpdateResponsibles,
-  onDelete, onEditFields,
+  onDelete, onEditFields, onUpdateTitle,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -1017,7 +1018,7 @@ function VagaDrawer({
 
   const header = (
     <div style={{ minWidth: 0 }}>
-      <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{vaga.title}</div>
+      <EditableTitle value={vaga.title} canWrite={canWrite} onSave={(v) => onUpdateTitle(vaga.id, v)} fontSize={16} />
       <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{vaga.job_title || "—"} · {vaga.department || "—"}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageTextColor(stageInfo.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
@@ -1754,7 +1755,7 @@ function NovoCandidatoModal({ defaultStage, defaultVagaId, vagas, stages, onSave
 
 function CandidatoDrawer({
   candidato, vagas, stages, canWrite, onStageChange, onStageMoved, onAddNote, onRatingChange, onClose, onHire,
-  customFields, onCustomFieldChange, onAddActivity, onUpdateActivity, currentUser, users, notifyMentions, onDelete, onEditFields,
+  customFields, onCustomFieldChange, onAddActivity, onUpdateActivity, currentUser, users, notifyMentions, onDelete, onEditFields, onUpdateTitle,
 }) {
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
@@ -1860,7 +1861,7 @@ function CandidatoDrawer({
     <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0 }}>
       <InitialsAvatar name={candidato.name} size={40} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{candidato.name}</div>
+        <EditableTitle value={candidato.name} canWrite={canWrite} onSave={(v) => onUpdateTitle(candidato.id, v)} fontSize={16} />
         {candidato.email && <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{candidato.email}</div>}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageTextColor(stageInfo.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
@@ -3696,6 +3697,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           users={profileUsers}
           notifyMentions={notifyMentions}
           onUpdateResponsibles={(ids) => updateVaga(vagaEmDrawer.id, { responsible_ids: ids })}
+          onUpdateTitle={(id, title) => updateVaga(id, { title })}
           onDelete={deleteVaga}
           onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
         />
@@ -3733,6 +3735,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           users={profileUsers}
           notifyMentions={notifyMentions}
           onDelete={deleteAplicacao}
+          onUpdateTitle={(id, name) => updateAplicacao(id, { name })}
           onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
         />
       )}

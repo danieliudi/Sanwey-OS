@@ -135,7 +135,7 @@ const TOOLS = [
   {
     name: 'dossie_cliente',
     description:
-      'Monta o dossê completo de um cliente já identificado (use buscar_cliente primeiro para achar o client_id): negócios abertos/fechados, atas de visita, mudanças de etapa, visitas, amostras, pós-venda e faturamento por ano — tudo direto do banco real.',
+      'Monta o dossiê completo de um cliente já identificado (use buscar_cliente primeiro para achar o client_id): negócios abertos/fechados, atas de visita, mudanças de etapa, visitas, amostras, pós-venda e faturamento por ano — tudo direto do banco real.',
     inputSchema: {
       type: 'object',
       properties: {

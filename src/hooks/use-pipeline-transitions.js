@@ -148,7 +148,47 @@ export function usePipelineTransitions() {
     return allowed;
   }, [rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { rules, isTransitionAllowed, toggleTransition, resetCompany, setRowAllowed, getAllowedDestinations };
+  // Gate de etapa por valor (18/08/2026) — condição opcional pra um destino
+  // específico, além do allowed bool. Ausência de linha = sem gate (mesma
+  // semântica de "aberto" que o resto do hook já usa).
+  const getTransitionCondition = useCallback((companyId, fromStageId, toStageId) => {
+    const row = rows.find(r => r.company_id === companyId && r.from_stage_key === fromStageId && r.to_stage_key === toStageId);
+    return row?.condition_groups || null;
+  }, [rows]);
+
+  // Grava só a condição, sem mexer no allowed de nenhum outro destino da
+  // mesma etapa — writeFullMatrix (usado por toggle/setRowAllowed) nunca
+  // inclui condition_groups no payload, então não corre risco de apagar uma
+  // condição já salva quando outro destino é alternado (upsert do
+  // supabase-js só toca as colunas presentes no payload no ON CONFLICT).
+  const setTransitionCondition = useCallback(async (companyId, fromStageId, toStageId, conditionGroups) => {
+    const existing = rows.find(r => r.company_id === companyId && r.from_stage_key === fromStageId && r.to_stage_key === toStageId);
+
+    setRows(prev => existing
+      ? prev.map(r => (r === existing ? { ...r, condition_groups: conditionGroups } : r))
+      : [...prev, { domain: DOMAIN, company_id: companyId, from_stage_key: fromStageId, to_stage_key: toStageId, allowed: true, condition_groups: conditionGroups }]);
+
+    if (!isSupabaseConfigured) return;
+    if (existing) {
+      const { error } = await supabase.from("pipeline_stage_transitions")
+        .update({ condition_groups: conditionGroups })
+        .eq("domain", DOMAIN).eq("company_id", companyId).eq("from_stage_key", fromStageId).eq("to_stage_key", toStageId);
+      if (error) await fetchAll();
+    } else {
+      // Linha ainda não existia (destino nunca tinha sido tocado) — "sem
+      // linha" já significava permitido, então grava allowed:true explícito
+      // junto pra manter esse mesmo comportamento agora que a linha passa a
+      // existir por causa da condição.
+      const { error } = await supabase.from("pipeline_stage_transitions")
+        .upsert(
+          { domain: DOMAIN, company_id: companyId, from_stage_key: fromStageId, to_stage_key: toStageId, allowed: true, condition_groups: conditionGroups },
+          { onConflict: "domain,company_id,from_stage_key,to_stage_key" },
+        );
+      if (error) await fetchAll();
+    }
+  }, [rows, fetchAll]);
+
+  return { rules, isTransitionAllowed, toggleTransition, resetCompany, setRowAllowed, getAllowedDestinations, getTransitionCondition, setTransitionCondition };
 }
 
 export default usePipelineTransitions;

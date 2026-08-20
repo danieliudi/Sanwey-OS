@@ -246,16 +246,26 @@ ${benefits.length ? `**Benefícios:** ${benefits.join(", ")}` : ""}`,
 
 // orderHistory: outros negócios já ganhos do mesmo cliente (mesmo clientId),
 // usado pra sugerir upsell/cross-sell com base no que ele já comprou.
-export function proposalPrompt(lead, orderHistory = []) {
+// lineItems (Fase 1 do CPQ, opcional): [{modelLabel, quantity, unitPrice}].
+// Quando presente, os valores reais substituem "[a definir]" — sem quebrar
+// quem ainda chama proposalPrompt(lead, orderHistory) sem 3º argumento.
+export function proposalPrompt(lead, orderHistory = [], lineItems = []) {
   const hasHistory = orderHistory.length > 0;
+  const hasLineItems = lineItems.length > 0;
   const historyLines = orderHistory
     .map(l => `- ${l.skuName || l.sector || 'negócio anterior'}: R$ ${l.value?.toLocaleString('pt-BR') || '—'}`)
+    .join('\n');
+  const lineItemsTotal = lineItems.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0);
+  const lineItemLines = lineItems
+    .map(it => `- ${it.modelLabel} · ${Number(it.quantity) || 0} un × R$ ${(Number(it.unitPrice) || 0).toLocaleString('pt-BR')} = R$ ${((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)).toLocaleString('pt-BR')}`)
     .join('\n');
 
   return [
     {
       role: 'system',
-      content: `Você é um redator comercial B2B. Escreva o corpo de uma proposta comercial formal em português brasileiro, pronta para ser lida pelo cliente. Não inclua saudação nem despedida com nome de remetente (isso é adicionado depois). Não invente preços — deixe um campo "[a definir]" onde condições comerciais específicas seriam necessárias.`,
+      content: hasLineItems
+        ? `Você é um redator comercial B2B. Escreva o corpo de uma proposta comercial formal em português brasileiro, pronta para ser lida pelo cliente. Não inclua saudação nem despedida com nome de remetente (isso é adicionado depois). Os itens e valores da proposta já estão definidos abaixo — use os valores reais informados, nunca escreva "[a definir]" para preço.`
+        : `Você é um redator comercial B2B. Escreva o corpo de uma proposta comercial formal em português brasileiro, pronta para ser lida pelo cliente. Não inclua saudação nem despedida com nome de remetente (isso é adicionado depois). Não invente preços — deixe um campo "[a definir]" onde condições comerciais específicas seriam necessárias.`,
     },
     {
       role: 'user',
@@ -265,14 +275,16 @@ export function proposalPrompt(lead, orderHistory = []) {
 **Decisor:** ${lead.decisionMaker?.name || 'responsável pela decisão'} (${lead.decisionMaker?.role || '—'})
 **Necessidade identificada:** ${lead.evidence || lead.triggerLabel || 'a definir com o cliente'}
 **Produto/serviço de interesse:** ${lead.skuName || '—'}
-**Valor estimado do negócio:** R$ ${lead.value?.toLocaleString('pt-BR') || '[a definir]'}
+${hasLineItems
+  ? `**Itens da proposta:**\n${lineItemLines}\n**Valor total:** R$ ${lineItemsTotal.toLocaleString('pt-BR')}`
+  : `**Valor estimado do negócio:** R$ ${lead.value?.toLocaleString('pt-BR') || '[a definir]'}`}
 **Classificação do cliente:** ${lead.clientClassification || '—'}
 ${hasHistory ? `\n**Negócios anteriores já fechados com este cliente:**\n${historyLines}` : ''}
 
 Estrutura:
 1. **Contexto** — 1 parágrafo curto retomando a necessidade identificada.
 2. **Proposta de solução** — 1-2 parágrafos descrevendo como o produto/serviço atende essa necessidade.
-3. **Condições comerciais** — placeholder "[a definir]" para preço, prazo e forma de pagamento.
+3. **Condições comerciais** — ${hasLineItems ? 'apresente os itens e valores acima de forma narrativa; prazo e forma de pagamento continuam como "[a definir]".' : 'placeholder "[a definir]" para preço, prazo e forma de pagamento.'}
 ${hasHistory ? '4. **Oportunidade de upsell/cross-sell** — 1 parágrafo curto sugerindo produtos/serviços complementares com base no histórico de compras acima, só se fizer sentido comercial real.\n5. **Próximos passos**' : '4. **Próximos passos**'} — 1 parágrafo curto com uma chamada para ação clara.`,
     },
   ];
