@@ -668,6 +668,7 @@ export function SettingsView({
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState(null);
   const [croppingSrc, setCroppingSrc] = useState(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -1076,12 +1077,13 @@ export function SettingsView({
                       <button
                         onClick={() => fileRef.current?.click()}
                         title="Alterar foto"
+                        disabled={avatarUploading}
                         className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center"
-                        style={{ background: "var(--accent)", color: "#FFF", border: "2px solid #FFF", cursor: "pointer" }}
+                        style={{ background: "var(--accent)", color: "#FFF", border: "2px solid #FFF", cursor: avatarUploading ? "not-allowed" : "pointer" }}
                       >
-                        <Camera size={13} />
+                        {avatarUploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
                       </button>
-                      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} disabled={avatarUploading} />
                     </div>
                     <div>
                       <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{currentUser?.name}</div>
@@ -2370,9 +2372,32 @@ export function SettingsView({
 
       <AvatarCropModal
         imageSrc={croppingSrc}
-        onSave={(croppedDataUrl) => {
-          setProfileForm(f => ({ ...f, avatarUrl: croppedDataUrl }));
+        onSave={async (blob) => {
           setCroppingSrc(null);
+          if (!supabaseEnabled || !currentUser?.id) {
+            // Modo offline (sem Storage): mantém o comportamento antigo,
+            // guarda o preview como dataURL só na sessão local.
+            const reader = new FileReader();
+            reader.onload = ev => setProfileForm(f => ({ ...f, avatarUrl: ev.target.result }));
+            reader.readAsDataURL(blob);
+            return;
+          }
+          setAvatarUploading(true);
+          try {
+            const path = `${currentUser.id}/avatar.jpg`;
+            const { error: upErr } = await supabase.storage
+              .from("avatars")
+              .upload(path, blob, { contentType: "image/jpeg", upsert: true });
+            if (upErr) throw upErr;
+            const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+            // Cache-bust: mesmo path é reaproveitado (upsert), sem isso o
+            // navegador/CDN poderia continuar servindo a foto anterior.
+            setProfileForm(f => ({ ...f, avatarUrl: `${data.publicUrl}?v=${Date.now()}` }));
+          } catch (err) {
+            setProfileFeedback({ type: "error", msg: err.message || "Erro ao subir a foto." });
+          } finally {
+            setAvatarUploading(false);
+          }
         }}
         onCancel={() => setCroppingSrc(null)}
       />

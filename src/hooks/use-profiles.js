@@ -59,15 +59,14 @@ export function useProfiles({ enabled = true } = {}) {
     setLoading(true);
     try {
       // Achado F-05 da auditoria funcional (19/08/2026): select("*") puxava
-      // TODAS as colunas de profiles em toda navegação, incluindo
-      // avatar_url em base64 (hoje 524KB pra só 3 fotos cadastradas, sem
-      // teto real de crescimento) e colunas que rowToUser() nem lê
-      // (department, job_title, employee_status, contract_type,
-      // admission_date, client_id...). Lista explícita = só o que o roster
-      // de fato usa. Isso NÃO resolve o base64 em si (avatar_url segue
-      // sendo consumido de verdade pelo roster) — a correção completa é
-      // mover a foto pro Storage, que precisa de decisão sobre bucket (ver
-      // auditoria, pendência de schema).
+      // TODAS as colunas de profiles em toda navegação, incluindo colunas
+      // que rowToUser() nem lê (department, job_title, employee_status,
+      // contract_type, admission_date, client_id...). Lista explícita = só
+      // o que o roster de fato usa. avatar_url continua na lista (é
+      // consumido de verdade pelo roster) mas desde
+      // 20261020_avatars_storage_bucket.sql guarda só uma URL do Storage,
+      // não mais o base64 da foto inteira — o custo por linha agora é
+      // desprezível.
       const { data, error: err } = await supabase
         .from("profiles")
         .select("id, name, email, role, roles, companies, initials, avatar_bg, avatar_url, sectors, supervisor_id, supplier_id, mention_notifications_enabled, chat_enabled, created_at")
