@@ -1,3 +1,11 @@
+-- SUPERADA — NÃO APLICAR. Verificado 20/08/2026 ao mergear esta branch: a
+-- versão de get_client_timeline() já em produção é a de
+-- 20261001_checkin_visita_localizacao.sql, que parte desta função e
+-- acrescenta meta.location/viagemRegistroId/viagemLabel por cima do mesmo
+-- fix de 'ata_voz' abaixo. Aplicar este arquivo agora reverteria a função
+-- pra trás, removendo os campos de check-in de visita. Mantido só como
+-- registro histórico do achado original — nada aqui deve rodar.
+--
 -- Ata de visita por voz na linha do tempo do CLIENTE
 --
 -- Achado 13/08/2026, logo depois de a ata ir ao ar (4.54.0): get_client_timeline
