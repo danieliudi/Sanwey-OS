@@ -29,6 +29,11 @@ function joinAplicacao(aplicacao, candidatosById) {
     phone: cand.phone || null,
     linkedin_url: cand.linkedin_url || null,
     resume_ext: cand.resume_ext || null,
+    // MD-03(b): nome do arquivo deixou de ser previsível (embute token de
+    // upload de uso único) — path exato vem do banco, não é mais
+    // reconstruído como "<id>/curriculo.<ext>". Ver
+    // 20261020_sec_rh_curriculos_upload_token.sql.
+    resume_object_path: cand.resume_object_path || null,
     source: cand.source || null,
     // Coluna existe desde a FASE 5 (20260714_multi_responsible_foundation)
     // mas nunca tinha sido lida aqui — sem isso o card de candidato não sabe
