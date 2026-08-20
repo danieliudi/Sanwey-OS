@@ -126,6 +126,7 @@ import { useAgentsCoachmark } from "./hooks/use-agents-coachmark";
 import { AgentsSidebarCoachmark } from "./components/shell/AgentsSidebarCoachmark";
 import { useFeatureSpotlight } from "./hooks/use-feature-spotlight";
 import { FeatureSpotlight } from "./components/shared/FeatureSpotlight";
+import { NotFoundView } from "./components/shared/NotFoundView";
 
 // Onboarding contextual por tela: reaproveita o quickStart que já existe em
 // VIDEO_TUTORIALS (src/data/tutorials.js), hoje só visível na tela separada
@@ -2421,8 +2422,10 @@ export default function App() {
             />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
-          {/* Catch-all: rota desconhecida volta pro Início. */}
-          <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
+          {/* N-02 da auditoria funcional (19/08/2026): antes redirecionava em
+              silêncio pro Início — mockup aprovado 20/08/2026, mostra o
+              estado dentro do próprio shell (sidebar/topbar continuam). */}
+          <Route path="*" element={<NotFoundView onBack={() => setSection("dashboard")} />} />
         </Routes>
         </ErrorBoundary>
         </div>

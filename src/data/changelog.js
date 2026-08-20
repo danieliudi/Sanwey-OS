@@ -24,6 +24,20 @@
 
 export const CHANGELOG = [
   {
+    version: "4.63.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Um endereço digitado errado ou uma tela renomeada caía em silêncio no Painel, sem explicar nada — agora mostra um aviso claro com botão pra voltar.",
+      },
+      {
+        kind: "correcao",
+        text: "Algumas pessoas apareciam duplicadas em RH → Funcionários (um cadastro vinculado ao login, outro solto) — mesclados; não deve mais acontecer.",
+        roles: ["admin", "rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "4.62.0",
     items: [
       {
