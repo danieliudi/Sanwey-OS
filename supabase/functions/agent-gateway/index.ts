@@ -169,6 +169,30 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
     return;
   }
 
+  // Conteúdo de mercado (aba Mercado do hub de Inteligência, 19-20/08/2026)
+  // — mesmo padrão rascunho→aprovação→publicação dos dois acima. O workflow
+  // n8n "Scout de Mercado" (Perplexity) grava aqui via action=create; só ao
+  // aprovar em Agentes é que a linha nasce em market_intelligence_items.
+  if (action.action_type === 'sugestao_conteudo_mercado') {
+    const payload2 = action.payload || {};
+    if (!action.title || !action.summary) return;
+    const validCategories = ['visao_geral', 'concorrencia', 'regulatorio', 'sustentabilidade', 'regional', 'preco_insumo'];
+    const category = validCategories.includes(payload2.category) ? payload2.category : 'visao_geral';
+    try {
+      await admin.from('market_intelligence_items').insert({
+        category,
+        title: action.title,
+        summary: action.summary,
+        source_url: payload2.source_url || null,
+        source_name: payload2.source_name || 'Perplexity',
+        sector: payload2.sector || null,
+        relevant_for: action.company_id ? [action.company_id] : null,
+        created_by: 'agente_pesquisa_mercado',
+      });
+    } catch (_e) { /* ignorado de propósito */ }
+    return;
+  }
+
   if (action.action_type === 'sugestao_prospect') {
     if (!payload.company || !payload.sector || !payload.state) return;
     const relevantFor = Array.isArray(payload.relevant_for) && payload.relevant_for.length
