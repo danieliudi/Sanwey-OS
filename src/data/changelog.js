@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.64.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O link de assinatura do calendário (Marketing → Calendário → Sincronizar) agora pode ser trocado a qualquer momento — útil se você compartilhou ou colou o link em algum lugar por engano.",
+        roles: ["admin", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "4.63.0",
     items: [
       {
