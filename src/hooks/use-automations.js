@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { matchOperator, evaluateConditionGroups } from "../utils/condition-operators";
 
 /**
  * Rule-based automation engine — no AI, zero API calls. Compartilhado pela
@@ -250,12 +251,7 @@ export function useAutomations({ userId } = {}) {
 
       // ── Refinamento por condições agrupadas (AND dentro do grupo, OR entre
       //    grupos) — grupo vazio = só o trigger decide, sempre passa. ─────────
-      const groups = rule.conditionGroups || [];
-      const conditionsPass = groups.length === 0 || groups.some(group =>
-        (group.conditions || []).every(c =>
-          matchOperator(String(lead[c.field] ?? ""), c.operator, String(c.value ?? ""))
-        )
-      );
+      const conditionsPass = evaluateConditionGroups(rule.conditionGroups, lead);
 
       const actionsToRun = conditionsPass ? (rule.thenActions || []) : (rule.elseActions || []);
       for (const action of actionsToRun) {
@@ -293,23 +289,6 @@ export function useAutomations({ userId } = {}) {
     stats,
     refetch: fetchAll,
   };
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function matchOperator(actual, operator, expected) {
-  switch (operator) {
-    case "eq":            return actual === expected;
-    case "neq":            return actual !== expected;
-    case "contains":       return actual.toLowerCase().includes(expected.toLowerCase());
-    case "gt":             return parseFloat(actual) > parseFloat(expected);
-    case "lt":             return parseFloat(actual) < parseFloat(expected);
-    case "gte":            return parseFloat(actual) >= parseFloat(expected);
-    case "lte":            return parseFloat(actual) <= parseFloat(expected);
-    case "is_empty":       return actual.trim() === "";
-    case "is_not_empty":   return actual.trim() !== "";
-    default:               return actual === expected;
-  }
 }
 
 function runAction(action, rule, lead, { patches, notifications, sideEffects }) {

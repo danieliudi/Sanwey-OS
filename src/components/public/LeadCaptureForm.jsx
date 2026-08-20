@@ -43,8 +43,18 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Achado N-03 da auditoria funcional (19/08/2026): o slug público usa o id
+// interno de banco ("industria"), mas o nome comercial da empresa é
+// "Sanwey" — quem for divulgar a captura tenta /captura/sanwey primeiro e
+// recebia "link inválido". Alias só de leitura aqui, no ponto de entrada —
+// o id interno continua sendo o canônico em todo o resto do fluxo (RPC,
+// dedupe por CNPJ, etc). Correção pontual: não mexe na taxonomia paralela
+// COMPANY_IDS vs. RH_FRENTES (achado F-06, maior escopo).
+const SLUG_ALIASES = { sanwey: "industria" };
+
 export default function LeadCaptureForm() {
-  const { slug } = useParams();
+  const { slug: rawSlug } = useParams();
+  const slug = SLUG_ALIASES[rawSlug] || rawSlug;
   const [params] = useSearchParams();
   const source = params.get("src") || "site";
 

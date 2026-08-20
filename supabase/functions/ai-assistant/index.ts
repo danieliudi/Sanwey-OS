@@ -60,8 +60,27 @@ serve(async (req) => {
       );
     }
 
-    const content = await callAIProvider({ provider: resolved.provider, model: resolved.model, apiKey: resolved.apiKey, messages, maxTokens });
-    return new Response(JSON.stringify({ content }), { headers: { ...cors, "Content-Type": "application/json" } });
+    const t0 = Date.now();
+    try {
+      const { content, usage } = await callAIProvider({ provider: resolved.provider, model: resolved.model, apiKey: resolved.apiKey, messages, maxTokens });
+      // GAP 2 (18/08/2026): trilha de auditoria mínima, mesmo padrão do
+      // logToolCall de sanwey-crm-mcp — só metadados (ids, enums curtos,
+      // números), nunca o conteúdo de messages/content.
+      console.log(JSON.stringify({
+        event: "ai_assistant_call", user_id: userData.user.id, crm_module: body.module || "ai_assistant",
+        provider: resolved.provider, execution_status: "ok", latency_ms: Date.now() - t0,
+        prompt_tokens: usage.promptTokens, completion_tokens: usage.completionTokens,
+        at: new Date().toISOString(),
+      }));
+      return new Response(JSON.stringify({ content }), { headers: { ...cors, "Content-Type": "application/json" } });
+    } catch (err: any) {
+      console.log(JSON.stringify({
+        event: "ai_assistant_call", user_id: userData.user.id, crm_module: body.module || "ai_assistant",
+        provider: resolved.provider, execution_status: "error", latency_ms: Date.now() - t0,
+        at: new Date().toISOString(),
+      }));
+      throw err;
+    }
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }

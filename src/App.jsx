@@ -7,7 +7,7 @@ import {
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
-  FlaskConical, PackageSearch, ClipboardList, Bug,
+  FlaskConical, PackageSearch, ClipboardList, Bug, BookOpen,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -94,6 +94,7 @@ import { MinhasTarefasView } from "./components/views/MinhasTarefasView";
 import { ChatView } from "./components/views/ChatView";
 import { MarketingRequestsView } from "./components/views/MarketingRequestsView";
 import { FornecedoresView } from "./components/views/FornecedoresView";
+import { DocumentLibraryView } from "./components/views/DocumentLibraryView";
 import { ComprasMarketingView } from "./components/views/ComprasMarketingView";
 import { RHOverviewView } from "./components/views/RHOverviewView";
 import { RHFuncionariosView } from "./components/views/RHFuncionariosView";
@@ -1441,6 +1442,7 @@ export default function App() {
           { id: "pedidos",      label: "Pedidos",    icon: ClipboardList },
           { id: "clients",      label: "Clientes",   icon: Users },
           { id: "catalogo",     label: "Catálogo",   icon: PackageSearch },
+          { id: "document-library", label: "Biblioteca de Documentos", icon: BookOpen },
           ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
           { id: "explorer",     label: "Explorador", icon: Globe2 },
           { id: "crm-viagens",  label: "Viagens & Despesas", icon: Plane },
@@ -2010,6 +2012,11 @@ export default function App() {
               onResetPipeline={resetCompanyPipeline}
               onUpdateStage={updateStage}
             />
+          } />
+          <Route path={ROUTES["document-library"]} element={
+            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : isPureRH ? <Navigate to={ROUTES.dashboard} replace /> : (
+              <DocumentLibraryView user={currentUser} canManage={isManager} />
+            )
           } />
           <Route path={ROUTES.posvenda} element={
             isAgencia ? <Navigate to={ROUTES.marketing} replace /> : isPureRH ? <Navigate to={ROUTES.dashboard} replace /> : <PosVendaView

@@ -15,21 +15,31 @@ export default function PesquisaPublicaForm() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(null);
+  // Achado F-04 (mesmo padrão de JobApplicationForm/BemEstarPublicaForm):
+  // erro de rede e "pesquisa não existe" tinham o mesmo texto, e sem timeout
+  // o spinner girava pra sempre se a promise nunca resolvesse.
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => { document.title = "Pesquisa — Grupo Sanwey"; }, []);
 
   useEffect(() => {
     let active = true;
+    setPesquisa(undefined);
+    setLoadError(false);
     if (!isSupabaseConfigured) { setPesquisa(null); return; }
+    const timeoutId = setTimeout(() => { if (active) setLoadError(true); }, 10000);
     (async () => {
       const { data, error: err } = await supabase.rpc("get_pesquisa_publica", { p_id: id });
+      clearTimeout(timeoutId);
       if (!active) return;
+      if (err) { setLoadError(true); return; }
       const row = Array.isArray(data) ? data[0] : data;
-      if (err || !row) { setPesquisa(null); return; }
+      if (!row) { setPesquisa(null); return; }
       setPesquisa(row);
     })();
-    return () => { active = false; };
-  }, [id]);
+    return () => { active = false; clearTimeout(timeoutId); };
+  }, [id, reloadKey]);
 
   const perguntas = useMemo(() => Array.isArray(pesquisa?.perguntas) ? pesquisa.perguntas : [], [pesquisa]);
   const set = (k, v) => setAnswers((a) => ({ ...a, [k]: v }));
@@ -58,6 +68,18 @@ export default function PesquisaPublicaForm() {
     }
   };
 
+  if (loadError) {
+    return (
+      <Shell>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", padding: "24px 0" }}>
+          <AlertCircle size={28} color={ACCENT} />
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Não conseguimos carregar agora</h1>
+          <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 340, margin: 0 }}>Verifique sua conexão e tente de novo.</p>
+          <button type="button" onClick={() => setReloadKey(k => k + 1)} style={{ padding: "10px 18px", borderRadius: 10, background: ACCENT, color: "#FFF", fontSize: 14, fontWeight: 700, border: "none", cursor: "pointer" }}>Tentar de novo</button>
+        </div>
+      </Shell>
+    );
+  }
   if (pesquisa === undefined) {
     return <Shell><div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}><Loader2 size={24} className="animate-spin" style={{ color: ACCENT }} /></div></Shell>;
   }

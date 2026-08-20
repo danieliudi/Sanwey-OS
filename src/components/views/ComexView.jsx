@@ -1001,10 +1001,10 @@ const IMPORT_CONFIG = {
     },
   ],
   renderLeftFields: (op, onSave, disabled) => (
-    <>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
       <ImportSupplierField op={op} onSave={onSave} disabled={disabled} />
       <ImportCurrencyField op={op} onSave={onSave} disabled={disabled} />
-    </>
+    </div>
   ),
   renderFormExtra: (op, onSave, disabled) => <LandedCostCalculator op={op} onSave={onSave} disabled={disabled} />,
   buildStats: (operations, stages) => {

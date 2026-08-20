@@ -21,7 +21,14 @@ function resolveStageLabel(lead, pipelines) {
 
 export function csvCell(v) {
   if (v === null || v === undefined) return "";
-  const s = String(v);
+  let s = String(v);
+  // Neutraliza injeção de fórmula (OWASP CSV Injection): "=", "+", "-", "@",
+  // TAB ou CR no início da célula fazem Excel/Sheets tratar o conteúdo como
+  // fórmula ao abrir. Prefixo de apóstrofo força leitura como texto sem
+  // alterar o valor exibido. Dado de origem pública (captura de lead,
+  // candidatura) chega sem sanitização nenhuma — a defesa tem que ficar na
+  // exportação, não na entrada.
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   if (s.includes(";") || s.includes("\"") || s.includes("\n") || s.includes("\r")) {
     return `"${s.replace(/"/g, "\"\"")}"`;
   }
@@ -318,6 +325,23 @@ export function exportDeliverablesToCSV(deliverables, { stages, filename } = {})
   const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
   const today = new Date().toISOString().slice(0, 10);
   triggerDownload(filename || `sanwey-entregas-${today}.csv`, csv);
+}
+
+export function exportMarketingTasksToCSV(tasks, { stages, usersById, campaignsById, priorityLabels, filename } = {}) {
+  const header = ["Título", "Campanha", "Responsáveis", "Prioridade", "Prazo", "Etapa", "Empresas", "Criado em"];
+  const rows = (tasks || []).map(t => [
+    t.title || "",
+    (t.campaignId && campaignsById?.get(t.campaignId)?.name) || "",
+    (t.assigneeIds || []).map(id => usersById?.get(id)?.name).filter(Boolean).join(", "),
+    priorityLabels?.find(p => p.id === t.priority)?.label || t.priority || "",
+    formatDate(t.deadline),
+    (stages || []).find(s => s.id === t.stage)?.name || t.stage || "",
+    (t.companyIds || []).map(id => COMPANIES[id]?.short || id).join(", "),
+    formatDate(t.createdAt),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-tarefas-marketing-${today}.csv`, csv);
 }
 
 export default exportLeadsToCSV;

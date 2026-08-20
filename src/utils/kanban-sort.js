@@ -12,6 +12,7 @@ export const SORT_OPTIONS = [
   { value: "deadline", label: "Prazo mais próximo" },
   { value: "priority", label: "Prioridade" },
   { value: "value", label: "Valor (maior primeiro)" },
+  { value: "fit", label: "Fit score (maior primeiro)" },
   { value: "alpha", label: "Alfabética" },
 ];
 
@@ -22,7 +23,7 @@ const PRIORITY_RANK = { alta: 0, media: 1, baixa: 2 };
 
 export function sortKanbanItems(items, criteria, getters = {}) {
   if (!items?.length) return items || [];
-  const { deadline, priority, value, name, createdAt } = getters;
+  const { deadline, priority, value, fit, name, createdAt } = getters;
 
   if (criteria === "deadline" && deadline) {
     return [...items].sort((a, b) => {
@@ -38,6 +39,9 @@ export function sortKanbanItems(items, criteria, getters = {}) {
   }
   if (criteria === "value" && value) {
     return [...items].sort((a, b) => (value(b) || 0) - (value(a) || 0));
+  }
+  if (criteria === "fit" && fit) {
+    return [...items].sort((a, b) => (fit(b) || 0) - (fit(a) || 0));
   }
   if (criteria === "alpha" && name) {
     return [...items].sort((a, b) => (name(a) || "").localeCompare(name(b) || ""));

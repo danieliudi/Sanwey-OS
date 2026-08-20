@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, Loader2, AlertCircle, Download, RotateCcw, Leaf } from "lucide-react";
+import { Bot, Loader2, AlertCircle, Download, RotateCcw, Leaf, Plus, Trash2 } from "lucide-react";
 import { useAI } from "../../hooks/use-ai";
 import { proposalPrompt } from "../../constants/ai-prompts";
 import { COMPANIES } from "../../constants/companies";
 import { useEsgReports } from "../../hooks/use-esg-carbon";
+import { useProposals } from "../../hooks/use-proposals";
+import { SANBAG_MODELS } from "../../data/sanbag-models";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { formatDateBR } from "../../utils/date";
 // formatBRL já vem com "R$ " embutido — nunca concatenar outro na frente.
 import { formatBRL } from "../../utils/currency";
@@ -41,12 +44,54 @@ function printDocument() {
   setTimeout(cleanup, 3000);
 }
 
+function newLineItem() {
+  return { id: crypto.randomUUID(), modelLabel: "", quantity: 1, unitPrice: 0, certificationNote: "" };
+}
+
 export function ProposalPanel({ lead, currentUser, allLeads, onAddActivity }) {
   const { complete, isConfigured } = useAI(currentUser);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const generatedOnce = useRef(false);
+  const initializedFromProposalRef = useRef(false);
+
+  // CPQ Fase 1 (19/08/2026) — tabela editável de linha de item acima do
+  // botão "Gerar", persistida em proposals/proposal_line_items (nunca um
+  // jsonb solto — ver use-proposals.js). Modelo é texto livre OU escolhido
+  // da lista canônica (datalist) — Fase 1 não tem preço-base, o vendedor
+  // digita o preço unitário.
+  const [lineItems, setLineItems] = useState([]);
+  const { proposal, lineItems: persistedLineItems, loading: proposalsLoading, persist } = useProposals(lead.id, lead.companyId);
+
+  // Retoma o rascunho salvo (texto + linhas) na primeira vez que a proposta
+  // persistida carrega — só uma vez, pra não sobrescrever edição em curso do
+  // vendedor caso o hook refaça fetch por outro motivo.
+  useEffect(() => {
+    if (initializedFromProposalRef.current || proposalsLoading) return;
+    initializedFromProposalRef.current = true;
+    if (proposal?.ai_draft_text) {
+      setDraft(proposal.ai_draft_text);
+      generatedOnce.current = true;
+    }
+    if (persistedLineItems.length > 0) {
+      setLineItems(persistedLineItems.map(it => ({
+        id: it.id,
+        modelLabel: it.model_label,
+        quantity: it.quantity,
+        unitPrice: it.unit_price,
+        certificationNote: it.certification_note || "",
+      })));
+    }
+  }, [proposalsLoading, proposal, persistedLineItems]);
+
+  const addLineItem = () => setLineItems(prev => [...prev, newLineItem()]);
+  const updateLineItem = (id, patch) => setLineItems(prev => prev.map(it => (it.id === id ? { ...it, ...patch } : it)));
+  const removeLineItem = (id) => setLineItems(prev => prev.filter(it => it.id !== id));
+  const lineItemsTotal = useMemo(
+    () => lineItems.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0),
+    [lineItems]
+  );
 
   // Outros negócios já ganhos do mesmo cliente — vira base pra sugestão de
   // upsell/cross-sell no corpo da proposta.
@@ -59,10 +104,21 @@ export function ProposalPanel({ lead, currentUser, allLeads, onAddActivity }) {
     setLoading(true);
     setError(null);
     try {
-      const text = await complete(proposalPrompt(lead, orderHistory));
+      const text = await complete(proposalPrompt(lead, orderHistory, lineItems));
       const isFirstGeneration = !generatedOnce.current;
       setDraft(text);
       generatedOnce.current = true;
+
+      // Persiste texto + linhas — best-effort: se falhar (RLS, rede), o
+      // draft já está na tela e o "Baixar PDF" continua funcionando, só se
+      // perde o "retomar depois" (mesmo espírito do resto do arquivo, nada
+      // aqui pode travar a UI por causa do Supabase).
+      try {
+        await persist({ draftText: text, items: lineItems, createdBy: currentUser?.id || null });
+      } catch (persistErr) {
+        setError(persistErr.message || "Proposta gerada, mas não foi possível salvar o rascunho.");
+      }
+
       // FASE 3 — buraco "proposta gerada não é registrada". "Gerada", nunca
       // "enviada": o documento é montado aqui na tela e o envio ao cliente é
       // manual (PDF impresso/anexado por fora) — a plataforma não tem como
@@ -71,7 +127,8 @@ export function ProposalPanel({ lead, currentUser, allLeads, onAddActivity }) {
       // encheria a linha do tempo de ruído. Fire-and-forget (sem await), pelo
       // mesmo motivo do resto do arquivo: nada aqui pode segurar a UI.
       if (isFirstGeneration && onAddActivity) {
-        const value = Number(lead.value);
+        const hasLineItems = lineItems.length > 0;
+        const value = hasLineItems ? lineItemsTotal : Number(lead.value);
         onAddActivity(lead.id, {
           type: "proposal_generated",
           userId: currentUser?.id || null,
@@ -83,6 +140,8 @@ export function ProposalPanel({ lead, currentUser, allLeads, onAddActivity }) {
             leadValue: Number.isFinite(value) ? value : null,
             skuName: lead.skuName || null,
             companyId: lead.companyId || null,
+            lineItemsTotal: hasLineItems ? lineItemsTotal : null,
+            itemCount: hasLineItems ? lineItems.length : null,
           },
         });
       }
@@ -115,6 +174,73 @@ export function ProposalPanel({ lead, currentUser, allLeads, onAddActivity }) {
           <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
             Proposta comercial
           </span>
+        </div>
+
+        <datalist id="sanbag-models-datalist">
+          {SANBAG_MODELS.map(m => <option key={m.label} value={m.label} />)}
+        </datalist>
+
+        <div className="mb-3">
+          {lineItems.length > 0 && (
+            <div className="space-y-1.5 mb-2">
+              {lineItems.map(item => (
+                <div key={item.id} className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    list="sanbag-models-datalist"
+                    value={item.modelLabel}
+                    onChange={e => updateLineItem(item.id, { modelLabel: e.target.value })}
+                    placeholder="Modelo (ex.: Lacrado)"
+                    className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+                    style={{ borderColor: BORDER, background: "var(--surface)", color: "var(--text)", flex: "1 1 40%", minWidth: 0 }}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={item.quantity}
+                    onChange={e => updateLineItem(item.id, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
+                    placeholder="Qtd"
+                    className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+                    style={{ borderColor: BORDER, background: "var(--surface)", color: "var(--text)", width: 56 }}
+                  />
+                  <div style={{ width: 110 }}>
+                    <CurrencyInput
+                      value={item.unitPrice}
+                      onChange={v => updateLineItem(item.id, { unitPrice: v === "" ? 0 : v })}
+                      style={{ borderColor: BORDER, background: "var(--surface)", color: "var(--text)", borderRadius: 8, borderWidth: 1, borderStyle: "solid", fontSize: 12, padding: "6px 8px" }}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-right" style={{ color: "var(--text)", width: 88, flexShrink: 0 }}>
+                    {formatBRL((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0))}
+                  </span>
+                  <button
+                    onClick={() => removeLineItem(item.id)}
+                    aria-label="Remover item"
+                    title="Remover item"
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer", flexShrink: 0 }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))}
+              <div className="flex items-center justify-end gap-2 pt-1.5 mt-1" style={{ borderTop: `1px solid ${BORDER}` }}>
+                <span className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>Total</span>
+                <span className="text-sm font-bold" style={{ color: "var(--text)" }}>{formatBRL(lineItemsTotal)}</span>
+              </div>
+            </div>
+          )}
+          <button
+            data-tour="proposal-line-items"
+            onClick={addLineItem}
+            className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-full border transition-all duration-150"
+            style={{ background: "var(--surface)", color: "var(--text-dim)", borderColor: BORDER, cursor: "pointer" }}
+          >
+            <Plus size={11} /> Adicionar item
+          </button>
         </div>
 
         {!isConfigured && (
@@ -207,6 +333,37 @@ export function ProposalPanel({ lead, currentUser, allLeads, onAddActivity }) {
           <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>Proposta comercial para</div>
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>{lead.company}</div>
           <div style={{ fontSize: 13, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{draft}</div>
+
+          {lineItems.length > 0 && (
+            <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 24, fontSize: 12.5 }}>
+              <thead>
+                <tr style={{ borderBottom: `1.5px solid ${company.primary}` }}>
+                  <th style={{ textAlign: "left", padding: "6px 4px", fontWeight: 700 }}>Modelo</th>
+                  <th style={{ textAlign: "right", padding: "6px 4px", fontWeight: 700 }}>Qtd.</th>
+                  <th style={{ textAlign: "right", padding: "6px 4px", fontWeight: 700 }}>Preço unit.</th>
+                  <th style={{ textAlign: "right", padding: "6px 4px", fontWeight: 700 }}>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineItems.map(item => (
+                  <tr key={item.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                    <td style={{ padding: "6px 4px" }}>{item.modelLabel || "—"}</td>
+                    <td style={{ padding: "6px 4px", textAlign: "right" }}>{Number(item.quantity) || 0}</td>
+                    <td style={{ padding: "6px 4px", textAlign: "right" }}>{formatBRL(Number(item.unitPrice) || 0)}</td>
+                    <td style={{ padding: "6px 4px", textAlign: "right", fontWeight: 600 }}>
+                      {formatBRL((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={3} style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700 }}>Total</td>
+                  <td style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700 }}>{formatBRL(lineItemsTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
 
           {latestEsgReport && (
             <div

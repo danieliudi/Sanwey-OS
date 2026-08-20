@@ -85,7 +85,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-50"
         style={{ background: "rgba(0,0,0,0.15)" }}
       />
 

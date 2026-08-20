@@ -1,0 +1,891 @@
+================================================================================
+AUDITORIA FUNCIONAL, DE NAVEGABILIDADE E DE USABILIDADE — SANWEY GESTÃO
+(auditoria NÃO-segurança — bugs, fluxos, conexões entre entidades)
+================================================================================
+Data........: 19/08/2026
+Escopo......: repositório (branch main, v4.58.1) + banco de PRODUÇÃO
+              "Sanwey_crm" (ref adizvduyfzfftyswkijj) + execução real da
+              aplicação em navegador (Chromium/Playwright, vite dev)
+Prints......: pasta screenshots/ — 15 capturas (desktop 1440x900 e mobile
+              390x844) + capturas de interação
+Alterações..: NENHUMA alteração de código. Em produção, uma conta temporária
+              de auditoria foi criada e REMOVIDA integralmente (ver §7.3).
+
+--------------------------------------------------------------------------------
+LIMITAÇÃO CENTRAL — LEIA ANTES DO RESTO
+--------------------------------------------------------------------------------
+A política de rede deste ambiente bloqueia TODO o egresso HTTPS do navegador
+e do shell (confirmado: `adizvduyfzfftyswkijj.supabase.co` e até `example.com`
+retornam 403 no CONNECT do proxy). O app subiu e roda localmente, mas o
+navegador NÃO alcança o Supabase.
+
+Consequência prática: **não foi possível logar e, portanto, não há prints da
+área autenticada** — Funil de Vendas, os 13 Kanbans, drawers, RH, Painel
+Executivo, Chat. A conta de auditoria foi criada (com seu aval) e se mostrou
+inútil por esse motivo; foi removida.
+
+O que isso NÃO impediu:
+  • Prints reais das 10 rotas públicas + login, desktop e mobile — e foi
+    justamente aí que apareceram bugs de estado de carregamento (§4).
+  • Auditoria dos DADOS REAIS de produção via SQL, incluindo **simulação da
+    RLS com a sessão de um usuário real** — foi assim que o achado F-01
+    (o mais grave deste relatório) foi provado, não deduzido.
+  • Leitura de código para rastrear causa raiz de cada sintoma.
+
+O §7 lista, item a item, tudo que ficou sem teste.
+
+================================================================================
+ATUALIZAÇÃO — 19/08/2026, sessão seguinte: correções aplicadas
+================================================================================
+Com aprovação explícita do Daniel, os achados abaixo foram corrigidos —
+código verificado em navegador contra o build real, migrations aplicadas em
+produção e reconferidas por simulação de RLS. O resto deste documento
+permanece como registro do que foi encontrado, não como status atual.
+
+  [F-01] Parcialmente — a CAUSA (seletor de empresa sem "montemor" em
+         UserManagementView) segue sem decisão do Daniel (regra 5: schema/
+         produto). Continua bloqueado como estava.
+  [F-02] Corrigido e aplicado — guarda de cargo no trigger + linha da
+         Beehave removida de rh_colaboradores (21 → 20).
+  [F-04] Corrigido — as 3 páginas públicas distinguem carregando / erro de
+         rede / não encontrado, com timeout de 10s e "Tentar de novo".
+         BÔNUS encontrado ao corrigir: BemEstarPublicaForm tinha um
+         Promise.all sem try/catch — falha de rede virava unhandled
+         rejection e travava em loading pra sempre, nem caía no estado de
+         "indisponível" que o F-04 original já descrevia como problema.
+  [F-05] Parcialmente — use-profiles troca select(*) por colunas explícitas
+         (aplicado). NÃO resolve o payload de avatar_url em base64 — mover
+         foto pro Storage requer decisão sobre bucket, segue pendente.
+  [F-13] CRÍTICO, corrigido e aplicado — prospect_seeds escopado por
+         empresa. Verificado: agência externa caiu de 45 para 0 linhas.
+  [F-14] Corrigido e aplicado — agencia_sees_supplier() fail-closed.
+         Efeito colateral avisado ao Daniel antes de aplicar: a agência
+         externa perde acesso às 13 entregas sem campanha vinculada (era
+         exatamente essa lacuna, ligada ao F-09, que abria a válvula).
+  [F-15] Corrigido e aplicado — vendedor vê roster da própria empresa.
+         Verificado: 1 → 13 perfis visíveis para um vendedor sem
+         subordinados.
+  [N-03] Corrigido — /captura/sanwey aceita alias pra "industria".
+         Verificado em navegador: renderiza o formulário, não mais "link
+         inválido".
+  [U-01] Corrigido — botão de idioma tirado da tabulação (tabIndex=-1,
+         aria-disabled). Decisão de implementar/remover de vez continua
+         pendente — só a acessibilidade foi corrigida, não o produto.
+  [U-03][U-04] Corrigidos — título e badge de MarketingRequestForm
+         acompanham a categoria e deixam de anunciar só "Sanwey".
+
+NÃO corrigidos nesta passada:
+  [F-06][F-07][F-08][F-09][F-10][F-11][F-16][F-17][F-18] — seguem como
+  estavam. F-07 (dedupe rh_colaboradores) e a limpeza de §7.4 continuam
+  exigindo decisão humana sobre qual linha manter em cada duplicata — não
+  são migrations que dá pra aplicar às cegas.
+  [N-01][N-02] — 9 rotas fora do registro de módulo e a página 404 seguem
+  pendentes; N-01 especificamente NÃO foi tratado por precaução: adicionar
+  'presidency'/'users' ao registro de módulos pode BLOQUEAR acesso de quem
+  hoje entra livremente, dependendo de como effectiveModules() calcula o
+  default por cargo — precisa de análise própria antes de mexer, não é uma
+  correção mecânica.
+  [U-02][U-05] — seguem como estavam.
+
+  Big Bag Insights: análise e mockup de integração em andamento na mesma
+  sessão desta atualização — ver anexo separado quando publicado.
+
+--------------------------------------------------------------------------------
+SUMÁRIO
+--------------------------------------------------------------------------------
+Uma frase: **a plataforma foi bem construída e está sendo mal alimentada.**
+O código é sólido; o que está quebrado é o vínculo entre as entidades —
+cliente, funcionário, usuário e solicitação existem como ilhas, e em um caso
+provado uma unidade inteira do Grupo (Monte Mor) está invisível para o time
+que precisa atendê-la.
+
+Os que eu levaria primeiro:
+
+  F-13 CRÍTICO  A lista de prospecção comercial (45 empresas-alvo com CNPJ,
+                fit_score e o racional de cada uma) é legível por QUALQUER
+                conta autenticada — inclusive pela agência de marketing
+                EXTERNA. A policy é `USING (enabled = true)`, sem escopo.
+  F-01 CRÍTICO  A frente de Monte Mor inteira é invisível para o Marketing:
+                2 solicitações reais aprovadas E as 2 entregas que elas
+                geraram. A agência externa vê essas entregas; a gerente de
+                Marketing da Sanwey, não.
+  F-14 ALTO     A agência externa enxerga MAIS entregas (15/15) que a gerente
+                de Marketing (13/15) — a função de escopo é fail-open quando
+                a entrega não tem campanha, que é o caso de 13 das 15.
+  F-15 ALTO     Vendedor não enxerga nenhum colega (roster de 1 pessoa).
+                Isso desliga @menção, escolha de responsável, AvatarStack e
+                transferência de lead — sem nenhuma mensagem de erro.
+  F-02 ALTO     "Funcionários" do RH é a lista de todo mundo que já criou
+                conta — inclusive a agência externa, como funcionário ATIVO.
+                21 colaboradores para 14 pessoas reais.
+  F-03 ALTO     Cargo, departamento, frente e salário NULOS em ~100% das
+                linhas. Relatórios de RH e o Chat automático operam no vazio.
+  F-04 ALTO     3 páginas públicas ficam em spinner infinito se a rede
+                falhar, e erro de rede é exibido como "vaga não encontrada".
+  F-05 MÉDIO    Fotos de perfil em base64 dentro da tabela: 524 KB baixados
+                em toda tela que lista usuários, hoje, com só 3 fotos.
+
+CONTAGEM: 2 críticos, 10 altos, 13 médios, 9 baixos, 6 não-testáveis.
+(§9 foi acrescentado numa 2ª rodada, com a matriz de visibilidade por papel —
+achados F-13 a F-18 e uma correção ao F-01.)
+
+================================================================================
+§1. CONEXÕES ENTRE ENTIDADES (clientes, funcionários, usuários)
+================================================================================
+Esta seção responde diretamente ao que você pediu: a lógica por trás das
+divisões e vínculos entre as páginas. Todos os números vêm de consulta ao
+banco de produção em 19/08/2026.
+
+--------------------------------------------------------------------------------
+[F-01] CRÍTICO — Uma unidade inteira do Grupo é invisível para quem tem que
+       atendê-la: solicitações de Monte Mor não chegam ao Marketing
+--------------------------------------------------------------------------------
+PROVA (simulação da RLS com a sessão real da Tatiane, gerente_marketing):
+
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"1425817b-...-85d2e47db0d0"}';
+  select title, company_ids from public.marketing_requests;
+
+  → devolve 5 linhas. O banco tem 7.
+  Faltam exatamente estas duas, ambas company_ids = {montemor}:
+     • "Divulgação de Vagas Auxiliar de Limpeza"  (Any Cristina, 29/07/2026)
+     • "Divulgação de vaga Eletricista"           (Any Cristina, 03/08/2026)
+
+Não são teste: têm solicitante real, foram APROVADAS, e geraram entrega.
+
+CAUSA RAIZ — três peças que não conversam:
+  1. src/components/public/MarketingRequestForm.jsx usa MARKETING_UNIT_IDS,
+     que inclui "montemor". O formulário público OFERECE Monte Mor.
+  2. A policy `marketing_requests_read` exige
+        company_ids && current_user_companies()
+  3. src/components/views/UserManagementView.jsx:656 e :839 montam o seletor
+     de empresa do usuário a partir de COMPANY_IDS = {industria, resibag}.
+     **Não existe caminho na interface para dar "montemor" a alguém.**
+
+Logo: é possível CRIAR uma solicitação para uma unidade à qual é impossível
+DAR ACESSO. O registro nasce órfão por construção. Só admin enxerga (porque
+`current_user_is_admin()` curto-circuita o predicado).
+
+AGRAVANTE (corrigido na 2ª rodada — ver §9): o problema é PIOR do que uma
+solicitação escondida. As duas ENTREGAS geradas por esses pedidos também são
+invisíveis para a gerente de Marketing:
+
+  Tatiane (gerente_marketing) enxerga .... 13 de 15 entregas
+  As 2 que faltam ........................ "Divulgação de vaga Eletricista"
+                                           "Divulgação de Vagas Auxiliar de Limpeza"
+                                           (ambas company_ids = {montemor})
+
+Ou seja: a frente de trabalho de Monte Mor inteira — pedido E execução — não
+existe na tela de quem deveria executá-la. E, pelo achado F-14 (§9), a agência
+EXTERNA Beehave enxerga as 15 de 15, incluindo essas duas. A agência de fora vê
+o trabalho de Monte Mor que a gerente de Marketing da Sanwey não vê.
+
+CORREÇÃO (escolher uma, é decisão sua):
+  a) Se Monte Mor deve ser atendida pelo Marketing: incluir "montemor" no
+     seletor de UserManagementView (trocar COMPANY_IDS por MARKETING_UNIT_IDS
+     nas linhas 656 e 839) e conceder a unidade a quem atende. Corrige os 2
+     registros existentes e impede a recorrência. É a menor mudança.
+  b) Se Monte Mor NÃO deve aparecer: removê-la de MARKETING_UNIT_IDS e do
+     formulário público, e reatribuir os 2 registros existentes.
+  Não deixar como está: hoje o solicitante recebe "aprovado" e o executor
+  nunca vê o pedido.
+
+--------------------------------------------------------------------------------
+[F-06] ALTO — Três vocabulários paralelos para as mesmas empresas, sem
+       nenhuma função de tradução entre eles
+--------------------------------------------------------------------------------
+  src/constants/companies.js   COMPANY_IDS        = industria, resibag
+  src/constants/companies.js   MARKETING_UNIT_IDS = industria, resibag, montemor
+  src/constants/rh-frentes.js  RH_FRENTES         = sanwey,    resibag, montemor
+
+A MESMA empresa (Sanwey Indústria) é `industria` no Comercial/Marketing e
+`sanwey` no RH. Busca por qualquer função de conversão entre os dois:
+nenhuma ocorrência no repositório.
+
+Os comentários no código registram isso como decisão deliberada ("Monte Mor é
+entidade só de folha, sem operação comercial"), e a decisão faz sentido. O que
+não foi feito é a consequência dela:
+
+  • A pessoa contratada pela vaga pública entra com frente_origem = "sanwey"
+    (JobApplicationForm.jsx:16), vira rh_colaboradores.frente = "sanwey", e o
+    mesmo ser humano tem profiles.companies = {"industria"}. Nada liga os dois.
+  • Qualquer cruzamento Comercial × RH — que é exatamente o que o Painel
+    Executivo se propõe a fazer (regra 9 do CLAUDE.md) — não tem como agrupar
+    "por empresa" sem uma tabela de tradução que não existe.
+  • ExecutiveDashboard.jsx:253-254 já tem um remendo defensivo (`extraIds`)
+    para ids que aparecem nos dados mas não estão em COMPANY_IDS. Ou seja: o
+    problema já foi sentido e contornado no ponto de exibição, não na origem.
+
+CORREÇÃO: criar UM mapa canônico (ex.: `UNIT_ALIASES = { sanwey: 'industria' }`)
+em companies.js e usá-lo em toda leitura de `frente`. É barato agora e fica
+progressivamente mais caro conforme o RH acumula histórico.
+
+--------------------------------------------------------------------------------
+[F-02] ALTO — "Funcionários" é a lista de todo mundo que já criou conta,
+       incluindo uma agência externa como funcionário ATIVO
+--------------------------------------------------------------------------------
+Números: 21 linhas em rh_colaboradores para 14 perfis reais.
+
+CAUSA RAIZ — trigger `sync_profile_to_colaborador`, que dispara em TODO INSERT
+em profiles sem olhar o cargo:
+
+  INSERT INTO public.rh_colaboradores (profile_id, full_name, email,
+                                       employee_status, frente)
+  VALUES (NEW.id, NEW.name, NEW.email, 'ativo', NEW.frente)
+
+Não há filtro por `roles`. Então qualquer conta — agência, cliente,
+fornecedor, portal — nasce como FUNCIONÁRIO ATIVO do Grupo Sanwey.
+
+O que está na base hoje por causa disso:
+  • agencia@beehavemarketing.com.br — agência de marketing EXTERNA, roles
+    {agencia}, listada como colaboradora com employee_status = 'ativo'.
+  • QA Screenshot Temp e QA Screenshot Temp 2 (@example.invalid) — sobras de
+    uma rodada anterior de teste automatizado, ainda 'ativo'.
+
+Isso não é cosmético: headcount, custo de folha projetado, listas de
+distribuição, aniversariantes, onboarding e qualquer contagem de RH partem
+dessa tabela.
+
+CORREÇÃO: adicionar guarda no trigger —
+  IF NEW.roles && ARRAY['agencia','cliente','fornecedor','portal']::text[]
+     THEN RETURN NEW; END IF;
+(o `chat_sync_channel_membership` JÁ faz exatamente essa checagem; é só
+espelhar o mesmo predicado). Mudança de schema → confirmação sua, regra 5.
+Depois, limpar as linhas de QA.
+
+--------------------------------------------------------------------------------
+[F-07] ALTO — Pessoas duplicadas: o mesmo ser humano aparece duas vezes
+--------------------------------------------------------------------------------
+7 colaboradores têm profile_id NULO. Desses, 2 têm e-mail que JÁ EXISTE em
+profiles — ou seja, a pessoa existe duas vezes:
+
+  Rafael Doddi    → 1 vinculado ao perfil + 1 solto (frente 'sanwey')
+  iudiyano        → 1 vinculado ao perfil + 1 solto (frente 'sanwey')
+
+E mais três casos de duplicata por variação de grafia/domínio:
+  Leonardo Braga  → perfil com @resibag.com.br, colaborador com @sanwey.com.br
+  Daniel Iudi Yano (daniel.iudi@) + "Daniel Uidi" (daniel.yudi@) — erro de
+                     digitação virou uma segunda pessoa
+
+Não há chave única nem dedupe por e-mail em rh_colaboradores. Compare com o
+cuidado que existe do lado comercial: `clients` tem dedup por CNPJ com
+ClientSelector/ClientQuickCreateModal, e o CLAUDE.md registra que o
+Funil de Vendas ficou de fora do EditableTitle justamente para não quebrar
+esse dedupe. O RH não recebeu o mesmo tratamento.
+
+CORREÇÃO: índice único em lower(email) para rh_colaboradores (ou merge
+manual + validação na tela de cadastro). Antes, decidir o que fazer com as 5
+duplicatas existentes — merge, não delete, para não perder histórico.
+
+--------------------------------------------------------------------------------
+[F-03] ALTO — As dimensões que o RH usa para agrupar estão vazias em ~100%
+       das linhas
+--------------------------------------------------------------------------------
+Contagem direta em produção:
+
+  profiles.department .......... NULO em 14 de 14   (100%)
+  profiles.job_title ........... NULO em 14 de 14   (100%)
+  rh_colaboradores.department .. NULO em 21 de 21   (100%)
+  rh_colaboradores.salary ...... NULO em 20 de 21   ( 95%)
+  rh_colaboradores.frente ...... NULO em 15 de 21   ( 71%)
+
+Consequências concretas, não hipotéticas:
+
+  • CHAT COM SINCRONIZAÇÃO AUTOMÁTICA NÃO FUNCIONA. A função
+    `chat_sync_membership_for_channel` recebe (department, companies) para
+    decidir quem entra no canal. Com department NULO em todo mundo, um canal
+    com filtro por departamento não casa ninguém. Estado atual: 1 canal com
+    sync_filter, 5 membros no total da plataforma.
+  • Qualquer filtro/relatório de RH por cargo ou departamento devolve vazio —
+    a tela funciona, o dado não existe.
+  • Organograma e custo por departamento são impossíveis hoje.
+
+Isto é o exemplo mais direto do que você perguntou ("se o propósito da página
+está sendo cumprido pelas ferramentas dela"): a ferramenta está pronta e a
+página não cumpre o propósito porque o campo que ela agrupa nunca é
+preenchido. A pergunta a fazer não é "onde está o bug", é "por que ninguém
+preenche" — provavelmente porque o cadastro não exige e não há importação em
+massa. Vale checar se a tela de cadastro marca esses campos como obrigatórios.
+
+--------------------------------------------------------------------------------
+[F-08] MÉDIO — Clientes e Funil de Vendas são duas ilhas
+--------------------------------------------------------------------------------
+  • 14 de 15 clientes NÃO têm nenhum negócio no funil.
+  • 14 de 15 clientes têm owner_ids VAZIO — ninguém é dono de nenhum cliente.
+  • 3 de 15 não têm CNPJ — para esses, o dedupe por CNPJ (o mecanismo que
+    define a arquitetura do LeadDetailDrawer) não tem como operar.
+  • O funil inteiro tem 1 lead.
+
+A base tem nomes reais e relevantes (Vale, Braskem, Bayer CropScience, Yara,
+Amaggi, Solvay, Total Energies, Química Amparo). Ou seja: alguém importou uma
+carteira de contas-alvo e o funil nunca foi alimentado a partir dela. Também
+há poluição: clientes chamados "teste" e "QA-AUDIT Empresa Final".
+
+Não é bug de código — é o principal sintoma de adoção. Mas tem uma leitura de
+produto: a página Clientes hoje é um catálogo estático, não um ponto de
+partida para trabalho. O caminho "cliente → criar negócio" existe? Se existe e
+ninguém usa, é problema de descoberta (regra 12, spotlight). Se não existe de
+forma óbvia, é lacuna de fluxo.
+
+--------------------------------------------------------------------------------
+[F-09] MÉDIO — Campanha → Entrega: hierarquia declarada, não usada
+--------------------------------------------------------------------------------
+  13 de 15 entregas (marketing_deliverables) têm campaign_id NULO.
+  Existem 2 campanhas na base; 28 tarefas de marketing.
+
+A estrutura sugere Campanha como guarda-chuva de Entregas. Na prática as
+entregas nascem soltas. O board Campanhas mostra 2 itens enquanto o trabalho
+real (13 entregas + 28 tarefas) acontece fora dele — então qualquer métrica
+de "resultado por campanha" cobre 13% da operação.
+
+--------------------------------------------------------------------------------
+[F-10] MÉDIO — Explorador → Clientes: 45 de 48 sementes nunca converteram
+--------------------------------------------------------------------------------
+`prospect_seeds` tem 48 linhas; 45 não têm cliente correspondente por CNPJ.
+O Explorador gera prospecção que não vira cadastro. Ou falta o botão de
+conversão no lugar certo, ou ele existe e não foi descoberto. Vale um teste
+com usuário real antes de mexer em código.
+
+--------------------------------------------------------------------------------
+[F-11] MÉDIO — Convites deixam a pessoa meio-provisionada
+--------------------------------------------------------------------------------
+5 convites nunca aceitos: leonardo.braga@resibag, geraldo.baena,
+fernando.garcia, rafael.doddi, clayton.yokoi.
+
+Mas 4 dessas pessoas JÁ TÊM perfil na plataforma (com ja_logou=false e
+e-mail não confirmado) — e, por F-02, já têm linha de funcionário ATIVO no RH.
+Ou seja: a pessoa consta como usuário e como funcionário ativo sem nunca ter
+entrado. Quem olha a lista de usuários não distingue "ativo" de "nunca
+acessou". Sugestão: badge "convite pendente" na lista de Usuários — é barato e
+resolve a leitura.
+
+--------------------------------------------------------------------------------
+[F-12] BAIXO — Solicitações antigas aprovadas sem artefato (dado legado)
+--------------------------------------------------------------------------------
+2 solicitações aprovadas não geraram entrega/tarefa/compra: "teste"
+(14/07) e "post dia das mães" (15/07, solicitante "dassda"). Ambas de meados
+de julho e com cara de teste.
+
+VERIFIQUEI antes de classificar: TODAS as solicitações de 29/07 em diante
+geraram artefato corretamente. **O fluxo de aprovação funciona hoje** — isto é
+resíduo anterior à feature, não bug ativo. Registrado só para não voltar a ser
+"descoberto" numa próxima auditoria.
+
+================================================================================
+§2. NAVEGABILIDADE
+================================================================================
+
+--------------------------------------------------------------------------------
+[N-01] ALTO — 9 telas estão fora do registro de módulos e não podem ser
+       controladas por "Acesso por módulo" — incluindo Presidência
+--------------------------------------------------------------------------------
+Comparando ROUTES (50 rotas) com MODULE_GROUPS (41 módulos):
+
+  Módulo sem rota .......... nenhum (bom)
+  Rota SEM módulo .......... 9:
+      presidency        ← Painel da Presidência/Diretoria
+      users             ← Gestão de Usuários
+      settings          ← Configurações
+      pipeline-builder  ← Editor de etapas do funil
+      fair-import       ← Importação de feiras
+      funnel-history    ← Histórico do funil
+      central-bugs      ← Central de bugs
+      dashboard, profile
+
+`presidency` e `users` são as duas telas mais sensíveis da plataforma e são
+justamente as que o controle de acesso por módulo não alcança.
+
+Isto se soma ao achado AC-01 do relatório de segurança (o gate de módulo só
+existe no navegador): mesmo que aquele gate passe a valer no banco, estas 9
+telas continuariam fora dele, porque nem sequer têm entrada no registro.
+
+CORREÇÃO: decidir explicitamente quais destas 9 devem ser gateáveis e
+registrá-las em MODULE_GROUPS. As que forem "sempre admin" devem ter isso
+escrito no código, não implícito na ausência.
+
+--------------------------------------------------------------------------------
+[N-02] MÉDIO — Não existe página 404 [PRINT: desktop-rota-inexistente.png]
+--------------------------------------------------------------------------------
+Testado: http://localhost:5173/rota-que-nao-existe
+Resultado: renderiza a tela de login, idêntica à raiz, sem nenhum aviso.
+
+Causa: src/main.jsx:26 — `<Route path="/*" element={<App />} />` engole
+qualquer caminho. Para o usuário logado, App.jsx:1702 redireciona em silêncio.
+
+Impacto: link antigo compartilhado no chat, favorito de uma rota renomeada ou
+URL com erro de digitação levam a pessoa a uma tela que não explica nada. Em
+uma plataforma com 50 rotas e menus reordenáveis, isso acontece.
+
+CORREÇÃO: uma rota final com tela "Página não encontrada" + botão para o
+painel. É uma mudança visual → mockup antes (regra 3).
+
+--------------------------------------------------------------------------------
+[N-03] MÉDIO — O link público de captura expõe o id interno, e o slug
+       intuitivo dá erro [PRINT: desktop-captura.png]
+--------------------------------------------------------------------------------
+  /captura/sanwey     → "Link inválido — O endereço deste formulário não
+                         corresponde a nenhuma empresa do grupo."
+  /captura/industria  → formulário correto
+
+Para divulgar a captura da Sanwey é preciso publicar uma URL que diz
+"industria". O nome comercial da empresa é Sanwey; "industria" é um id de
+banco. Quem for montar campanha vai tentar /captura/sanwey primeiro — e vai
+receber erro.
+
+Ponto positivo: a mensagem de erro é excelente — clara, sem jargão, e
+renderizada 100% no cliente (funciona mesmo com o backend fora). É o
+contraste que prova o ponto de D-01 abaixo: dá para fazer certo.
+
+CORREÇÃO: aceitar aliases no slug (`sanwey` → `industria`) mantendo o id
+interno como canônico. Duas linhas, e o link publicado passa a ser legível.
+
+================================================================================
+§3. ESTADOS DE CARREGAMENTO E ERRO (testado em navegador)
+================================================================================
+
+--------------------------------------------------------------------------------
+[F-04] ALTO — Spinner infinito em 3 páginas públicas, e erro de rede exibido
+       como "não encontrado"  [PRINT: desktop-vaga-publica.png]
+--------------------------------------------------------------------------------
+Com o backend inalcançável, três rotas públicas ficam PARADAS para sempre:
+
+  /vagas/:slug     → só o rodapé, spinner girando  (33 caracteres na tela)
+  /pesquisa/:id    → idem                          (14 caracteres)
+  /bem-estar/:id   → idem                          (26 caracteres)
+
+Idêntico em desktop e mobile. Sem timeout, sem mensagem, sem botão de tentar
+de novo.
+
+CAUSA RAIZ — src/components/public/JobApplicationForm.jsx:44-54:
+
+  const [vaga, setVaga] = useState(undefined);  // undefined = loading
+  ...
+  const { data, error: err } = await supabase.rpc("get_vaga_publica", {...});
+  if (err || !data || data.length === 0) { setVaga(null); return; }
+
+Dois problemas distintos no mesmo trecho:
+
+  (a) SEM TIMEOUT. Se a promessa não resolve (rede lenta, 3G ruim, backend
+      pendurado), `vaga` fica `undefined` e o spinner é permanente. O
+      supabase-js não impõe timeout por padrão.
+  (b) ERRO DE REDE = "VAGA NÃO ENCONTRADA". Quando a chamada FALHA, o código
+      cai no mesmo `setVaga(null)` usado para "slug inexistente". O candidato
+      em rede instável recebe a informação de que a vaga não existe — e ela
+      existe. Ele não tenta de novo.
+
+Onde isso dói mais: é a porta de entrada de recrutamento. A pessoa que você
+quer contratar chega por celular, em rede móvel, e vê um spinner eterno ou uma
+mensagem errada dizendo que a vaga acabou.
+
+CORREÇÃO:
+  1. Separar os três estados: carregando / erro de rede / não encontrada.
+     `const [erro, setErro] = useState(null)` e distinguir `err` de
+     `data.length === 0`.
+  2. Timeout de ~10s com mensagem "Não conseguimos carregar agora" + botão
+     "Tentar de novo".
+  3. Aplicar o mesmo em PesquisaPublicaForm.jsx e BemEstarPublicaForm.jsx —
+     é o mesmo padrão nos três.
+
+--------------------------------------------------------------------------------
+[D-02] POSITIVO — /gestor-vaga e /captura degradam corretamente
+--------------------------------------------------------------------------------
+  /gestor-vaga/:token → mostra "Confirme seu e-mail — Por segurança, confirme
+                        o e-mail que recebeu este link antes de ver os
+                        candidatos." mesmo sem backend. [PRINT]
+  /captura/:slug      → mensagem de link inválido, clara, client-side. [PRINT]
+
+Estas duas fazem a validação que dá para fazer no cliente ANTES de depender da
+rede. É o padrão que as três de F-04 deveriam seguir. Registrado como
+referência interna, não como achado.
+
+================================================================================
+§4. DESEMPENHO
+================================================================================
+
+--------------------------------------------------------------------------------
+[F-05] MÉDIO-ALTO — Fotos de perfil em base64 dentro da tabela, baixadas
+       inteiras em toda tela que lista usuários
+--------------------------------------------------------------------------------
+Medição real (extração da tabela profiles de produção):
+
+  profiles, 15 linhas ................ 534 KB
+  destes, coluna avatar_url .......... 524 KB  (98% do peso da tabela)
+  maior foto individual .............. 264 KB  (Daniel Iudi Yano)
+  fotos armazenadas hoje ............. 3
+
+CAUSA — src/components/views/SettingsView.jsx:681-683: a foto é lida com
+`FileReader.readAsDataURL` e gravada como data URI direto na coluna:
+
+  const reader = new FileReader();
+  reader.onload = (ev) => setCroppingSrc(ev.target.result);
+  reader.readAsDataURL(file);
+
+E src/hooks/use-profiles.js:62-63 puxa tudo:
+
+  .from("profiles")
+  .select("*")
+
+CONSEQUÊNCIA — o roster de usuários é usado em avatares, @menções,
+responsáveis, AvatarStack (7+ arquivos), seletor de dono. Ou seja: 524 KB
+trafegam em praticamente toda navegação, hoje, com apenas 3 das 15 pessoas
+tendo foto.
+
+PROJEÇÃO — o limite no cliente é de 2 MB no arquivo ORIGINAL, e base64 infla
+~33%: uma foto pode chegar a ~2,7 MB na linha. Com as 15 pessoas com foto no
+limite, o roster passaria de 30 MB. Em celular, em rede móvel, isso é a
+diferença entre o app abrir e não abrir. E `profiles` é assinada por Realtime
+em vários hooks — cada mudança reenvia a linha inteira.
+
+CORREÇÃO (a plataforma já tem tudo pronto para isso):
+  1. Guardar a foto no Storage — existem 12 buckets, e o padrão de upload já
+     é usado em rh-curriculos, chat-attachments, lead-attachments. Gravar
+     apenas a URL em avatar_url.
+  2. Redimensionar antes de subir (ex.: 256x256, WebP). Já existe
+     src/utils/image-quality.js para apoiar.
+  3. Enquanto isso não acontece, o ganho maior e mais barato: trocar o
+     `select("*")` de use-profiles.js:63 pela lista explícita de colunas que
+     o roster realmente usa. As fotos só seriam buscadas onde são exibidas.
+  4. Migrar as 3 fotos existentes.
+
+================================================================================
+§5. USABILIDADE E DETALHES DE INTERFACE
+================================================================================
+
+[U-01] MÉDIO — Botão de idioma é decorativo, e é o PRIMEIRO da tabulação
+       [PRINT: desktop-login.png]
+       src/components/shell/LoginScreen.jsx:138-153. O `LangSelector` tem
+       ícone de globo, texto "Português (BR)" e um ChevronDown — todo o
+       vocabulário visual de um menu suspenso — mas não tem `onClick`. O
+       único sinal de que não faz nada é `title="Idioma (em breve)"`, que só
+       aparece no hover de desktop (em celular, nunca).
+       Testei a ordem de tabulação no login:
+         Tab 1 → BUTTON (o seletor de idioma)
+         Tab 2 → INPUT e-mail
+         Tab 3 → INPUT senha
+       Quem navega por teclado bate primeiro num botão morto.
+       CORREÇÃO: ou implementar, ou remover, ou deixar visivelmente inerte
+       (sem chevron, com "em breve" visível) e tirar do foco (`tabIndex={-1}`).
+
+[U-02] MÉDIO — "Criar conta" aberto numa plataforma corporativa interna
+       [PRINT: desktop-login.png]  LoginScreen.jsx:360-364 alterna para o
+       modo signup. Somando com F-02: uma conta criada por conta própria vira
+       imediatamente FUNCIONÁRIO ATIVO no RH, via trigger. E `handle_new_user`
+       dá a ela role 'vendedor' com companies vazio.
+       Não confirmei se o "Enable signup" está de fato ligado no painel do
+       Supabase — a interface oferece o caminho; vale checar a chave. Se
+       estiver ligado, desligar e deixar só convite é o mais coerente com o
+       resto da plataforma (que tem fluxo de convite completo).
+
+[U-03] BAIXO — /solicitar-compra se apresenta como Marketing
+       O título continua "Solicitar ao Marketing" e o badge "MARKETING ·
+       SANWEY" mesmo na rota dedicada a compras. Confirmei que o
+       `defaultCategory="compra"` FUNCIONA (o formulário renderiza conteúdo
+       diferente: 693 vs 1082 caracteres). É só o rótulo que não acompanha.
+
+[U-04] BAIXO — Badge fixo "MARKETING · SANWEY" num formulário de 3 unidades
+       O mesmo formulário atende Sanwey, Resibag e Monte Mor, mas se anuncia
+       como Sanwey. Para quem solicita de Monte Mor ou Resibag, a página
+       parece a errada.
+
+[U-05] BAIXO — Rodapé do login promete 4 áreas sem link
+       "Comunicação interna", "Agenda & Eventos", "Políticas & Processos" e
+       "Suporte interno" aparecem como cartões no rodapé da tela de login,
+       antes de qualquer autenticação, sem serem clicáveis. Como o usuário
+       ainda não entrou, é informativo — mas o formato de cartão sugere ação.
+
+================================================================================
+§6. PONTOS FORTES OBSERVADOS
+================================================================================
+Registrados para não serem desfeitos:
+
+ • Renderização resiliente: com o backend 100% inalcançável, NENHUMA página
+   quebrou com tela branca ou stack trace. Todas renderizaram sua casca. Isso
+   é raro e indica bom tratamento de estado inicial.
+ • Paridade desktop/mobile perfeita nas páginas públicas: as 10 rotas
+   produziram exatamente o mesmo conteúdo em 1440x900 e 390x844.
+ • Mensagens de erro em português claro, sem jargão ("O endereço deste
+   formulário não corresponde a nenhuma empresa do grupo").
+ • O fluxo de aprovação de solicitações funciona: toda solicitação de 29/07
+   em diante gerou entrega ou tarefa corretamente.
+ • ExecutiveDashboard já trata defensivamente ids de empresa desconhecidos
+   (linha 253) em vez de quebrar.
+ • O `chat_sync_channel_membership` já exclui agencia/cliente — o predicado
+   que falta em `sync_profile_to_colaborador` (F-02) já existe pronto ao lado.
+ • Nenhum erro de console nas páginas públicas além das falhas de rede
+   esperadas.
+
+================================================================================
+§7. O QUE NÃO FOI TESTADO — E POR QUÊ
+================================================================================
+(seção pedida explicitamente: "o que não for, registre")
+
+7.1 ÁREA AUTENTICADA — NÃO TESTADA VISUALMENTE
+    Bloqueio: política de rede do ambiente (403 no CONNECT do proxy para
+    qualquer host externo). O navegador não alcança o Supabase, então não há
+    login possível. Ficaram sem print e sem teste de interação:
+      • Funil de Vendas e os 13 Kanbans (arrastar card, mover etapa,
+        guardrail de transição)
+      • Todos os drawers de detalhe (SplitPanelDrawer, StageNavigator,
+        abas Form/Atividades/Histórico/IA/Anexos)
+      • Painel Executivo e Presidência
+      • RH completo (6 boards), Chat, Minhas Tarefas, Comex, Compras,
+        Pós-venda, Viagens & Despesas, ESG
+      • Exportação CSV real, upload de anexo, Realtime, modo offline/PWA
+      • Tour guiado (spotlight), toasts, changelog
+    Para fazer isso seria necessário: rodar num ambiente com egresso liberado
+    para *.supabase.co, ou você rodar o app localmente e me passar os prints.
+
+7.2 NÃO TESTADO POR DEPENDER DE ESTADO REAL
+    • Fluxo de convite ponta a ponta (envio de e-mail via Resend)
+    • Assinatura eletrônica D4Sign (sem credenciais reais no projeto)
+    • Agentes/automações (agent-runner só roda por pg_cron)
+    • Impressão/PDF, leitor de tela, contraste em dark mode
+
+7.3 ALTERAÇÕES FEITAS EM PRODUÇÃO — E DESFEITAS
+    Com seu aval, criei `auditoria@sanwey.com.br` (admin) para tentar o login.
+    Descoberto o bloqueio de rede, a conta foi REMOVIDA integralmente:
+    profiles, profile_secrets, rh_colaboradores, chat_channel_members,
+    auth.identities e auth.users.
+    Verificação pós-remoção: profiles = 14 e rh_colaboradores = 21, exatamente
+    os valores anteriores. Nenhum resíduo.
+    Nenhuma outra escrita foi feita em produção. Todo o resto foi leitura.
+
+7.4 LIMPEZA PENDENTE (não fiz — é decisão sua)
+    Estes registros de teste seguem em produção e poluem contagens:
+      rh_colaboradores: "QA Screenshot Temp", "QA Screenshot Temp 2"
+      clients: "teste", "QA-AUDIT Empresa Final"
+      marketing_requests: "teste", "teste 1", "post dia das mães"
+    Não apaguei nada por conta própria — apagar dado de produção precisa da
+    sua palavra, e "teste" pode ter virado registro real.
+
+================================================================================
+§8. PLANO DE AÇÃO SUGERIDO
+================================================================================
+
+AGORA (impacto alto, esforço baixo)
+ 0. [F-13] Escopar `prospect_seeds` — hoje a agência externa lê a lista de
+           contas-alvo do Grupo inteira. É a correção mais urgente do
+           relatório. [SCHEMA]
+ 0b.[F-14] Tornar `agencia_sees_supplier` fail-closed. [SCHEMA]
+ 1. [F-01] Liberar "montemor" no seletor de empresa de UserManagementView
+           (linhas 656 e 839) e conceder a unidade a quem atende Marketing.
+           Desbloqueia 2 pedidos reais parados desde julho.
+ 2. [F-05] Trocar o `select("*")` de use-profiles.js:63 por lista explícita
+           de colunas. Ganho imediato de 524 KB por navegação.
+ 3. [U-01] Resolver o botão de idioma (implementar, remover ou inertizar).
+ 4. [U-02] Verificar e provavelmente desligar o signup aberto no Supabase.
+
+ESTA SEMANA
+ 5. [F-04] Separar carregando / erro de rede / não encontrado nas 3 páginas
+           públicas, com timeout e botão de tentar de novo.
+ 6. [F-02] Guarda de cargo no trigger sync_profile_to_colaborador. [SCHEMA]
+ 7. [F-07] Índice único por e-mail em rh_colaboradores + merge das 5
+           duplicatas. [SCHEMA]
+ 8. [N-03] Aceitar alias "sanwey" no slug de /captura.
+ 9. [7.4]  Limpar os registros de teste, após sua confirmação.
+
+ESTE MÊS
+10. [F-03] Descobrir POR QUE cargo/departamento/frente nunca são preenchidos
+           (cadastro não exige? falta importação?) e corrigir na origem.
+           Sem isso, RH e Chat automático seguem inoperantes.
+11. [F-06] Mapa canônico de tradução entre COMPANY_IDS e RH_FRENTES.
+12. [N-01] Decidir e registrar quais das 9 rotas órfãs devem ser gateáveis.
+13. [N-02] Página 404 (precisa de mockup — regra 3).
+14. [F-15] Roster básico visível ao vendedor (VIEW pública com id, nome,
+           iniciais, avatar, empresa). Destrava @menção, responsável e
+           AvatarStack de uma vez. [SCHEMA]
+15. [F-18] Decidir o destino do papel `diretoria`: cadastrar alguém ou
+           remover as 70 policies órfãs.
+16. [F-17] Chat: adicionar membros aos canais e preencher `department` — hoje
+           o módulo só funciona para o admin.
+17. [F-08/F-09/F-10] Sessão com usuários reais para entender por que os
+           caminhos cliente→negócio, campanha→entrega e semente→cliente não
+           são percorridos. Isso é pesquisa de produto, não correção de bug —
+           e é onde está o maior ganho da plataforma hoje.
+
+
+================================================================================
+§9. SEGUNDA RODADA — MATRIZ DE VISIBILIDADE POR PAPEL (19/08/2026)
+================================================================================
+NOTA DE MÉTODO: esta seção NÃO exigiu credencial de ninguém. A visibilidade de
+cada papel foi obtida simulando a sessão no banco:
+
+    set local role authenticated;
+    set local request.jwt.claims = '{"sub":"<id do usuario>"}';
+
+Ou seja, dá para responder "o que fulano enxerga" para QUALQUER usuário, sem
+senha. A limitação que permanece é outra: prints da interface autenticada
+seguem impossíveis por causa do bloqueio de rede (§7.1) — e nenhum usuário
+adicional resolveria isso.
+
+MATRIZ (linhas visíveis por papel; total real entre parênteses no cabeçalho):
+
+  tabela                 admin  ger.RH  ger.MKT  vendedor  agência(externa)
+  ---------------------- -----  ------  -------  --------  ----------------
+  leads            (1)       1       0        -         0         0
+  clients         (15)      15       0        -         7         0
+  profiles        (14)      14       2        -         1         4
+  rh_colaboradores(21)      21      21        -         0         0
+  rh_candidatos    (3)       3       3        -         0         0
+  marketing_requests (7)     7       0        5         0         0
+  marketing_deliverables(15)15       0       13         0        15   <<<
+  marketing_campaigns (2)    2       0        2         0         -
+  market_signals  (10)      10      10        -         4        10   <<<
+  prospect_seeds  (45)      45      45        -        45        45   <<<
+  agent_actions   (29)      29      29        -         0         0
+  chat_channels    (3)       3       0        -         0         0   <<<
+
+Os "<<<" marcam os quatro achados abaixo.
+
+--------------------------------------------------------------------------------
+[F-13] CRÍTICO — Lista de prospecção comercial visível a QUALQUER conta,
+       inclusive à agência externa
+--------------------------------------------------------------------------------
+Policy em produção:
+
+    prospect_seeds_read_authenticated   USING (enabled = true)
+
+Nenhum escopo. Nem por empresa, nem por papel, nem por dono. Todos os 5 papéis
+testados leem as 45 sementes — inclusive a Beehave, que é uma AGÊNCIA DE
+MARKETING EXTERNA, e um vendedor que não deveria ver alvos de outra frente.
+
+O que está exposto em cada semente: razão social, CNPJ, setor, UF, cidade,
+porte, `fit_score` e o campo `evidence` (o racional de por que a empresa é
+alvo). Isso é a lista de contas-alvo do Grupo, com a priorização junto.
+
+ASSUMO UM ERRO MEU: isto é achado de SEGURANÇA e passou batido na auditoria de
+19/08. Minha varredura procurou policies com o predicado literal `true`, e
+`enabled = true` não casou com o padrão. A varredura estava estreita demais.
+
+CORREÇÃO: escopar por empresa, no mesmo molde de `market_signals`:
+    USING (enabled = true AND (current_user_is_admin()
+           OR relevant_for && current_user_companies()))
+e excluir explicitamente papéis externos (agencia/cliente/fornecedor).
+[SCHEMA — precisa da sua confirmação]
+
+--------------------------------------------------------------------------------
+[F-14] ALTO — A agência externa vê MAIS entregas que a gerente de Marketing
+--------------------------------------------------------------------------------
+Números medidos: Beehave 15/15. Tatiane (gerente_marketing) 13/15.
+
+CAUSA — a função de escopo tem duas válvulas de escape, e as duas estão abertas:
+
+    CREATE FUNCTION agencia_sees_supplier(p_supplier_id uuid) ... AS $$
+      SELECT current_user_role() = 'agencia'
+        AND ( p_supplier_id IS NULL                                    -- (1)
+           OR (SELECT supplier_id FROM profiles WHERE id=auth.uid()) IS NULL  -- (2)
+           OR (SELECT supplier_id FROM profiles WHERE id=auth.uid()) = p_supplier_id );
+    $$
+
+O `p_supplier_id` vem de `marketing_campaigns.supplier_id` da campanha da
+entrega. Como 13 das 15 entregas NÃO têm campanha (achado F-09), o subselect
+devolve NULL, a válvula (1) abre, e a agência vê tudo. A válvula (2) faz o
+mesmo para qualquer agência sem fornecedor vinculado.
+
+F-09 deixa de ser só "hierarquia não usada": a ausência de campanha é o que
+desliga o controle de acesso das entregas. Os dois achados são o mesmo bug.
+
+Detalhe extra: a função usa `current_user_role()` (coluna escalar legada) em
+vez de `roles[]` — mesma deriva descrita no achado MD-11 do relatório de
+segurança.
+
+CORREÇÃO: inverter o padrão para fail-closed — sem fornecedor identificado,
+a agência NÃO vê:
+    SELECT current_user_role() = 'agencia'
+      AND p_supplier_id IS NOT NULL
+      AND (SELECT supplier_id FROM profiles WHERE id=auth.uid()) = p_supplier_id;
+[SCHEMA]
+
+--------------------------------------------------------------------------------
+[F-15] ALTO — Vendedor não enxerga nenhum colega (roster de 1 pessoa)
+--------------------------------------------------------------------------------
+Medido: Mario Augusto (vendedor) vê 1 perfil — o dele.
+
+A policy `profiles_select` dá ao vendedor apenas `id = auth.uid()` mais os
+`current_user_subordinate_ids()`. Sem subordinados, o roster tem 1 linha.
+
+O QUE ISSO QUEBRA NA PRÁTICA (tudo consome o mesmo roster de useProfiles):
+  • @menção em comentário — não há ninguém para mencionar
+  • escolher responsável por lead/tarefa — lista só com ele mesmo
+  • AvatarStack (7+ telas) — sempre um avatar só
+  • transferir/compartilhar um lead com colega — impossível pela interface
+  • qualquer filtro "por vendedor" — uma opção só
+
+É provavelmente a maior lacuna funcional silenciosa da plataforma: nada dá
+erro, as telas só ficam vazias, e quem usa conclui que "não tem esse recurso".
+
+CORREÇÃO: adicionar ao `profiles_select` um ramo que permita ao vendedor ver
+o roster básico (id, nome, iniciais, avatar, empresa) dos colegas da mesma
+empresa — sem expor e-mail, salário ou dados pessoais. Hoje a policy é tudo
+ou nada porque `profiles` mistura identidade e dado sensível; uma VIEW pública
+com as 5 colunas do roster resolve sem afrouxar a tabela. [SCHEMA]
+
+--------------------------------------------------------------------------------
+[F-16] ALTO — A gerente de RH vê 2 perfis de 14, mas vê a prospecção comercial
+       inteira
+--------------------------------------------------------------------------------
+Medido para tatiane.coelho (gerente_rh + rh):
+  profiles ............... 2 de 14   (só ela e a outra pessoa de RH)
+  rh_colaboradores ....... 21 de 21  (correto)
+  prospect_seeds ......... 45 de 45  (não deveria)
+  market_signals ......... 10 de 10  (não deveria)
+  agent_actions .......... 29 de 29  (não deveria)
+
+O escopo está exatamente invertido em relação à função dela: enxerga tudo do
+Comercial, e quase nada do cadastro de usuários das pessoas que administra.
+
+O RH consegue trabalhar em `rh_colaboradores` (21 linhas), mas qualquer tela
+que cruze colaborador com a CONTA da pessoa — quem já acessou, qual papel,
+qual empresa no sistema — vem vazia. Some isso ao achado F-11 (convite
+pendente indistinguível) e o RH não tem como saber quem de fato entrou.
+
+--------------------------------------------------------------------------------
+[F-17] MÉDIO — O Chat só existe para o admin
+--------------------------------------------------------------------------------
+chat_channels visíveis: admin 3 · gerente_rh 0 · vendedor 0 · agência 0.
+Total de membros de canal na plataforma: 5.
+
+Combina com F-03 (department NULO em 14/14 perfis): o canal com sincronização
+automática filtra por departamento e não casa ninguém, e os canais manuais não
+tiveram membros adicionados. O módulo está no ar e é inoperante para todos
+menos uma pessoa.
+
+--------------------------------------------------------------------------------
+[F-18] MÉDIO — O papel "diretoria" não existe em nenhum usuário, mas 70
+       policies e uma rota inteira foram construídas para ele
+--------------------------------------------------------------------------------
+  usuários com 'diretoria' em roles ......... 0
+  policies que referenciam 'diretoria' ...... 70
+  rota dedicada ............................. `presidency`
+
+A visão de Presidência/Diretoria — leitura ampla de clientes, leads,
+atividades, colaboradores, férias, movimentações, avaliações, candidatos,
+entregas e ações de agente — está implementada no banco em 70 policies e
+não é alcançável por ninguém hoje.
+
+Ou a diretoria nunca foi cadastrada (e o recurso está pronto, só faltou dar o
+papel a alguém), ou o papel foi abandonado e as 70 policies são peso morto que
+toda auditoria futura vai reanalisar. Vale decidir — é barato nos dois
+sentidos, e hoje é ambíguo.
+
+--------------------------------------------------------------------------------
+RESPOSTA DIRETA: PRECISO DE OUTRO USUÁRIO?
+--------------------------------------------------------------------------------
+NÃO para visibilidade de dados. A simulação de RLS cobre qualquer papel sem
+credencial, e foi assim que os achados F-13 a F-18 saíram.
+
+SIM, mas nenhum usuário resolve, para o que falta: os prints da interface
+autenticada dependem de acesso de REDE ao Supabase, que este ambiente bloqueia.
+Continuam sem verificação visual: arrastar card no Kanban, drawers, guardrail
+de transição de etapa, exportação CSV real, upload, Realtime, PWA offline,
+tour guiado e dark mode.
+
+Para fechar essa parte, o caminho é um destes:
+  a) rodar a auditoria num ambiente com egresso liberado para *.supabase.co;
+  b) você rodar `npm run dev` localmente e me mandar os prints das telas que
+     quiser auditar — eu já sei exatamente o que procurar em cada uma;
+  c) me dar acesso a um ambiente de homologação com dados de teste.
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================

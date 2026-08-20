@@ -66,6 +66,34 @@ Regras que não podem ser quebradas:
 - Responda com o JSON puro, sem cercas de código e sem texto antes ou depois.`;
 }
 
+// GAP 3 (18/08/2026): mesma máscara de CPF do ai-assistant/_shared/ai-provider.ts
+// — este arquivo não importa de lá (chama fetch direto pros providers, sem
+// passar por callAIProvider), então a função é duplicada aqui. Só mascara o
+// texto mandado pro modelo de ESTRUTURAÇÃO (segundo passo) — o áudio em si
+// já foi mandado inteiro pro Whisper transcrever, isso é inerente à feature
+// (não dá pra mascarar antes de existir texto). A transcrição devolvida pro
+// vendedor conferir na tela continua completa, sem máscara — é dado do
+// próprio sistema, protegido por RLS, não um prompt saindo pra fora.
+function isValidCPF(digits: string): boolean {
+  if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(digits[i], 10) * (10 - i);
+  let check1 = 11 - (sum % 11);
+  if (check1 >= 10) check1 = 0;
+  if (check1 !== parseInt(digits[9], 10)) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(digits[i], 10) * (11 - i);
+  let check2 = 11 - (sum % 11);
+  if (check2 >= 10) check2 = 0;
+  return check2 === parseInt(digits[10], 10);
+}
+
+function maskCPF(text: string): string {
+  let masked = text.replace(/\d{3}\.\d{3}\.\d{3}-\d{2}/g, (m) => (isValidCPF(m.replace(/\D/g, "")) ? "[CPF removido]" : m));
+  masked = masked.replace(/\b\d{11}\b/g, (m) => (isValidCPF(m) ? "[CPF removido]" : m));
+  return masked;
+}
+
 function parseModelJson(raw: string): Record<string, unknown> {
   let s = (raw || '').trim();
   // Modelos às vezes devolvem cercado por ```json apesar da instrução.
@@ -74,51 +102,6 @@ function parseModelJson(raw: string): Record<string, unknown> {
   const last = s.lastIndexOf('}');
   if (first !== -1 && last > first) s = s.slice(first, last + 1);
   return JSON.parse(s);
-}
-
-function toBase64(bytes: Uint8Array): string {
-  // btoa em pedaços: String.fromCharCode(...bytes) estoura a pilha em
-  // arquivo de alguns MB, que é justamente o tamanho de uma ata de 5 min.
-  let binary = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
-
-// ── Gemini: lê o áudio direto, uma chamada faz transcrição e estruturação ──
-async function viaGemini(opts: {
-  model: string; apiKey: string; system: string;
-  audio?: { base64: string; mimeType: string }; text?: string;
-}): Promise<{ transcript: string; structured: Record<string, unknown> }> {
-  const parts: Record<string, unknown>[] = [];
-  if (opts.audio) {
-    parts.push({ text: 'Transcreva o áudio e devolva o JSON pedido. Inclua também o campo extra "transcricao" com a transcrição literal do que foi falado.' });
-    parts.push({ inline_data: { mime_type: opts.audio.mimeType, data: opts.audio.base64 } });
-  } else {
-    parts.push({ text: `Relato do vendedor:\n\n${opts.text}\n\nDevolva o JSON pedido.` });
-  }
-
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent?key=${opts.apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: opts.system }] },
-        contents: [{ role: 'user', parts }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
-      }),
-    },
-  );
-  const d = await r.json();
-  if (!r.ok) throw new Error(d?.error?.message || 'Erro do Gemini');
-  const raw = d?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || '';
-  const obj = parseModelJson(raw);
-  const transcript = String(obj.transcricao ?? opts.text ?? '');
-  delete obj.transcricao;
-  return { transcript, structured: obj };
 }
 
 // ── OpenAI: Whisper transcreve, depois o modelo de texto estrutura ─────────
@@ -154,7 +137,7 @@ async function viaOpenAI(opts: {
       max_tokens: 1200,
       messages: [
         { role: 'system', content: opts.system },
-        { role: 'user', content: `Relato do vendedor:\n\n${transcript}\n\nDevolva o JSON pedido.` },
+        { role: 'user', content: `Relato do vendedor:\n\n${maskCPF(transcript)}\n\nDevolva o JSON pedido.` },
       ],
     }),
   });
@@ -174,7 +157,7 @@ async function viaAnthropic(opts: {
       model: opts.model,
       max_tokens: 1200,
       system: opts.system,
-      messages: [{ role: 'user', content: `Relato do vendedor:\n\n${opts.text}\n\nDevolva o JSON pedido.` }],
+      messages: [{ role: 'user', content: `Relato do vendedor:\n\n${maskCPF(opts.text)}\n\nDevolva o JSON pedido.` }],
     }),
   });
   const d = await r.json();
@@ -205,6 +188,11 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: userErr } = await userClient.auth.getUser();
   if (userErr || !userData?.user) return json({ error: 'Unauthorized' }, 401);
 
+  // GAP 2 (18/08/2026): mesma trilha de auditoria mínima do ai-assistant/
+  // agent-runner — só metadados, nunca conteúdo. Sem prompt/completion_tokens
+  // aqui (Whisper não devolve usage) e sem `role` (esta function não recebe
+  // roles, só o JWT do vendedor) — o resto do formato é o mesmo.
+  const t0 = Date.now();
   try {
     const body = await req.json();
     const audioPath: string | undefined = body.audioPath;
@@ -227,8 +215,8 @@ Deno.serve(async (req: Request) => {
     const provider = (p.provider || Deno.env.get('AI_ORG_PROVIDER') || '').toLowerCase();
     const apiKey   = p.apiKey   || Deno.env.get('AI_ORG_API_KEY');
     const baseModel = p.model   || Deno.env.get('AI_ORG_MODEL');
-    // Permite apontar um modelo específico só pro áudio sem trocar o do resto
-    // da plataforma — é aqui que entra um Gemini quando o padrão é outro.
+    // Permite apontar um modelo específico só pro áudio (ex.: gpt-4o-mini-transcribe)
+    // sem trocar o modelo padrão do resto da plataforma.
     const model = (temAudio && Deno.env.get('AI_AUDIO_MODEL')) || baseModel;
 
     if (!provider || !apiKey || !model) {
@@ -243,21 +231,26 @@ Deno.serve(async (req: Request) => {
     };
     const system = systemPrompt(ctx);
 
-    // ── Só texto: qualquer um dos três provedores resolve ────────────────
+    // ── Só texto: OpenAI ou Anthropic resolvem ───────────────────────────
     if (!temAudio) {
       const texto = textoDigitado!.trim();
-      const out = provider === 'gemini'    ? await viaGemini({ model, apiKey, system, text: texto })
-                : provider === 'openai'    ? await viaOpenAI({ model, apiKey, system, text: texto })
+      const out = provider === 'openai'    ? await viaOpenAI({ model, apiKey, system, text: texto })
                 : provider === 'anthropic' ? await viaAnthropic({ model, apiKey, system, text: texto })
                 : null;
-      if (!out) return json({ error: `Provedor de IA desconhecido: ${provider}` }, 400);
+      if (!out) return json({ error: provider === 'gemini' ? 'Gemini não é mais um provedor suportado. Use Anthropic ou OpenAI.' : `Provedor de IA desconhecido: ${provider}` }, 400);
+      console.log(JSON.stringify({
+        event: 'crm_ata_voz_call', user_id: userData.user.id, crm_module: 'crm_visitas',
+        provider, execution_status: 'ok', latency_ms: Date.now() - t0, at: new Date().toISOString(),
+      }));
       return json({ ...out, source: 'texto' });
     }
 
-    // ── Com áudio: precisa de um provedor que leia som ──────────────────
-    if (provider === 'anthropic') {
+    // ── Com áudio: só a OpenAI (Whisper) recebe som hoje ─────────────────
+    if (provider !== 'openai') {
       return json({
-        error: 'O provedor configurado (Anthropic) não recebe áudio. Configure AI_AUDIO_MODEL com um modelo Gemini, ou escreva a ata em texto.',
+        error: provider === 'anthropic'
+          ? 'O provedor configurado (Anthropic) não recebe áudio — escreva a ata em texto, ou peça a um admin pra configurar a OpenAI.'
+          : 'Gemini não é mais um provedor suportado. Configure a OpenAI pra transcrição por voz, ou escreva a ata em texto.',
       }, 400);
     }
 
@@ -284,12 +277,18 @@ Deno.serve(async (req: Request) => {
     }
     const mimeType = tipoBruto.split(';')[0].trim();
 
-    const out = provider === 'gemini'
-      ? await viaGemini({ model, apiKey, system, audio: { base64: toBase64(bytes), mimeType } })
-      : await viaOpenAI({ model, apiKey, system, audio: { bytes, mimeType, filename: audioPath?.split('/').pop() || 'ata.webm' } });
+    const out = await viaOpenAI({ model, apiKey, system, audio: { bytes, mimeType, filename: audioPath?.split('/').pop() || 'ata.webm' } });
 
+    console.log(JSON.stringify({
+      event: 'crm_ata_voz_call', user_id: userData.user.id, crm_module: 'crm_visitas',
+      provider, execution_status: 'ok', latency_ms: Date.now() - t0, at: new Date().toISOString(),
+    }));
     return json({ ...out, source: 'audio' });
   } catch (err) {
+    console.log(JSON.stringify({
+      event: 'crm_ata_voz_call', user_id: userData.user.id, crm_module: 'crm_visitas',
+      provider: null, execution_status: 'error', latency_ms: Date.now() - t0, at: new Date().toISOString(),
+    }));
     const message = err instanceof Error ? err.message : String(err);
     // JSON malformado do modelo é o erro mais provável em produção — vale
     // uma mensagem que diz o que fazer, não o stack do parser.

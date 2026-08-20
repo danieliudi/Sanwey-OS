@@ -24,6 +24,138 @@
 
 export const CHANGELOG = [
   {
+    version: "4.61.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O campo único de \"Decisor\" no Funil de Vendas virou Comitê de Compra: cadastre quantos contatos o cliente tiver (compras, técnico, financeiro...) em Clientes → aba Contatos, em vez de um nome só.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Etapas do funil agora podem exigir uma condição de campo pra liberar o avanço (ex.: só permite mover se o valor for maior que X) — configure em Funil de Vendas → Editar etapas, no ícone de filtro ao lado de cada etapa de destino.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Nova tela \"Biblioteca de Documentos\" (menu Comercial): cadastre certificado, datasheet e ficha técnica uma vez e anexe em quantos negócios precisar — acesse também de dentro de um negócio, na aba Anexos → \"Anexar da biblioteca\".",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "A aba \"PDF\" de cada negócio ganhou uma tabela de itens: adicione modelo, quantidade e preço unitário — a proposta gerada por IA e o PDF já usam os valores reais em vez de \"[a definir]\".",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "Negócio com menção a concorrente numa atividade recente (últimos 60 dias) mostra um aviso no card e no topo do detalhe, pra não passar batido.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "novo",
+        text: "O indicador de prioridade (Fit Score) no Funil de Vendas voltou a calcular de verdade — combina aderência de segmento, valor do negócio e tempo parado — e já dá pra ordenar o quadro por ele.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Uma aba \"WhatsApp\" apareceu nos negócios do Funil de Vendas — ainda em teste, sem envio nem recebimento ativo (depende de aprovação de número no Meta Business Manager). Por enquanto só mostra \"Nenhuma conversa ainda\".",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
+    version: "4.60.3",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Quando a empresa configura uma chave de IA própria, a seção \"Minha chave pessoal\" em Configurações trava sozinha pra quem não é admin/gerente — evita cada pessoa conectando a própria conta de IA por conta própria, sem passar pelo mesmo provedor confiável da empresa.",
+      },
+    ],
+  },
+  {
+    version: "4.60.2",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Removido o Google Gemini das opções de IA (assistente, Gravar ata e agentes) — o plano gratuito da API dele pode usar seus dados pra treinar modelo do Google, diferente de Anthropic e OpenAI, que nunca treinam com dado de API. Quem tinha chave pessoal do Gemini precisa reconectar com outro provedor em Configurações → Integrações de IA.",
+      },
+    ],
+  },
+  {
+    version: "4.60.1",
+    items: [
+      {
+        kind: "novo",
+        text: "Título de Vaga e de Candidato agora é editável direto no card, igual a Campanhas/Entregas/Tarefas/Compras — sem precisar abrir o formulário completo só pra corrigir um nome.",
+        roles: ["admin", "gerente", "gerente_rh"],
+      },
+    ],
+  },
+  {
+    version: "4.60.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Tarefas de Marketing ganhou o botão \"Exportar CSV\", igual aos outros 16 boards que já têm.",
+        roles: ["admin", "gerente_marketing", "marketing"],
+      },
+      {
+        kind: "ajuste",
+        text: "Pós-venda agora mostra o indicador de comentário não lido no card, igual aos outros boards com comentários.",
+        roles: ["admin", "gerente", "vendedor", "suporte"],
+      },
+    ],
+  },
+  {
+    version: "4.59.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "No Funil de Vendas, abrir \"Perguntar à IA\" não esmaecia o botão \"+ Nova oportunidade\" ao fundo — mesma causa do fix do card de detalhe, agora corrigida também aqui.",
+      },
+    ],
+  },
+  {
+    version: "4.59.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "O botão flutuante \"+ Nova oportunidade\" (e equivalentes de outros boards) ficava sobreposto ao card de detalhe aberto, tampando parte do formulário — corrigido.",
+      },
+    ],
+  },
+  {
+    version: "4.59.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "No modo escuro, os campos do formulário \"Nova despesa\" (e do teto de orçamento, em Despesas) ficavam com texto quase invisível — corrigido.",
+      },
+      {
+        kind: "correcao",
+        text: "Aprovar uma cotação em Compras podia falhar com um erro técnico quando o mesmo fornecedor tinha mais de uma proposta registrada — corrigido.",
+      },
+    ],
+  },
+  {
+    version: "4.59.0",
+    items: [
+      {
+        kind: "novo",
+        text: "\"Gravar ata\" ganhou um botão fixo no topo do card do Funil de Vendas — abre por cima de qualquer aba, sem precisar rolar até Atividades pra achar.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Cards/modais de detalhe (Funil de Vendas, Pós-venda, Entregas, Campanhas, Compras, Tarefas de Marketing, Lista Pessoal, Comex e RH) ficaram mais largos, com menos rolagem pra ver a mesma informação.",
+      },
+      {
+        kind: "correcao",
+        text: "E-mail de contato muito longo no Funil de Vendas estourava a largura da lateral em vez de cortar com reticências — corrigido.",
+      },
+    ],
+  },
+  {
     version: "4.58.1",
     items: [
       {

@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   X, RotateCcw, CheckCircle2, Lock, ArrowRight, ChevronDown, ChevronUp,
-  Info, Pencil, FastForward, Ban, CheckCheck, Eye, GitBranch,
+  Info, Pencil, FastForward, Ban, CheckCheck, Eye, GitBranch, Filter, Trash2,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { CRMStageListManager } from "../shared/stage-editor/StageListManager";
 import { stageTextColor } from "../../utils/stage-colors";
 import { SellerPreviewModal } from "./SellerPreviewModal";
+import { useStageFields } from "../../hooks/use-stage-fields";
+import { Modal } from "../ui/Modal";
 
 /**
  * PipelineStagesModal — versão modal (escopada a uma única empresa) do
@@ -30,6 +32,10 @@ export function PipelineStagesModal({
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Gate de etapa por valor (18/08/2026) — condição opcional pra um destino
+  // específico, além do allowed bool já existente.
+  const [conditionEditor, setConditionEditor] = useState(null); // { fromStage, toStage } | null
+  const { getFields } = useStageFields();
 
   // Só fecha no Escape se nenhum modal aninhado (Editor/Preview) estiver
   // aberto — senão o Escape fecharia os dois de uma vez.
@@ -253,6 +259,8 @@ export function PipelineStagesModal({
                       onClearAll={() => transitions.setRowAllowed(companyId, safeStages, fromStage.id, [])}
                       onForwardOnly={() => transitions.setRowAllowed(companyId, safeStages, fromStage.id, forwardIds)}
                       accent={accent}
+                      getTransitionCondition={(toId) => transitions.getTransitionCondition(companyId, fromStage.id, toId)}
+                      onEditCondition={(toStage) => setConditionEditor({ fromStage, toStage })}
                     />
                   );
                 })}
@@ -292,6 +300,16 @@ export function PipelineStagesModal({
         stages={safeStages}
         transitions={transitions}
       />
+      {conditionEditor && (
+        <TransitionConditionModal
+          fromStage={conditionEditor.fromStage}
+          toStage={conditionEditor.toStage}
+          fields={getFields(companyId, conditionEditor.fromStage.id)}
+          initialGroups={transitions.getTransitionCondition(companyId, conditionEditor.fromStage.id, conditionEditor.toStage.id)}
+          onSave={(groups) => transitions.setTransitionCondition(companyId, conditionEditor.fromStage.id, conditionEditor.toStage.id, groups)}
+          onClose={() => setConditionEditor(null)}
+        />
+      )}
     </>
   );
 }
@@ -300,6 +318,7 @@ export function PipelineStagesModal({
 function StageRow({
   fromStage, possibleDests, allowedDests, hasCustomRules,
   onToggle, onSetAll, onClearAll, onForwardOnly, accent,
+  getTransitionCondition, onEditCondition,
 }) {
   const [expanded, setExpanded] = useState(true);
 
@@ -345,12 +364,16 @@ function StageRow({
         <div className="px-4 pb-3 flex flex-wrap gap-2">
           {possibleDests.map(toStage => {
             const allowed = !hasCustomRules || allowedDests.includes(toStage.id);
+            const condition = getTransitionCondition?.(toStage.id);
+            const hasCondition = Array.isArray(condition) && condition.length > 0;
             return (
               <DestPill
                 key={toStage.id}
                 stage={toStage}
                 allowed={allowed}
+                hasCondition={hasCondition}
                 onClick={() => onToggle(toStage.id)}
+                onEditCondition={() => onEditCondition(toStage)}
               />
             );
           })}
@@ -386,25 +409,39 @@ function BulkBtn({ onClick, icon: Icon, label, tone }) {
 
 // Pill nova: permitida = preenchida (cor da etapa). Bloqueada = tracejada
 // cinza com texto riscado. Affordance fica óbvia batendo o olho.
-function DestPill({ stage, allowed, onClick }) {
+//
+// Gate de etapa por valor (18/08/2026): botão de condição (Filter) só
+// aparece em pílula permitida — condicionar um destino já bloqueado não faz
+// sentido. Ícone preenchido quando já existe condição salva pra esse
+// destino, contornado quando não existe.
+function DestPill({ stage, allowed, hasCondition, onClick, onEditCondition }) {
   if (allowed) {
     return (
-      <button
-        onClick={onClick}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer"
-        style={{
-          background: stage.color,
-          color: "#FFFFFF",
-          border: `1px solid ${stage.color}`,
-        }}
-        onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
-        onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
-        title={`Bloquear transição para ${stage.name}`}
+      <span
+        className="inline-flex items-center rounded-full overflow-hidden"
+        style={{ border: `1px solid ${stage.color}` }}
       >
-        <CheckCircle2 size={11} />
-        <span className="font-bold text-[10px]" style={{ opacity: 0.8 }}>{stage.code}</span>
-        {stage.name}
-      </button>
+        <button
+          onClick={onClick}
+          className="flex items-center gap-1.5 pl-3 pr-2 py-1.5 text-xs font-semibold transition-all cursor-pointer"
+          style={{ background: stage.color, color: "#FFFFFF", border: "none" }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+          title={`Bloquear transição para ${stage.name}`}
+        >
+          <CheckCircle2 size={11} />
+          <span className="font-bold text-[10px]" style={{ opacity: 0.8 }}>{stage.code}</span>
+          {stage.name}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onEditCondition(); }}
+          className="flex items-center justify-center pl-1.5 pr-2.5 py-1.5 cursor-pointer"
+          style={{ background: stage.color, color: "#FFFFFF", border: "none", opacity: hasCondition ? 1 : 0.55 }}
+          title={hasCondition ? "Condição de avanço configurada — clique pra editar" : "Adicionar condição de avanço"}
+        >
+          <Filter size={11} fill={hasCondition ? "currentColor" : "none"} />
+        </button>
+      </span>
     );
   }
   return (
@@ -443,6 +480,162 @@ function PillSample({ allowed }) {
     >
       <Lock size={9} /> bloq
     </span>
+  );
+}
+
+// ── Gate de etapa por valor — mini-editor de condição por transição ────────
+
+const CONDITION_OPERATORS = [
+  { id: "eq",           label: "é igual a" },
+  { id: "neq",          label: "é diferente de" },
+  { id: "gt",           label: "maior que" },
+  { id: "lt",           label: "menor que" },
+  { id: "contains",     label: "contém" },
+  { id: "is_empty",     label: "está vazio" },
+  { id: "is_not_empty", label: "não está vazio" },
+];
+const CONDITION_NO_VALUE_OPS = new Set(["is_empty", "is_not_empty"]);
+const EMPTY_TRANSITION_CONDITION = { field: "", operator: "eq", value: "" };
+
+// Editor compacto de condition_groups (18/08/2026, gap "gate de etapa por
+// valor") — mesmo shape de automations.conditionGroups (OR entre grupos,
+// AND dentro do grupo), mas escopado a UM destino específico e aos campos
+// customizados da ETAPA DE ORIGEM (não uma lista fixa como o editor de
+// Automações usa) — não é reaproveitável dali sem reescrever a fonte dos
+// campos, e esta é só a 2ª ocorrência de editor de condition_groups na
+// plataforma (regra 4 do CLAUDE.md: extrair pra shared/ só na 3ª).
+function TransitionConditionModal({ fromStage, toStage, fields, initialGroups, onSave, onClose }) {
+  const [groups, setGroups] = useState(() => (Array.isArray(initialGroups) && initialGroups.length ? initialGroups : []));
+  const [saving, setSaving] = useState(false);
+
+  const addGroup = () => setGroups(g => [...g, { logic: "AND", conditions: [{ ...EMPTY_TRANSITION_CONDITION }] }]);
+  const removeGroup = (gi) => setGroups(g => g.filter((_, i) => i !== gi));
+  const addCondition = (gi) => setGroups(g => g.map((grp, i) => i === gi ? { ...grp, conditions: [...grp.conditions, { ...EMPTY_TRANSITION_CONDITION }] } : grp));
+  const removeCondition = (gi, ci) => setGroups(g => g.map((grp, i) => i === gi ? { ...grp, conditions: grp.conditions.filter((_, j) => j !== ci) } : grp));
+  const patchCondition = (gi, ci, patch) => setGroups(g => g.map((grp, i) => i === gi
+    ? { ...grp, conditions: grp.conditions.map((c, j) => j === ci ? { ...c, ...patch } : c) }
+    : grp));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Grupo sem campo escolhido em nenhuma condição não serve de gate —
+      // limpa antes de salvar pra não gravar lixo.
+      const clean = groups
+        .map(g => ({ ...g, conditions: g.conditions.filter(c => c.field) }))
+        .filter(g => g.conditions.length > 0);
+      await onSave(clean.length > 0 ? clean : null);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title={`Condição: ${fromStage.name} → ${toStage.name}`} width={480}>
+      <div className="space-y-3">
+        <div
+          className="rounded-xl border px-3.5 py-2.5 text-xs leading-relaxed"
+          style={{ borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text-dim)" }}
+        >
+          Opcional — além de "permitido/bloqueado", exige que um campo da etapa <b>{fromStage.name}</b> tenha
+          um valor específico antes de avançar pra <b>{toStage.name}</b>. Condições no mesmo grupo exigem <b>E</b>;
+          grupos diferentes são <b>OU</b>. Sem nenhuma condição, só o permitido/bloqueado decide.
+        </div>
+
+        {fields.length === 0 && (
+          <div className="rounded-xl border px-3.5 py-2.5 text-xs" style={{ borderColor: "var(--warning)", background: "var(--warning-bg)", color: "var(--warning)" }}>
+            A etapa "{fromStage.name}" não tem campo customizado nenhum — cadastre um em "Editar etapas" antes de configurar uma condição aqui.
+          </div>
+        )}
+
+        {groups.length === 0 && fields.length > 0 && (
+          <button
+            onClick={addGroup}
+            className="w-full flex items-center justify-center gap-1.5 p-3 text-xs font-semibold rounded-xl border-2 border-dashed cursor-pointer"
+            style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface-alt)" }}
+          >
+            <Filter size={13} />
+            Adicionar condição
+          </button>
+        )}
+
+        {groups.map((group, gi) => (
+          <div key={gi} className="rounded-xl border p-3 space-y-2" style={{ borderColor: "var(--border)" }}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+                {gi === 0 ? "Grupo 1" : `OU · Grupo ${gi + 1}`}
+              </span>
+              <button onClick={() => removeGroup(gi)} className="p-1 rounded cursor-pointer" style={{ color: "var(--text-faint)" }} title="Remover grupo">
+                <Trash2 size={12} />
+              </button>
+            </div>
+
+            {group.conditions.map((c, ci) => (
+              <div key={ci} className="flex items-center gap-1.5">
+                {ci > 0 && <span className="text-[10px] font-bold px-1.5 shrink-0" style={{ color: "var(--text-dim)" }}>E</span>}
+                <select
+                  value={c.field}
+                  onChange={e => patchCondition(gi, ci, { field: e.target.value })}
+                  className="flex-1 min-w-0 text-xs rounded-lg border px-2 py-1.5 outline-none"
+                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                >
+                  <option value="">Campo...</option>
+                  {fields.map(f => <option key={f.fieldKey} value={f.fieldKey}>{f.label}</option>)}
+                </select>
+                <select
+                  value={c.operator}
+                  onChange={e => patchCondition(gi, ci, { operator: e.target.value })}
+                  className="text-xs rounded-lg border px-2 py-1.5 outline-none shrink-0"
+                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", width: 128 }}
+                >
+                  {CONDITION_OPERATORS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+                {!CONDITION_NO_VALUE_OPS.has(c.operator) && (
+                  <input
+                    type="text"
+                    value={c.value}
+                    onChange={e => patchCondition(gi, ci, { value: e.target.value })}
+                    placeholder="Valor"
+                    className="w-24 text-xs rounded-lg border px-2 py-1.5 outline-none shrink-0"
+                    style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                  />
+                )}
+                <button onClick={() => removeCondition(gi, ci)} className="p-1 rounded cursor-pointer shrink-0" style={{ color: "var(--text-faint)" }} title="Remover condição">
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+
+            <button
+              onClick={() => addCondition(gi)}
+              className="text-[11px] font-semibold cursor-pointer"
+              style={{ color: "var(--accent)" }}
+            >
+              + condição (E)
+            </button>
+          </div>
+        ))}
+
+        {groups.length > 0 && (
+          <button onClick={addGroup} className="text-[11px] font-semibold cursor-pointer" style={{ color: "var(--text-dim)" }}>
+            + grupo (OU)
+          </button>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="px-3.5 py-2 rounded-lg text-xs font-semibold border cursor-pointer"
+                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}>
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={saving}
+                  className="px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer"
+                  style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving ? 0.6 : 1 }}>
+            {saving ? "Salvando…" : "Salvar"}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
