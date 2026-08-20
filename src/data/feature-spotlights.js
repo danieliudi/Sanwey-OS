@@ -25,6 +25,13 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "inteligencia-mercado-hub",
+    route: "market-intel",
+    target: '[data-tour="inteligencia-mercado-hub"]',
+    text: "Novo: dados do setor atualizados automaticamente, o antigo painel de Insights (agora numa aba própria) e um cruzamento dos dois num lugar só.",
+    version: "4.62.0",
+  },
+  {
     id: "ata-voz-gravar",
     route: "crm",
     // Alvo trocado em 18/08/2026 (redesenho do drawer): "Gravar ata" saiu de

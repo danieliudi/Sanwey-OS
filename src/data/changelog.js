@@ -24,6 +24,25 @@
 
 export const CHANGELOG = [
   {
+    version: "4.62.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Novo menu Inteligência → Mercado: dados do setor (atualizados automaticamente), o antigo painel de Insights (agora numa aba própria) e um cruzamento entre os dois — quais setores em alta já têm negócio aberto no seu funil.",
+        roles: ["admin", "gerente", "marketing", "gerente_marketing", "vendedor", "rh", "gerente_rh"],
+      },
+      {
+        kind: "correcao",
+        text: "Campos de texto, número, moeda e data continuavam claros no modo escuro (ex.: \"Descrição\" e \"Vencimento\" do modal de Nova despesa) — corrigido em toda a plataforma.",
+      },
+      {
+        kind: "correcao",
+        text: "Painel Executivo parava de carregar com \"Erro ao carregar esta tela\" — corrigido.",
+        roles: ["admin", "gerente", "gerente_marketing", "gerente_rh", "comex"],
+      },
+    ],
+  },
+  {
     version: "4.61.0",
     items: [
       {

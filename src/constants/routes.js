@@ -25,6 +25,12 @@ export const ROUTES = {
   executive:         "/executivo",
   "esg-carbono":     "/esg-carbono",
   insights:          "/insights",
+  // Hub "Inteligência de Mercado" (19-20/08/2026): 3 abas (Mercado/Insights/
+  // Cruzamento) numa página só, mesmo padrão do Executivo (regra 9). A antiga
+  // rota /insights (ROUTES.insights acima) passou a redirecionar pra cá —
+  // InsightsView virou a aba "Insights" deste hub, não sumiu, só mudou de
+  // endereço (ver App.jsx).
+  "market-intel":    "/inteligencia-mercado",
   presidency:        "/presidencia",
   "funnel-history":  "/historico-funil",
   "pipeline-builder":"/pipeline-builder",
