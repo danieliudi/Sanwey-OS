@@ -19,6 +19,18 @@ function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
+// MD-05 da auditoria de segurança (19/08/2026): comparação em tempo
+// constante — mesmo padrão de sanwey-crm-mcp/index.ts, evita vazar, por
+// diferença de tempo de resposta, quantos caracteres do hash estão certos.
+function timingSafeEqual(a: string, b: string): boolean {
+  const ab = new TextEncoder().encode(a);
+  const bb = new TextEncoder().encode(b);
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
 async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest("SHA-256", data);
@@ -58,7 +70,7 @@ Deno.serve(async (req) => {
     }
     const receivedHash = req.headers.get("hash") || req.headers.get("x-d4sign-hash") || "";
     const expectedHash = await sha256Hex(`${documentUuid}${webhookSecret}`);
-    if (!receivedHash || receivedHash !== expectedHash) {
+    if (!receivedHash || !timingSafeEqual(receivedHash, expectedHash)) {
       return jsonResponse({ error: "Assinatura do webhook inválida." }, 401);
     }
 
