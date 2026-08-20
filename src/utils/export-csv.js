@@ -21,7 +21,12 @@ function resolveStageLabel(lead, pipelines) {
 
 export function csvCell(v) {
   if (v === null || v === undefined) return "";
-  const s = String(v);
+  let s = String(v);
+  // Neutraliza injeção de fórmula (=, +, -, @, tab, CR) sem alterar o valor
+  // visível na planilha — Excel/Sheets ignoram o apóstrofo de prefixo.
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`;
+  }
   if (s.includes(";") || s.includes("\"") || s.includes("\n") || s.includes("\r")) {
     return `"${s.replace(/"/g, "\"\"")}"`;
   }
