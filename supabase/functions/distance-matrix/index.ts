@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Proxy pro Google Distance Matrix API — mesmo padrão do places-autocomplete
 // (auth via verify_jwt do próprio Supabase, CORS liberado pro app, chave
@@ -31,6 +32,12 @@ const corsHeaders = {
 // Teto de paradas por cálculo (custo: a Distance Matrix cobra por elemento).
 const MAX_STOPS = 10;
 
+// MD-07 da auditoria de segurança (19/08/2026): verify_jwt=true garante
+// sessão válida, mas nada limitava o número de CHAMADAS por usuário contra
+// uma API cobrada por requisição. 80/dia (decidido com o Daniel 20/08/2026)
+// — cobre vários relatórios de viagem no dia, corta script/loop.
+const DAILY_LIMIT = 80;
+
 // Mensagem única devolvida ao cliente em qualquer falha inesperada — nunca
 // `String(e)` nem o corpo de erro do Google, que podem carregar a URL com a
 // chave da API.
@@ -61,6 +68,29 @@ Deno.serve(async (req) => {
   let apiKey: string | undefined;
 
   try {
+    // Respostas de auth/cota seguem a mesma convenção "falha limpa" das
+    // demais respostas desta function (200 + error no corpo) — o gateway
+    // (verify_jwt=true) já barra requisição sem JWT válido antes de chegar
+    // aqui; isto é defesa em profundidade + extrai o user_id pra cota.
+    const authHeader = req.headers.get("Authorization") || "";
+    const jwt = authHeader.replace(/^Bearer\s+/i, "");
+    if (!jwt) {
+      return jsonResponse({ legs: [], totalKm: null, error: "Autenticação necessária" }, 200);
+    }
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+    if (userErr || !userData?.user) {
+      return jsonResponse({ legs: [], totalKm: null, error: "Sessão inválida" }, 200);
+    }
+
+    const { data: count, error: quotaErr } = await admin.rpc("external_api_daily_increment", {
+      p_bucket: "distance_matrix",
+      p_user_id: userData.user.id,
+    });
+    if (!quotaErr && typeof count === "number" && count > DAILY_LIMIT) {
+      return jsonResponse({ legs: [], totalKm: null, error: `Limite diário de cálculo de distância atingido (${DAILY_LIMIT}/dia).` }, 200);
+    }
+
     const { placeIds } = await req.json();
     const raw: string[] = Array.isArray(placeIds) ? placeIds.filter((id) => typeof id === "string" && id.trim()) : [];
 
