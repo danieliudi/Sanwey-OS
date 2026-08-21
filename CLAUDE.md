@@ -145,6 +145,36 @@ mundo na chave da empresa, já com cota por usuário via MD-06) são as duas
 saídas reais, mas nenhuma foi escolhida ainda. Não implementar nenhuma das
 duas por conta própria — é decisão de produto, não bug a corrigir.
 
+**Achados BAIXO da auditoria de segurança (19/08/2026) — decisões registradas
+20/08/2026, não reabrir sem motivo novo**:
+
+- **BX-03** (`pg_net` no schema `public`, lint de higiene): não mexer. O
+  acesso real já está fechado (`net.http_get/post/delete` restritos a
+  `postgres`/`service_role` desde sessão anterior). A extensão não é
+  relocalizável (`extrelocatable = false`) — mover pra schema `extensions`
+  exigiria `DROP`+`CREATE EXTENSION`, com risco real de interromper o
+  pg_cron (`agent_runner_daily_cron` usa `net.http_post`) e perder linhas de
+  fila pendentes, por um ganho puramente cosmético (o lint some, nenhum
+  acesso muda). Risco desproporcional ao ganho — decidido não fazer.
+- **BX-04** (4 tabelas com RLS habilitada e zero policies — deny-all):
+  `marketing_protocol_numbers` e `rh_pesquisa_respostas` já documentam a
+  própria intenção na migration de origem ("só SECURITY DEFINER toca essa
+  tabela"). `rapp_cargas`/`rapp_ibama` (dados IBAMA RAPP) foram conferidas
+  20/08/2026: não têm migration no repo (populadas por ETL externo direto
+  via `service_role`, fora do Git) nem são lidas em nenhuma tela — deny-all
+  não é bug, é o comportamento correto pro que existe hoje. Se um dia uma
+  tela vier a ler `rapp_cargas`/`rapp_ibama` com sessão de usuário, ela vai
+  precisar de policy nova — não existe hoje.
+- **BX-08** (bucket `chat-stickers` público): confirmado deliberado —
+  upload restrito a `chat_is_manager(auth.uid())`, leitura pública (figurinha
+  precisa ser vista por todo mundo no chat), 2 MB + MIME `png`/`webp` já
+  aplicados na migration de origem. Sem ação.
+- **BX-10** (sessão em `localStorage` por padrão, sem MFA): a preferência
+  "Lembrar-me" (sessionStorage quando desmarcada) já existe e está correta.
+  Reduzir o tempo de vida do refresh token é configuração do painel
+  Supabase (Auth → Settings), fora do alcance de migration/código — mesma
+  categoria do MD-09 (leaked password protection).
+
 ## 3. Processo obrigatório pra qualquer mudança de UI/UX genuinamente nova
 
 **Mockup antes de mexer em produção.** Decidido com o Daniel em 28/07/2026,

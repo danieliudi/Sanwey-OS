@@ -1,0 +1,12 @@
+-- BX-09 da auditoria de segurança (19/08/2026): external_cache_auth_read
+-- (USING true) deixava QUALQUER usuário autenticado ler a tabela inteira —
+-- resultado de consulta de CNPJ (nome/e-mail/telefone da empresa
+-- pesquisada) e Comex, e desde MD-06/MD-07 (20/08/2026) também os
+-- contadores de cota diária de IA/Google por usuário. Confirmado: nenhum
+-- código do frontend lê esta tabela (só cnpj-lookup/comexstat/as duas
+-- funções de cota, todas via service_role, que ignora RLS) — a policy não
+-- servia pra nada legítimo, só expunha "quem a Sanwey andou pesquisando"
+-- pro quadro inteiro. Remove a policy — fica deny-all pra client roles,
+-- mesmo padrão já usado em marketing_protocol_numbers/rh_pesquisa_respostas
+-- ("sem policies: só SECURITY DEFINER/service_role toca essa tabela").
+DROP POLICY IF EXISTS external_cache_auth_read ON public.external_cache;
