@@ -116,6 +116,21 @@ aplicar `AND companies && current_user_companies()` nem mascarar `salary` sem
 perguntar antes — mudaria o fluxo real de quem hoje precisa alternar entre
 frentes no mesmo cadastro.
 
+**Policy nova nunca lê `profiles.role` (escalar) — sempre `roles[]`**: achado
+MD-11 da auditoria de segurança (19/08/2026) — 22 policies em produção ainda
+comparam contra `profiles.role` (`role = ANY(['admin','gerente_rh','rh'])`,
+sempre em condição POSITIVA, nunca negação — o padrão perigoso de negação era
+só o AL-06, já corrigido em sessão anterior). Não é vulnerabilidade ativa hoje
+— o pior efeito de uma condição positiva desatualizada é NEGAR acesso
+legítimo pra quem tem um cargo secundário em `roles[]` que não é o `role`
+primário, nunca vazar dado a mais. É dívida estrutural que ficou de pé
+(migrar as 22 é trabalho não-trivial, decisão de quando fazer é do Daniel) —
+mas dívida nova é fácil de evitar: daqui pra frente, toda policy/função RLS
+nova usa `roles[]` (via `current_user_has_role(...)`/`roles &&`), nunca
+`profiles.role` direto. Se for mexer em uma das 22 policies antigas por outro
+motivo, é uma boa oportunidade de migrar ela junto — mas não é obrigatório
+nem deve ser feito "de brinde" sem avisar.
+
 ## 3. Processo obrigatório pra qualquer mudança de UI/UX genuinamente nova
 
 **Mockup antes de mexer em produção.** Decidido com o Daniel em 28/07/2026,
