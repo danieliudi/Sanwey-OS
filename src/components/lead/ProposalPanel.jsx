@@ -11,9 +11,16 @@ import { formatDateBR } from "../../utils/date";
 // formatBRL já vem com "R$ " embutido — nunca concatenar outro na frente.
 import { formatBRL } from "../../utils/currency";
 
-const RED = "#b5000b";
-const BORDER = "#E5E7EB";
-const BG = "#F1EDE8";
+// Antes hardcoded (#b5000b/#E5E7EB/#F1EDE8) — cor própria, nem o vermelho da
+// marca nem dark-mode aware; painel ficava claro fixo mesmo no escuro
+// (achado do PR #103, 03/08/2026 — reaplicado aqui porque o arquivo mudou
+// desde então). Só cobre a parte INTERATIVA do painel — o bloco impresso
+// abaixo (.doc-print-only) usa PRINT_BORDER, fixo de propósito: o PDF
+// gerado tem que parecer igual não importa o tema do usuário que gerou.
+const RED = "var(--accent)";
+const BORDER = "var(--border)";
+const BG = "var(--surface-alt)";
+const PRINT_BORDER = "#E5E7EB";
 
 // Mesma convenção de arredondamento/formatação de toneladas do módulo
 // ESG & Carbono (ver kgToT/fmtT em ESGCarbonoView.jsx) — não reimplementar
@@ -346,7 +353,7 @@ export function ProposalPanel({ lead, currentUser, allLeads, onAddActivity }) {
               </thead>
               <tbody>
                 {lineItems.map(item => (
-                  <tr key={item.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  <tr key={item.id} style={{ borderBottom: `1px solid ${PRINT_BORDER}` }}>
                     <td style={{ padding: "6px 4px" }}>{item.modelLabel || "—"}</td>
                     <td style={{ padding: "6px 4px", textAlign: "right" }}>{Number(item.quantity) || 0}</td>
                     <td style={{ padding: "6px 4px", textAlign: "right" }}>{formatBRL(Number(item.unitPrice) || 0)}</td>
@@ -382,7 +389,7 @@ export function ProposalPanel({ lead, currentUser, allLeads, onAddActivity }) {
                 <br />
                 Sanwey
               </div>
-              <div style={{ flex: 1, borderLeft: `1px solid ${BORDER}`, paddingLeft: 14 }}>
+              <div style={{ flex: 1, borderLeft: `1px solid ${PRINT_BORDER}`, paddingLeft: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>
                   {fmtTonnesCO2e(esgTotalKg)} apurados · {formatDateBR(latestEsgReport.periodStart)}–{formatDateBR(latestEsgReport.periodEnd)}
                 </div>
