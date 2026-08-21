@@ -131,6 +131,20 @@ nova usa `roles[]` (via `current_user_has_role(...)`/`roles &&`), nunca
 motivo, é uma boa oportunidade de migrar ela junto — mas não é obrigatório
 nem deve ser feito "de brinde" sem avisar.
 
+**Chave pessoal de IA em texto plano — risco residual aceito, não é pra
+"corrigir" sozinho**: achado MD-12 da auditoria de segurança (19/08/2026) —
+a chave pessoal (OpenAI/Anthropic) que o usuário configura em Configurações →
+Integrações de IA fica em claro no jsonb `profile_secrets.ai_config`. A
+separação `profiles`/`profile_secrets` (19/08/2026) já garante que nem admin
+nem gerente leem a chave de outra pessoa via RLS (`profile_secrets_self`,
+`id = auth.uid()` pra ALL) — o que resta é que qualquer caminho com
+service_role (edge functions, MCP, backup, dump de suporte) lê o valor em
+claro. Decidido com o Daniel 20/08/2026: por ora fica como está — cifrar de
+verdade (pgsodium/Supabase Vault) ou remover a opção de chave pessoal (todo
+mundo na chave da empresa, já com cota por usuário via MD-06) são as duas
+saídas reais, mas nenhuma foi escolhida ainda. Não implementar nenhuma das
+duas por conta própria — é decisão de produto, não bug a corrigir.
+
 ## 3. Processo obrigatório pra qualquer mudança de UI/UX genuinamente nova
 
 **Mockup antes de mexer em produção.** Decidido com o Daniel em 28/07/2026,
