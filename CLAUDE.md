@@ -104,6 +104,18 @@ transições de etapa de Compras são fortemente acopladas a RPCs de aprovação
 migrar pro modelo compartilhado significaria reconstruir esse motor sem ganho
 funcional. Não tente "arrumar" isso proativamente.
 
+**Exceção deliberada, não migrar sem perguntar antes — escopo de `rh_colaboradores`
+é o Grupo inteiro, não por empresa**: achado MD-10 da auditoria de segurança
+(19/08/2026) — a policy `rh_colaboradores_rh_access` (produção) libera leitura
+do cadastro completo (salário e CPF inclusos) das 3 frentes pra qualquer cargo
+'rh'/'gerente_rh'/admin, sem nenhum filtro por `current_user_companies()` —
+diferente do padrão rigoroso do Comercial (`clients_read`/`leads_select`, que
+sempre filtram por empresa). Confirmado com o Daniel 20/08/2026: é intencional
+— RH é centralizado de propósito, atende as 3 frentes com o mesmo time. Não
+aplicar `AND companies && current_user_companies()` nem mascarar `salary` sem
+perguntar antes — mudaria o fluxo real de quem hoje precisa alternar entre
+frentes no mesmo cadastro.
+
 ## 3. Processo obrigatório pra qualquer mudança de UI/UX genuinamente nova
 
 **Mockup antes de mexer em produção.** Decidido com o Daniel em 28/07/2026,
