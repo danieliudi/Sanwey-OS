@@ -70,7 +70,11 @@ export default function TalentPoolForm() {
     setError(null);
     try {
       const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
-      const { data: candidateId, error: rpcErr } = await supabase.rpc("submit_talent_pool_application", {
+      // MD-03(b) da auditoria de segurança (20/08/2026): a RPC devolvia o
+      // UUID cru do candidato (reaproveitável pra sempre por quem soubesse
+      // o e-mail de outra pessoa); agora devolve um path de upload de uso
+      // único e curta validade — ver 20261020_sec_rh_curriculos_upload_token.sql.
+      const { data: resp, error: rpcErr } = await supabase.rpc("submit_talent_pool_application", {
         p_nome: form.nome.trim(),
         p_email: form.email.trim() || null,
         p_telefone: form.telefone.replace(/\D/g, "") || null,
@@ -81,10 +85,9 @@ export default function TalentPoolForm() {
       });
       if (rpcErr) throw rpcErr;
 
-      const path = `${candidateId}/curriculo.${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from("rh-curriculos")
-        .upload(path, file, { contentType: file.type, upsert: true });
+        .upload(resp.resume_object_path, file, { contentType: file.type, upsert: true });
       if (uploadErr) throw uploadErr;
 
       setDone(true);

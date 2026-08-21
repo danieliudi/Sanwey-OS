@@ -184,25 +184,24 @@ export default function MarketingRequestForm({ defaultCategory = "material" }) {
     setSubmitting(true);
     setError(null);
     try {
-      // Gera o id no cliente pra poder buscar o número do protocolo depois —
-      // um .select() após o insert falharia (RLS de leitura exige papel de
-      // marketing, o formulário aqui é anônimo); ver get_marketing_request_number.
-      const id = crypto.randomUUID();
-      const { error: err } = await supabase.from("marketing_requests").insert({
-        id,
-        category:        category,
-        title:            form.title.trim(),
-        requester_name:   form.requesterName.trim(),
-        requester_email:  form.requesterEmail.trim() || null,
-        department:       category === "material" ? form.department : null,
-        request_type:     category === "material" ? form.requestType : null,
-        description:      form.description.trim() || null,
-        priority:         category === "material" ? form.priority : "media",
-        deadline:         form.deadline || null,
-        company_ids:      form.companyIds.length > 0 ? form.companyIds : MARKETING_UNIT_IDS,
-        budget:           category === "material" && form.budget !== "" ? form.budget : null,
-        approver_name:    category === "material" ? (form.approverName.trim() || null) : null,
-        status:           "pendente",
+      // MD-02 da auditoria de segurança (19/08/2026): INSERT direto na
+      // tabela com a chave anon não tinha nenhum limite de volume — RPC
+      // SECURITY DEFINER agora valida e aplica rate-limit por identidade
+      // (ver 20261020_sec_marketing_requests_rpc_ratelimit.sql). A RPC já
+      // devolve o id gerado, sem precisar gerar no cliente.
+      const { data: id, error: err } = await supabase.rpc("submit_marketing_request", {
+        p_category:        category,
+        p_title:            form.title.trim(),
+        p_requester_name:   form.requesterName.trim(),
+        p_requester_email:  form.requesterEmail.trim() || null,
+        p_department:       category === "material" ? form.department : null,
+        p_request_type:     category === "material" ? form.requestType : null,
+        p_description:      form.description.trim() || null,
+        p_priority:         category === "material" ? form.priority : "media",
+        p_deadline:         form.deadline || null,
+        p_company_ids:      form.companyIds.length > 0 ? form.companyIds : MARKETING_UNIT_IDS,
+        p_budget:           category === "material" && form.budget !== "" ? form.budget : null,
+        p_approver_name:    category === "material" ? (form.approverName.trim() || null) : null,
       });
       if (err) throw err;
       const { data: numberData } = await supabase.rpc("get_marketing_request_number", { p_id: id });

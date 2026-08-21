@@ -94,8 +94,8 @@ export const ONBOARDING_TOUR_STEPS = [
     blurb: "Mostra a saúde de todas as áreas do Grupo num só lugar — um número e um alerta por departamento, com uma aba própria pra se aprofundar." },
   { id: "esg-carbono", icon: "🌱", title: "ESG & Carbono",
     blurb: "Calcula a pegada de carbono da empresa a partir de dados que já estão na plataforma — e gera um relatório em PDF pronto para auditoria ou proposta comercial." },
-  { id: "insights", icon: "📈", title: "Insights",
-    blurb: "Junta números que já existem em RH, Comercial e Marketing pra mostrar se os processos estão mais rápidos ou lentos, e quanto a empresa está gastando." },
+  { id: "market-intel", icon: "🌐", title: "Mercado",
+    blurb: "Dados do setor (atualizados automaticamente), insights internos de RH/Comercial/Marketing, e o cruzamento dos dois num lugar só." },
   { id: "agents", icon: "🤖", title: "Agentes",
     blurb: "Um time de IA que fica de olho no pipeline e sugere ações — mas quem decide se a ação acontece é sempre você." },
 

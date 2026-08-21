@@ -104,6 +104,77 @@ transições de etapa de Compras são fortemente acopladas a RPCs de aprovação
 migrar pro modelo compartilhado significaria reconstruir esse motor sem ganho
 funcional. Não tente "arrumar" isso proativamente.
 
+**Exceção deliberada, não migrar sem perguntar antes — escopo de `rh_colaboradores`
+é o Grupo inteiro, não por empresa**: achado MD-10 da auditoria de segurança
+(19/08/2026) — a policy `rh_colaboradores_rh_access` (produção) libera leitura
+do cadastro completo (salário e CPF inclusos) das 3 frentes pra qualquer cargo
+'rh'/'gerente_rh'/admin, sem nenhum filtro por `current_user_companies()` —
+diferente do padrão rigoroso do Comercial (`clients_read`/`leads_select`, que
+sempre filtram por empresa). Confirmado com o Daniel 20/08/2026: é intencional
+— RH é centralizado de propósito, atende as 3 frentes com o mesmo time. Não
+aplicar `AND companies && current_user_companies()` nem mascarar `salary` sem
+perguntar antes — mudaria o fluxo real de quem hoje precisa alternar entre
+frentes no mesmo cadastro.
+
+**Policy nova nunca lê `profiles.role` (escalar) — sempre `roles[]`**: achado
+MD-11 da auditoria de segurança (19/08/2026) — 22 policies em produção ainda
+comparam contra `profiles.role` (`role = ANY(['admin','gerente_rh','rh'])`,
+sempre em condição POSITIVA, nunca negação — o padrão perigoso de negação era
+só o AL-06, já corrigido em sessão anterior). Não é vulnerabilidade ativa hoje
+— o pior efeito de uma condição positiva desatualizada é NEGAR acesso
+legítimo pra quem tem um cargo secundário em `roles[]` que não é o `role`
+primário, nunca vazar dado a mais. É dívida estrutural que ficou de pé
+(migrar as 22 é trabalho não-trivial, decisão de quando fazer é do Daniel) —
+mas dívida nova é fácil de evitar: daqui pra frente, toda policy/função RLS
+nova usa `roles[]` (via `current_user_has_role(...)`/`roles &&`), nunca
+`profiles.role` direto. Se for mexer em uma das 22 policies antigas por outro
+motivo, é uma boa oportunidade de migrar ela junto — mas não é obrigatório
+nem deve ser feito "de brinde" sem avisar.
+
+**Chave pessoal de IA em texto plano — risco residual aceito, não é pra
+"corrigir" sozinho**: achado MD-12 da auditoria de segurança (19/08/2026) —
+a chave pessoal (OpenAI/Anthropic) que o usuário configura em Configurações →
+Integrações de IA fica em claro no jsonb `profile_secrets.ai_config`. A
+separação `profiles`/`profile_secrets` (19/08/2026) já garante que nem admin
+nem gerente leem a chave de outra pessoa via RLS (`profile_secrets_self`,
+`id = auth.uid()` pra ALL) — o que resta é que qualquer caminho com
+service_role (edge functions, MCP, backup, dump de suporte) lê o valor em
+claro. Decidido com o Daniel 20/08/2026: por ora fica como está — cifrar de
+verdade (pgsodium/Supabase Vault) ou remover a opção de chave pessoal (todo
+mundo na chave da empresa, já com cota por usuário via MD-06) são as duas
+saídas reais, mas nenhuma foi escolhida ainda. Não implementar nenhuma das
+duas por conta própria — é decisão de produto, não bug a corrigir.
+
+**Achados BAIXO da auditoria de segurança (19/08/2026) — decisões registradas
+20/08/2026, não reabrir sem motivo novo**:
+
+- **BX-03** (`pg_net` no schema `public`, lint de higiene): não mexer. O
+  acesso real já está fechado (`net.http_get/post/delete` restritos a
+  `postgres`/`service_role` desde sessão anterior). A extensão não é
+  relocalizável (`extrelocatable = false`) — mover pra schema `extensions`
+  exigiria `DROP`+`CREATE EXTENSION`, com risco real de interromper o
+  pg_cron (`agent_runner_daily_cron` usa `net.http_post`) e perder linhas de
+  fila pendentes, por um ganho puramente cosmético (o lint some, nenhum
+  acesso muda). Risco desproporcional ao ganho — decidido não fazer.
+- **BX-04** (4 tabelas com RLS habilitada e zero policies — deny-all):
+  `marketing_protocol_numbers` e `rh_pesquisa_respostas` já documentam a
+  própria intenção na migration de origem ("só SECURITY DEFINER toca essa
+  tabela"). `rapp_cargas`/`rapp_ibama` (dados IBAMA RAPP) foram conferidas
+  20/08/2026: não têm migration no repo (populadas por ETL externo direto
+  via `service_role`, fora do Git) nem são lidas em nenhuma tela — deny-all
+  não é bug, é o comportamento correto pro que existe hoje. Se um dia uma
+  tela vier a ler `rapp_cargas`/`rapp_ibama` com sessão de usuário, ela vai
+  precisar de policy nova — não existe hoje.
+- **BX-08** (bucket `chat-stickers` público): confirmado deliberado —
+  upload restrito a `chat_is_manager(auth.uid())`, leitura pública (figurinha
+  precisa ser vista por todo mundo no chat), 2 MB + MIME `png`/`webp` já
+  aplicados na migration de origem. Sem ação.
+- **BX-10** (sessão em `localStorage` por padrão, sem MFA): a preferência
+  "Lembrar-me" (sessionStorage quando desmarcada) já existe e está correta.
+  Reduzir o tempo de vida do refresh token é configuração do painel
+  Supabase (Auth → Settings), fora do alcance de migration/código — mesma
+  categoria do MD-09 (leaked password protection).
+
 ## 3. Processo obrigatório pra qualquer mudança de UI/UX genuinamente nova
 
 **Mockup antes de mexer em produção.** Decidido com o Daniel em 28/07/2026,

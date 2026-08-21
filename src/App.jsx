@@ -72,7 +72,7 @@ import { PosVendaView } from "./components/views/PosVendaView";
 import { CRMViagensView } from "./components/views/CRMViagensView";
 import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
 import { ESGCarbonoView } from "./components/views/ESGCarbonoView";
-import { InsightsView } from "./components/views/InsightsView";
+import { MarketIntelligenceView } from "./components/views/MarketIntelligenceView";
 import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { ComexView } from "./components/views/ComexView";
 import { UserManagementView } from "./components/views/UserManagementView";
@@ -126,6 +126,7 @@ import { useAgentsCoachmark } from "./hooks/use-agents-coachmark";
 import { AgentsSidebarCoachmark } from "./components/shell/AgentsSidebarCoachmark";
 import { useFeatureSpotlight } from "./hooks/use-feature-spotlight";
 import { FeatureSpotlight } from "./components/shared/FeatureSpotlight";
+import { NotFoundView } from "./components/shared/NotFoundView";
 
 // Onboarding contextual por tela: reaproveita o quickStart que já existe em
 // VIDEO_TUTORIALS (src/data/tutorials.js), hoje só visível na tela separada
@@ -267,6 +268,15 @@ export default function App() {
   // não tem leitura garantida em nenhuma dessas — sem esse gate ele passava
   // pelo `isManager` genérico e via quase todo card do painel zerado.
   const isInsightsUser     = hasAnyRole(["admin", "rh", "gerente_rh", "marketing", "gerente_marketing"]) || isDiretoria;
+  // Hub "Inteligência de Mercado" (19-20/08/2026, decidido com o Daniel):
+  // aba Mercado visível pra vendedor + gerência/marketing/admin — superset
+  // de isInsightsUser, que não incluía vendedor nem gerente Comercial puro.
+  // Abas Insights/Cruzamento (dentro do mesmo hub) ficam mais restritas,
+  // só gerência/admin — isInsightsUser (já cobre rh/gerente_rh/marketing/
+  // gerente_marketing/admin/diretoria) OR isManagerRole (soma gerente
+  // Comercial, que isInsightsUser não tinha).
+  const canSeeMarketIntel     = hasAnyRole(["vendedor", "gerente", "marketing", "gerente_marketing", "admin"]) || isDiretoria;
+  const canSeeDeepMarketIntel = isInsightsUser || isManagerRole;
   const {
     users,
     loading: usersLoading,
@@ -1549,12 +1559,16 @@ export default function App() {
     // entre empresas do grupo) — mudou pra dentro do grupo "Comercial".
     const intelItems = [];
     if (canSeeExecutive) intelItems.push({ id: "executive", label: "Executivo",  icon: BarChart3 });
+    // Hub "Inteligência de Mercado" (19-20/08/2026) — substitui o antigo
+    // item "Insights" solto: agora são 3 abas (Mercado/Insights/Cruzamento)
+    // dentro de uma página só (ver MarketIntelligenceView), com a antiga
+    // InsightsView realocada pra dentro como a aba "Insights", não recriada.
+    if (canSeeMarketIntel) intelItems.push({ id: "market-intel", label: "Mercado", icon: Globe2 });
     // ESG & Carbono (Fase 1, mockup aprovado 07/08/2026) — mesmo gate de RLS
     // das 3 tabelas esg_* (admin/gerente/diretoria), não canSeeExecutive
     // (que também inclui gerente_marketing/rh/comex, sem RLS pra essas
     // tabelas).
     if (isManager || isDiretoria) intelItems.push({ id: "esg-carbono", label: "ESG & Carbono", icon: Leaf });
-    if (isInsightsUser) intelItems.push({ id: "insights", label: "Insights", icon: TrendingUp });
     // Agent Builder (PRD docs/prd-agent-builder.md): gerente_rh também cria e
     // aprova agentes de IA (piloto Fornecedores RH), não só o gerente
     // Comercial — mesmo gate que module-access.js/current_user_has_module.
@@ -1601,7 +1615,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isPureSuporte, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isPureSuporte, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1647,9 +1661,11 @@ export default function App() {
     if (!canSeeExecutive && section === "executive") {
       setSection("dashboard");
     }
-    // Insights tem gate próprio (isInsightsUser), não o isManager genérico —
-    // ver comentário na definição de isInsightsUser.
-    if (!isInsightsUser && section === "insights") {
+    // Hub "Inteligência de Mercado" tem gate próprio (canSeeMarketIntel), não
+    // o isManager genérico — ver comentário na definição da flag. /insights
+    // (rota antiga) já redireciona pra cá sozinho (ver Route), então section
+    // nunca fica presa em "insights" por mais de um tick.
+    if (!canSeeMarketIntel && section === "market-intel") {
       setSection("dashboard");
     }
     const marketingOnly = ["marketing", "marketing-entregas", "marketing-tarefas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras", "marketing-feiras"];
@@ -1711,7 +1727,7 @@ export default function App() {
       setSection("dashboard");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section, allowedModules, moduleStates]);
+  }, [currentUser, isManager, isRHManager, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section, allowedModules, moduleStates]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
@@ -2137,9 +2153,13 @@ export default function App() {
               ? <ESGCarbonoView currentUser={currentUser} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
-          <Route path={ROUTES.insights} element={
-            isInsightsUser
-              ? <InsightsView leads={leads} pipelines={pipelines} />
+          {/* InsightsView virou a aba "Insights" do hub abaixo — mesmo padrão
+              de /presidencia/-funnel-history logo adiante: link antigo
+              continua funcionando, só aponta pro endereço novo. */}
+          <Route path={ROUTES.insights} element={<Navigate to={ROUTES["market-intel"]} replace />} />
+          <Route path={ROUTES["market-intel"]} element={
+            canSeeMarketIntel
+              ? <MarketIntelligenceView leads={leads} pipelines={pipelines} canSeeDeepIntel={canSeeDeepMarketIntel} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Antiga rota /presidencia foi fundida no Executivo. Redireciona
@@ -2402,8 +2422,10 @@ export default function App() {
             />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
-          {/* Catch-all: rota desconhecida volta pro Início. */}
-          <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
+          {/* N-02 da auditoria funcional (19/08/2026): antes redirecionava em
+              silêncio pro Início — mockup aprovado 20/08/2026, mostra o
+              estado dentro do próprio shell (sidebar/topbar continuam). */}
+          <Route path="*" element={<NotFoundView onBack={() => setSection("dashboard")} />} />
         </Routes>
         </ErrorBoundary>
         </div>

@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, X, Trash2, Download, Link2, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, Download, Link2, CalendarDays, RotateCcw, AlertTriangle } from "lucide-react";
 import { MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { generateICS, downloadICS } from "../../utils/ics-export";
+import { supabase } from "../../lib/supabase";
+import { Modal } from "../ui/Modal";
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -159,18 +161,49 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
 
 function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
   const [copied, setCopied] = useState(null);
+  // MD-04 da auditoria de segurança (19/08/2026): o token de calendar-ics é
+  // permanente, sem forma de revogar pela interface — se vazar, vaza pra
+  // sempre. `localToken` sobrepõe o `calendarToken` vindo de cima assim que
+  // o usuário gera um novo, sem precisar esperar um refresh de perfil
+  // (window focus) só pra ver o link atualizado neste modal.
+  const [localToken, setLocalToken] = useState(null);
+  const [confirmRegenOpen, setConfirmRegenOpen] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenError, setRegenError] = useState(null);
+  const effectiveToken = localToken || calendarToken;
 
-  const personalUrl  = calendarToken && supabaseUrl
-    ? `${supabaseUrl}/functions/v1/calendar-ics?token=${calendarToken}&type=personal`
+  const personalUrl  = effectiveToken && supabaseUrl
+    ? `${supabaseUrl}/functions/v1/calendar-ics?token=${effectiveToken}&type=personal`
     : null;
-  const marketingUrl = calendarToken && supabaseUrl
-    ? `${supabaseUrl}/functions/v1/calendar-ics?token=${calendarToken}&type=marketing`
+  const marketingUrl = effectiveToken && supabaseUrl
+    ? `${supabaseUrl}/functions/v1/calendar-ics?token=${effectiveToken}&type=marketing`
     : null;
 
   const copyUrl = async (url, key) => {
     try { await navigator.clipboard.writeText(url); } catch { }
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const regenerateToken = async () => {
+    setRegenerating(true);
+    setRegenError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sessão expirada.");
+      const newToken = crypto.randomUUID();
+      const { error: err } = await supabase
+        .from("profile_secrets")
+        .update({ calendar_token: newToken })
+        .eq("id", user.id);
+      if (err) throw err;
+      setLocalToken(newToken);
+      setConfirmRegenOpen(false);
+    } catch (err) {
+      setRegenError(err.message || "Não foi possível gerar um novo link.");
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   useEffect(() => {
@@ -214,9 +247,22 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
 
           {/* Subscription section */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
               URL de assinatura (sincronização automática)
+              {personalUrl && (
+                <button
+                  onClick={() => setConfirmRegenOpen(true)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", color: "var(--accent)", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0, textTransform: "none", letterSpacing: 0 }}
+                >
+                  <RotateCcw size={11} />
+                  Gerar novo link
+                </button>
+              )}
             </div>
+
+            {regenError && (
+              <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 10 }}>{regenError}</div>
+            )}
 
             {!personalUrl ? (
               <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "12px 14px", fontSize: 12, color: "var(--warning)" }}>
@@ -249,6 +295,38 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
           </div>
         </div>
       </div>
+
+      <Modal open={confirmRegenOpen} onClose={() => !regenerating && setConfirmRegenOpen(false)} title="Gerar novo link do calendário?" width={380}>
+        <div style={{ padding: "18px 20px 20px" }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--warning-bg)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+            <AlertTriangle size={20} color="var(--warning)" />
+          </div>
+          <p style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.65, margin: "0 0 12px" }}>
+            O link atual para de funcionar imediatamente. Qualquer app que já assina esse calendário (Google, Outlook, Apple)
+            vai parar de receber atualizações até você colar o link novo lá.
+          </p>
+          <ul style={{ margin: "0 0 16px", paddingLeft: 18, fontSize: 12.5, color: "var(--text-dim)", lineHeight: 1.7 }}>
+            <li>Os dois links (pessoal e de marketing) são trocados juntos.</li>
+            <li>Não afeta eventos já sincronizados — só novas atualizações.</li>
+          </ul>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+            <button
+              onClick={() => setConfirmRegenOpen(false)}
+              disabled={regenerating}
+              style={{ height: 34, padding: "0 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, border: "1px solid var(--border-strong)", background: "var(--surface)", color: "var(--text-dim)", cursor: regenerating ? "not-allowed" : "pointer" }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={regenerateToken}
+              disabled={regenerating}
+              style={{ height: 34, padding: "0 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, border: "none", background: "var(--danger)", color: "var(--on-danger)", cursor: regenerating ? "not-allowed" : "pointer", opacity: regenerating ? 0.7 : 1 }}
+            >
+              {regenerating ? "Gerando…" : "Gerar novo link"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

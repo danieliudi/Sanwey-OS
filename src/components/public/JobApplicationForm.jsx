@@ -104,7 +104,13 @@ export default function JobApplicationForm() {
     setError(null);
     try {
       const ext = file ? (file.name.split(".").pop() || "pdf").toLowerCase() : null;
-      const { data: candidateId, error: rpcErr } = await supabase.rpc("submit_job_application", {
+      // MD-03(b) da auditoria de segurança (20/08/2026): a RPC devolvia o
+      // UUID cru do candidato (reaproveitável pra sempre por quem soubesse
+      // o e-mail de outra pessoa); agora devolve { candidate_id,
+      // resume_object_path } — path de upload de uso único e curta
+      // validade, null quando não há currículo pra subir. Ver
+      // 20261020_sec_rh_curriculos_upload_token.sql.
+      const { data: resp, error: rpcErr } = await supabase.rpc("submit_job_application", {
         p_vaga_slug: slug,
         p_nome: form.nome.trim(),
         p_email: form.email.trim() || null,
@@ -115,12 +121,12 @@ export default function JobApplicationForm() {
         p_frente: form.unidade || null,
       });
       if (rpcErr) throw rpcErr;
+      const candidateId = resp.candidate_id;
 
-      if (file) {
-        const path = `${candidateId}/curriculo.${ext}`;
+      if (file && resp.resume_object_path) {
         const { error: uploadErr } = await supabase.storage
           .from("rh-curriculos")
-          .upload(path, file, { contentType: file.type, upsert: true });
+          .upload(resp.resume_object_path, file, { contentType: file.type, upsert: true });
         if (uploadErr) throw uploadErr;
       }
 

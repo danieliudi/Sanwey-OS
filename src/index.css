@@ -163,10 +163,16 @@
 }
 
 /* Native form controls in dark mode — sem isto, select/checkbox/radio nativos
-   renderizam claros no tema escuro */
+   renderizam claros no tema escuro. Achado 20/08/2026: a regra cobria só
+   select/checkbox/radio — input de texto/número/data e textarea (ex.: campo
+   "Descrição" e "Vencimento" do modal de Nova despesa) ficaram de fora, então
+   o cromo nativo (ícone do date picker, spinners, texto em cinza claro sobre
+   fundo branco de autofill) continuava claro mesmo com background/color
+   corretos no CSS do próprio campo — color-scheme só afeta o que o navegador
+   desenha por conta própria, nunca sobrescreve background/color explícitos. */
 [data-theme="dark"] select,
-[data-theme="dark"] input[type="checkbox"],
-[data-theme="dark"] input[type="radio"] {
+[data-theme="dark"] input,
+[data-theme="dark"] textarea {
   color-scheme: dark;
 }
 
