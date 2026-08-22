@@ -4,14 +4,13 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 const TABLE = "chat_stickers";
 const BUCKET = "chat-stickers";
 
-const DIACRITICS_RE = new RegExp("[̀-ͯ]", "g");
-
-function slug(name) {
-  return (name || "figurinha")
-    .normalize("NFD").replace(DIACRITICS_RE, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "") || "figurinha";
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 // Pacote único/global (sem company_id — decisão do Daniel, ver spec seção
@@ -49,27 +48,23 @@ export function useChatStickers({ includeInactive = false } = {}) {
     return data?.publicUrl || null;
   }, []);
 
+  // Upload passa pela edge function chat-sticker-upload em vez de ir direto
+  // pro Storage — ela confere a assinatura binária real do arquivo (magic
+  // bytes) contra PNG/WEBP antes de gravar, em vez de confiar só no
+  // content-type que o client declara (reforço de moderação, BX-08).
   const uploadSticker = useCallback(async (file, name) => {
     if (!isSupabaseConfigured || !file) return null;
-    const ext = file.name.includes(".") ? file.name.split(".").pop() : "png";
     const label = (name || file.name.replace(/\.[^.]+$/, "")).trim() || "figurinha";
-    const path = `${Date.now()}-${slug(label)}.${ext}`;
+    const fileBase64 = await fileToBase64(file);
 
-    const { error: storageErr } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, file, { contentType: file.type || undefined, upsert: false });
-    if (storageErr) throw storageErr;
+    const { data, error: fnErr } = await supabase.functions.invoke("chat-sticker-upload", {
+      body: { fileBase64, fileName: file.name, name: label },
+    });
+    if (fnErr) throw fnErr;
+    if (data?.error) throw new Error(data.error);
 
-    const { data: authData } = await supabase.auth.getUser();
-    const { data, error: dbErr } = await supabase
-      .from(TABLE)
-      .insert({ name: label, image_path: path, uploaded_by: authData?.user?.id || null })
-      .select()
-      .single();
-    if (dbErr) throw dbErr;
-
-    setStickers(prev => [data, ...prev]);
-    return data;
+    setStickers(prev => [data.sticker, ...prev]);
+    return data.sticker;
   }, []);
 
   const toggleStickerActive = useCallback(async (id, active) => {

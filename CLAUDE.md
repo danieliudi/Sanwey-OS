@@ -117,19 +117,24 @@ perguntar antes — mudaria o fluxo real de quem hoje precisa alternar entre
 frentes no mesmo cadastro.
 
 **Policy nova nunca lê `profiles.role` (escalar) — sempre `roles[]`**: achado
-MD-11 da auditoria de segurança (19/08/2026) — 22 policies em produção ainda
-comparam contra `profiles.role` (`role = ANY(['admin','gerente_rh','rh'])`,
-sempre em condição POSITIVA, nunca negação — o padrão perigoso de negação era
-só o AL-06, já corrigido em sessão anterior). Não é vulnerabilidade ativa hoje
-— o pior efeito de uma condição positiva desatualizada é NEGAR acesso
-legítimo pra quem tem um cargo secundário em `roles[]` que não é o `role`
-primário, nunca vazar dado a mais. É dívida estrutural que ficou de pé
-(migrar as 22 é trabalho não-trivial, decisão de quando fazer é do Daniel) —
-mas dívida nova é fácil de evitar: daqui pra frente, toda policy/função RLS
-nova usa `roles[]` (via `current_user_has_role(...)`/`roles &&`), nunca
-`profiles.role` direto. Se for mexer em uma das 22 policies antigas por outro
-motivo, é uma boa oportunidade de migrar ela junto — mas não é obrigatório
-nem deve ser feito "de brinde" sem avisar.
+MD-11 da auditoria de segurança (19/08/2026), **migrado em 22/08/2026**
+(`supabase/migrations/20261020_sec_md11_roles_array_migration.sql`, pedido
+explícito do Daniel). Levantamento vivo no banco achou 36 policies no modelo
+antigo — não 22 como o número original da auditoria registrou; o escopo
+cresceu porque tabelas novas (`lead_attachments`, `lead_checklists`,
+`activities`, `marketing_deliverable_attachments`,
+`marketing_quote_email_template`, `agent_actions`) foram copiadas do padrão
+antigo depois da auditoria de 19/08 — sinal de que a regra abaixo não estava
+sendo seguida na prática até agora. Todas as 36 foram recriadas usando
+`roles[]` (via `current_user_has_role(...)`, `current_user_is_admin()`, ou
+`roles && ARRAY[...]` direto). Segurança da migração: o trigger
+`profiles_sync_roles` garante `role = ANY(roles)` sempre (checado ao vivo
+antes de aplicar, 0 violações) e nenhuma das 36 comparações era negação —
+então a troca só pôde AMPLIAR acesso (a quem tem o cargo como secundário),
+nunca restringir. Daqui pra frente, toda policy/função RLS nova usa
+`roles[]` — nunca `profiles.role` direto. Se essa regra for ignorada de novo
+e dívida nova aparecer, é sinal de que precisa virar lint/CI (item IN-06 do
+backlog), não só texto aqui.
 
 **Chave pessoal de IA em texto plano — risco residual aceito, não é pra
 "corrigir" sozinho**: achado MD-12 da auditoria de segurança (19/08/2026) —
@@ -165,10 +170,20 @@ duas por conta própria — é decisão de produto, não bug a corrigir.
   não é bug, é o comportamento correto pro que existe hoje. Se um dia uma
   tela vier a ler `rapp_cargas`/`rapp_ibama` com sessão de usuário, ela vai
   precisar de policy nova — não existe hoje.
-- **BX-08** (bucket `chat-stickers` público): confirmado deliberado —
-  upload restrito a `chat_is_manager(auth.uid())`, leitura pública (figurinha
-  precisa ser vista por todo mundo no chat), 2 MB + MIME `png`/`webp` já
-  aplicados na migration de origem. Sem ação.
+- **BX-08** (bucket `chat-stickers` público): leitura pública continua
+  deliberada (figurinha precisa ser vista por todo mundo no chat) — mas o
+  Daniel pediu reforço na moderação de upload em 22/08/2026. Antes, o upload
+  ia direto do client pro Storage (`supabase.storage.upload`), confiando no
+  content-type que o próprio client declarava — o `allowed_mime_types` do
+  bucket só valida esse header, não os bytes reais do arquivo, então um
+  gestor com sessão comprometida podia declarar `image/png` num arquivo que
+  na real era outra coisa (ex.: SVG com `<script>`) e o bucket público
+  aceitava. Fechado roteando o upload por uma edge function nova
+  (`supabase/functions/chat-sticker-upload`, `verify_jwt=true`) que confere
+  a assinatura binária real (magic bytes PNG/WEBP) antes de gravar — rejeita
+  se não bater, independente do content-type declarado. `src/hooks/use-chat-stickers.js`
+  (`uploadSticker`) chama essa function em vez de ir direto ao Storage; upload
+  restrito a `chat_is_manager` continua igual (revalidado dentro da function).
 - **BX-10** (sessão em `localStorage` por padrão, sem MFA): a preferência
   "Lembrar-me" (sessionStorage quando desmarcada) já existe e está correta.
   Reduzir o tempo de vida do refresh token é configuração do painel
