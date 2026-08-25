@@ -33,13 +33,18 @@ const MAX_AUDIO_BYTES = 20 * 1024 * 1024; // teto do envio inline dos provedores
 
 // O esquema que a IA tem que devolver. Vive aqui, e não no frontend, pra que
 // a tela de conferência e o prompt nunca saiam de sincronia.
+const CATEGORIAS_LICAO = ['preco', 'prazo-entrega', 'certificacao-compliance', 'decisor-relacionamento', 'concorrencia', 'produto-especificacao'];
+
 const SCHEMA_HINT = `{
   "cliente_nome": "string",
   "setor": "string ou null",
   "resultado": "ganhamos | perdemos | andamento | null",
   "situacao": "string — 2 a 4 frases, o que aconteceu",
   "sinais": "string ou null — o que surpreendeu, o que só apareceu na visita ou na conversa",
-  "licao": "string ou null — o que isso ensina pra um vendedor novo nessa situação"
+  "objecao_principal": "string ou null — a resistência/motivo de perda levantado, se houve",
+  "concorrente": "string ou null — concorrente citado pelo nome",
+  "licao": "string ou null — o que isso ensina pra um vendedor novo nessa situação",
+  "categoria_licao": ["string"] — zero ou mais valores dentre ${CATEGORIAS_LICAO.map(c => `"${c}"`).join(', ')}
 }`;
 
 function systemPrompt(ctx: Record<string, unknown>): string {
@@ -64,8 +69,11 @@ Regras que não podem ser quebradas:
 - "cliente_nome": o nome da empresa/cliente/prospect citado. Se não ficar claro, use a string vazia — nunca invente um nome.
 - "resultado": só marque "ganhamos" ou "perdemos" se o vendedor disser isso explicitamente (fechou, perdeu, foi pra outro fornecedor, etc.). Se a negociação ainda está rolando, "andamento". Sem nenhum sinal de desfecho, null.
 - "situacao" resume o que de fato aconteceu — o fato, não a opinião do vendedor sobre o fato.
-- "sinais" é o que surpreendeu ou só ficou claro na hora — uma objeção inesperada, um critério de decisão que não estava no radar, algo que o concorrente ofereceu.
+- "sinais" é o que surpreendeu ou só ficou claro na hora — um critério de decisão que não estava no radar, algo inesperado na negociação.
+- "objecao_principal" é a resistência/motivo de perda que o cliente colocou (preço, prazo, especificação, relacionamento com o decisor errado). Só preencha se foi dito — não deduza a partir do resultado.
+- "concorrente": nome do concorrente citado. Só se citado pelo nome; nunca infira "deve ser a empresa X" por eliminação.
 - "licao" é o que um vendedor novo, sem esse contexto, precisaria saber pra não cometer o mesmo erro ou repetir o acerto. Só preencha se o relato realmente ensinar algo — não force uma lição genérica.
+- "categoria_licao": classifique o tema da lição usando SOMENTE os valores da lista dada — nunca invente uma categoria fora dela. Pode marcar mais de uma se o relato claramente tocar mais de um tema (ex.: preço E concorrência). Se a lição for null, ou não se encaixar claramente em nenhum tema da lista, devolva um array vazio — não force encaixe.
 - Nomes próprios e de empresas: transcreva como foram ditos, sem corrigir para nomes que você conhece.
 - Responda com o JSON puro, sem cercas de código e sem texto antes ou depois.`;
 }

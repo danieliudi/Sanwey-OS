@@ -29,7 +29,17 @@ create table public.sales_cases (
   resultado text check (resultado in ('ganhamos', 'perdemos', 'andamento')),
   situacao text,
   sinais text,
+  objecao_principal text,
+  concorrente text,
   licao text,
+
+  -- Tag(s) da lição pra dar pra filtrar o playbook por tema depois, em vez
+  -- de reler texto livre. Vocabulário fechado curto e sugerido pela própria
+  -- IA (não digitado) — array porque um caso pode carregar mais de um tema
+  -- (ex.: preço + concorrência). Mesmo padrão de array-CHECK já usado em
+  -- rh_candidatos.frente_origem (<@ ARRAY[...]).
+  categoria_licao text[] not null default '{}'
+    check (categoria_licao <@ array['preco', 'prazo-entrega', 'certificacao-compliance', 'decisor-relacionamento', 'concorrencia', 'produto-especificacao']),
 
   raw_transcript text,
   source text not null default 'voz' check (source in ('voz', 'texto')),
