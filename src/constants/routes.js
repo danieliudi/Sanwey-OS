@@ -15,6 +15,7 @@ export const ROUTES = {
   explorer:          "/explorador",
   crm:               "/pipeline",
   posvenda:          "/pos-venda",
+  "sales-cases":     "/casos-comerciais",
   clients:           "/clientes",
   pedidos:           "/pedidos",
   catalogo:          "/catalogo",

@@ -7,7 +7,7 @@ import {
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
-  FlaskConical, PackageSearch, ClipboardList, Bug, BookOpen,
+  FlaskConical, PackageSearch, ClipboardList, Bug, BookOpen, Mic,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -66,6 +66,7 @@ import { ClientImportModal } from "./components/client/ClientImportModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
+import { SalesCasesView } from "./components/views/SalesCasesView";
 import { ExplorerView } from "./components/views/ExplorerView";
 import { CRMView } from "./components/views/CRMView";
 import { PosVendaView } from "./components/views/PosVendaView";
@@ -1449,6 +1450,10 @@ export default function App() {
           // LeadDetailDrawer.jsx) cria um caso aqui, o negócio original
           // continua existindo no Funil de Vendas.
           { id: "posvenda",     label: "Funil de Pós-venda", icon: Handshake },
+          // Botão solto pra registrar caso de prospecção sem cliente formal
+          // ainda (CLAUDE.md) — a partir de um cliente existente, a mesma
+          // captura abre direto na aba Histórico (ClientTimelinePanel).
+          { id: "sales-cases",  label: "Casos Comerciais",   icon: Mic },
           { id: "pedidos",      label: "Pedidos",    icon: ClipboardList },
           { id: "clients",      label: "Clientes",   icon: Users },
           { id: "catalogo",     label: "Catálogo",   icon: PackageSearch },
@@ -1677,7 +1682,7 @@ export default function App() {
       setSection("marketing");
     }
     // Pure marketing users shouldn't access CRM sections
-    const crmSections = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview"];
+    const crmSections = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "sales-cases"];
     if (isPureMarketing && crmSections.includes(section)) {
       setSection("dashboard");
     }
@@ -1704,7 +1709,7 @@ export default function App() {
       setSection("comex");
     }
     // Agência can access marketing routes + their own profile (settings).
-    const agenciaBlocked = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials"];
+    const agenciaBlocked = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "sales-cases", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
@@ -1973,6 +1978,11 @@ export default function App() {
                 onAddLead={handleAddLead}
                 accessibleCompanies={accessibleCompanies}
               />
+            )
+          } />
+          <Route path={ROUTES["sales-cases"]} element={
+            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : isPureRH ? <Navigate to={ROUTES.dashboard} replace /> : (
+              <SalesCasesView currentUser={currentUser} />
             )
           } />
           <Route path={ROUTES.explorer} element={

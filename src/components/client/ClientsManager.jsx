@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt, Loader2, AlertTriangle, CheckCircle2, Mic } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
 import { ClientProductsTab } from "./ClientProductsTab";
@@ -17,6 +17,8 @@ import { formatBRL } from "../../utils/currency";
 import { activityTypeMeta } from "../../utils/activity-types";
 import { findClientByCnpj, DuplicateClientError } from "../../utils/client-dedup";
 import { AtaVozPanel } from "../lead/AtaVozPanel";
+import { CasoProspeccaoVozPanel } from "./CasoProspeccaoVozPanel";
+import { useSalesCases } from "../../hooks/use-sales-cases";
 
 const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -1036,6 +1038,13 @@ export function ClientTimelinePanel({
   // ata é renderizável, não precisa da lista aberta pronta).
   const podeGravarAta = Boolean(client && currentUser && onCreateLead && onAddLeadActivity);
 
+  // Ponto de entrada 1 do caso de prospecção (CLAUDE.md): a partir da
+  // página do cliente, client_id/cliente_nome já vêm preenchidos — ver
+  // CasoProspeccaoVozPanel.jsx. addCase grava direto com a sessão do
+  // vendedor (RLS), nunca pela edge function (que só propõe o rascunho).
+  const [showCaso, setShowCaso] = useState(false);
+  const { addCase } = useSalesCases();
+
   // Histórico x agendado: visita ainda não realizada entra com ts =
   // data_planejada (data FUTURA). Como a lista é ts DESC, ela aparecia no TOPO
   // de uma aba chamada "Histórico", sob um cabeçalho de ano no futuro e com o
@@ -1110,6 +1119,28 @@ export function ClientTimelinePanel({
     />
   ) : null;
 
+  // Botão solto, logo abaixo da ata — mesma condição de renderização
+  // (client/currentUser resolvidos), mas ação separada: não é atividade do
+  // negócio, é um registro autônomo pro playbook de vendas (ver migration
+  // sales_cases). Estilo secundário (contorno, não preenchido) de propósito
+  // — "Gravar ata" continua sendo a ação primária desta aba.
+  const casoButton = podeGravarAta ? (
+    <button onClick={() => setShowCaso(true)} data-tour="client-registrar-caso"
+      className="inline-flex items-center gap-1.5 self-start px-3 py-1.5 rounded-lg text-xs font-semibold border"
+      style={{ borderColor: "var(--accent)", color: "var(--accent)", background: "var(--surface)", cursor: "pointer" }}>
+      <Mic size={12} /> Registrar um caso pro playbook de vendas
+    </button>
+  ) : null;
+
+  const casoModal = showCaso ? (
+    <CasoProspeccaoVozPanel
+      client={client}
+      currentUser={currentUser}
+      onClose={() => setShowCaso(false)}
+      onConfirm={addCase}
+    />
+  ) : null;
+
   // Estado vazio honesto: a base está praticamente vazia hoje, então quem
   // abre isto pela primeira vez PRECISA entender que a tela não está
   // quebrada — ela ainda não tem o que mostrar, e o que passa a alimentá-la.
@@ -1117,6 +1148,8 @@ export function ClientTimelinePanel({
     return (
       <div className="flex flex-col" style={{ gap: 12 }}>
         {ataPanel}
+        {casoButton}
+        {casoModal}
         <EmptyState
           icon={History}
           title="O histórico deste cliente começa agora"
@@ -1159,6 +1192,8 @@ export function ClientTimelinePanel({
   return (
     <div className="flex flex-col" style={{ gap: 12 }}>
       {ataPanel}
+      {casoButton}
+      {casoModal}
       {/* Não prometer completude que o painel não pode entregar: o recorte da
           RPC é por frente comercial (current_user_companies), então um cliente
           pode ter negócio numa frente que este usuário não acompanha. */}
