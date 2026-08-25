@@ -60,29 +60,47 @@ alter table public.sales_cases enable row level security;
 comment on table public.sales_cases is
   'Casos de prospecção (ganho/perdido/andamento) capturados por voz ou texto pro playbook de vendas. Escrita só pela tela, com aceite do vendedor via RLS do próprio usuário — nunca service_role. Ver supabase/functions/caso-prospeccao-voz.';
 
--- Leitura: mesmo grupo de papel de leads_select (vendedor/gerente/consultor
--- na frente, mais admin) — mas, ao contrário de leads_select, SEM filtro de
--- owner_ids/subordinados. Diferente de um negócio (que é "do vendedor"), um
--- caso de prospecção é material de playbook: o objetivo declarado é o time
--- inteiro aprender com o caso de qualquer colega na mesma frente, não só
--- quem registrou. Desvio deliberado do predicado da tabela-irmã, não
--- descuido — registrado aqui pra próxima revisão de segurança não achar
--- que é um gap.
+-- Leitura: mesmo grupo de papel de leads_select/clients_read (vendedor/
+-- gerente na frente, mais admin) — mas, ao contrário de leads_select, SEM
+-- filtro de owner_ids/subordinados. Diferente de um negócio (que é "do
+-- vendedor"), um caso de prospecção é material de playbook: o objetivo
+-- declarado é o time inteiro aprender com o caso de qualquer colega na
+-- mesma frente, não só quem registrou. Desvio deliberado do predicado da
+-- tabela-irmã, não descuido — registrado aqui pra próxima revisão de
+-- segurança não achar que é um gap.
+--
+-- NOTA: o predicado abaixo foi conferido contra `pg_policies` em produção
+-- (não só o texto das migrations antigas de leads/clients, que ficaram
+-- defasadas depois de 20260917_remove_consultor_role.sql — mesmo aviso que
+-- aquele arquivo já registra: "a fonte de verdade do predicado final é o
+-- próprio banco"). 'consultor' foi removido do array de roles de leads/
+-- clients faz tempo — não incluído aqui.
 create policy sales_cases_select on public.sales_cases for select
   using (
     current_user_is_admin()
     or (
-      current_user_roles() && array['gerente', 'vendedor', 'consultor']::text[]
+      current_user_roles() && array['gerente', 'vendedor']::text[]
       and frente = any (current_user_companies())
     )
   );
 
--- Escrita: mesmo papel/escopo de leads_insert — quem pode abrir um negócio
--- pode registrar um caso na mesma frente.
+-- Diretoria: mesmo padrão flat/aditivo de leads_diretoria_read e
+-- clients_diretoria_read em produção (policy separada, sem escopo de
+-- frente/empresa) — visão executiva já estabelecida nas duas tabelas-irmãs
+-- mais próximas, só leitura (nenhuma delas dá diretoria em INSERT/DELETE).
+create policy sales_cases_diretoria_read on public.sales_cases for select
+  using (current_user_has_role('diretoria'));
+
+-- Escrita: mesmo papel/escopo de leads_insert em produção — admin faz
+-- bypass do escopo de frente (igual leads_insert/clients_insert já fazem;
+-- achado de revisão: uma versão anterior deste arquivo aplicava o check de
+-- frente também pro admin, o que rejeitaria o insert de um admin cujo
+-- profiles.companies não inclui a frente escolhida — inconsistente com o
+-- bypass que sales_cases_select/sales_cases_delete já dão a admin).
 create policy sales_cases_insert on public.sales_cases for insert
   with check (
-    (current_user_is_admin() or current_user_roles() && array['gerente', 'vendedor', 'consultor']::text[])
-    and frente = any (current_user_companies())
+    (current_user_has_role('admin') or current_user_has_role('gerente') or current_user_has_role('vendedor'))
+    and (current_user_is_admin() or frente = any (current_user_companies()))
   );
 
 -- Exclusão: mesmo predicado de leads_delete/clients_delete — só admin ou
