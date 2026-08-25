@@ -105,8 +105,14 @@ export function CasoProspeccaoVozPanel({ client, currentUser, onClose, onConfirm
     setDraft({ ...(res.structured || {}), transcricao: res.transcript || fallbackTranscript });
     // Cliente já conhecido: o nome do cadastro é mais confiável que o que a
     // IA extraiu da fala — nunca sobrescreve com um palpite.
+    // typeof === "string": o JSON do modelo não passa por validação de
+    // schema (parseModelJson só faz JSON.parse) — um drift do modelo
+    // devolvendo número/objeto em vez de string não pode virar o valor de
+    // clienteNome, que mais adiante leva `.trim()` fora de try/catch
+    // (achado real de revisão adversarial: sem essa guarda, um
+    // cliente_nome não-string quebra o render inteiro, não só esta tela).
     if (client) setClienteNome(client.name);
-    else if (res.structured?.cliente_nome) setClienteNome(res.structured.cliente_nome);
+    else if (typeof res.structured?.cliente_nome === "string") setClienteNome(res.structured.cliente_nome);
     setPhase("review");
   };
 
