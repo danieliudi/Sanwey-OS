@@ -25,6 +25,20 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "registrar-caso-header",
+    route: "crm",
+    target: '[data-tour="registrar-caso-header"]',
+    text: "Novo: registre um caso de prospecção (ganhamos/perdemos/andamento) falando o que aconteceu — vira base pro playbook de vendas.",
+    version: "4.65.0",
+  },
+  {
+    id: "registrar-caso-cliente",
+    route: "clients",
+    target: '[data-tour="registrar-caso-cliente"]',
+    text: "Novo: registre um caso de prospecção sobre este cliente — fale o que aconteceu, a IA organiza e você confere antes de salvar.",
+    version: "4.65.0",
+  },
+  {
     id: "inteligencia-mercado-hub",
     route: "market-intel",
     target: '[data-tour="inteligencia-mercado-hub"]',
