@@ -284,13 +284,19 @@ Deno.serve(async (req: Request) => {
           return json({ error: `confirm_title não bate com o título atual da tarefa: "${task.title}". Confirme com o usuário antes de tentar de novo.` }, 409);
         }
 
+        // Revalida o título no próprio filtro do DELETE (achado da
+        // verificação final 26/08/2026) — sem isto, uma renomeação entre o
+        // SELECT acima e este DELETE (ex.: o Daniel editando o título pela
+        // tela no mesmo instante) apagaria a tarefa mesmo já não batendo
+        // mais com o confirm_title checado alguns instantes atrás.
         const { error, count } = await admin
           .from('personal_tasks')
           .delete({ count: 'exact' })
           .eq('id', id)
-          .eq('user_id', ownerUserId);
+          .eq('user_id', ownerUserId)
+          .eq('title', task.title);
         if (error) throw error;
-        if (!count) return json({ error: 'Tarefa não encontrada.' }, 404);
+        if (!count) return json({ error: 'A tarefa mudou (título diferente) desde a confirmação — confirme de novo.' }, 409);
         return json({ success: true });
       }
 
