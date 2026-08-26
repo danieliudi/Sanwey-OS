@@ -31,6 +31,17 @@ export const STATUS_COLUMNS = [
   { id: "feito",     name: "Arquivar",  color: "#64748B", terminal: true },
 ];
 
+// "Essa tarefa está concluída?" — único lugar que responde essa pergunta.
+// Achado 26/08/2026: antes desta função, ~7 arquivos checavam
+// `status === "feito"` direto, ignorando "concluido" (que o comentário
+// acima já documentava como "onde a tarefa de fato termina") — uma tarefa
+// em Concluído aparecia como pendente na Lista/Agenda, ainda disparava
+// lembrete de prazo e não gerava a próxima ocorrência de recorrência.
+export const TERMINAL_TASK_STATUSES = STATUS_COLUMNS.filter(c => c.terminal).map(c => c.id);
+export function isTaskDone(status) {
+  return TERMINAL_TASK_STATUSES.includes(status);
+}
+
 export const PERSONAL_TASK_PRIORITIES = [
   { id: "baixa", label: "Baixa", color: "#16A34A" },
   { id: "media", label: "Média", color: "#D97706" },

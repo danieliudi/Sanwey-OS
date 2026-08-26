@@ -3,6 +3,7 @@ import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
 import { NOTIFICATION_TYPE_TO_PREF } from "../constants/user-settings";
 import { getLeadOwnerIds } from "../utils/pipeline-metrics";
+import { isTaskDone } from "../constants/personal-tasks";
 
 const MAX_NOTIFICATIONS = 50;
 
@@ -136,7 +137,7 @@ export function useNotifications({ currentUser, leads = [], personalTasks = [], 
     if (!isTypeEnabled(notificationPrefs, "task_due")) return;
     const today = new Date().toDateString();
     for (const task of personalTasks) {
-      if (task.status === "feito" || !task.dueDate) continue;
+      if (isTaskDone(task.status) || !task.dueDate) continue;
       if (new Date(task.dueDate).toDateString() !== today) continue;
       const key = `task_due-${task.id}-${today}`;
       if (seenTaskIds.current.has(key)) continue;

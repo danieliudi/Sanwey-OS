@@ -54,9 +54,14 @@ que ela já usa pra "frente" com ClickUp/Trello).
 
 ### POST `?action=create`
 
-Body: `{ "title": "...", "description"?: "...", "due_date"?: "YYYY-MM-DD", "tag"?: "Resibag" }`
+Body: `{ "title": "...", "description"?, "due_date"?: "YYYY-MM-DD", "due_time"?: "HH:MM", "priority"?: "baixa"|"media"|"alta", "recurrence"?: "none"|"daily"|"weekly"|"monthly"|"custom", "recurrence_config"?: {...}, "related_lead_id"?: "...", "note"?: "...", "tag"?: "Resibag" }`
 
-`title` obrigatório. `tag`, se vier, vira o único item de `tags`.
+`title` obrigatório, todo o resto é opcional. `tag`, se vier, vira o único
+item de `tags`. `note`, se vier, vira a 1ª entrada do log de notas (mesmo
+formato de `?action=note` abaixo). `recurrence_config` segue o shape que o
+`RecurrencePicker` da tela já usa (ex.: `{ "intervalDays": 3 }` pra
+`recurrence: "custom"`, `{ "daysOfWeek": [1,3,5] }` pra `"weekly"`,
+`{ "dayOfMonth": 10 }` pra `"monthly"`).
 
 ```json
 { "success": true, "data": { "id": "...", "status": "a_fazer", ... } }
@@ -64,23 +69,88 @@ Body: `{ "title": "...", "description"?: "...", "due_date"?: "YYYY-MM-DD", "tag"
 
 ### PATCH `?action=update`
 
-Body: `{ "id": "...", "status"?: "a_fazer"|"fazendo"|"concluido", "title"?, "description"?, "due_date"? }`
+Body: `{ "id": "...", "status"?: "a_fazer"|"fazendo"|"concluido", "title"?, "description"?, "due_date"?, "due_time"?, "priority"?, "recurrence"?, "recurrence_config"?, "related_lead_id"? }`
 
 Usado principalmente pra concluir (`status: "concluido"` — nunca `"feito"`,
 que é a etapa de Arquivar, não de Conclusão). Seta `completed_at`
-automaticamente quando o status vira terminal.
+automaticamente quando o status vira terminal, e preserva o valor já
+existente se a tarefa já estava terminal antes (ex.: movida de
+`"concluido"` pra `"feito"` depois — arquivar não reinicia o carimbo de
+conclusão). Se duas chamadas de update mudarem status quase ao mesmo tempo,
+uma pode responder `409` — tenta de novo.
 
 ```json
 { "success": true, "data": { "id": "...", "status": "concluido", "completed_at": "...", ... } }
+```
+
+### DELETE `?action=delete&id=...&confirm_title=...`
+
+Exclusão definitiva — mesma ação do botão de lixeira que a tela já tem
+(que exige um 2º clique de confirmação). Não existe "lixeira"/status de
+cancelado: a tarefa some. `confirm_title` é **obrigatório** e precisa bater
+com o título atual da tarefa (sem diferenciar maiúscula/espaço nas
+pontas) — existe pra evitar que um pedido em linguagem natural mal
+interpretado apague algo sem querer; se não bater, devolve `409` com o
+título real, pra confirmar com o usuário antes de tentar de novo.
+
+```json
+{ "success": true }
+```
+
+### POST `?action=note`
+
+Body: `{ "id": "...", "note": "..." }`
+
+Sempre **soma** ao log de notas existente (nunca substitui o array) — a
+secretária não precisa saber o conteúdo atual de `notes` pra chamar isto.
+Mesmo formato que a tela já grava (`NotesTab`): `{ id, body, createdAt }`.
+
+```json
+{ "success": true, "data": { "id": "...", "notes": [ { "id": "...", "body": "...", "createdAt": "..." } ], ... } }
+```
+
+### POST `?action=attachment_upload`
+
+Body: `{ "task_id": "...", "file_name": "orcamento.pdf", "mime_type": "application/pdf", "base64": "..." }`
+
+Sobe pro mesmo bucket privado que a tela usa (`personal-task-attachments`,
+10MB). `mime_type` é obrigatório e precisa ser um destes (mesma allow-list
+do bucket): `application/pdf`, `application/msword`,
+`application/vnd.openxmlformats-officedocument.wordprocessingml.document`,
+`application/vnd.ms-excel`,
+`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`,
+`text/csv`, `text/plain`, `image/jpeg`, `image/png`, `image/gif`,
+`image/webp`. Path gerado no servidor (`${ownerUserId}/${task_id}/...`),
+não configurável pelo chamador.
+
+```json
+{ "success": true, "data": { "id": "...", "file_name": "orcamento.pdf", "file_size": 123456, "mime_type": "application/pdf", "created_at": "..." } }
+```
+
+### GET `?action=attachment_list&task_id=...`
+
+```json
+{ "data": [ { "id": "...", "file_name": "...", "file_size": 123456, "mime_type": "...", "created_at": "..." } ], "count": 1 }
+```
+
+### GET `?action=attachment_download&attachment_id=...`
+
+Devolve um link assinado de 5 minutos (bucket é privado, não tem URL
+pública fixa).
+
+```json
+{ "url": "https://...", "file_name": "orcamento.pdf", "expires_in": 300 }
 ```
 
 ## 4. Códigos de erro
 
 | Código | Motivo |
 |---|---|
-| 400 | Campo obrigatório ausente, ou ação sem nada pra atualizar |
+| 400 | Campo obrigatório ausente, ação sem nada pra atualizar, ou arquivo acima de 10MB |
 | 401 | Header `X-Personal-Tasks-Key` ausente ou errado |
+| 404 | Tarefa/anexo não encontrado (ou não é do dono) |
 | 405 | Método HTTP errado pra essa ação |
+| 409 | `action=note`/`action=update`: muita escrita concorrente na mesma tarefa (3 tentativas sem conseguir) — tenta de novo. `action=delete`: `confirm_title` não bate com o título atual |
 | 503 | Secrets da function não configurados |
 | 500 | Erro do Supabase/inesperado |
 
@@ -93,4 +163,6 @@ banco. Pra tarefas recorrentes, a recriação automática só acontece
 concluindo pela própria tela "Meu To-Do".
 
 ---
-*Gerado em: 17/08/2026 — companion do agent-gateway-api.md*
+*Gerado em: 17/08/2026 — companion do agent-gateway-api.md. Atualizado em
+26/08/2026: delete, note, anexos, e campos due_time/priority/recurrence/
+related_lead_id em create/update.*

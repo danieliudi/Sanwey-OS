@@ -21,7 +21,7 @@ import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { Badge } from "../ui/Badge";
 import { formatDateBR, daysSince } from "../../utils/date";
-import { STATUS_COLUMNS } from "../../constants/personal-tasks";
+import { STATUS_COLUMNS, isTaskDone } from "../../constants/personal-tasks";
 import { PersonalTaskCreateModal } from "../personal/PersonalTaskCreateModal";
 import { PersonalTaskDetailDrawer } from "../personal/PersonalTaskDetailDrawer";
 import { PersonalTaskAgendaView } from "../personal/PersonalTaskAgendaView";
@@ -75,7 +75,7 @@ function bucketFor(task) {
 }
 
 function isOverdueUndone(task) {
-  if (!task.dueDate || task.status === "feito") return false;
+  if (!task.dueDate || isTaskDone(task.status)) return false;
   return daysSince(task.dueDate) > 0;
 }
 
@@ -162,7 +162,7 @@ function BlockedBadge() {
 // Entregas (ChecklistsTab em DeliverableDetailDrawer.jsx): borda/fundo
 // var(--success) quando marcado, título com line-through.
 function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen, blocked }) {
-  const done = task.status === "feito";
+  const done = isTaskDone(task.status);
   return (
     <div
       onClick={() => onOpen(task)}
@@ -549,12 +549,14 @@ export function PersonalTasksView({ currentUser }) {
   // (use-personal-tasks.js), passando direto por cima da trava de
   // dependência (attemptMove). Uma tarefa bloqueada podia ser marcada como
   // feita com 1 clique no checkbox, ignorando o badge "Bloqueada" ao lado
-  // dela. Mesmo par a_fazer/feito que toggleDone usa, só que roteado pela
-  // trava.
+  // dela. Mesmo par a_fazer/concluido que toggleDone usa, só que roteado
+  // pela trava. Marcar sempre vai pra 'concluido' (a vitória real — ver
+  // STATUS_COLUMNS), nunca 'feito'/Arquivar direto; reabrir volta pra
+  // 'a_fazer' a partir de qualquer um dos dois terminais.
   const handleToggleDone = useCallback((id) => {
     const task = tasksById[id];
     if (!task) return;
-    attemptMove(id, task.status === "feito" ? "a_fazer" : "feito");
+    attemptMove(id, isTaskDone(task.status) ? "a_fazer" : "concluido");
   }, [tasksById, attemptMove]);
 
   const handleCreate = useCallback(async (data) => { await createTask(data); }, [createTask]);

@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.65.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Meu To-Do: mover uma tarefa para \"Concluído\" agora marca a data de conclusão e cria a próxima ocorrência na hora certa (recorrência); mover para \"Arquivar\" não zera mais essa data. O checkbox da Lista, o calendário e o lembrete de prazo também passam a reconhecer \"Concluído\" como tarefa terminada, não só \"Arquivar\".",
+      },
+    ],
+  },
+  {
     version: "4.65.0",
     items: [
       {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { isTaskDone } from "../constants/personal-tasks";
 
 const TABLE = "personal_task_automations";
 
@@ -143,7 +144,9 @@ export function usePersonalTaskAutomations(userId) {
       for (const action of actionsToRun) {
         if (!action?.type) continue;
         if (action.type === "move_stage" && action.targetStage && task.status !== action.targetStage) {
-          patches.push({ patch: { status: action.targetStage, completedAt: action.targetStage === "feito" ? new Date().toISOString() : null }, ruleName: rule.name });
+          const nowDone = isTaskDone(action.targetStage);
+          const keepExistingCompletedAt = nowDone && isTaskDone(task.status) && task.completedAt;
+          patches.push({ patch: { status: action.targetStage, completedAt: nowDone ? (keepExistingCompletedAt || new Date().toISOString()) : null }, ruleName: rule.name });
         }
         if (action.type === "set_field" && action.field === "priority" && action.fieldValue) {
           patches.push({ patch: { priority: action.fieldValue }, ruleName: rule.name });
