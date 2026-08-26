@@ -105,12 +105,17 @@ Mesmo formato que a tela já grava (`NotesTab`): `{ id, body, createdAt }`.
 
 ### POST `?action=attachment_upload`
 
-Body: `{ "task_id": "...", "file_name": "orcamento.pdf", "mime_type"?: "application/pdf", "base64": "..." }`
+Body: `{ "task_id": "...", "file_name": "orcamento.pdf", "mime_type": "application/pdf", "base64": "..." }`
 
 Sobe pro mesmo bucket privado que a tela usa (`personal-task-attachments`,
-10MB, mesmos tipos de arquivo aceitos pela migration de origem). Path
-gerado no servidor (`${ownerUserId}/${task_id}/...`), não configurável pelo
-chamador.
+10MB). `mime_type` é obrigatório e precisa ser um destes (mesma allow-list
+do bucket): `application/pdf`, `application/msword`,
+`application/vnd.openxmlformats-officedocument.wordprocessingml.document`,
+`application/vnd.ms-excel`,
+`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`,
+`text/csv`, `text/plain`, `image/jpeg`, `image/png`, `image/gif`,
+`image/webp`. Path gerado no servidor (`${ownerUserId}/${task_id}/...`),
+não configurável pelo chamador.
 
 ```json
 { "success": true, "data": { "id": "...", "file_name": "orcamento.pdf", "file_size": 123456, "mime_type": "application/pdf", "created_at": "..." } }

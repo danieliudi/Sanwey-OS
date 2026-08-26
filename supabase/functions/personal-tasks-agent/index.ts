@@ -87,6 +87,20 @@ const TASK_COLUMNS =
 
 const ATTACHMENTS_BUCKET = 'personal-task-attachments';
 const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024; // mesmo teto do bucket (ver migration)
+// Mesma allow-list do bucket (20260828_personal_tasks_level1_level2.sql) —
+// checado aqui ANTES do upload (achado da revisão de segurança 26/08/2026:
+// sem isto, um mime_type fora da lista — ou a ausência dele, que caía no
+// fallback 'application/octet-stream', que também NÃO está na allow-list —
+// só falhava dentro do storage.upload, subindo o erro cru do Storage em vez
+// de um 400 limpo).
+const ATTACHMENT_ALLOWED_MIME_TYPES = [
+  'application/pdf', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv', 'text/plain',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+];
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -296,6 +310,9 @@ Deno.serve(async (req: Request) => {
         if (!body.task_id) return json({ error: 'Campo obrigatório ausente: task_id' }, 400);
         if (!body.file_name) return json({ error: 'Campo obrigatório ausente: file_name' }, 400);
         if (!body.base64) return json({ error: 'Campo obrigatório ausente: base64' }, 400);
+        if (!body.mime_type || !ATTACHMENT_ALLOWED_MIME_TYPES.includes(body.mime_type)) {
+          return json({ error: `Campo mime_type ausente ou não permitido. Use um de: ${ATTACHMENT_ALLOWED_MIME_TYPES.join(', ')}` }, 400);
+        }
 
         const { data: task, error: taskErr } = await admin
           .from('personal_tasks')
@@ -327,7 +344,7 @@ Deno.serve(async (req: Request) => {
 
         const fileName = String(body.file_name);
         const ext = fileName.includes('.') ? fileName.split('.').pop() : 'bin';
-        const mimeType = typeof body.mime_type === 'string' ? body.mime_type : 'application/octet-stream';
+        const mimeType = body.mime_type;
         const path = `${ownerUserId}/${body.task_id}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
 
         const { error: upErr } = await admin.storage.from(ATTACHMENTS_BUCKET).upload(path, bytes, {
