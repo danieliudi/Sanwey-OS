@@ -99,7 +99,17 @@ export function SalesCaseVoicePanel({
   const aiConfig = currentUser?.aiConfig;
   const podeIA = isSupabaseConfigured;
 
-  const resolvedCompanyId = isClientMode ? (client?.companyIds?.[0] || companyId) : companyId;
+  // Cliente pode pertencer a mais de uma empresa (company_ids é array) —
+  // pegar sempre companyIds[0] sem checar quebraria em silêncio pro RLS
+  // (achado real da QA, 21/08/2026: um vendedor só de Resibag abrindo um
+  // cliente ["montemor","resibag"] teria o insert negado se "montemor"
+  // ficasse na frente). Prioriza a empresa que o próprio usuário atende;
+  // só cai pra companyIds[0] se não houver nenhuma em comum (não deveria
+  // acontecer, já que a RLS de clients já exige sobreposição pra ele
+  // enxergar o cliente).
+  const resolvedCompanyId = isClientMode
+    ? (client?.companyIds?.find(c => currentUser?.companies?.includes(c)) || client?.companyIds?.[0] || companyId)
+    : companyId;
 
   const chamarIA = async (payload) => {
     const { data, error: err } = await supabase.functions.invoke("caso-prospeccao-voz", {

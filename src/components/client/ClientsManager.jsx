@@ -610,6 +610,7 @@ function ClientDetailModal({
       headerExtra={editing && (
         <button
           onClick={() => setCasoModalOpen(true)}
+          data-tour="registrar-caso-cliente"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer shrink-0"
           style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none" }}
         >

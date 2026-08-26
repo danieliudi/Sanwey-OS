@@ -769,6 +769,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 fontSize: 13,
                 cursor: "pointer",
               }}
+              data-tour="registrar-caso-header"
               aria-label="Registrar aprendizado de venda"
               title="Registrar caso de prospecção ainda sem cadastro formal"
             >

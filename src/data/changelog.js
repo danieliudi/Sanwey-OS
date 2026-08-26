@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.62.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Nova forma de registrar um caso de prospecção (ganhamos/perdemos/andamento): botão \"Registrar aprendizado\" na página do cliente e no Funil de Vendas — fale o que aconteceu, confira o resumo que a IA organizou e salve. Vira base pro playbook de vendas do time.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
     version: "4.61.0",
     items: [
       {
