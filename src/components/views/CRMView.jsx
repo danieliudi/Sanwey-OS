@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Upload, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star, AlertCircle } from "lucide-react";
+import { Plus, X, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Upload, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star, AlertCircle, Mic } from "lucide-react";
+import { Modal } from "../ui/Modal";
+import { SalesCaseVoicePanel } from "../shared/SalesCaseVoicePanel";
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { exportLeadsToCSV } from "../../utils/export-csv";
@@ -373,6 +375,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const { formConfig, updateFormConfig } = useLeadFormConfig();
   const stageFields = useStageFields();
   const [createModalStage, setCreateModalStage] = useState(null); // { stageId, stage, companyId }
+  // Aprendizado de venda (mockup "Registrar um Caso", aprovado 21/08/2026) —
+  // pra prospect que ainda não é cliente formal, só digita/fala o nome.
+  const [casoModalOpen, setCasoModalOpen] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [editingStage, setEditingStage] = useState(null); // { stage, companyId }
@@ -751,6 +756,26 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               )}
             </div>
           )}
+          {!isGroupView && (
+            <button
+              onClick={() => setCasoModalOpen(true)}
+              className="flex items-center gap-1.5 font-semibold"
+              style={{
+                background: "var(--surface)",
+                color: "var(--text-dim)",
+                border: "1px solid var(--border-strong)",
+                borderRadius: 10,
+                padding: "6px 14px",
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+              aria-label="Registrar aprendizado de venda"
+              title="Registrar caso de prospecção ainda sem cadastro formal"
+            >
+              <Mic size={13} />
+              Registrar aprendizado
+            </button>
+          )}
           {onAddLead && stages.filter(s => !s.terminal).length > 0 && (
             <button
               onClick={() => {
@@ -777,6 +802,17 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           )}
         </div>
         </div>
+
+        <Modal open={casoModalOpen} onClose={() => setCasoModalOpen(false)} title="Registrar aprendizado de venda" width={640}>
+          <div className="p-4">
+            <SalesCaseVoicePanel
+              mode="prospect"
+              companyId={isGroupView ? firstValidCompany : activeCompany}
+              currentUser={user}
+              onSaved={() => setCasoModalOpen(false)}
+            />
+          </div>
+        </Modal>
       </KanbanBoardHeader>
 
       {onAddLead && stages.filter(s => !s.terminal).length > 0 && (

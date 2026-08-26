@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt, Loader2, AlertTriangle, CheckCircle2, Mic } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
+import { SalesCaseVoicePanel } from "../shared/SalesCaseVoicePanel";
 import { ClientProductsTab } from "./ClientProductsTab";
 import { ClientContactsTab } from "./ClientContactsTab";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
@@ -550,6 +551,11 @@ function ClientDetailModal({
   const { loading: cnpjLoading, error: cnpjError, lookup: cnpjLookupFn, reset: cnpjReset } = useCnpjLookup();
   const [cnpjFilled, setCnpjFilled] = useState(false);
 
+  // Aprendizado de venda (mockup "Registrar um Caso", aprovado 21/08/2026) —
+  // mesmo padrão do botão "Gravar ata" no header do LeadDetailDrawer: abre
+  // por cima de qualquer aba, client_id preenchido sozinho.
+  const [casoModalOpen, setCasoModalOpen] = useState(false);
+
   // ClientDetailModal nunca desmonta entre um cliente e outro (ClientsManager
   // sempre o renderiza, só o Modal interno decide mostrar/esconder) — sem
   // isso, o resultado/erro da busca de CNPJ de um cliente "vazava" visualmente
@@ -601,11 +607,32 @@ function ClientDetailModal({
       title={form.name || (editing ? editing.name : "Novo cliente")}
       subtitle={[form.city, form.state].filter(Boolean).join(" / ") || (editing ? undefined : "Preencha os dados abaixo")}
       statusBadge={form.category ? <CategoryTag value={form.category} /> : undefined}
+      headerExtra={editing && (
+        <button
+          onClick={() => setCasoModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer shrink-0"
+          style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none" }}
+        >
+          <Mic size={13} /> Registrar aprendizado
+        </button>
+      )}
       tabs={tabs}
       activeTab={tab}
       onTabChange={onTabChange}
       width={560}
     >
+      {editing && (
+        <Modal open={casoModalOpen} onClose={() => setCasoModalOpen(false)} title="Registrar aprendizado de venda" width={640}>
+          <div className="p-4">
+            <SalesCaseVoicePanel
+              mode="client"
+              client={editing}
+              currentUser={currentUser}
+              onSaved={() => setCasoModalOpen(false)}
+            />
+          </div>
+        </Modal>
+      )}
       {tab === "dados" && (
         <div className="space-y-3.5">
           <div>
