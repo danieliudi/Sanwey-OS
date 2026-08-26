@@ -241,33 +241,48 @@ Deno.serve(async (req: Request) => {
       // de propósito: a secretária nunca tem o array completo e atual em
       // mãos, então um "replace" via update arriscaria apagar nota
       // registrada direto na tela entre uma chamada e outra.
+      //
+      // Read-modify-write com trava otimista (achado da revisão de QA
+      // funcional 26/08/2026): o `.eq('notes', snapshot)` no update só
+      // aplica se ninguém escreveu `notes` entre o select e o update desta
+      // chamada — se aplicar 0 linhas, outra escrita venceu a corrida
+      // (outra chamada de `note`, ou a própria tela) e tenta de novo lendo
+      // o estado mais recente, até 3 tentativas.
       case 'note': {
         if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
         const body = await req.json();
         if (!body.id) return json({ error: 'Campo obrigatório ausente: id' }, 400);
         if (!body.note || !String(body.note).trim()) return json({ error: 'Campo obrigatório ausente: note' }, 400);
 
-        const { data: task, error: findErr } = await admin
-          .from('personal_tasks')
-          .select('notes')
-          .eq('id', body.id)
-          .eq('user_id', ownerUserId)
-          .maybeSingle();
-        if (findErr) throw findErr;
-        if (!task) return json({ error: 'Tarefa não encontrada.' }, 404);
-
         const entry = { id: crypto.randomUUID(), body: String(body.note).trim(), createdAt: new Date().toISOString() };
-        const notes = [...(task.notes || []), entry];
 
-        const { data, error } = await admin
-          .from('personal_tasks')
-          .update({ notes })
-          .eq('id', body.id)
-          .eq('user_id', ownerUserId)
-          .select(TASK_COLUMNS)
-          .single();
-        if (error) throw error;
-        return json({ success: true, data });
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data: task, error: findErr } = await admin
+            .from('personal_tasks')
+            .select('notes')
+            .eq('id', body.id)
+            .eq('user_id', ownerUserId)
+            .maybeSingle();
+          if (findErr) throw findErr;
+          if (!task) return json({ error: 'Tarefa não encontrada.' }, 404);
+
+          const currentNotes = task.notes || [];
+          const notes = [...currentNotes, entry];
+
+          const { data, error } = await admin
+            .from('personal_tasks')
+            .update({ notes })
+            .eq('id', body.id)
+            .eq('user_id', ownerUserId)
+            .eq('notes', JSON.stringify(currentNotes))
+            .select(TASK_COLUMNS)
+            .maybeSingle();
+          if (error) throw error;
+          if (data) return json({ success: true, data });
+          // 0 linhas atualizadas: `notes` mudou entre o select e o update
+          // desta tentativa — tenta de novo lendo o estado mais recente.
+        }
+        return json({ error: 'Não deu pra registrar a nota — muita escrita concorrente na mesma tarefa. Tenta de novo.' }, 409);
       }
 
       // ── ATTACHMENT UPLOAD ─────────────────────────────────
@@ -291,9 +306,18 @@ Deno.serve(async (req: Request) => {
         if (taskErr) throw taskErr;
         if (!task) return json({ error: 'Tarefa não encontrada.' }, 404);
 
+        const base64Str = String(body.base64);
+        // Checagem estimada (achado da revisão de QA funcional 26/08/2026)
+        // ANTES de decodificar — rejeita cedo um payload grosseiramente
+        // acima do limite sem gastar CPU/memória com atob()/Uint8Array;
+        // o teto exato continua checado no length real depois de decodificar.
+        if (Math.floor((base64Str.length * 3) / 4) > ATTACHMENT_MAX_BYTES * 1.05) {
+          return json({ error: 'Arquivo maior que o limite de 10MB.' }, 400);
+        }
+
         let bytes: Uint8Array;
         try {
-          bytes = base64ToBytes(String(body.base64));
+          bytes = base64ToBytes(base64Str);
         } catch {
           return json({ error: 'base64 inválido.' }, 400);
         }

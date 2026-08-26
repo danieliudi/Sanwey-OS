@@ -139,6 +139,7 @@ pública fixa).
 | 401 | Header `X-Personal-Tasks-Key` ausente ou errado |
 | 404 | Tarefa/anexo não encontrado (ou não é do dono) |
 | 405 | Método HTTP errado pra essa ação |
+| 409 | `action=note`: muita escrita concorrente na mesma tarefa (3 tentativas sem conseguir) — tenta de novo |
 | 503 | Secrets da function não configurados |
 | 500 | Erro do Supabase/inesperado |
 
