@@ -109,17 +109,22 @@ create policy sales_cases_insert on public.sales_cases
     or (created_by = auth.uid() and company_id = any (current_user_companies()))
   );
 
+-- Ramo do criador exige company_id no escopo dele nos dois lados (USING =
+-- linha atual, WITH CHECK = linha resultante) — sem isso, o próprio criador
+-- conseguia "mover" o caso pra company_id de outra empresa livremente
+-- (achado real da revisão adversarial, 21/08/2026), diferente do INSERT,
+-- que já exigia isso desde o início.
 create policy sales_cases_update on public.sales_cases
   for update
   using (
     current_user_is_admin()
     or (current_user_has_role('gerente') and company_id = any (current_user_companies()))
-    or created_by = auth.uid()
+    or (created_by = auth.uid() and company_id = any (current_user_companies()))
   )
   with check (
     current_user_is_admin()
     or (current_user_has_role('gerente') and company_id = any (current_user_companies()))
-    or created_by = auth.uid()
+    or (created_by = auth.uid() and company_id = any (current_user_companies()))
   );
 
 create policy sales_cases_delete on public.sales_cases
