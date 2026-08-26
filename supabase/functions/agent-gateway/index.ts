@@ -169,6 +169,30 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
     return;
   }
 
+  // Conteúdo de mercado (aba Mercado do hub de Inteligência, 19-20/08/2026)
+  // — mesmo padrão rascunho→aprovação→publicação dos dois acima. O workflow
+  // n8n "Scout de Mercado" (Perplexity) grava aqui via action=create; só ao
+  // aprovar em Agentes é que a linha nasce em market_intelligence_items.
+  if (action.action_type === 'sugestao_conteudo_mercado') {
+    const payload2 = action.payload || {};
+    if (!action.title || !action.summary) return;
+    const validCategories = ['visao_geral', 'concorrencia', 'regulatorio', 'sustentabilidade', 'regional', 'preco_insumo'];
+    const category = validCategories.includes(payload2.category) ? payload2.category : 'visao_geral';
+    try {
+      await admin.from('market_intelligence_items').insert({
+        category,
+        title: action.title,
+        summary: action.summary,
+        source_url: payload2.source_url || null,
+        source_name: payload2.source_name || 'Perplexity',
+        sector: payload2.sector || null,
+        relevant_for: action.company_id ? [action.company_id] : null,
+        created_by: 'agente_pesquisa_mercado',
+      });
+    } catch (_e) { /* ignorado de propósito */ }
+    return;
+  }
+
   if (action.action_type === 'sugestao_prospect') {
     if (!payload.company || !payload.sector || !payload.state) return;
     const relevantFor = Array.isArray(payload.relevant_for) && payload.relevant_for.length
@@ -422,17 +446,24 @@ Deno.serve(async (req: Request) => {
         if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
         if (!isAgentKey) return json({ error: 'Somente agentes podem usar esta rota' }, 403);
 
+        // MD-05 da auditoria de segurança (19/08/2026): sem company_id, esta
+        // rota devolvia o pipeline do Grupo inteiro (CNPJ, valor do negócio,
+        // decisor, notas) pra qualquer uma das 5 chaves de agente. Nenhum
+        // agente hoje precisa legitimamente ler mais de uma empresa por
+        // chamada — fail-closed em vez de defaultar pra "todas".
+        const companyId = url.searchParams.get('company_id');
+        if (!companyId) return json({ error: 'company_id é obrigatório' }, 400);
+
         let q = adminClient
           .from('leads')
           .select('id, company_id, company, stage, owner, urgency, fit_score, value, last_activity, stage_changed_at, next_follow_up, cnpj, sector, decision_maker, notes')
+          .eq('company_id', companyId)
           .order('last_activity', { ascending: true });
 
-        const companyId = url.searchParams.get('company_id');
         const stage     = url.searchParams.get('stage');
         const ownerId   = url.searchParams.get('owner');
         const limit     = parseInt(url.searchParams.get('limit') ?? '100');
 
-        if (companyId) q = q.eq('company_id', companyId);
         if (stage)     q = q.eq('stage', stage);
         if (ownerId)   q = q.eq('owner', ownerId);
         q = q.limit(Math.min(limit, 500));

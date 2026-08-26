@@ -3,7 +3,7 @@ import {
   UserPlus, User, Mail, Check, Save, Edit3, Trash2, Info, Loader2, Send, X,
   Search, Users, Building2, MoreVertical, RotateCcw, MessageCircle, MessageCircleOff,
 } from "lucide-react";
-import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS, MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS, NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
 import { useModuleOverrides } from "../../hooks/use-module-overrides";
@@ -53,6 +53,19 @@ const ROLE_OPTIONS_ADMIN = [
   { value: "comex", label: "Comex" },
   { value: "admin", label: "Admin" },
 ];
+
+// Achado F-01 da auditoria funcional (19/08/2026, decisão do Daniel
+// 20/08/2026): Monte Mor gera solicitação real pro Marketing atender
+// (MARKETING_UNIT_IDS já previa isso), mas não existia NENHUM jeito de dar
+// a unidade a um usuário aqui — o seletor só iterava COMPANY_IDS. "montemor"
+// não tem entrada em COMPANIES (não é empresa vendedora, ver comentário em
+// constants/companies.js), só em MARKETING_UNIT_LABELS/_COLORS — por isso
+// esta função resolve os dois casos em vez de assumir COMPANIES[id] sempre.
+function unitDisplay(id) {
+  if (COMPANIES[id]) return COMPANIES[id];
+  const primary = MARKETING_UNIT_COLORS[id] || NEUTRAL.slate;
+  return { name: MARKETING_UNIT_LABELS[id] || id, primary, dark: primary, light: `${primary}1F` };
+}
 
 function roleLabel(role) {
   if (role === "admin")             return "Admin";
@@ -653,8 +666,8 @@ export function UserManagementView({
           <div>
             <FieldLabel>Empresas com acesso {formCompanyRequired && "*"}</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
-              {COMPANY_IDS.map(id => {
-                const c = COMPANIES[id];
+              {MARKETING_UNIT_IDS.map(id => {
+                const c = unitDisplay(id);
                 const selected = form.companies.includes(id);
                 return (
                   <button key={id} type="button" onClick={() => toggleCompany(id)}
@@ -836,8 +849,8 @@ export function UserManagementView({
           <div>
             <FieldLabel>Empresas com acesso {inviteForm.role === "vendedor" && "*"}</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
-              {COMPANY_IDS.map(id => {
-                const c = COMPANIES[id];
+              {MARKETING_UNIT_IDS.map(id => {
+                const c = unitDisplay(id);
                 const selected = inviteForm.companies.includes(id);
                 return (
                   <button key={id} type="button" onClick={() => toggleInviteCompany(id)}

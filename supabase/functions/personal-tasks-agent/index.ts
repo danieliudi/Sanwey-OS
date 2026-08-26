@@ -1,5 +1,17 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
+// MD-05 da auditoria de segurança (19/08/2026): comparação em tempo
+// constante — mesmo padrão de sanwey-crm-mcp/index.ts, evita vazar, por
+// diferença de tempo de resposta, quantos caracteres do token estão certos.
+function timingSafeEqual(a: string, b: string): boolean {
+  const ab = new TextEncoder().encode(a);
+  const bb = new TextEncoder().encode(b);
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
 // ============================================================
 // personal-tasks-agent — Edge Function
 //
@@ -67,7 +79,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const providedKey = req.headers.get('x-personal-tasks-key');
-  if (!providedKey || providedKey !== expectedKey) {
+  if (!providedKey || !timingSafeEqual(providedKey, expectedKey)) {
     return json({ error: 'Unauthorized' }, 401);
   }
 

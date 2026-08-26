@@ -45,12 +45,18 @@ serve(async (req) => {
       );
     }
 
-    const { provider, model, apiKey, messages, maxTokens = 1200 } = body;
+    const { provider, model, apiKey, messages } = body;
+    // MD-06 da auditoria de segurança (19/08/2026): maxTokens vinha 100% do
+    // body, sem teto — um chamador podia pedir uma resposta arbitrariamente
+    // grande e inflar o custo por chamada. Teto de 2000 no servidor, acima
+    // do default de 1200 (não aperta uso normal, só corta abuso).
+    const maxTokens = Math.min(Number(body.maxTokens) || 1200, 2000);
 
     // resolveProviderConfig aplica o mesmo fallback pra chave da empresa
     // (org-wide, secret AI_ORG_*) quando o usuário não tem chave pessoal —
     // chave pessoal (vinda do body) sempre tem prioridade quando presente.
-    const resolved = (apiKey && provider && model)
+    const usingPersonalKey = Boolean(apiKey && provider && model);
+    const resolved = usingPersonalKey
       ? { provider, model, apiKey }
       : resolveProviderConfig(null);
     if (!resolved) {
@@ -58,6 +64,24 @@ serve(async (req) => {
         JSON.stringify({ error: "IA não configurada. Configure sua chave pessoal em Configurações → Integrações de IA, ou peça a um admin pra configurar a chave da empresa." }),
         { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
+    }
+
+    // MD-06: cota diária só se aplica ao fallback da chave da EMPRESA — a
+    // chave pessoal do usuário não é limitada aqui, o custo é dele. 50
+    // chamadas/dia (decidido com o Daniel 20/08/2026) — generoso pro uso
+    // real, corta claramente um script/loop abusando da conta paga.
+    const AI_ORG_DAILY_LIMIT = 50;
+    if (!usingPersonalKey) {
+      const { data: quotaCount, error: quotaErr } = await supabaseAuth.rpc("ai_org_quota_increment", {
+        p_user_id: userData.user.id,
+        p_daily_limit: AI_ORG_DAILY_LIMIT,
+      });
+      if (!quotaErr && typeof quotaCount === "number" && quotaCount > AI_ORG_DAILY_LIMIT) {
+        return new Response(
+          JSON.stringify({ error: `Limite diário de uso da IA da empresa atingido (${AI_ORG_DAILY_LIMIT} chamadas/dia). Configure sua própria chave em Configurações → Integrações de IA pra continuar sem limite.` }),
+          { status: 429, headers: { ...cors, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const t0 = Date.now();

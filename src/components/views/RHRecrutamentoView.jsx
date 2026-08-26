@@ -196,7 +196,7 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
     if (resumeUrls[key]) { window.open(resumeUrls[key], "_blank", "noreferrer"); return; }
     const { data, error: err } = await supabase.storage
       .from("rh-curriculos")
-      .createSignedUrl(`${cand.id}/curriculo.${cand.resume_ext}`, 3600);
+      .createSignedUrl(cand.resume_object_path, 3600);
     if (err || !data?.signedUrl) { setErrorMsg("Não foi possível abrir o currículo."); return; }
     setResumeUrls(prev => ({ ...prev, [key]: data.signedUrl }));
     window.open(data.signedUrl, "_blank", "noreferrer");
@@ -213,7 +213,7 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
       try {
         const { data: blob, error: dlErr } = await supabase.storage
           .from("rh-curriculos")
-          .download(`${cand.id}/curriculo.${cand.resume_ext}`);
+          .download(cand.resume_object_path);
         if (dlErr || !blob) throw new Error("Currículo indisponível");
         const userContent = cand.resume_ext === "pdf"
           ? [
@@ -2071,7 +2071,7 @@ function CandidatoDrawer({
           onClick={async () => {
             const { data, error: err } = await supabase.storage
               .from("rh-curriculos")
-              .createSignedUrl(`${candidato.candidateId}/curriculo.${candidato.resume_ext}`, 3600);
+              .createSignedUrl(candidato.resume_object_path, 3600);
             if (!err && data?.signedUrl) window.open(data.signedUrl, "_blank", "noreferrer");
           }}
           style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}

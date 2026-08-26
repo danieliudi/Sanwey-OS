@@ -29,13 +29,20 @@ export const FEATURE_SPOTLIGHTS = [
     route: "crm",
     target: '[data-tour="registrar-caso-header"]',
     text: "Novo: registre um caso de prospecção (ganhamos/perdemos/andamento) falando o que aconteceu — vira base pro playbook de vendas.",
-    version: "4.62.0",
+    version: "4.65.0",
   },
   {
     id: "registrar-caso-cliente",
     route: "clients",
     target: '[data-tour="registrar-caso-cliente"]',
     text: "Novo: registre um caso de prospecção sobre este cliente — fale o que aconteceu, a IA organiza e você confere antes de salvar.",
+    version: "4.65.0",
+  },
+  {
+    id: "inteligencia-mercado-hub",
+    route: "market-intel",
+    target: '[data-tour="inteligencia-mercado-hub"]',
+    text: "Novo: dados do setor atualizados automaticamente, o antigo painel de Insights (agora numa aba própria) e um cruzamento dos dois num lugar só.",
     version: "4.62.0",
   },
   {

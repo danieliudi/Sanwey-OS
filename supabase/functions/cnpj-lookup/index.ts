@@ -185,8 +185,14 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Rate limit atingido na BrasilAPI. Tente novamente em instantes." }, 429);
   }
   if (!upstream.ok) {
+    // BX-07 da auditoria de segurança (19/08/2026): repassar o corpo cru do
+    // upstream ao cliente fugia do padrão adotado em distance-matrix/
+    // reverse-geocode/places-autocomplete — mensagem genérica ao cliente,
+    // detalhe só no log do servidor (BrasilAPI é pública/sem chave, então o
+    // risco real era baixo, mas mantém o padrão consistente).
     const text = await upstream.text();
-    return jsonResponse({ error: "Upstream error", status: upstream.status, detail: text.slice(0, 300) }, 502);
+    console.error(`[cnpj-lookup] BrasilAPI HTTP ${upstream.status}: ${text.slice(0, 300)}`);
+    return jsonResponse({ error: "Não foi possível consultar o CNPJ na Receita Federal no momento." }, 502);
   }
 
   const raw = await upstream.json() as Record<string, unknown>;

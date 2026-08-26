@@ -131,7 +131,9 @@ export function AvatarCropModal({ imageSrc, onSave, onCancel }) {
     const centerX = OUTPUT_SIZE / 2 + offset.x * k;
     const centerY = OUTPUT_SIZE / 2 + offset.y * k;
     ctx.drawImage(imgRef.current, centerX - drawW / 2, centerY - drawH / 2, drawW, drawH);
-    onSave(canvas.toDataURL("image/jpeg", 0.92));
+    // Blob (não dataURL) — quem chama sobe pro Storage em vez de guardar
+    // base64 inline (ver 20261020_avatars_storage_bucket.sql, achado F-05).
+    canvas.toBlob(blob => onSave(blob), "image/jpeg", 0.92);
   };
 
   return (

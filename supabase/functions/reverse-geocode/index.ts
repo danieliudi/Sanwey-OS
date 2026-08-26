@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Proxy pro Google Geocoding API (reverse geocode) — mesma chave
 // GOOGLE_PLACES_API_KEY já usada por places-autocomplete/distance-matrix,
@@ -22,6 +23,12 @@ const corsHeaders = {
 };
 
 const GENERIC_ERROR = "Falha ao consultar o endereço.";
+
+// MD-07 da auditoria de segurança (19/08/2026): verify_jwt=true garante
+// sessão válida, mas nada limitava o número de CHAMADAS por usuário contra
+// uma API cobrada por requisição. 150/dia (decidido com o Daniel
+// 20/08/2026) — cobre vários check-ins de visita no dia, corta script/loop.
+const DAILY_LIMIT = 150;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -47,6 +54,29 @@ Deno.serve(async (req) => {
   let apiKey: string | undefined;
 
   try {
+    // Respostas de auth/cota seguem a mesma convenção "falha limpa" das
+    // demais respostas desta function (200 + error no corpo) — o gateway
+    // (verify_jwt=true) já barra requisição sem JWT válido antes de chegar
+    // aqui; isto é defesa em profundidade + extrai o user_id pra cota.
+    const authHeader = req.headers.get("Authorization") || "";
+    const jwt = authHeader.replace(/^Bearer\s+/i, "");
+    if (!jwt) {
+      return jsonResponse({ address: null, error: "Autenticação necessária" }, 200);
+    }
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+    if (userErr || !userData?.user) {
+      return jsonResponse({ address: null, error: "Sessão inválida" }, 200);
+    }
+
+    const { data: count, error: quotaErr } = await admin.rpc("external_api_daily_increment", {
+      p_bucket: "reverse_geocode",
+      p_user_id: userData.user.id,
+    });
+    if (!quotaErr && typeof count === "number" && count > DAILY_LIMIT) {
+      return jsonResponse({ address: null, error: `Limite diário de consulta de endereço atingido (${DAILY_LIMIT}/dia).` }, 200);
+    }
+
     const { lat, lng } = await req.json();
     const latNum = Number(lat);
     const lngNum = Number(lng);

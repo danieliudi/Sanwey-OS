@@ -58,11 +58,14 @@ export const MODULE_GROUPS = [
   {
     label: "Inteligência",
     modules: [
-      { id: "executive",   label: "Executivo" },
-      { id: "insights",    label: "Insights" },
-      { id: "agents",      label: "Agentes" },
-      { id: "esg-carbono", label: "ESG & Carbono" },
-      { id: "automations", label: "Automações" },
+      { id: "executive",    label: "Executivo" },
+      // "Insights" virou uma aba dentro do hub "Mercado" (19-20/08/2026) —
+      // id trocou de "insights" pra "market-intel" porque agora cobre as 3
+      // abas (Mercado/Insights/Cruzamento), não só a antiga InsightsView.
+      { id: "market-intel", label: "Mercado" },
+      { id: "agents",       label: "Agentes" },
+      { id: "esg-carbono",  label: "ESG & Carbono" },
+      { id: "automations",  label: "Automações" },
     ],
   },
   // Páginas que existem no menu de todo mundo. Entraram no registro em
@@ -105,6 +108,9 @@ export function computeRoleFlags(roles) {
     isPureComex:         rolesSubsetOf(list, ["comex"]),
     isAdmin:             hasAnyRole(list, ["admin"]),
     isInsights:          hasAnyRole(list, ["admin", "rh", "gerente_rh", "marketing", "gerente_marketing"]),
+    // Vendedor puro: usado só pelo gate do hub "Mercado" abaixo (aba Mercado
+    // é o único módulo desta lista visível pra esse papel sozinho).
+    isVendedor:          hasAnyRole(list, ["vendedor"]),
     // Diretoria (reunião com o RH, 20/07): enxerga tudo da plataforma em modo
     // leitura — nenhuma escrita em lugar nenhum (garantido via RLS, ver
     // migration 20260756_papel_diretoria.sql). Não é sinônimo de admin: não
@@ -161,7 +167,10 @@ export function defaultModulesForRoles(roles) {
   if (f.isComex) set.add("comex");
 
   if (f.isManager || f.isMarketingManager || f.isRHManager) set.add("executive");
-  if (f.isInsights) set.add("insights");
+  // Hub "Inteligência de Mercado" (19-20/08/2026) — substitui "insights":
+  // aba Mercado é vendedor+gerência/marketing/admin (superset do antigo
+  // f.isInsights, que não incluía vendedor nem gerente Comercial puro).
+  if (f.isInsights || f.isManager || f.isVendedor) set.add("market-intel");
   // Agent Builder (PRD docs/prd-agent-builder.md): gerente_rh também cria e
   // aprova agentes de IA de RH, não só o gerente Comercial — espelha
   // current_user_has_module('agents') no banco (migration

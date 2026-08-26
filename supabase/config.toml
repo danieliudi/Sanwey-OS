@@ -1,0 +1,38 @@
+project_id = "adizvduyfzfftyswkijj"
+
+# `verify_jwt` versionado aqui, e não só no dashboard: o gateway da Supabase
+# valida o JWT ANTES de qualquer linha do nosso código, então uma function que
+# faz a própria autenticação precisa desligar essa checagem — senão ela devolve
+# 401 sem nunca executar (foi o que aconteceu com a personal-tasks-agent,
+# deployada sem este arquivo e por isso com o padrão `true`).
+#
+# ATENÇÃO: este arquivo precisa listar TODA function que hoje roda com
+# verify_jwt = false. Um `supabase functions deploy` sem `--no-verify-jwt` usa
+# o padrão `true` pra qualquer function não listada aqui — ou seja, omitir uma
+# delas a quebraria silenciosamente no próximo deploy.
+
+# Gateway das automações n8n — autentica com x-agent-key própria.
+[functions.agent-gateway]
+verify_jwt = false
+
+# Endpoint da secretária agêntica pro "Meu To-Do" pessoal — autentica com
+# X-Personal-Tasks-Key própria (ver personal-tasks-agent-api.md).
+[functions.personal-tasks-agent]
+verify_jwt = false
+
+# Webhook público da D4Sign — autentica por segredo do próprio provedor.
+[functions.d4sign-webhook]
+verify_jwt = false
+
+# Servidor MCP — autentica com chave própria.
+[functions.sanwey-crm-mcp]
+verify_jwt = false
+
+# Link público de calendário (.ics) — consumido por clientes de calendário
+# que não mandam JWT nenhum.
+[functions.calendar-ics]
+verify_jwt = false
+
+# Página pública de review de vaga pelo gestor — acessada por link direto.
+[functions.manager-vaga-review]
+verify_jwt = false

@@ -24,12 +24,55 @@
 
 export const CHANGELOG = [
   {
-    version: "4.62.0",
+    version: "4.65.0",
     items: [
       {
         kind: "novo",
         text: "Nova forma de registrar um caso de prospecção (ganhamos/perdemos/andamento): botão \"Registrar aprendizado\" na página do cliente e no Funil de Vendas — fale o que aconteceu, confira o resumo que a IA organizou e salve. Vira base pro playbook de vendas do time.",
         roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
+    version: "4.64.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O link de assinatura do calendário (Marketing → Calendário → Sincronizar) agora pode ser trocado a qualquer momento — útil se você compartilhou ou colou o link em algum lugar por engano.",
+        roles: ["admin", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
+    version: "4.63.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Um endereço digitado errado ou uma tela renomeada caía em silêncio no Painel, sem explicar nada — agora mostra um aviso claro com botão pra voltar.",
+      },
+      {
+        kind: "correcao",
+        text: "Algumas pessoas apareciam duplicadas em RH → Funcionários (um cadastro vinculado ao login, outro solto) — mesclados; não deve mais acontecer.",
+        roles: ["admin", "rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
+    version: "4.62.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Novo menu Inteligência → Mercado: dados do setor (atualizados automaticamente), o antigo painel de Insights (agora numa aba própria) e um cruzamento entre os dois — quais setores em alta já têm negócio aberto no seu funil.",
+        roles: ["admin", "gerente", "marketing", "gerente_marketing", "vendedor", "rh", "gerente_rh"],
+      },
+      {
+        kind: "correcao",
+        text: "Campos de texto, número, moeda e data continuavam claros no modo escuro (ex.: \"Descrição\" e \"Vencimento\" do modal de Nova despesa) — corrigido em toda a plataforma.",
+      },
+      {
+        kind: "correcao",
+        text: "Painel Executivo parava de carregar com \"Erro ao carregar esta tela\" — corrigido.",
+        roles: ["admin", "gerente", "gerente_marketing", "gerente_rh", "comex"],
       },
     ],
   },
