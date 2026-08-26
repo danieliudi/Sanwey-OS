@@ -187,56 +187,102 @@ Deno.serve(async (req: Request) => {
         const body = await req.json();
         if (!body.id) return json({ error: 'Campo obrigatório ausente: id' }, 400);
 
-        const patch: Record<string, unknown> = {};
-        if (typeof body.status === 'string') {
-          patch.status = body.status;
-          if (TERMINAL_STATUSES.includes(body.status)) {
-            // Preserva completed_at se a tarefa já estava terminal (ex.:
-            // "concluido" -> "feito" é só arquivar, não um 2º término) —
-            // mesmo princípio do fix de 26/08/2026 em use-personal-tasks.js.
-            const { data: existing } = await admin
-              .from('personal_tasks')
-              .select('status,completed_at')
-              .eq('id', body.id)
-              .eq('user_id', ownerUserId)
-              .maybeSingle();
-            patch.completed_at =
-              existing && TERMINAL_STATUSES.includes(existing.status) && existing.completed_at
-                ? existing.completed_at
-                : new Date().toISOString();
-          } else {
-            patch.completed_at = null;
-          }
-        }
-        if (typeof body.title === 'string') patch.title = body.title;
-        if (typeof body.description === 'string') patch.description = body.description;
-        if (typeof body.due_date === 'string' || body.due_date === null) patch.due_date = body.due_date;
-        if (typeof body.due_time === 'string' || body.due_time === null) patch.due_time = body.due_time;
-        if (typeof body.priority === 'string') patch.priority = body.priority;
-        if (typeof body.recurrence === 'string') patch.recurrence = body.recurrence;
-        if (body.recurrence_config && typeof body.recurrence_config === 'object') patch.recurrence_config = body.recurrence_config;
-        if (typeof body.related_lead_id === 'string' || body.related_lead_id === null) patch.related_lead_id = body.related_lead_id;
-        if (Object.keys(patch).length === 0) return json({ error: 'Nada pra atualizar' }, 400);
+        const staticPatch: Record<string, unknown> = {};
+        if (typeof body.title === 'string') staticPatch.title = body.title;
+        if (typeof body.description === 'string') staticPatch.description = body.description;
+        if (typeof body.due_date === 'string' || body.due_date === null) staticPatch.due_date = body.due_date;
+        if (typeof body.due_time === 'string' || body.due_time === null) staticPatch.due_time = body.due_time;
+        if (typeof body.priority === 'string') staticPatch.priority = body.priority;
+        if (typeof body.recurrence === 'string') staticPatch.recurrence = body.recurrence;
+        if (body.recurrence_config && typeof body.recurrence_config === 'object') staticPatch.recurrence_config = body.recurrence_config;
+        if (typeof body.related_lead_id === 'string' || body.related_lead_id === null) staticPatch.related_lead_id = body.related_lead_id;
 
-        const { data, error } = await admin
-          .from('personal_tasks')
-          .update(patch)
-          .eq('id', body.id)
-          .eq('user_id', ownerUserId)
-          .select(TASK_COLUMNS)
-          .single();
-        if (error) throw error;
-        return json({ success: true, data });
+        // Sem mudança de status: patch simples, sem corrida pra travar
+        // (nenhum campo aqui é calculado a partir do estado atual).
+        if (typeof body.status !== 'string') {
+          if (Object.keys(staticPatch).length === 0) return json({ error: 'Nada pra atualizar' }, 400);
+          const { data, error } = await admin
+            .from('personal_tasks')
+            .update(staticPatch)
+            .eq('id', body.id)
+            .eq('user_id', ownerUserId)
+            .select(TASK_COLUMNS)
+            .single();
+          if (error) throw error;
+          return json({ success: true, data });
+        }
+
+        // Muda status: completed_at é calculado a partir do status/
+        // completed_at atuais (preserva se a tarefa já estava terminal —
+        // "concluido" -> "feito" é só arquivar, não um 2º término, mesmo
+        // princípio do fix de 26/08/2026 em use-personal-tasks.js). Trava
+        // otimista (achado da revisão adversarial 26/08/2026, mesmo padrão
+        // já usado em `action=note`): o update só aplica se status/
+        // completed_at não mudaram entre o select e o update desta
+        // tentativa — senão relê o estado mais recente e tenta de novo.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data: existing, error: findErr } = await admin
+            .from('personal_tasks')
+            .select('status,completed_at')
+            .eq('id', body.id)
+            .eq('user_id', ownerUserId)
+            .maybeSingle();
+          if (findErr) throw findErr;
+          if (!existing) return json({ error: 'Tarefa não encontrada.' }, 404);
+
+          const patch: Record<string, unknown> = { ...staticPatch, status: body.status };
+          patch.completed_at = TERMINAL_STATUSES.includes(body.status)
+            ? (TERMINAL_STATUSES.includes(existing.status) && existing.completed_at ? existing.completed_at : new Date().toISOString())
+            : null;
+
+          let q = admin
+            .from('personal_tasks')
+            .update(patch)
+            .eq('id', body.id)
+            .eq('user_id', ownerUserId)
+            .eq('status', existing.status);
+          q = existing.completed_at === null ? q.is('completed_at', null) : q.eq('completed_at', existing.completed_at);
+
+          const { data, error } = await q.select(TASK_COLUMNS).maybeSingle();
+          if (error) throw error;
+          if (data) return json({ success: true, data });
+          // 0 linhas: status/completed_at mudaram entre o select e o update
+          // desta tentativa — tenta de novo lendo o estado mais recente.
+        }
+        return json({ error: 'Não deu pra atualizar — muita escrita concorrente na mesma tarefa. Tenta de novo.' }, 409);
       }
 
       // ── DELETE ────────────────────────────────────────────
       // Exclusão de verdade — mesma ação que o botão de lixeira já expõe na
       // tela (deleteTask, use-personal-tasks.js). Sem status "cancelado":
       // não existe like esconder um card sem criar etapa nova no Kanban.
+      //
+      // `confirm_title` obrigatório (achado da revisão adversarial
+      // 26/08/2026): a tela exige um 2º clique de confirmação antes de
+      // excluir (MoveStageMenu) — a API não tinha nenhum equivalente, e um
+      // pedido em linguagem natural mal interpretado ("pode limpar essa
+      // tarefa") apagaria de forma permanente e silenciosa. Precisa bater
+      // (sem diferenciar maiúscula/espaço nas pontas) com o título ATUAL da
+      // tarefa — se não bater, devolve 409 com o título real, pra secretária
+      // confirmar com o usuário antes de tentar de novo.
       case 'delete': {
         if (req.method !== 'DELETE') return json({ error: 'Method not allowed' }, 405);
         const id = url.searchParams.get('id');
+        const confirmTitle = url.searchParams.get('confirm_title');
         if (!id) return json({ error: 'Parâmetro obrigatório ausente: id' }, 400);
+        if (!confirmTitle) return json({ error: 'Parâmetro obrigatório ausente: confirm_title (título atual da tarefa, pra confirmar a exclusão).' }, 400);
+
+        const { data: task, error: findErr } = await admin
+          .from('personal_tasks')
+          .select('title')
+          .eq('id', id)
+          .eq('user_id', ownerUserId)
+          .maybeSingle();
+        if (findErr) throw findErr;
+        if (!task) return json({ error: 'Tarefa não encontrada.' }, 404);
+        if (confirmTitle.trim().toLowerCase() !== task.title.trim().toLowerCase()) {
+          return json({ error: `confirm_title não bate com o título atual da tarefa: "${task.title}". Confirme com o usuário antes de tentar de novo.` }, 409);
+        }
 
         const { error, count } = await admin
           .from('personal_tasks')

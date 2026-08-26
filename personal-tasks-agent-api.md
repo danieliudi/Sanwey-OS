@@ -76,16 +76,22 @@ que é a etapa de Arquivar, não de Conclusão). Seta `completed_at`
 automaticamente quando o status vira terminal, e preserva o valor já
 existente se a tarefa já estava terminal antes (ex.: movida de
 `"concluido"` pra `"feito"` depois — arquivar não reinicia o carimbo de
-conclusão).
+conclusão). Se duas chamadas de update mudarem status quase ao mesmo tempo,
+uma pode responder `409` — tenta de novo.
 
 ```json
 { "success": true, "data": { "id": "...", "status": "concluido", "completed_at": "...", ... } }
 ```
 
-### DELETE `?action=delete&id=...`
+### DELETE `?action=delete&id=...&confirm_title=...`
 
-Exclusão definitiva — mesma ação do botão de lixeira que a tela já tem.
-Não existe "lixeira"/status de cancelado: a tarefa some.
+Exclusão definitiva — mesma ação do botão de lixeira que a tela já tem
+(que exige um 2º clique de confirmação). Não existe "lixeira"/status de
+cancelado: a tarefa some. `confirm_title` é **obrigatório** e precisa bater
+com o título atual da tarefa (sem diferenciar maiúscula/espaço nas
+pontas) — existe pra evitar que um pedido em linguagem natural mal
+interpretado apague algo sem querer; se não bater, devolve `409` com o
+título real, pra confirmar com o usuário antes de tentar de novo.
 
 ```json
 { "success": true }
@@ -144,7 +150,7 @@ pública fixa).
 | 401 | Header `X-Personal-Tasks-Key` ausente ou errado |
 | 404 | Tarefa/anexo não encontrado (ou não é do dono) |
 | 405 | Método HTTP errado pra essa ação |
-| 409 | `action=note`: muita escrita concorrente na mesma tarefa (3 tentativas sem conseguir) — tenta de novo |
+| 409 | `action=note`/`action=update`: muita escrita concorrente na mesma tarefa (3 tentativas sem conseguir) — tenta de novo. `action=delete`: `confirm_title` não bate com o título atual |
 | 503 | Secrets da function não configurados |
 | 500 | Erro do Supabase/inesperado |
 
