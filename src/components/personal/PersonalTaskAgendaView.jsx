@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarOff } from "lucide-react";
 import { toLocalISODate } from "../../utils/date";
+import { isTaskDone } from "../../constants/personal-tasks";
 
 const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTH_LABELS = [
@@ -106,7 +107,7 @@ export function PersonalTaskAgendaView({ tasks, onOpen }) {
                           title={t.title}
                         >
                           <span style={{ width: 5, height: 5, borderRadius: "50%", background: PRIORITY_DOT[t.priority] || PRIORITY_DOT.media, flexShrink: 0 }} />
-                          <span className="text-[10px] truncate" style={{ color: t.status === "feito" ? "var(--text-dim)" : "var(--text)", textDecoration: t.status === "feito" ? "line-through" : "none" }}>
+                          <span className="text-[10px] truncate" style={{ color: isTaskDone(t.status) ? "var(--text-dim)" : "var(--text)", textDecoration: isTaskDone(t.status) ? "line-through" : "none" }}>
                             {t.title}
                           </span>
                         </button>
@@ -133,7 +134,7 @@ export function PersonalTaskAgendaView({ tasks, onOpen }) {
             {withoutDate.map(t => (
               <button key={t.id} onClick={() => onOpen(t)}
                 className="px-2.5 py-1 rounded-lg text-xs"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: t.status === "feito" ? "var(--text-dim)" : "var(--text)", textDecoration: t.status === "feito" ? "line-through" : "none", cursor: "pointer" }}>
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: isTaskDone(t.status) ? "var(--text-dim)" : "var(--text)", textDecoration: isTaskDone(t.status) ? "line-through" : "none", cursor: "pointer" }}>
                 {t.title}
               </button>
             ))}

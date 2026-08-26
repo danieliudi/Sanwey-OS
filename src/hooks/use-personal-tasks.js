@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 import { toLocalISODate } from "../utils/date";
+import { isTaskDone } from "../constants/personal-tasks";
 
 const TABLE = "personal_tasks";
 
@@ -204,22 +205,33 @@ export function usePersonalTasks({ userId, enabled = true } = {}) {
   }, [active]);
 
   // Único lugar que muda status: usado pelo checkbox (List), atalho
-  // "Feito"/"Reabrir" (Kanban), drag-and-drop e MoveStageMenu — setando/
+  // "Concluir"/"Reabrir" (Kanban), drag-and-drop e MoveStageMenu — setando/
   // limpando completed_at junto (reabrir volta pra 'a_fazer', não pra
   // 'fazendo': "desmarcar" é o oposto direto de "marcar", sem adivinhar em
-  // qual etapa intermediária ela estava). Concluir uma tarefa recorrente
-  // ("Todo dia"/"Toda semana"/"Todo mês") gera a próxima ocorrência na hora
-  // — mesmo título/descrição/prioridade/tags, status voltando pra 'a_fazer'.
-  // Só dispara ao chegar em 'feito' vindo de outro status (não ao reabrir,
-  // nem ao mover entre 'a_fazer'/'fazendo'), senão reabrir uma tarefa
-  // recorrente ficaria duplicando linha.
+  // qual etapa intermediária ela estava). completed_at é preservado ao
+  // passar de 'concluido' pra 'feito' (arquivar não é um 2º término, é só
+  // guardar — ver STATUS_COLUMNS) e só é re-carimbado se a tarefa chegar
+  // terminal sem já ter um valor (ex.: arquivada direto, pulando Concluído).
+  //
+  // CORRIGIDO 26/08/2026: até então isto só reconhecia o status 'feito'
+  // como conclusão — 'concluido' (documentado em STATUS_COLUMNS como "onde
+  // a tarefa de fato termina") não setava completed_at nem disparava
+  // recorrência, e 'feito'/Arquivar (que devia só guardar) é que disparava
+  // os dois, invertido. Concluir uma tarefa recorrente ("Todo dia"/"Toda
+  // semana"/"Todo mês") gera a próxima ocorrência na hora — mesmo título/
+  // descrição/prioridade/tags, status voltando pra 'a_fazer'. Só dispara ao
+  // chegar em 'concluido' vindo de outro status (não ao reabrir, não ao
+  // mover entre 'a_fazer'/'fazendo', e não ao só arquivar depois), senão
+  // reabrir uma tarefa recorrente ficaria duplicando linha.
   const setTaskStatus = useCallback(async (id, status) => {
     const current = tasks.find(t => t.id === id);
     if (!current) return;
-    const becomingDone = status === "feito" && current.status !== "feito";
+    const becomingDone = status === "concluido" && current.status !== "concluido";
+    const nowDone = isTaskDone(status);
+    const keepExistingCompletedAt = nowDone && isTaskDone(current.status) && current.completedAt;
     await updateTask(id, {
       status,
-      completedAt: status === "feito" ? new Date().toISOString() : null,
+      completedAt: nowDone ? (keepExistingCompletedAt || new Date().toISOString()) : null,
     });
     if (becomingDone && current.recurrence && current.recurrence !== "none") {
       await createTask({
@@ -239,10 +251,10 @@ export function usePersonalTasks({ userId, enabled = true } = {}) {
   const toggleDone = useCallback(async (id) => {
     const current = tasks.find(t => t.id === id);
     if (!current) return;
-    await setTaskStatus(id, current.status === "feito" ? "a_fazer" : "feito");
+    await setTaskStatus(id, isTaskDone(current.status) ? "a_fazer" : "concluido");
   }, [tasks, setTaskStatus]);
 
-  const openCount = useMemo(() => tasks.filter(t => t.status !== "feito").length, [tasks]);
+  const openCount = useMemo(() => tasks.filter(t => !isTaskDone(t.status)).length, [tasks]);
 
   return {
     tasks,
