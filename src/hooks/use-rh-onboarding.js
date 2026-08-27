@@ -51,13 +51,16 @@ export function useRHOnboarding({ userId } = {}) {
   }, [userId]);
 
   // Cria as tarefas do checklist para um colaborador — a partir de um template
-  // (checklist_padrao) ou de uma lista avulsa de títulos.
+  // (checklist_padrao) ou de uma lista avulsa de títulos. `responsavelIds`
+  // (opcional) só é usado pelo fluxo de tarefa avulsa — aplicar um template
+  // continua sem responsável (a pessoa atribui depois, tarefa por tarefa).
   const applyChecklist = useCallback(async (colaboradorId, items, templateId = null) => {
     const rows = items.map(item => ({
       colaborador_id: colaboradorId,
       template_id: templateId,
       titulo: item.titulo,
       data_limite: item.dataLimite || null,
+      responsavel_ids: item.responsavelIds || [],
       created_by: userId,
     }));
     const { data: novas, error } = await supabase.from("rh_onboarding_tarefas").insert(rows).select();
@@ -79,6 +82,7 @@ export function useRHOnboarding({ userId } = {}) {
         template_id: null,
         titulo: item.titulo,
         data_limite: item.dataLimite || null,
+        responsavel_ids: item.responsavelIds || [],
         created_by: userId,
       }))
     );
@@ -92,6 +96,12 @@ export function useRHOnboarding({ userId } = {}) {
     const { error } = await supabase.from("rh_onboarding_tarefas").update({ status, updated_at: new Date().toISOString() }).eq("id", tarefaId);
     if (error) throw new Error(error.message);
     setTarefas(prev => prev.map(t => t.id === tarefaId ? { ...t, status } : t));
+  }, []);
+
+  const updateTarefaResponsaveis = useCallback(async (tarefaId, responsavelIds) => {
+    const { error } = await supabase.from("rh_onboarding_tarefas").update({ responsavel_ids: responsavelIds, updated_at: new Date().toISOString() }).eq("id", tarefaId);
+    if (error) throw new Error(error.message);
+    setTarefas(prev => prev.map(t => t.id === tarefaId ? { ...t, responsavel_ids: responsavelIds } : t));
   }, []);
 
   const deleteTarefa = useCallback(async (tarefaId) => {
@@ -108,7 +118,8 @@ export function useRHOnboarding({ userId } = {}) {
     applyChecklist,
     applyTaskToMany,
     updateTarefaStatus,
+    updateTarefaResponsaveis,
     deleteTarefa,
     refetch: fetchAll,
-  }), [templates, tarefas, loading, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, deleteTarefa, fetchAll]);
+  }), [templates, tarefas, loading, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, updateTarefaResponsaveis, deleteTarefa, fetchAll]);
 }

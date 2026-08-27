@@ -33,6 +33,8 @@ import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { MobileTableCards } from "../shared/MobileTableCards";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { AppToast } from "../shared/AppToast";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
+import { AvatarStack } from "../shared/AvatarStack";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
@@ -219,8 +221,9 @@ function statusConfig(status) {
   }
 }
 
-function TaskRow({ tarefa, canWrite, canToggle, onStatusChange, onDelete }) {
+function TaskRow({ tarefa, users, canWrite, canToggle, onStatusChange, onDelete }) {
   const s = statusConfig(tarefa.status);
+  const responsaveis = (tarefa.responsavel_ids || []).map(id => users?.find(u => u.id === id)).filter(Boolean);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
       <button
@@ -242,6 +245,7 @@ function TaskRow({ tarefa, canWrite, canToggle, onStatusChange, onDelete }) {
         </div>
         <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>Prazo: {formatDateBR(tarefa.data_limite)}</div>
       </div>
+      {responsaveis.length > 0 && <AvatarStack users={responsaveis} size={22} max={3} />}
       <span style={{ background: s.bg, color: s.color, borderRadius: 99, padding: "2px 9px", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>{s.label}</span>
       {canToggle && tarefa.status !== "concluida" && tarefa.status !== "em_andamento" && (
         <button onClick={() => onStatusChange(tarefa.id, "em_andamento")} style={{ fontSize: 10, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>Iniciar</button>
@@ -424,6 +428,7 @@ function OnboardingDrawer({
   const [templateId, setTemplateId] = useState("");
   const [novaTarefa, setNovaTarefa] = useState("");
   const [novoPrazo, setNovoPrazo] = useState(7);
+  const [novoResponsavelIds, setNovoResponsavelIds] = useState([]);
 
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -482,9 +487,10 @@ function OnboardingDrawer({
 
   const handleAddTask = () => {
     if (!novaTarefa.trim()) return;
-    onAddTask(colaborador.id, [{ titulo: novaTarefa.trim(), dataLimite: addDays(new Date().toISOString().slice(0, 10), novoPrazo) }]);
+    onAddTask(colaborador.id, [{ titulo: novaTarefa.trim(), dataLimite: addDays(new Date().toISOString().slice(0, 10), novoPrazo), responsavelIds: novoResponsavelIds }]);
     setNovaTarefa("");
     setNovoPrazo(7);
+    setNovoResponsavelIds([]);
   };
 
   const handleApplyTemplate = () => {
@@ -566,6 +572,7 @@ function OnboardingDrawer({
               <TaskRow
                 key={t.id}
                 tarefa={t}
+                users={users}
                 canWrite={canWrite}
                 canToggle={canWrite}
                 onStatusChange={onStatusChange}
@@ -609,6 +616,14 @@ function OnboardingDrawer({
               <button onClick={handleAddTask} disabled={!novaTarefa.trim()} style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 8px", cursor: novaTarefa.trim() ? "pointer" : "default", display: "flex", opacity: novaTarefa.trim() ? 1 : 0.5, flexShrink: 0 }}>
                 <Plus size={13} color="var(--text)" />
               </button>
+            </div>
+            <div style={{ marginTop: 6 }}>
+              <AssigneeMultiSelect
+                value={novoResponsavelIds}
+                onChange={setNovoResponsavelIds}
+                options={users}
+                placeholder="Responsável (opcional)…"
+              />
             </div>
           </>
         )}

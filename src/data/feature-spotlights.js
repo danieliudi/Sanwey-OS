@@ -339,6 +339,13 @@ export const FEATURE_SPOTLIGHTS = [
   // só existe em cima de um card de lead responsável/parado, que pode não
   // haver nenhum no momento em que a pessoa entra na rota "dashboard".
   // Coberto pelo changelog 4.74.0.
+  //
+  // 4.75.0 — Tarefas de Marketing/Comex/Meu To-do entrando na fila de
+  // Pendências (Copiloto Fase 4): DECIDIDO PULAR o spotlight. É cobertura de
+  // dado numa lista que já existe (mais tipos de item aparecendo na mesma
+  // fila, mesmo mecanismo de clique-pra-abrir de sempre) — não um elemento
+  // de UI novo pra apontar; mesmo critério das colunas mais largas em
+  // 4.59.0. Coberto pelo changelog 4.75.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;

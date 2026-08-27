@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.75.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pendências: Tarefas de Marketing, Comex (Exportação e Importação) e Meu To-do agora entram na sua fila — tarefa de marketing atribuída a você, operação de Comex parada há tempo demais na etapa, e tarefa pessoal atrasada.",
+      },
+    ],
+  },
+  {
     version: "4.74.0",
     items: [
       {
