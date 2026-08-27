@@ -3,6 +3,18 @@ import React from "react";
 // Tab strip em pílulas do drawer de detalhe de card — consolidado de 3 cópias
 // quase idênticas (CampaignDetailDrawer.SideTabs, DeliverableDetailDrawer.SideTabs,
 // RHDetailDrawerShell.RHSideTabs). Nenhum valor visual mudou nesta extração.
+//
+// CORREÇÃO 27/08/2026 (achado do Daniel, print do drawer no dark mode): a aba
+// ATIVA pintava o texto com var(--accent) sobre var(--surface). --accent muda
+// em runtime (por frente comercial e por escolha pessoal em Configurações →
+// Aparência, que aceita QUALQUER cor incluindo neutros escuros tipo "Carvão"
+// #37352F) — num tema escuro, accent escuro sobre superfície escura deixava o
+// rótulo da aba selecionada praticamente invisível, justo a que precisa ser a
+// mais legível. Agora o accent segue marcando a seleção onde não custa
+// legibilidade (borda + var(--accent-tint) de fundo, token que já existe e é
+// calculado por tema), e o TEXTO usa var(--text) — contraste garantido nos
+// dois temas, independente de qual accent estiver ativo. Mesma classe de bug
+// das etiquetas do Meu To-Do, corrigida na mesma leva.
 export function DetailDrawerTabs({ tabs, activeId, onChange }) {
   return (
     <div className="flex flex-wrap gap-1">
@@ -15,8 +27,8 @@ export function DetailDrawerTabs({ tabs, activeId, onChange }) {
             onClick={() => onChange(t.id)}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer"
             style={{
-              background: active ? "var(--surface)" : "transparent",
-              color:      active ? "var(--accent)" : "var(--text-dim)",
+              background: active ? "var(--accent-tint)" : "transparent",
+              color:      active ? "var(--text)" : "var(--text-dim)",
               border:     `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
             }}
             onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
@@ -30,7 +42,7 @@ export function DetailDrawerTabs({ tabs, activeId, onChange }) {
                 style={{
                   fontSize: 9, minWidth: 14, height: 14, padding: "0 4px",
                   background: active ? "var(--accent)" : "var(--surface-alt)",
-                  color: active ? "#FFF" : "var(--text-dim)",
+                  color: active ? "var(--on-accent)" : "var(--text-dim)",
                 }}
               >
                 {t.badge}

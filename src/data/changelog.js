@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.67.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "Corrigida a aba selecionada (Detalhes/Checklist/Anexos e equivalentes) ficar ilegível no modo escuro dentro do card aberto — em Campanhas, Entregas, Compras, RH e Meu To-Do.",
+      },
+    ],
+  },
+  {
     version: "4.67.2",
     items: [
       {
