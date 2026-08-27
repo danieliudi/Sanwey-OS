@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  CheckSquare, Inbox, AlertTriangle, Flame, ChevronDown,
+  CheckSquare, Inbox, AlertTriangle, Flame, ChevronDown, RotateCcw, X, BellRing, AlertCircle,
 } from "lucide-react";
 import { useMyTasks } from "../../hooks/use-my-tasks";
 import { Card, CardGrid, CardSkeleton } from "../shared/Card";
@@ -9,6 +9,10 @@ import { StatCard } from "../ui/StatCard";
 import { StatCardGrid } from "../shared/StatCardGrid";
 import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
+import { AppToast } from "../shared/AppToast";
+import { sendRhEmail } from "../../utils/rh-send-email";
+import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
+import { formatDateBR } from "../../utils/date";
 
 // "Minhas Tarefas" — landing page after login (FASE 6). Aggregates every
 // card across every module where the current user is a responsible person,
@@ -86,10 +90,91 @@ function UrgencyPill({ tone, label }) {
   );
 }
 
+// Ícone/tom/rótulo do botão de ação de 1 clique por id-prefixo de pendência —
+// FASE 2 do Copiloto (27/08/2026). Só os 4 tipos abaixo têm uma mutação
+// pronta no hook do próprio domínio, sem input extra genuinamente obrigatório
+// nem lógica de guarda vivendo só na View (appr-ferias aprovar/recusar ficou
+// de fora: RHFeriasView exige checar documento obrigatório e capturar motivo
+// de recusa, não é uma chamada de 1 função só — duplicar isso aqui arriscaria
+// pular uma checagem de compliance real).
+const QUICK_ACTIONS = [
+  { prefix: "alert-treino-", label: "Reciclar", icon: RotateCcw, tone: "default", key: "reciclar" },
+  { prefix: "appr-request-", label: "Recusar", icon: X, tone: "danger", key: "recusarRequest" },
+  { prefix: "appr-purchase-", label: "Recusar", icon: X, tone: "danger", key: "recusarPurchase" },
+  { prefix: "alert-avaliacao-", label: "Enviar lembrete", icon: BellRing, tone: "default", key: "lembrete" },
+];
+
+function quickActionFor(taskId) {
+  return QUICK_ACTIONS.find(a => taskId.startsWith(a.prefix)) || null;
+}
+
+function QuickActionButton({ label, icon: Icon, tone, busy, onClick }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); if (!busy) onClick(); }}
+      disabled={busy}
+      className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 whitespace-nowrap"
+      style={{
+        color: tone === "danger" ? "var(--danger)" : "var(--accent)",
+        background: tone === "danger" ? "var(--danger-bg)" : "color-mix(in srgb, var(--accent) 12%, transparent)",
+        border: "none",
+        cursor: busy ? "default" : "pointer",
+        opacity: busy ? 0.6 : 1,
+      }}
+    >
+      <Icon size={12} />
+      {busy ? "…" : label}
+    </button>
+  );
+}
+
 export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadClick, onOpenPending }) {
-  const { tasks, loading, counts } = useMyTasks({ currentUser });
+  const { tasks, loading, counts, reciclarAtribuicao, rejectRequest, rejectPurchase } = useMyTasks({ currentUser });
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState(false);
+  const [actionBusyId, setActionBusyId] = useState(null);
+  const [actionError, setActionError] = useState(null);
+
+  const runQuickAction = async (task, fn) => {
+    setActionError(null);
+    setActionBusyId(task.id);
+    try {
+      await fn();
+    } catch (e) {
+      setActionError(e?.message || "Não foi possível concluir a ação — tente novamente.");
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  const handleQuickAction = (task, actionKey) => {
+    switch (actionKey) {
+      case "reciclar":
+        return runQuickAction(task, () => reciclarAtribuicao(task.raw.id));
+      case "recusarRequest":
+        return runQuickAction(task, () => rejectRequest(task.raw.id));
+      case "recusarPurchase":
+        return runQuickAction(task, () => rejectPurchase(task.raw.id));
+      case "lembrete":
+        return runQuickAction(task, async () => {
+          const f = task.raw;
+          const col = task.colaborador;
+          const destinatarios = users.filter(u => (u.roles || []).some(r => ["gerente_rh", "admin"].includes(r)) && u.email);
+          if (destinatarios.length === 0) throw new Error("Nenhum gestor de RH com e-mail cadastrado pra receber o lembrete.");
+          const results = await Promise.all(destinatarios.map(dest => sendRhEmail("avaliacao_proxima", dest.email, {
+            EMPLOYEE_NAME: col?.fullName || "",
+            JOB_TITLE: col?.jobTitle || "—",
+            DEPARTMENT: col?.department || "—",
+            TIPO_CICLO: cicloTipoLabel(f.tipo) || f.cycle || "—",
+            DUE_DATE: f.period_end ? formatDateBR(f.period_end) : "—",
+            DUE_LABEL: task.badge,
+          }, { colaboradorId: col?.id })));
+          if (!results.some(Boolean)) throw new Error("Não foi possível enviar o lembrete por e-mail — tente novamente.");
+        });
+      default:
+        return;
+    }
+  };
 
   useEffect(() => { setExpanded(false); }, [filter]);
 
@@ -135,6 +220,11 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
 
   return (
     <div className="space-y-7">
+      {actionError && (
+        <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setActionError(null)}>
+          {actionError}
+        </AppToast>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
@@ -210,6 +300,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
                     {group.items.map(task => {
                       const meta = BUCKET_META[task.bucket];
                       const isCritical = task.badgeTone === "var(--danger)";
+                      const quickAction = quickActionFor(task.id);
                       return (
                         <div
                           key={task.id}
@@ -225,6 +316,15 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
                             meta={`${task.moduleLabel} · ${task.subtitle}`}
                             status={{ color: meta.dotColor, label: meta.label }}
                             footer={<UrgencyPill tone={task.badgeTone} label={task.badge} />}
+                            headerAction={quickAction ? (
+                              <QuickActionButton
+                                label={quickAction.label}
+                                icon={quickAction.icon}
+                                tone={quickAction.tone}
+                                busy={actionBusyId === task.id}
+                                onClick={() => handleQuickAction(task, quickAction.key)}
+                              />
+                            ) : undefined}
                             onClick={() => handleTaskClick(task)}
                             density="list"
                           />

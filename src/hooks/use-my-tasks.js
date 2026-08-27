@@ -105,15 +105,15 @@ export function useMyTasks({ currentUser } = {}) {
   const { stages: posvendaStages } = useRHPipelineStages("posvenda");
   const { campaigns, loading: campaignsLoading } = useMarketingCampaigns({ userId, role, roles });
   const { deliverables, loading: deliverablesLoading } = useMarketingDeliverables({ userId, role, roles });
-  const { purchases, loading: purchasesLoading } = useMarketingPurchaseRequests({});
+  const { purchases, loading: purchasesLoading, rejectPurchase } = useMarketingPurchaseRequests({});
   const { quotes, loading: quotesLoading } = useMarketingQuotes({ userId, role, roles });
-  const { requests: marketingRequests, loading: marketingRequestsLoading } = useMarketingRequests({ userId, role, roles });
+  const { requests: marketingRequests, loading: marketingRequestsLoading, rejectRequest } = useMarketingRequests({ userId, role, roles });
   const { feedbacks, loading: feedbacksLoading } = useRHFeedback({ userId });
   const { requests: feriasRequests, loading: feriasLoading } = useRHFeriasRequests({});
   const { vagas, loading: recrutamentoLoading } = useRHRecrutamento({ userId });
   const { colaboradores, loading: colaboradoresLoading } = useRHColaboradores({ userId });
   const { colaboradorBeneficios, loading: beneficiosLoading } = useRHBeneficios({ userId });
-  const { treinamentos, atribuicoes, loading: treinamentosLoading } = useRHTreinamentos({ userId });
+  const { treinamentos, atribuicoes, loading: treinamentosLoading, reciclarAtribuicao } = useRHTreinamentos({ userId });
 
   const loading = leadsLoading || campaignsLoading || deliverablesLoading || purchasesLoading
     || quotesLoading || marketingRequestsLoading || feedbacksLoading || feriasLoading
@@ -651,6 +651,11 @@ export function useMyTasks({ currentUser } = {}) {
           badgeTone: "var(--danger)",
           urgencyRank: avalDias,
           section: "rh-feedback",
+          // `colaborador` (não dentro de `raw`, mesmo espírito do campo
+          // `lead` nos itens de Leads) — o botão "Enviar lembrete" (FASE 2)
+          // precisa de nome/cargo/departamento pro e-mail, que `raw: f` (a
+          // linha de rh_feedback) sozinha não carrega.
+          colaborador: col,
           raw: f,
         });
       }
@@ -695,7 +700,14 @@ export function useMyTasks({ currentUser } = {}) {
     alert: tasks.filter(t => t.bucket === "alert").length,
   }), [tasks]);
 
-  return { tasks, loading, counts };
+  // Botões de ação de 1 clique na fila (FASE 2 do Copiloto) — só os 3 tipos
+  // com função de mutação já pronta no próprio hook do domínio, sem input
+  // extra genuinamente obrigatório e sem lógica de guarda vivendo só dentro
+  // da View (achado real: appr-ferias aprovar/recusar tinha ficado de fora
+  // do escopo original por depender de checagem de documento obrigatório +
+  // captura de motivo, ambos vivendo em RHFeriasView — não duplicado aqui).
+  // MinhasTarefasView chama estas direto, sem reimplementar a mutação.
+  return { tasks, loading, counts, reciclarAtribuicao, rejectRequest, rejectPurchase };
 }
 
 export default useMyTasks;
