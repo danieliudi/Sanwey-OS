@@ -24,6 +24,8 @@ import { useOrgAIStatus } from "../../hooks/use-org-ai-status";
 import { friendlyAiErrorMessage } from "../../utils/ai-errors";
 import { useBottomNavPrefs, BOTTOM_NAV_MAX_SHORTCUTS } from "../../hooks/use-bottom-nav-prefs";
 import { getRoleTabs, flattenNavGroups } from "../shell/MobileBottomNav";
+import { usePersonalTasksApiKeys } from "../../hooks/use-personal-tasks-api-keys";
+import { formatDateBR, relativeTime } from "../../utils/date";
 
 // Mesmo critério de quem cria canal no Chat (chat_is_manager, migration
 // 20260812_chat_interno_fase1.sql) — replicado aqui (2ª ocorrência, também em
@@ -797,6 +799,63 @@ export function SettingsView({
     return () => { cancelled = true; };
   }, [activeTab, canSeeD4Sign]);
 
+  // ── Secretária de IA (Mia, secretaria-plataforma) — conexão via chave
+  // pessoal ao "Meu To-Do" (27/08/2026, ver hooks/use-personal-tasks-api-keys.js) ──
+  const {
+    keys: secretariaKeys,
+    generateKey: secretariaGenerateKey,
+    revokeKey: secretariaRevokeKey,
+  } = usePersonalTasksApiKeys(currentUser?.id);
+  const [secretariaGenModalOpen, setSecretariaGenModalOpen] = useState(false);
+  const [secretariaGenLabel, setSecretariaGenLabel] = useState("");
+  const [secretariaRevealedKey, setSecretariaRevealedKey] = useState(null);
+  const [secretariaGenerating, setSecretariaGenerating] = useState(false);
+  const [secretariaGenError, setSecretariaGenError] = useState(null);
+  const [secretariaRevoking, setSecretariaRevoking] = useState(null); // id da chave sendo revogada, ou null
+  // Contador de geração — achado da revisão de QA/adversarial 27/08/2026:
+  // fechar o modal não cancelava a promise de secretariaGenerateKey em voo;
+  // se ela resolvesse DEPOIS do fechamento, a chave (já criada no banco)
+  // aparecia revelada na PRÓXIMA vez que "Gerar nova chave" fosse aberto,
+  // mesmo sem o usuário ter clicado em nada dessa vez. Incrementado a cada
+  // tentativa nova e no fechamento do modal — qualquer resultado que chegue
+  // depois de invalidado (id não bate mais) é descartado em silêncio.
+  const secretariaGenIdRef = useRef(0);
+
+  async function handleSecretariaGenerate() {
+    const genId = ++secretariaGenIdRef.current;
+    setSecretariaGenerating(true);
+    setSecretariaGenError(null);
+    try {
+      const rawKey = await secretariaGenerateKey(secretariaGenLabel);
+      if (secretariaGenIdRef.current !== genId) return; // modal fechado/nova tentativa — descarta
+      setSecretariaRevealedKey(rawKey);
+    } catch {
+      if (secretariaGenIdRef.current !== genId) return;
+      setSecretariaGenError("Não deu pra gerar a chave agora. Tenta de novo.");
+    } finally {
+      if (secretariaGenIdRef.current === genId) setSecretariaGenerating(false);
+    }
+  }
+  function handleSecretariaModalClose() {
+    // Fechar o modal invalida qualquer geração em voo (ver secretariaGenIdRef
+    // acima) e limpa todo estado — a chave em claro só existe aqui, nunca em
+    // lugar que sobreviva ao fechamento.
+    secretariaGenIdRef.current += 1;
+    setSecretariaGenModalOpen(false);
+    setSecretariaGenLabel("");
+    setSecretariaRevealedKey(null);
+    setSecretariaGenerating(false);
+    setSecretariaGenError(null);
+  }
+  async function handleSecretariaRevoke(id) {
+    setSecretariaRevoking(id);
+    try {
+      await secretariaRevokeKey(id);
+    } finally {
+      setSecretariaRevoking(null);
+    }
+  }
+
   useEffect(() => {
     if (currentUser?.aiConfig) {
       setAiForm({
@@ -1460,6 +1519,7 @@ export function SettingsView({
               <Tabs
                 tabs={[
                   { id: "ia", label: "Inteligência Artificial", icon: Bot },
+                  { id: "secretaria", label: "Secretária de IA", icon: Link2 },
                   ...(canSeeD4Sign ? [{ id: "assinatura", label: "Assinatura eletrônica", icon: Key }] : []),
                 ]}
                 active={integTab}
@@ -1708,6 +1768,138 @@ export function SettingsView({
                   </>)}
                 </div>
               </Section>
+              )}
+
+              {integTab === "secretaria" && (
+                <Section
+                  title="Conexão com a Secretária de IA (Mia)"
+                  description="Cada chave abaixo dá acesso pra criar e organizar tarefas direto no seu Meu To-do. Gere uma pra cada conta que você quiser conectar — trabalho, pessoal, ou qualquer outra."
+                >
+                  <div className="space-y-2 mb-4">
+                    {secretariaKeys.length === 0 && (
+                      <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+                        Nenhuma chave gerada ainda.
+                      </p>
+                    )}
+                    {secretariaKeys.map(k => (
+                      <div
+                        key={k.id}
+                        className="flex items-center gap-3 px-3.5 py-3 rounded-xl border"
+                        style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: k.revoked_at ? "var(--text-faint)" : "var(--success)" }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{k.label}</div>
+                          <div className="text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+                            {k.revoked_at
+                              ? `Revogada em ${formatDateBR(k.revoked_at)}`
+                              : `Criada em ${formatDateBR(k.created_at)} · ${k.last_used_at ? `usada ${relativeTime(k.last_used_at)}` : "nunca usada"}`}
+                          </div>
+                        </div>
+                        {!k.revoked_at && (
+                          <button
+                            onClick={() => handleSecretariaRevoke(k.id)}
+                            disabled={secretariaRevoking === k.id}
+                            className="text-xs font-semibold"
+                            style={{ color: "var(--danger)", background: "none", border: "none", cursor: secretariaRevoking === k.id ? "wait" : "pointer" }}
+                          >
+                            {secretariaRevoking === k.id ? "Revogando…" : "Revogar"}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setSecretariaGenModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+                    style={{ background: "var(--accent)", border: "none", cursor: "pointer" }}
+                  >
+                    <Link2 size={12} />
+                    Gerar nova chave
+                  </button>
+
+                  <Modal open={secretariaGenModalOpen} onClose={handleSecretariaModalClose} title="Nova chave de conexão" width={440}>
+                    <div className="p-5">
+                      {!secretariaRevealedKey ? (<>
+                        <label className="text-xs font-semibold block mb-2" style={{ color: "var(--text-dim)" }}>
+                          Nome da chave
+                        </label>
+                        <input
+                          type="text"
+                          value={secretariaGenLabel}
+                          onChange={e => setSecretariaGenLabel(e.target.value)}
+                          placeholder="Ex.: Trabalho, Pessoal…"
+                          className="w-full text-sm rounded-xl border px-3 py-2.5 outline-none mb-4"
+                          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                        />
+                        <button
+                          onClick={handleSecretariaGenerate}
+                          disabled={secretariaGenerating || !secretariaGenLabel.trim()}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+                          style={{
+                            background: "var(--accent)", border: "none",
+                            opacity: (secretariaGenerating || !secretariaGenLabel.trim()) ? 0.6 : 1,
+                            cursor: (secretariaGenerating || !secretariaGenLabel.trim()) ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          {secretariaGenerating ? "Gerando…" : "Gerar chave"}
+                        </button>
+                        {secretariaGenError && (
+                          <div
+                            className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg mt-3"
+                            style={{ background: "var(--danger-bg)", color: "var(--danger)" }}
+                          >
+                            <AlertCircle size={13} />
+                            {secretariaGenError}
+                          </div>
+                        )}
+                      </>) : (<>
+                        <div
+                          className="rounded-xl p-3.5 mb-3"
+                          style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}
+                        >
+                          <div
+                            className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide mb-2"
+                            style={{ color: "var(--success)" }}
+                          >
+                            <CheckCircle2 size={12} /> Chave gerada
+                          </div>
+                          <code
+                            className="block text-xs rounded-lg border px-2.5 py-2 mb-2 break-all"
+                            style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)", fontFamily: "monospace" }}
+                          >
+                            {secretariaRevealedKey}
+                          </code>
+                          <div className="flex items-center gap-1.5 text-[11.5px] font-semibold" style={{ color: "var(--warning)" }}>
+                            <AlertTriangle size={12} /> Copie agora — ela não aparece de novo.
+                          </div>
+                        </div>
+                        <p className="text-[12px] leading-relaxed mb-4" style={{ color: "var(--text-dim)" }}>
+                          Cole essa chave no campo de token do Sanwey Tasks, do lado da Secretária de IA, pra conectar
+                          esta conta ao seu Meu To-do.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <CopyLinkButton
+                            url={secretariaRevealedKey}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white"
+                            style={{ background: "var(--accent)", border: "none", cursor: "pointer" }}
+                          />
+                          <button
+                            onClick={handleSecretariaModalClose}
+                            className="px-4 py-2 rounded-xl text-xs font-semibold border"
+                            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+                          >
+                            Concluir
+                          </button>
+                        </div>
+                      </>)}
+                    </div>
+                  </Modal>
+                </Section>
               )}
 
               {integTab === "assinatura" && canSeeD4Sign && (
