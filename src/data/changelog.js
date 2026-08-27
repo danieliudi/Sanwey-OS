@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.74.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pendências: leads sob sua responsabilidade e leads parados agora têm um botão de IA direto no card — 'Rascunho de e-mail' ou 'Próximo passo' — sem precisar abrir o Funil de Vendas primeiro.",
+      },
+    ],
+  },
+  {
     version: "4.73.0",
     items: [
       {

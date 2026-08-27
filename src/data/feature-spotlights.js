@@ -332,6 +332,13 @@ export const FEATURE_SPOTLIGHTS = [
   // pra uma ação que já existia (abrir o card e agir de lá) — não uma
   // capacidade nova, mesmo critério das colunas mais largas em 4.59.0.
   // Coberto pelo changelog 4.73.0.
+  //
+  // 4.74.0 — botão de IA ("Rascunho de e-mail"/"Próximo passo") na fila de
+  // Pendências pros 2 tipos de pendência de Leads (Copiloto Fase 3):
+  // DECIDIDO PULAR o spotlight — mesmo motivo exato da 4.73.0 acima, o alvo
+  // só existe em cima de um card de lead responsável/parado, que pode não
+  // haver nenhum no momento em que a pessoa entra na rota "dashboard".
+  // Coberto pelo changelog 4.74.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;
