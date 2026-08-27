@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.73.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pendências: 4 tipos de tarefa agora resolvem direto na fila, sem precisar abrir o card — reciclar um treinamento vencido, recusar uma solicitação de marketing ou uma compra, e reenviar o lembrete de avaliação de desempenho atrasada pro RH.",
+        roles: ["admin", "gerente_rh", "marketing", "gerente_marketing"],
+      },
+      {
+        kind: "correcao",
+        text: "Recusar uma solicitação de marketing agora avisa se ela já tinha sido decidida por outra pessoa, em vez de sobrescrever em silêncio.",
+        roles: ["admin", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "4.72.0",
     items: [
       {

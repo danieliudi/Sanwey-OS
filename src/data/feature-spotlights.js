@@ -321,6 +321,17 @@ export const FEATURE_SPOTLIGHTS = [
   // acordeão de amostras já abre sozinho quando tem dado, então quem tinha
   // amostra registrada nem percebe a mudança de comportamento. Coberto pelo
   // changelog 4.72.0.
+  //
+  // 4.73.0 — botões de ação de 1 clique na fila de Pendências (Copiloto
+  // Fase 2): DECIDIDO PULAR o spotlight. O alvo real (o botão "Reciclar"/
+  // "Recusar"/"Enviar lembrete") só existe em CIMA de um card de um dos 4
+  // tipos específicos — pode não haver nenhum pendente no momento em que a
+  // pessoa entra na rota "dashboard" (mecanismo ancora num elemento fixo por
+  // rota, não serve bem pra "o card X, quando X existir", mesmo motivo já
+  // registrado pro ícone de "em teste" em 4.57.0). Além disso é um atalho
+  // pra uma ação que já existia (abrir o card e agir de lá) — não uma
+  // capacidade nova, mesmo critério das colunas mais largas em 4.59.0.
+  // Coberto pelo changelog 4.73.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;
