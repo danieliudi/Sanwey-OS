@@ -299,6 +299,28 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: o formulário da etapa pode mudar conforme o tipo da tarefa. Marque a etiqueta (Compra, Reunião…) no card e configure aqui, em Condicionais de campo, o que cada tipo pede.",
     version: "4.68.0",
   },
+  // Igual a "clientes-novo-cliente": o alvo é o botão da rota que abre o
+  // modal, não o campo em si — o CNPJ/aviso de duplicidade/contato só
+  // existem dentro do LeadCreateModal, que não está montado ao entrar na
+  // tela. Achado real que motivou (caso Casa Granado, 27/08/2026): sem CNPJ
+  // visível e sem aviso de nome parecido, um vendedor criou um cliente
+  // duplicado sem perceber.
+  {
+    id: "crm-nova-oportunidade-cnpj",
+    route: "crm",
+    target: '[data-tour="crm-nova-oportunidade"]',
+    text: "Novo: ao criar uma oportunidade, dá pra buscar o CNPJ (preenche a Razão Social), o sistema avisa se o nome digitado parece muito com um cliente já cadastrado, e já dá pra registrar quem te atendeu (nome, cargo, e-mail, telefone) — clique aqui.",
+    version: "4.72.0",
+  },
+  //
+  // 4.72.0 — dropdown "Pesquisar" (ex-4 ícones) e acordeão "Amostras
+  // enviadas" no card do Funil de Vendas: DECIDIDO PULAR o spotlight. Mesmo
+  // critério das colunas mais largas em 4.59.0 — decluttering passivo, não
+  // uma capacidade nova pra "descobrir": os links de pesquisa continuam
+  // fazendo a mesma coisa de antes, só atrás de um clique a mais; o
+  // acordeão de amostras já abre sozinho quando tem dado, então quem tinha
+  // amostra registrada nem percebe a mudança de comportamento. Coberto pelo
+  // changelog 4.72.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;

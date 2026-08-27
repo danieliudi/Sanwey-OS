@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.72.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Funil de Vendas: o card novo agora tem campo de CNPJ com busca automática (preenche razão social, cidade e estado), avisa quando o nome digitado parece muito com um cliente já cadastrado (evita duplicidade) e permite registrar a pessoa de contato — nome, cargo, e-mail e telefone — já na criação do card.",
+        roles: ["admin", "gerente", "vendedor", "consultor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Funil de Vendas: os 4 ícones de 'Pesquisar empresa' no card viraram um único botão 'Pesquisar', e 'Amostras enviadas' agora é um bloco recolhido por padrão (abre sozinho quando já tem amostra registrada) — coluna esquerda do card menos poluída.",
+        roles: ["admin", "gerente", "vendedor", "consultor"],
+      },
+    ],
+  },
+  {
     version: "4.71.0",
     items: [
       {

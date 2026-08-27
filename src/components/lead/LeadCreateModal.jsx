@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { X, Settings, Loader2 } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { X, Settings, Loader2, Search, Users } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { CANONICAL_STATES } from "../../constants/taxonomy";
@@ -13,6 +13,8 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { localDateInputToISOString, toLocalISODate } from "../../utils/date";
+import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
+import { formatPhone } from "../../utils/masks";
 
 // ── Customer search helpers ───────────────────────────────────────────────────
 
@@ -240,12 +242,27 @@ export function LeadCreateModal({
   onViewExisting,
   clients,
   createClient,
+  createClientContact,
+  canAddContact = false,
 }) {
   const [values, setValues] = useState(() => ({
     owner: currentUser?.id ? [currentUser.id] : [],
     sector: currentUser?.sectors?.[0] || "",
     contactEmail: "",
   }));
+  // "Pessoa de contato" (comprador/representante) capturada já na criação
+  // do card — pedido direto de um vendedor (27/08/2026): a informação
+  // surge na prospecção, não faz sentido só existir no cadastro do cliente
+  // depois. Grava em client_contacts — mesma tabela do comitê de compra,
+  // não um conceito à parte (regra 2 do CLAUDE.md).
+  const [contactDraft, setContactDraft] = useState({ name: "", jobTitle: "", email: "", phone: "" });
+  const { loading: cnpjLoading, error: cnpjError, lookup: cnpjLookupFn, reset: cnpjReset } = useCnpjLookup();
+  // Aviso de nome parecido (não exato) com um cliente já cadastrado — sem
+  // isso, digitar "Casa Granado" quando o cadastro é "CASA GRANADO
+  // LABORATORIOS FARMACIAS E DROGARIAS S A" não batia em lugar nenhum e
+  // criava um cliente duplicado em silêncio (achado real, 27/08/2026).
+  const [fuzzyDismissed, setFuzzyDismissed] = useState(false);
+  const [fuzzyAcceptedClient, setFuzzyAcceptedClient] = useState(null);
   // Campo opcional e secundário (spec aprovada com o Daniel) — controlado à
   // parte de `values` porque não faz parte do `formConfig` configurável
   // (não é um FIELD_DEFS, é fixo em todo card novo).
@@ -307,6 +324,10 @@ export function LeadCreateModal({
       setDuplicates([]);
       setTouchedKeys(new Set());
       setSubmitAttempted(false);
+      setContactDraft({ name: "", jobTitle: "", email: "", phone: "" });
+      cnpjReset();
+      setFuzzyDismissed(false);
+      setFuzzyAcceptedClient(null);
       setTimeout(() => firstRef.current?.focus(), 80);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -326,6 +347,53 @@ export function LeadCreateModal({
     }, 250);
     return () => clearTimeout(timer);
   }, [values.company, values.cnpj, existingLeads]);
+
+  // Um novo nome digitado invalida qualquer escolha/dispensa anterior do
+  // aviso de nome parecido — sem isso, aceitar/ignorar um candidato ficaria
+  // "grudado" mesmo depois da pessoa corrigir o que digitou.
+  useEffect(() => {
+    setFuzzyDismissed(false);
+    setFuzzyAcceptedClient(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.company]);
+
+  // Candidato de nome PARECIDO (não exato) num cliente já cadastrado — só
+  // quando não há match exato por CNPJ nem por nome (esses já linkam sem
+  // aviso, ver handleSubmit). Prioriza startsWith sobre includes genérico.
+  const fuzzyClientMatch = useMemo(() => {
+    const typedName = normalizeName(values.company);
+    if (typedName.length < 3) return null;
+    const typedCnpj = cnpjDigits(values.cnpj);
+    if (typedCnpj.length >= 8 && (clients || []).some(c => cnpjDigits(c.cnpj || "") === typedCnpj)) return null;
+    if ((clients || []).some(c => normalizeName(c.name) === typedName)) return null;
+    let best = null, bestScore = 0;
+    for (const c of (clients || [])) {
+      const cn = normalizeName(c.name);
+      if (!cn || cn === typedName) continue;
+      let score = 0;
+      if (cn.startsWith(typedName)) score = 3;
+      else if (typedName.startsWith(cn)) score = 2;
+      else if (cn.includes(typedName) || typedName.includes(cn)) score = 1;
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+    return best;
+  }, [values.company, values.cnpj, clients]);
+
+  const cleanLookupValue = (v) => (v && v !== "—" ? v : "");
+  const runCnpjLookup = async () => {
+    const digits = cnpjDigits(values.cnpj || "");
+    if (digits.length !== 14) return;
+    const data = await cnpjLookupFn(digits);
+    if (!data) return;
+    const cidadeLimpa = cleanLookupValue(data.city).split("/")[0].trim();
+    setValues(v => ({
+      ...v,
+      company: v.company || cleanLookupValue(data.company),
+      razaoSocial: v.razaoSocial || cleanLookupValue(data.razaoSocial),
+      city: v.city || cidadeLimpa,
+      state: v.state || cleanLookupValue(data.state),
+    }));
+  };
 
   const set = useCallback((fieldId, val) => {
     setValues(prev => ({ ...prev, [fieldId]: val }));
@@ -418,8 +486,11 @@ export function LeadCreateModal({
       // Auto-link or create client record
       const cnpjNorm = cnpjDigits(values.cnpj || "");
       const nameLower = normalizeName(values.company || "");
-      let clientId = null;
-      if (cnpjNorm.length >= 8) {
+      // Aviso de nome parecido aceito pela pessoa tem prioridade — evita
+      // repetir a checagem exata (já sabemos que não bateu) e o duplicado
+      // que o aviso existe justamente pra evitar.
+      let clientId = fuzzyAcceptedClient?.id || null;
+      if (!clientId && cnpjNorm.length >= 8) {
         const found = (clients || []).find(c => cnpjDigits(c.cnpj || "") === cnpjNorm);
         if (found) clientId = found.id;
       }
@@ -431,6 +502,7 @@ export function LeadCreateModal({
         try {
           const newClient = await createClient({
             name: (values.company || "").trim(),
+            razaoSocial: values.razaoSocial || null,
             cnpj: values.cnpj || null,
             city: values.city || null,
             state: values.state || null,
@@ -441,6 +513,17 @@ export function LeadCreateModal({
       }
       if (clientId) lead.clientId = clientId;
 
+      // "Pessoa de contato" — grava em client_contacts pro cliente que o
+      // card resolveu (existente ou recém-criado acima), nunca bloqueia a
+      // criação do card se falhar (RLS, rede) — só avisa depois.
+      if (clientId && contactDraft.name.trim() && createClientContact) {
+        try {
+          await createClientContact(clientId, contactDraft);
+        } catch (contactErr) {
+          console.warn("[LeadCreateModal] Contato não salvo:", contactErr?.message);
+        }
+      }
+
       await onAdd(lead);
       onClose();
     } catch (err) {
@@ -448,7 +531,7 @@ export function LeadCreateModal({
     } finally {
       setSaving(false);
     }
-  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields, negotiationStartedAt]);
+  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields, negotiationStartedAt, clients, createClient, createClientContact, contactDraft, fuzzyAcceptedClient]);
 
   // ESC fecha o modal via hook global (pilha LIFO) — funciona mesmo sem foco
   // dentro do modal, diferente do antigo onKeyDown na raiz.
@@ -556,17 +639,88 @@ export function LeadCreateModal({
                     )}
                     {def.label}
                   </label>
-                  <FieldInput
-                    def={def}
-                    configEntry={entry}
-                    value={values[entry.id]}
-                    onChange={val => set(entry.id, val)}
-                    users={users}
-                    companyId={companyId}
-                    inputRef={idx === 0 ? firstRef : undefined}
-                    touched={submitAttempted || touchedKeys.has(`base:${entry.id}`)}
-                  />
+                  {entry.id === "cnpj" ? (
+                    <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <FieldInput
+                          def={def}
+                          configEntry={entry}
+                          value={values[entry.id]}
+                          onChange={val => set(entry.id, val)}
+                          users={users}
+                          companyId={companyId}
+                          inputRef={idx === 0 ? firstRef : undefined}
+                          touched={submitAttempted || touchedKeys.has(`base:${entry.id}`)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={runCnpjLookup}
+                        disabled={cnpjLoading || cnpjDigits(values.cnpj).length !== 14}
+                        title="Buscar razão social na Receita a partir do CNPJ"
+                        style={{
+                          flexShrink: 0, borderRadius: 6, padding: "8px 10px", fontSize: 12, fontWeight: 600,
+                          display: "flex", alignItems: "center", gap: 6,
+                          background: "var(--text)", color: "var(--surface)", border: "none",
+                          opacity: (cnpjLoading || cnpjDigits(values.cnpj).length !== 14) ? 0.5 : 1,
+                          cursor: (cnpjLoading || cnpjDigits(values.cnpj).length !== 14) ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {cnpjLoading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                        Buscar
+                      </button>
+                    </div>
+                  ) : (
+                    <FieldInput
+                      def={def}
+                      configEntry={entry}
+                      value={values[entry.id]}
+                      onChange={val => set(entry.id, val)}
+                      users={users}
+                      companyId={companyId}
+                      inputRef={idx === 0 ? firstRef : undefined}
+                      touched={submitAttempted || touchedKeys.has(`base:${entry.id}`)}
+                    />
+                  )}
+                  {entry.id === "cnpj" && cnpjError && (
+                    <div style={{ marginTop: 4, fontSize: 11, color: "var(--danger)" }}>
+                      {cnpjError.message || String(cnpjError)}
+                    </div>
+                  )}
                 </div>
+                {entry.id === "company" && fuzzyClientMatch && !fuzzyDismissed && !fuzzyAcceptedClient && (
+                  <div
+                    style={{
+                      marginBottom: 16, padding: "10px 12px", background: "var(--warning-bg)",
+                      border: "1px solid var(--warning)", borderRadius: 8, fontSize: 12,
+                    }}
+                  >
+                    <div style={{ color: "var(--warning)", fontWeight: 600, marginBottom: 6 }}>
+                      Você quis dizer "{fuzzyClientMatch.name}"?
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setFuzzyAcceptedClient(fuzzyClientMatch)}
+                        style={{ fontSize: 11.5, fontWeight: 700, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                      >
+                        Usar esse cliente
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFuzzyDismissed(true)}
+                        style={{ fontSize: 11.5, color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                      >
+                        Ignorar e criar novo
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {fuzzyAcceptedClient && entry.id === "company" && (
+                  <div style={{ marginBottom: 16, fontSize: 11.5, color: "var(--accent)" }}>
+                    ✓ Vai vincular a "{fuzzyAcceptedClient.name}"
+                  </div>
+                )}
                 {(entry.id === "company" || entry.id === "cnpj") && duplicates.length > 0 && (
                   <div
                     style={{
@@ -638,6 +792,52 @@ export function LeadCreateModal({
               </React.Fragment>
             );
           })}
+
+          {/* "Pessoa de contato" — pedido direto de um vendedor (áudio,
+              27/08/2026): a informação do comprador/representante surge na
+              prospecção, então captura já aqui. Grava em client_contacts —
+              mesma tabela do comitê de compra (aba Contatos do cadastro do
+              cliente), o card só é uma segunda porta de entrada pro mesmo
+              dado. Escondido pra quem não pode gravar lá (mesmo predicado
+              de current_user_can_manage_client — admin/gerente/vendedor). */}
+          {canAddContact && (
+            <div
+              className="mb-4"
+              style={{ padding: "12px 14px", borderRadius: 10, border: "1px dashed var(--border)" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <Users size={12} /> Pessoa de contato
+                <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(opcional)</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <input
+                  value={contactDraft.name}
+                  onChange={e => setContactDraft(c => ({ ...c, name: e.target.value }))}
+                  placeholder="Nome"
+                  style={{ fontSize: 13, borderRadius: 6, border: "1px solid var(--border-strong)", padding: "8px 12px", color: "var(--text)", background: "var(--surface)", outline: "none" }}
+                />
+                <input
+                  value={contactDraft.jobTitle}
+                  onChange={e => setContactDraft(c => ({ ...c, jobTitle: e.target.value }))}
+                  placeholder="Cargo"
+                  style={{ fontSize: 13, borderRadius: 6, border: "1px solid var(--border-strong)", padding: "8px 12px", color: "var(--text)", background: "var(--surface)", outline: "none" }}
+                />
+                <input
+                  value={contactDraft.email}
+                  onChange={e => setContactDraft(c => ({ ...c, email: e.target.value }))}
+                  type="email"
+                  placeholder="E-mail"
+                  style={{ fontSize: 13, borderRadius: 6, border: "1px solid var(--border-strong)", padding: "8px 12px", color: "var(--text)", background: "var(--surface)", outline: "none" }}
+                />
+                <input
+                  value={contactDraft.phone}
+                  onChange={e => setContactDraft(c => ({ ...c, phone: formatPhone(e.target.value) }))}
+                  placeholder="Telefone"
+                  style={{ fontSize: 13, borderRadius: 6, border: "1px solid var(--border-strong)", padding: "8px 12px", color: "var(--text)", background: "var(--surface)", outline: "none" }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Campo opcional e secundário — card discreto, não é o campo
               principal do form (spec aprovada com o Daniel). */}

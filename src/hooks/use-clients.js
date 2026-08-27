@@ -125,6 +125,29 @@ export function useClients({ userId } = {}) {
   // cliente é sempre salvo primeiro: se o INSERT do contato falhar (RLS,
   // rede), o cliente criado NÃO é desfeito — o erro carrega `clientSaved`
   // pra quem chamou decidir como avisar sem fingir que nada foi salvo.
+  // Extraído de dentro de createClient (27/08/2026) — o Funil de Vendas
+  // agora também grava "Pessoa de contato" na criação do card, mas ali o
+  // cliente pode já EXISTIR (match por CNPJ/nome ou escolhido no aviso de
+  // nome parecido), não só ser recém-criado. Único caminho de escrita em
+  // client_contacts, chamado pelos dois lugares.
+  const createClientContact = useCallback(async (clientId, contact) => {
+    if (!clientId || !contact?.name?.trim() || !isSupabaseConfigured) return;
+    const { error: contactErr } = await supabase.from("client_contacts").insert({
+      client_id: clientId,
+      name: contact.name.trim(),
+      email: contact.email?.trim() || null,
+      phone: contact.phone?.trim() || null,
+      job_title: contact.jobTitle?.trim() || null,
+    });
+    if (contactErr) throw contactErr;
+  }, []);
+
+  // `contact` (opcional) captura o contato principal já na tela de criação —
+  // sem isso, cadastrar um contato exigia salvar o cliente, reabrir e ir na
+  // aba Contatos (por isso client_contacts nascia praticamente vazia). O
+  // cliente é sempre salvo primeiro: se o INSERT do contato falhar (RLS,
+  // rede), o cliente criado NÃO é desfeito — o erro carrega `clientSaved`
+  // pra quem chamou decidir como avisar sem fingir que nada foi salvo.
   const createClient = useCallback(async (client, contact) => {
     const dup = findClientByCnpj(clientsRef.current, client.cnpj);
     if (dup) throw new DuplicateClientError(dup);
@@ -144,22 +167,15 @@ export function useClients({ userId } = {}) {
     const saved = rowToClient(data);
     setRemoteClients(prev => prev.some(c => c.id === saved.id) ? prev : [...prev, saved]);
 
-    if (contact?.name?.trim()) {
-      const { error: contactErr } = await supabase.from("client_contacts").insert({
-        client_id: saved.id,
-        name: contact.name.trim(),
-        email: contact.email?.trim() || null,
-        phone: contact.phone?.trim() || null,
-        job_title: contact.jobTitle?.trim() || null,
-      });
-      if (contactErr) {
-        const wrapped = new Error(`Cliente criado, mas o contato não foi salvo: ${contactErr.message}`);
-        wrapped.clientSaved = saved;
-        throw wrapped;
-      }
+    try {
+      await createClientContact(saved.id, contact);
+    } catch (contactErr) {
+      const wrapped = new Error(`Cliente criado, mas o contato não foi salvo: ${contactErr.message}`);
+      wrapped.clientSaved = saved;
+      throw wrapped;
     }
     return saved;
-  }, [setFallbackClients, userId]);
+  }, [setFallbackClients, userId, createClientContact]);
 
   const updateClient = useCallback(async (id, patch) => {
     if (!isSupabaseConfigured) {
@@ -216,9 +232,10 @@ export function useClients({ userId } = {}) {
     loading,
     error,
     createClient,
+    createClientContact,
     updateClient,
     deleteClient,
     upsertClientBillingHistory,
     refetch: fetchAll,
-  }), [clients, loading, error, createClient, updateClient, deleteClient, upsertClientBillingHistory, fetchAll]);
+  }), [clients, loading, error, createClient, createClientContact, updateClient, deleteClient, upsertClientBillingHistory, fetchAll]);
 }

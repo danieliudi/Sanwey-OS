@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   X, MapPin, Network, Package, Users, Sparkles, Copy, Send,
-  Calendar, Linkedin, Newspaper, MessageSquareWarning, Search,
+  Calendar, Linkedin, Newspaper, MessageSquareWarning, Search, ChevronDown,
   Check, Trash2, Mail, Mic,
   Clock, GitBranch, CalendarClock, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
@@ -748,31 +748,11 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
               </div>
 
               {/* Pesquisar empresa — junto do bloco Cliente, não mais no
-                  painel central da etapa. */}
+                  painel central da etapa. Item 4 aprovado no mockup de
+                  27/08/2026 (Opção A): 4 ícones soltos viravam poluição visual
+                  reportada pelo Daniel — colapsados num único botão "Pesquisar". */}
               <div className="mt-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
-                  Pesquisar empresa
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {researchLinks.map(l => {
-                    const Icon = l.icon;
-                    return (
-                      <a
-                        key={l.id}
-                        href={l.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={l.label}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-150 cursor-pointer"
-                        style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text-dim)" }}
-                        onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow-pop)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "var(--border)"; }}
-                      >
-                        <Icon size={14} strokeWidth={2} />
-                      </a>
-                    );
-                  })}
-                </div>
+                <ResearchDropdown links={researchLinks} />
               </div>
             </div>
 
@@ -1932,6 +1912,73 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// ── Pesquisar empresa ────────────────────────────────────────────────────────
+// Item 4 aprovado no mockup de 27/08/2026 (Opção A): os 4 ícones soltos
+// (Google/LinkedIn/Google News/Reclame Aqui) viraram um único botão
+// "Pesquisar" com dropdown — mesma lista de links, sem o custo visual de 4
+// alvos de clique permanentes na coluna esquerda.
+function ResearchDropdown({ links }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e) => {
+      if (wrapRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  if (!links?.length) return null;
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 text-xs font-semibold rounded-lg border transition-all duration-150 cursor-pointer"
+        style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text-dim)", padding: "6px 10px" }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+      >
+        <Search size={13} strokeWidth={2} />
+        Pesquisar
+        <ChevronDown size={12} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20,
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
+            boxShadow: "var(--shadow-pop)", minWidth: 170, overflow: "hidden",
+          }}
+        >
+          {links.map(l => {
+            const Icon = l.icon;
+            return (
+              <a
+                key={l.id}
+                href={l.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 text-xs"
+                style={{ padding: "8px 12px", color: "var(--text)", textDecoration: "none" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              >
+                <Icon size={13} strokeWidth={2} style={{ flexShrink: 0, color: "var(--text-dim)" }} />
+                {l.label}
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Amostras enviadas ────────────────────────────────────────────────────────
 // Aprovado via mockup com o Daniel — bloco de lista relacionada ao lead,
 // mesmo padrão visual de AttachmentsPanel logo abaixo (linha com borda,
@@ -1944,6 +1991,18 @@ function SamplesPanel({ leadId, companyColor, currentUser }) {
   const [sentAt, setSentAt] = useState(() => toLocalISODate(new Date()));
   const [cost, setCost] = useState("");
   const [saving, setSaving] = useState(false);
+  // Item 5 aprovado no mockup de 27/08/2026 (Opção A): bloco fixo aberto era
+  // uma das duas fontes de poluição na coluna esquerda que o Daniel apontou —
+  // colapsado por padrão quando vazio, abre sozinho na 1ª vez que carregar com
+  // dado (não reabre depois se o usuário recolher de propósito).
+  const [expanded, setExpanded] = useState(false);
+  const autoExpandedRef = useRef(false);
+  useEffect(() => {
+    if (!loading && samples.length > 0 && !autoExpandedRef.current) {
+      autoExpandedRef.current = true;
+      setExpanded(true);
+    }
+  }, [loading, samples.length]);
 
   const openModal = () => {
     setNotes("");
@@ -1967,12 +2026,17 @@ function SamplesPanel({ leadId, companyColor, currentUser }) {
 
   return (
     <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-xs font-semibold" style={{ color: companyColor }}>
-          🧪 Amostras enviadas
-        </div>
+      <div className="flex items-center justify-between" style={{ marginBottom: expanded ? 12 : 0 }}>
         <button
-          onClick={openModal}
+          onClick={() => setExpanded(v => !v)}
+          className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+          style={{ color: companyColor, background: "transparent", border: "none", padding: 0 }}
+        >
+          <ChevronDown size={13} style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s" }} />
+          🧪 Amostras enviadas{samples.length > 0 ? ` (${samples.length})` : ""}
+        </button>
+        <button
+          onClick={e => { e.stopPropagation(); openModal(); }}
           className="text-xs font-semibold flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
           style={{ color: companyColor, background: companyColor + "18", border: "none" }}
           onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
@@ -1982,17 +2046,17 @@ function SamplesPanel({ leadId, companyColor, currentUser }) {
         </button>
       </div>
 
-      {loading && (
+      {expanded && loading && (
         <div className="text-xs text-center py-2" style={{ color: "var(--text-dim)" }}>Carregando…</div>
       )}
 
-      {!loading && samples.length === 0 && (
+      {expanded && !loading && samples.length === 0 && (
         <div className="text-xs text-center py-2 italic" style={{ color: "var(--text-dim)" }}>
           Nenhuma amostra registrada ainda.
         </div>
       )}
 
-      {samples.length > 0 && (
+      {expanded && samples.length > 0 && (
         <div className="space-y-1.5">
           {samples.map(s => (
             <div
@@ -2027,14 +2091,14 @@ function SamplesPanel({ leadId, companyColor, currentUser }) {
         </div>
       )}
 
-      {samples.length > 0 && (
+      {expanded && samples.length > 0 && (
         <div className="flex items-center justify-between mt-3 pt-3 text-xs" style={{ borderTop: "1px solid var(--surface-alt)" }}>
           <span className="font-semibold" style={{ color: "var(--text-dim)" }}>Total gasto</span>
           <span className="font-bold" style={{ color: "var(--text)" }}>{formatBRL(totalCost)}</span>
         </div>
       )}
 
-      {error && (
+      {expanded && error && (
         <div className="mt-2 text-xs" style={{ color: "var(--danger)" }}>{error}</div>
       )}
 

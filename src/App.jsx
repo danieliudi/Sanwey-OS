@@ -331,6 +331,7 @@ export default function App() {
     clients,
     loading: clientsLoading,
     createClient,
+    createClientContact,
     updateClient,
     deleteClient,
     upsertClientBillingHistory,
@@ -2079,6 +2080,7 @@ export default function App() {
               pipelineTransitions={pipelineTransitions}
               clients={clients}
               onCreateClient={createClient}
+              onCreateClientContact={createClientContact}
               autoOpenCreate={crmAutoCreate}
               onAutoOpenHandled={() => setCrmAutoCreate(false)}
               onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
