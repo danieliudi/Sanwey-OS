@@ -161,8 +161,8 @@ function AIDraftButton({ label, onClick }) {
   );
 }
 
-export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadClick, onOpenPending }) {
-  const { tasks, loading, counts, reciclarAtribuicao, rejectRequest, rejectPurchase } = useMyTasks({ currentUser });
+export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadClick, onOpenPending, personalTasksEnabled = true }) {
+  const { tasks, loading, counts, reciclarAtribuicao, rejectRequest, rejectPurchase } = useMyTasks({ currentUser, personalTasksEnabled });
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState(false);
   // Set, não um id escalar — achado real de QA (27/08/2026): a fila mostra

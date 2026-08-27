@@ -1974,6 +1974,7 @@ export default function App() {
                 onNavigate={setSection}
                 onLeadClick={setSelectedLead}
                 onOpenPending={handleOpenPendingTask}
+                personalTasksEnabled={Boolean(settings.personalTasksEnabled)}
               />
             )
           } />
