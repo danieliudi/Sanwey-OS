@@ -267,6 +267,13 @@ export function LeadCreateModal({
   // parte de `values` porque não faz parte do `formConfig` configurável
   // (não é um FIELD_DEFS, é fixo em todo card novo).
   const [negotiationStartedAt, setNegotiationStartedAt] = useState("");
+  // O modal nunca desmonta entre um card e outro (CRMView só alterna `open`)
+  // — sem isso, uma busca de CNPJ ainda em voo quando o usuário fecha e abre
+  // outro card resolveria contra o estado do card NOVO, preenchendo campos
+  // com o dado do CNPJ do card anterior (achado real de QA adversarial,
+  // 27/08/2026). Incrementado no reset de `open` abaixo; `runCnpjLookup`
+  // só aplica a resposta se a sessão ainda for a mesma que a disparou.
+  const cnpjSessionRef = useRef(0);
   // Valores dos campos customizados da ETAPA de destino (pipeline_stage_fields)
   // — mesmo mecanismo do drawer/enforcement, mas coletado já na criação, pra
   // não precisar abrir o card de novo só pra preencher o que a fase pede.
@@ -288,7 +295,7 @@ export function LeadCreateModal({
   // formulário preenchido pede confirmação. Achado da 2ª auditoria.
   const initialSnapshotRef = useRef(null);
   const stateRef = useRef(null);
-  stateRef.current = JSON.stringify({ values, customValues, negotiationStartedAt });
+  stateRef.current = JSON.stringify({ values, customValues, negotiationStartedAt, contactDraft });
   if (initialSnapshotRef.current === null) initialSnapshotRef.current = stateRef.current;
   const guardedClose = useCallback(() => {
     if (stateRef.current !== initialSnapshotRef.current
@@ -325,6 +332,7 @@ export function LeadCreateModal({
       setTouchedKeys(new Set());
       setSubmitAttempted(false);
       setContactDraft({ name: "", jobTitle: "", email: "", phone: "" });
+      cnpjSessionRef.current += 1;
       cnpjReset();
       setFuzzyDismissed(false);
       setFuzzyAcceptedClient(null);
@@ -383,8 +391,12 @@ export function LeadCreateModal({
   const runCnpjLookup = async () => {
     const digits = cnpjDigits(values.cnpj || "");
     if (digits.length !== 14) return;
+    const session = cnpjSessionRef.current;
     const data = await cnpjLookupFn(digits);
-    if (!data) return;
+    // O modal pode ter fechado e reaberto (outro card/etapa) enquanto essa
+    // busca estava em voo — descarta a resposta em vez de contaminar o
+    // formulário de um card diferente do que a disparou.
+    if (!data || session !== cnpjSessionRef.current) return;
     const cidadeLimpa = cleanLookupValue(data.city).split("/")[0].trim();
     setValues(v => ({
       ...v,
@@ -438,6 +450,14 @@ export function LeadCreateModal({
       setError("E-mail inválido.");
       return;
     }
+    // Achado real de QA (27/08/2026): cargo/e-mail/telefone preenchidos sem
+    // nome eram descartados em silêncio (createClientContact exige nome) —
+    // sem essa checagem, o vendedor achava que tinha salvo o contato.
+    if (canAddContact && !contactDraft.name.trim() && (contactDraft.jobTitle.trim() || contactDraft.email.trim() || contactDraft.phone.trim())) {
+      setSubmitAttempted(true);
+      setError("Informe o nome da pessoa de contato (ou apague os outros campos dela).");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -486,11 +506,13 @@ export function LeadCreateModal({
       // Auto-link or create client record
       const cnpjNorm = cnpjDigits(values.cnpj || "");
       const nameLower = normalizeName(values.company || "");
-      // Aviso de nome parecido aceito pela pessoa tem prioridade — evita
-      // repetir a checagem exata (já sabemos que não bateu) e o duplicado
-      // que o aviso existe justamente pra evitar.
-      let clientId = fuzzyAcceptedClient?.id || null;
-      if (!clientId && cnpjNorm.length >= 8) {
+      // Match EXATO (CNPJ ou nome) sempre vence — inclusive sobre um aviso de
+      // nome parecido já aceito antes. Achado real de QA adversarial
+      // (27/08/2026): sem essa ordem, aceitar "Usar esse cliente" e DEPOIS
+      // colar um CNPJ que bate exato com outro cliente vinculava o lead ao
+      // cliente errado (o aceito por nome, não o do CNPJ digitado).
+      let clientId = null;
+      if (cnpjNorm.length >= 8) {
         const found = (clients || []).find(c => cnpjDigits(c.cnpj || "") === cnpjNorm);
         if (found) clientId = found.id;
       }
@@ -498,6 +520,7 @@ export function LeadCreateModal({
         const found = (clients || []).find(c => normalizeName(c.name || "") === nameLower);
         if (found) clientId = found.id;
       }
+      if (!clientId && fuzzyAcceptedClient?.id) clientId = fuzzyAcceptedClient.id;
       if (!clientId && (values.company || "").trim().length >= 2) {
         try {
           const newClient = await createClient({
@@ -516,7 +539,7 @@ export function LeadCreateModal({
       // "Pessoa de contato" — grava em client_contacts pro cliente que o
       // card resolveu (existente ou recém-criado acima), nunca bloqueia a
       // criação do card se falhar (RLS, rede) — só avisa depois.
-      if (clientId && contactDraft.name.trim() && createClientContact) {
+      if (canAddContact && clientId && contactDraft.name.trim() && createClientContact) {
         try {
           await createClientContact(clientId, contactDraft);
         } catch (contactErr) {
@@ -531,7 +554,7 @@ export function LeadCreateModal({
     } finally {
       setSaving(false);
     }
-  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields, negotiationStartedAt, clients, createClient, createClientContact, contactDraft, fuzzyAcceptedClient]);
+  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields, negotiationStartedAt, clients, createClient, createClientContact, contactDraft, fuzzyAcceptedClient, canAddContact]);
 
   // ESC fecha o modal via hook global (pilha LIFO) — funciona mesmo sem foco
   // dentro do modal, diferente do antigo onKeyDown na raiz.

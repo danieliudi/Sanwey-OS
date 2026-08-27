@@ -977,7 +977,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                 bloco de lista relacionada ao lead usado em "Produto
                 vinculado" acima / AttachmentsPanel (linha com borda,
                 lixeira inline por item). */}
-            <SamplesPanel leadId={lead.id} companyColor={company.primary} currentUser={currentUser} />
+            <SamplesPanel key={lead.id} leadId={lead.id} companyColor={company.primary} currentUser={currentUser} />
 
             <div className="pt-1">
               <Button variant="primary" size="sm" icon={Send} accent={company.primary} onClick={handleStartOutreach}>

@@ -28,8 +28,17 @@ export const CHANGELOG = [
     items: [
       {
         kind: "novo",
-        text: "Funil de Vendas: o card novo agora tem campo de CNPJ com busca automática (preenche razão social, cidade e estado), avisa quando o nome digitado parece muito com um cliente já cadastrado (evita duplicidade) e permite registrar a pessoa de contato — nome, cargo, e-mail e telefone — já na criação do card.",
+        text: "Funil de Vendas: o card novo agora tem campo de CNPJ com busca automática (preenche razão social, cidade e estado), e avisa quando o nome digitado parece muito com um cliente já cadastrado, pra evitar duplicidade.",
         roles: ["admin", "gerente", "vendedor", "consultor"],
+      },
+      {
+        kind: "novo",
+        // Bloco "Pessoa de contato" só aparece pra quem já podia editar o
+        // cadastro do cliente (canAddContact em CRMView.jsx) — consultor não
+        // vê esse campo, então não entra no roles daqui (achado de QA
+        // 27/08/2026: o item anterior incluía consultor por engano).
+        text: "Funil de Vendas: já dá pra registrar a pessoa de contato — nome, cargo, e-mail e telefone — direto na criação do card, sem precisar abrir o cadastro do cliente depois.",
+        roles: ["admin", "gerente", "vendedor"],
       },
       {
         kind: "ajuste",
