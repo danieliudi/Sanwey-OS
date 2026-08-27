@@ -2103,6 +2103,8 @@ export default function App() {
               clients={clients}
               onCreateClient={createClient}
               onOpenLead={setSelectedLead}
+              initialSelectedCaseId={selectedPosvendaCaseId}
+              onInitialCaseConsumed={() => setSelectedPosvendaCaseId(null)}
             />
           } />
           <Route path={ROUTES["crm-viagens"]} element={
@@ -2369,7 +2371,11 @@ export default function App() {
           } />
           <Route path={ROUTES["marketing-compras"]} element={
             ((isMarketingUser && !isAgencia) || isDiretoria)
-              ? <ComprasMarketingView user={currentUser} users={users} notifyMentions={notifyMentions} />
+              ? <ComprasMarketingView
+                  user={currentUser} users={users} notifyMentions={notifyMentions}
+                  initialSelectedPurchaseId={selectedPurchaseRequestId}
+                  onInitialPurchaseConsumed={() => setSelectedPurchaseRequestId(null)}
+                />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["rh-overview"]} element={
@@ -2407,6 +2413,8 @@ export default function App() {
                   canWrite={isRHManager}
                   canTriage={isRHUser}
                   notifyMentions={notifyMentions}
+                  initialSelectedVagaId={selectedVagaId}
+                  onInitialVagaConsumed={() => setSelectedVagaId(null)}
                 />
               : <Navigate to={ROUTES.dashboard} replace />
           } />

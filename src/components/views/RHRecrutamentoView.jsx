@@ -2753,7 +2753,7 @@ function addDays(base, days) {
   return d.toISOString().slice(0, 10);
 }
 
-export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }) {
+export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, initialSelectedVagaId, onInitialVagaConsumed }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
     createVaga, updateVaga, changeVagaStage, duplicateVaga, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
@@ -2782,6 +2782,16 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const [addVagaStage, setAddVagaStage]     = useState(null);
   const [editingVaga, setEditingVaga]       = useState(null);
   const [vagaDrawerId, setVagaDrawerId]     = useState(null);
+
+  // Deep-link vindo da fila de Pendências (Copiloto, 27/08/2026) — mais
+  // simples que Entregas/Compras: `vagaDrawerId` já é só o id (vagaEmDrawer
+  // resolve via useMemo assim que `vagas` chegar), então não precisa de
+  // guard de loading pra atribuir.
+  useEffect(() => {
+    if (!initialSelectedVagaId) return;
+    setVagaDrawerId(initialSelectedVagaId);
+    onInitialVagaConsumed?.();
+  }, [initialSelectedVagaId, onInitialVagaConsumed]);
   const [vagaMoveError, setVagaMoveError]   = useState(null);
   const [candMoveError, setCandMoveError]   = useState(null);
   const [cargosManagerOpen, setCargosManagerOpen] = useState(false);

@@ -612,7 +612,7 @@ function CalendarView({ purchases, onPillClick }) {
 }
 
 /* ── Main view ────────────────────────────────────────────────────────── */
-export function ComprasMarketingView({ user, users = [], notifyMentions }) {
+export function ComprasMarketingView({ user, users = [], notifyMentions, initialSelectedPurchaseId, onInitialPurchaseConsumed }) {
   const {
     purchases, loading, error,
     createPurchase, updatePurchase, deletePurchase, duplicatePurchase,
@@ -625,6 +625,19 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
   const [showCreate, setShowCreate] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
   const [selected, setSelected] = useState(null);
+
+  // Deep-link vindo da fila de Pendências (Copiloto, 27/08/2026) — mesmo
+  // padrão do Cmd-K (ver EntregasView/MarketingView). `loading` começa
+  // `false`, por isso o hasLoadedOnceRef em vez de um guard direto.
+  const hasLoadedOnceRef = useRef(false);
+  useEffect(() => { if (loading) hasLoadedOnceRef.current = true; }, [loading]);
+  useEffect(() => {
+    if (!initialSelectedPurchaseId || !hasLoadedOnceRef.current || loading) return;
+    const p = purchases.find(p => p.id === initialSelectedPurchaseId);
+    if (p) setSelected(p);
+    onInitialPurchaseConsumed?.();
+  }, [initialSelectedPurchaseId, purchases, loading, onInitialPurchaseConsumed]);
+
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [stageError, setStageError] = useState(null);

@@ -844,7 +844,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 
 // ── PosVendaView ──────────────────────────────────────────────────────────────
 
-export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, users, clients = [], onCreateClient, onOpenLead }) {
+export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, users, clients = [], onCreateClient, onOpenLead, initialSelectedCaseId, onInitialCaseConsumed }) {
   const isGroupView = activeCompany === "all";
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
@@ -915,6 +915,15 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const [draggedColumnKey, setDraggedColumnKey] = useState(null);
   const [editingFieldsStage, setEditingFieldsStage] = useState(null); // { stageKey, name }
   const [selectedCaseId, setSelectedCaseId] = useState(null);
+
+  // Deep-link vindo da fila de Pendências (Copiloto, 27/08/2026) — mesmo
+  // padrão simples de RHRecrutamentoView/vagaDrawerId (o case resolve via
+  // `cases.find` assim que `cases` chegar, sem precisar de loading gate).
+  useEffect(() => {
+    if (!initialSelectedCaseId) return;
+    setSelectedCaseId(initialSelectedCaseId);
+    onInitialCaseConsumed?.();
+  }, [initialSelectedCaseId, onInitialCaseConsumed]);
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
 
   const trailingRef = useRef(null);
