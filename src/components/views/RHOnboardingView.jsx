@@ -951,7 +951,7 @@ function BulkTarefaModal({ colaboradores, onApply, onClose }) {
 
 // ── Visão individual (colaborador logado, não-RH) ────────────────────────────
 
-function MeuChecklist({ colaborador, tarefas, onStatusChange }) {
+function MeuChecklist({ colaborador, tarefas, users, onStatusChange }) {
   const total = tarefas.length;
   const done = tarefas.filter((t) => t.status === "concluida").length;
   const progresso = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -970,7 +970,7 @@ function MeuChecklist({ colaborador, tarefas, onStatusChange }) {
       </div>
       <div style={{ padding: "4px 16px 8px" }}>
         {tarefas.map((t) => (
-          <TaskRow key={t.id} tarefa={t} canWrite={false} canToggle onStatusChange={onStatusChange} onDelete={() => {}} />
+          <TaskRow key={t.id} tarefa={t} users={users} canWrite={false} canToggle onStatusChange={onStatusChange} onDelete={() => {}} />
         ))}
       </div>
     </div>
@@ -1479,6 +1479,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           <MeuChecklist
             colaborador={meuColaborador}
             tarefas={tarefasByColaborador[meuColaborador.id] || []}
+            users={users}
             onStatusChange={updateTarefaStatus}
           />
         )}

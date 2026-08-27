@@ -98,12 +98,6 @@ export function useRHOnboarding({ userId } = {}) {
     setTarefas(prev => prev.map(t => t.id === tarefaId ? { ...t, status } : t));
   }, []);
 
-  const updateTarefaResponsaveis = useCallback(async (tarefaId, responsavelIds) => {
-    const { error } = await supabase.from("rh_onboarding_tarefas").update({ responsavel_ids: responsavelIds, updated_at: new Date().toISOString() }).eq("id", tarefaId);
-    if (error) throw new Error(error.message);
-    setTarefas(prev => prev.map(t => t.id === tarefaId ? { ...t, responsavel_ids: responsavelIds } : t));
-  }, []);
-
   const deleteTarefa = useCallback(async (tarefaId) => {
     const { error } = await supabase.from("rh_onboarding_tarefas").delete().eq("id", tarefaId);
     if (error) throw new Error(error.message);
@@ -118,8 +112,7 @@ export function useRHOnboarding({ userId } = {}) {
     applyChecklist,
     applyTaskToMany,
     updateTarefaStatus,
-    updateTarefaResponsaveis,
     deleteTarefa,
     refetch: fetchAll,
-  }), [templates, tarefas, loading, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, updateTarefaResponsaveis, deleteTarefa, fetchAll]);
+  }), [templates, tarefas, loading, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, deleteTarefa, fetchAll]);
 }

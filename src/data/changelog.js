@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.76.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Onboarding: agora dá pra atribuir um ou mais responsáveis a cada tarefa criada — aparece como avatar na lista, inclusive pro colaborador ver no próprio checklist.",
+      },
+    ],
+  },
+  {
     version: "4.75.0",
     items: [
       {

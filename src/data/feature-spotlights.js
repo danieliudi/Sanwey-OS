@@ -346,6 +346,15 @@ export const FEATURE_SPOTLIGHTS = [
   // fila, mesmo mecanismo de clique-pra-abrir de sempre) — não um elemento
   // de UI novo pra apontar; mesmo critério das colunas mais largas em
   // 4.59.0. Coberto pelo changelog 4.75.0.
+  //
+  // 4.76.0 — responsável(is) em tarefa de Onboarding (avatar na lista +
+  // picker ao criar tarefa ad-hoc): DECIDIDO PULAR o spotlight. O alvo real
+  // (o picker de responsável) só existe DENTRO do drawer de um colaborador
+  // específico em `OnboardingDrawer` — não é um elemento fixo de rota que
+  // o mecanismo (ancorado por `route`+`target` na primeira visita à tela)
+  // consegue apontar de forma confiável, mesmo motivo já registrado pro
+  // botão de ação de 1 clique em 4.73.0/4.74.0. Coberto pelo changelog
+  // 4.76.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;
