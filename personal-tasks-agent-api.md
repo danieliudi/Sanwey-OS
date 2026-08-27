@@ -14,28 +14,36 @@ nas tarefas do Daniel — nunca um mecanismo multi-usuário.
 
 ---
 
-## 1. Setup obrigatório (uma vez)
+## 1. Setup obrigatório (uma vez, por perfil que quiser conectar)
 
-1. Acesse: https://supabase.com/dashboard/project/adizvduyfzfftyswkijj/settings/edge-functions
-2. Clique em **"Edit secrets"**
-3. Adicione:
-   - `PERSONAL_TASKS_AGENT_KEY` = (gere uma string longa e aleatória, ex: `openssl rand -hex 32`)
-   - `PERSONAL_TASKS_OWNER_USER_ID` = o `profiles.id` (= `auth.users.id`) do Daniel
-4. Salve.
+Desde 27/08/2026 não existe mais secret fixo de Edge Function pra isso —
+cada perfil do sanwey-crm gera sua própria chave, direto na tela:
 
-A secretária agêntica guarda o valor de `PERSONAL_TASKS_AGENT_KEY` como
-`SANWEY_TASKS_API_TOKEN` (mesmo padrão de token único que ela já usa pra
-Notion/Google Tasks).
+1. Logue no sanwey-crm com o perfil que você quer que receba as tarefas.
+2. Vá em **Configurações → Integrações → Secretária de IA**.
+3. Clique em **"Gerar nova chave"**, dê um nome (ex.: "Trabalho", "Pessoal")
+   e copie o valor mostrado — ele só aparece **uma vez** (só o hash fica
+   salvo no banco, ver `20261021_personal_tasks_api_keys.sql`).
+4. Cole esse valor como `SANWEY_TASKS_API_TOKEN` do lado da secretária
+   agêntica (mesmo padrão de token único que ela já usa pra Notion/Google
+   Tasks).
+
+Quer trocar qual perfil recebe as tarefas (ex.: do trabalho pra pessoal)?
+Gere uma chave nova logado no OUTRO perfil e cole o novo valor no lugar do
+antigo — não precisa mexer em nenhum secret de Supabase. Revogar uma chave
+(mesma tela, botão "Revogar") derruba só aquela conexão, sem afetar outras.
 
 ## 2. Autenticação
 
 ```
-X-Personal-Tasks-Key: <valor do PERSONAL_TASKS_AGENT_KEY>
+X-Personal-Tasks-Key: <chave gerada em Configurações → Integrações → Secretária de IA>
 ```
 
 Sem caminho de JWT — nada dentro do próprio sanwey-crm chama esta função (a
-tela "Meu To-Do" já fala direto com o Supabase via RLS normal). Sem a chave
-certa: `401`. Sem os secrets configurados: `503` (fail-closed).
+tela "Meu To-Do" já fala direto com o Supabase via RLS normal). A função
+recebe a chave, calcula o hash (sha256) e resolve o dono da tarefa a partir
+da chave (`personal_tasks_api_keys.profile_id`) — nunca de um parâmetro do
+request. Chave ausente, errada, ou já revogada: `401`.
 
 ## 3. Rotas
 
@@ -147,12 +155,11 @@ pública fixa).
 | Código | Motivo |
 |---|---|
 | 400 | Campo obrigatório ausente, ação sem nada pra atualizar, ou arquivo acima de 10MB |
-| 401 | Header `X-Personal-Tasks-Key` ausente ou errado |
+| 401 | Header `X-Personal-Tasks-Key` ausente, errado, ou já revogado |
 | 404 | Tarefa/anexo não encontrado (ou não é do dono) |
 | 405 | Método HTTP errado pra essa ação |
 | 409 | `action=note`/`action=update`: muita escrita concorrente na mesma tarefa (3 tentativas sem conseguir) — tenta de novo. `action=delete`: `confirm_title` não bate com o título atual |
-| 503 | Secrets da function não configurados |
-| 500 | Erro do Supabase/inesperado |
+| 500 | Erro do Supabase/inesperado (inclusive falha ao validar a chave) |
 
 ## 5. Limitação conhecida
 
@@ -165,4 +172,7 @@ concluindo pela própria tela "Meu To-Do".
 ---
 *Gerado em: 17/08/2026 — companion do agent-gateway-api.md. Atualizado em
 26/08/2026: delete, note, anexos, e campos due_time/priority/recurrence/
-related_lead_id em create/update.*
+related_lead_id em create/update. Atualizado em 27/08/2026: autenticação
+migrada de secret fixo (1 dono só, pra sempre) pra chave por perfil, gerada em
+Configurações → Integrações → Secretária de IA — qualquer perfil pode
+conectar/trocar/revogar a própria conexão sem editar secret nenhum.*

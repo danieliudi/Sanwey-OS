@@ -24,11 +24,20 @@
 
 export const CHANGELOG = [
   {
-    version: "4.66.1",
+    version: "4.67.1",
     items: [
       {
         kind: "correcao",
         text: "Corrigido erro que travava a tela de Configurações → Módulos (\"Erro ao carregar esta tela\") — dois lugares da plataforma disputavam o mesmo canal de atualização em tempo real.",
+      },
+    ],
+  },
+  {
+    version: "4.67.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Configurações → Integrações → \"Secretária de IA\": gere sua própria chave de conexão pra criar tarefas no seu Meu To-Do direto pelo WhatsApp/Telegram da Mia. Cada chave é sua — gere uma pra conta do trabalho e outra pra pessoal, e troque qual está conectada a qualquer momento, sem precisar de suporte.",
       },
     ],
   },

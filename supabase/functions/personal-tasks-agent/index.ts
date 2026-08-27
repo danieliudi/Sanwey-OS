@@ -1,15 +1,16 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-// MD-05 da auditoria de segurança (19/08/2026): comparação em tempo
-// constante — mesmo padrão de sanwey-crm-mcp/index.ts, evita vazar, por
-// diferença de tempo de resposta, quantos caracteres do token estão certos.
-function timingSafeEqual(a: string, b: string): boolean {
-  const ab = new TextEncoder().encode(a);
-  const bb = new TextEncoder().encode(b);
-  if (ab.length !== bb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
-  return diff === 0;
+// Autenticação por hash (27/08/2026, ver 20261021_personal_tasks_api_keys.sql)
+// — não é comparação de duas strings em claro, então `timingSafeEqual` (que
+// este arquivo usava antes) não se aplica mais: o hash de qualquer chave
+// errada é uniformemente aleatório, não compartilha prefixo nenhum com o
+// hash certo de um jeito que timing possa explorar. Mesmo padrão de
+// autenticação por API key usado por praticamente todo provedor (GitHub,
+// Stripe): guarda só o hash, procura por igualdade exata do hash recebido.
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Mesmo idioma já usado em google-drive-upload/index.ts e crm-ata-voz/
@@ -34,20 +35,26 @@ function base64ToBytes(b64: string): Uint8Array {
 // exatamente a garantia de privacidade que a RLS foi desenhada pra dar.
 // Por isso: função própria, chave própria, escopo travado a UM usuário só.
 //
-// Auth: só um caminho — header X-Personal-Tasks-Key comparado contra
-// PERSONAL_TASKS_AGENT_KEY. Sem caminho de JWT — nada dentro do próprio
-// sanwey-crm precisa chamar isto (a tela "Meu To-Do" já fala direto com o
-// Supabase via RLS normal). Fail-closed (503) se o secret não estiver
-// configurado — mesmo padrão já usado em d4sign-webhook/index.ts.
+// Auth: header X-Personal-Tasks-Key, hash comparado contra
+// personal_tasks_api_keys.key_hash (ver 20261021_personal_tasks_api_keys.sql).
+// Sem caminho de JWT — nada dentro do próprio sanwey-crm precisa chamar isto
+// (a tela "Meu To-Do" já fala direto com o Supabase via RLS normal).
+//
+// Modelo anterior (até 27/08/2026): um secret fixo por Edge Function
+// (PERSONAL_TASKS_AGENT_KEY + PERSONAL_TASKS_OWNER_USER_ID), travado num
+// único perfil pra sempre — trocar de conta exigia editar secret direto no
+// Supabase. Agora qualquer perfil gera sua própria chave em Configurações →
+// Integrações → Secretária de IA (Daniel decidiu isto 27/08/2026, pra poder
+// alternar entre a conta do trabalho e a pessoal sem tocar em secret nenhum)
+// — cada chave resolve pro `profile_id` de quem gerou ela, não pra um
+// usuário fixo.
 //
 // Escopo: toda query já sai com .eq('user_id', ownerUserId), onde
-// ownerUserId vem de PERSONAL_TASKS_OWNER_USER_ID (secret de config, não
-// schema — é só o profiles.id do Daniel). Não existe parâmetro de request
-// que troque esse user_id — nem que quisesse, a função não alcança tarefa
-// de outra pessoa. Mesma trava vale pro Storage: todo path de anexo sai
-// com o prefixo ${ownerUserId}/, então mesmo com service_role (que ignora
-// RLS/policy de Storage) a função nunca lê nem grava fora da própria pasta
-// do Daniel.
+// ownerUserId agora vem da PRÓPRIA CHAVE recebida (personal_tasks_api_keys.
+// profile_id), nunca de um parâmetro do request. Mesma trava vale pro
+// Storage: todo path de anexo sai com o prefixo ${ownerUserId}/, então mesmo
+// com service_role (que ignora RLS/policy de Storage) a função nunca lê nem
+// grava fora da pasta de quem é dono daquela chave.
 //
 // "frente" (conceito do secretaria-agentic) não existe aqui — a ponte é
 // via `tags`: o provider do lado da secretária filtra/aplica tag
@@ -107,14 +114,8 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: CORS });
   }
 
-  const expectedKey = Deno.env.get('PERSONAL_TASKS_AGENT_KEY');
-  const ownerUserId = Deno.env.get('PERSONAL_TASKS_OWNER_USER_ID');
-  if (!expectedKey || !ownerUserId) {
-    return json({ error: 'Function não configurada (PERSONAL_TASKS_AGENT_KEY/PERSONAL_TASKS_OWNER_USER_ID ausente).' }, 503);
-  }
-
   const providedKey = req.headers.get('x-personal-tasks-key');
-  if (!providedKey || !timingSafeEqual(providedKey, expectedKey)) {
+  if (!providedKey) {
     return json({ error: 'Unauthorized' }, 401);
   }
 
@@ -123,6 +124,21 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     { auth: { persistSession: false } },
   );
+
+  // Lookup + bump de last_used_at num round-trip só. `revoked_at is null`
+  // no próprio filtro: uma chave revogada não autentica mais, sem precisar
+  // de checagem separada depois de já ter achado a linha.
+  const keyHash = await sha256Hex(providedKey);
+  const { data: keyRow, error: keyErr } = await admin
+    .from('personal_tasks_api_keys')
+    .update({ last_used_at: new Date().toISOString() })
+    .eq('key_hash', keyHash)
+    .is('revoked_at', null)
+    .select('profile_id')
+    .maybeSingle();
+  if (keyErr) return json({ error: 'Erro ao validar chave de acesso.' }, 500);
+  if (!keyRow) return json({ error: 'Unauthorized' }, 401);
+  const ownerUserId = keyRow.profile_id as string;
 
   const url = new URL(req.url);
   const action = url.searchParams.get('action') ?? 'list';
