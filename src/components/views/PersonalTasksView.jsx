@@ -99,7 +99,7 @@ function TagChips({ tags }) {
   return (
     <div className="flex flex-wrap gap-1">
       {tags.map(t => (
-        <span key={t} className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--surface-alt)", color: "var(--accent)" }}>
+        <span key={t} className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
           {t}
         </span>
       ))}

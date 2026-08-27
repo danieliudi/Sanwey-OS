@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.67.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "Corrigido contraste ruim das etiquetas do Meu To-Do no modo escuro (card do Kanban e drawer de detalhe) — quase ilegíveis dependendo da frente ativa.",
+      },
+    ],
+  },
+  {
     version: "4.67.1",
     items: [
       {
