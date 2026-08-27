@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.66.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Meu To-Do ganhou filtro por prioridade e por prazo, ao lado do filtro de etiqueta que já existia — dá pra ver só as tarefas de Alta prioridade, ou só as de hoje, por exemplo.",
+      },
+    ],
+  },
+  {
     version: "4.65.1",
     items: [
       {

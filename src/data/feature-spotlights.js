@@ -258,6 +258,13 @@ export const FEATURE_SPOTLIGHTS = [
   // lápis fica sempre visível ao lado do título (não escondido atrás de
   // hover/menu), então já se autoexplica ao abrir qualquer card de
   // Vaga/Candidato. Coberto pelo changelog 4.60.1.
+  {
+    id: "lista-pessoal-filtros",
+    route: "personal-tasks",
+    target: '[data-tour="lista-pessoal-filtros"]',
+    text: "Novo: dá pra filtrar o Meu To-do por prioridade e por prazo, além de etiqueta — clique aqui.",
+    version: "4.66.0",
+  },
 ];
 
 export default FEATURE_SPOTLIGHTS;
