@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.69.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Meu To-do: campo marcado como obrigatório agora trava mesmo — a tarefa só avança de etapa com os obrigatórios da etapa atual preenchidos, igual já acontece no Funil de Vendas, Entregas e RH. Voltar uma etapa continua livre, e a trava respeita os campos que só aparecem pra certas etiquetas.",
+      },
+    ],
+  },
+  {
     version: "4.68.0",
     items: [
       {

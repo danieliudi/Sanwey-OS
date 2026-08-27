@@ -13,7 +13,7 @@ import { resolveVisibleFields } from "../../utils/field-conditions";
 import { usePersonalTaskChecklists } from "../../hooks/use-personal-task-checklists";
 import { usePersonalTaskAttachments } from "../../hooks/use-personal-task-attachments";
 import { formatDateBR } from "../../utils/date";
-import { PERSONAL_TASK_PRIORITIES, RECURRENCE_OPTIONS, TASK_TAGS_CONDITION_KEY } from "../../constants/personal-tasks";
+import { PERSONAL_TASK_PRIORITIES, RECURRENCE_OPTIONS, buildTaskConditionValues } from "../../constants/personal-tasks";
 import { RecurrencePicker } from "./RecurrencePicker";
 import { PersonalTagsPicker } from "./PersonalTagsPicker";
 
@@ -149,16 +149,12 @@ function StageFieldsTab({ task, stageFieldsHook, onFieldChange, onEditFields }) 
   const defs = stageFieldsHook.getFields(task.status);
   const values = task.customFields || {};
 
-  // As etiquetas da tarefa entram no mapa de valores como uma chave sintética
-  // (27/08/2026) — é o que permite condicionar campo por etiqueta usando o
-  // motor que já existe, sem coluna nem tabela nova. Lista separada por
-  // vírgula porque o operador `contains` do motor faz substring simples; o
-  // separador com espaço evita que "Compra" case dentro de outra etiqueta
-  // colada. Só de LEITURA: nada aqui grava em customFields, então a chave
-  // nunca é persistida junto com os valores reais dos campos.
+  // Mapa que o motor de condicionais enxerga = campos + etiquetas (ver
+  // buildTaskConditionValues). Só de LEITURA: o que grava abaixo é sempre
+  // `values`, então a chave sintética nunca é persistida em customFields.
   const conditionValues = useMemo(
-    () => ({ ...values, [TASK_TAGS_CONDITION_KEY]: (task.tags || []).join(", ") }),
-    [values, task.tags]
+    () => buildTaskConditionValues(task),
+    [task]
   );
   const visibleDefs = resolveVisibleFields(defs, conditionValues);
 

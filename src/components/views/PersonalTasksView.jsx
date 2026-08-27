@@ -21,7 +21,8 @@ import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { Badge } from "../ui/Badge";
 import { formatDateBR, daysSince } from "../../utils/date";
-import { STATUS_COLUMNS, isTaskDone } from "../../constants/personal-tasks";
+import { STATUS_COLUMNS, isTaskDone, buildTaskConditionValues } from "../../constants/personal-tasks";
+import { getMissingRequiredFields, isStageRegression } from "../../utils/field-conditions";
 import { PersonalTaskCreateModal } from "../personal/PersonalTaskCreateModal";
 import { PersonalTaskDetailDrawer } from "../personal/PersonalTaskDetailDrawer";
 import { PersonalTaskAgendaView } from "../personal/PersonalTaskAgendaView";
@@ -609,6 +610,27 @@ export function PersonalTasksView({ currentUser }) {
         return false;
       }
     }
+    // Trava de campo obrigatório — a Lista Pessoal era o único board da
+    // plataforma sem ela (achado 27/08/2026): dava pra marcar um campo como
+    // obrigatório no editor de etapas e mesmo assim avançar sem preencher,
+    // diferente de Pipeline/RH/Entregas/Comex, que todos cobram. Mesmo
+    // predicado dos outros: cobra os campos da etapa que está SAINDO, e só
+    // ao avançar — voltar não conclui etapa nenhuma, então não cobra nada
+    // (regra registrada em field-conditions.js, decidida 11/08/2026).
+    //
+    // Usa buildTaskConditionValues, o MESMO mapa que o drawer usa pra
+    // decidir o que mostrar — sem isso, um campo obrigatório só sob certa
+    // etiqueta apareceria no formulário mas escaparia da trava.
+    if (!isStageRegression(columns, task.status, status)) {
+      const missing = getMissingRequiredFields(
+        stageFieldsHook.getFields(task.status),
+        buildTaskConditionValues(task),
+      );
+      if (missing.length > 0) {
+        setMoveError(`Não dá pra mover "${task.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+        return false;
+      }
+    }
     try {
       await setTaskStatus(id, status);
       runAutomations({ ...task, status }, task);
@@ -617,7 +639,7 @@ export function PersonalTasksView({ currentUser }) {
       setMoveError(err?.message || "Não deu pra mover a tarefa. Tenta de novo.");
       return false;
     }
-  }, [tasksById, terminalStageKeys, depsHook, columns, setTaskStatus, runAutomations]);
+  }, [tasksById, terminalStageKeys, depsHook, columns, stageFieldsHook, setTaskStatus, runAutomations]);
 
   const handleMove = useCallback((id, status) => { attemptMove(id, status); }, [attemptMove]);
 
