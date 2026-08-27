@@ -58,6 +58,24 @@ export const PERSONAL_TASK_PRIORITIES = [
 // começando com underline.
 export const TASK_TAGS_CONDITION_KEY = "__etiquetas";
 
+// Mapa de valores que o motor de condicionais enxerga: os campos preenchidos
+// da tarefa MAIS as etiquetas sob a chave sintética acima. Único lugar que
+// monta isso — o drawer (pra decidir o que mostrar/exigir) e a trava de
+// transição de etapa (pra decidir o que cobrar) PRECISAM enxergar
+// exatamente a mesma coisa. Com dois cálculos separados, um campo
+// `requiredIf: etiqueta contém "Compra"` apareceria no formulário mas
+// passaria batido pela trava — foi justamente o risco levantado na revisão
+// de QA da rodada anterior.
+//
+// Lista separada por ", " porque o operador `contains` faz substring
+// simples; o espaço evita que uma etiqueta case colada dentro da vizinha.
+export function buildTaskConditionValues(task) {
+  return {
+    ...(task?.customFields || {}),
+    [TASK_TAGS_CONDITION_KEY]: (task?.tags || []).join(", "),
+  };
+}
+
 // Catálogo sugerido de fábrica. Duas dimensões de propósito (decidido com o
 // Daniel 27/08/2026):
 //
