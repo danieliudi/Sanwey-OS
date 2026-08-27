@@ -86,7 +86,7 @@ function UrgencyPill({ tone, label }) {
   );
 }
 
-export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadClick }) {
+export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadClick, onOpenPending }) {
   const { tasks, loading, counts } = useMyTasks({ currentUser });
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState(false);
@@ -96,6 +96,14 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
   const totalTasks = counts.responsibility + counts.approval + counts.alert;
   const urgentNowCount = useMemo(
     () => tasks.filter(t => t.badgeTone === "var(--danger)").length,
+    [tasks],
+  );
+  // Aniversário/bodas de empresa (informational: true) continuam listados
+  // na aba Alertas — só não contam pro headline "Alertas ativos", que
+  // existe pra sinalizar urgência (achado real: os dois usam tom --success
+  // e não têm nenhuma ação de resolução).
+  const activeAlertCount = useMemo(
+    () => tasks.filter(t => t.bucket === "alert" && !t.informational).length,
     [tasks],
   );
 
@@ -121,6 +129,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
       onNavigate?.("crm");
       return;
     }
+    if (onOpenPending) { onOpenPending(task); return; }
     onNavigate?.(task.section);
   };
 
@@ -159,7 +168,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
             <StatCard icon={Inbox} value={counts.approval} label="Aguardando aprovação" />
             <StatCard
               icon={AlertTriangle}
-              value={counts.alert}
+              value={activeAlertCount}
               label="Alertas ativos"
               sublabel="Recalculado em tempo real"
             />

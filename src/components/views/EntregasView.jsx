@@ -663,7 +663,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 }
 
 /* ── Main view ───────────────────────────────────────────────── */
-export function EntregasView({ user, users = [], notifyMentions }) {
+export function EntregasView({ user, users = [], notifyMentions, initialSelectedDeliverableId, onInitialDeliverableConsumed }) {
   const location = useLocation();
   const {
     deliverables, loading, canWrite, canManage,
@@ -742,6 +742,22 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const [quickAddStage,  setQuickAddStage]  = useState(null);
   const [selected,       setSelected]       = useState(null);
   const [viewMode,       setViewMode]       = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
+
+  // Deep-link vindo da fila de Pendências (Copiloto, 27/08/2026) — mesmo
+  // padrão já usado por Campanhas/Férias/Feedback via initialSelectedXId.
+  // `loading` de useMarketingDeliverables começa `false` (só vira `true`
+  // depois que o próprio efeito do hook dispara o fetch) — sem o
+  // hasLoadedOnceRef, o 1º commit veria loading=false + deliverables=[] e
+  // "consumiria" o id sem nunca achar o card (mesma armadilha documentada
+  // em MarketingView.jsx pro Cmd-K).
+  const hasLoadedOnceRef = useRef(false);
+  useEffect(() => { if (loading) hasLoadedOnceRef.current = true; }, [loading]);
+  useEffect(() => {
+    if (!initialSelectedDeliverableId || !hasLoadedOnceRef.current || loading) return;
+    const d = deliverables.find(d => d.id === initialSelectedDeliverableId);
+    if (d) setSelected(d);
+    onInitialDeliverableConsumed?.();
+  }, [initialSelectedDeliverableId, deliverables, loading, onInitialDeliverableConsumed]);
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("marketing-entregas");
 
   /* Filters */

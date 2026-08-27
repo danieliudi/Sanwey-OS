@@ -320,25 +320,13 @@ export function useMyTasks({ currentUser } = {}) {
       }
     }
 
-    if (hasAnyRole(currentUser, ["admin", "gerente_marketing"])) {
-      for (const q of (quotes || [])) {
-        if (q.status !== "pendente") continue;
-        out.push({
-          id: `appr-quote-${q.id}`,
-          bucket: "approval",
-          module: "quotes",
-          moduleLabel: "Fornecedores",
-          icon: Truck,
-          title: q.title,
-          subtitle: q.supplier?.name || "—",
-          badge: q.deadline ? formatDateBR(q.deadline) : "Sem prazo",
-          badgeTone: "var(--warning)",
-          urgencyRank: daysUntil(q.deadline),
-          section: "marketing-fornecedores",
-          raw: q,
-        });
-      }
-    }
+    // "Aprovar cotação" foi removido da fila em 27/08/2026 (decisão do
+    // Daniel) — apontava pra uma tela que não existe mais. O fluxo de
+    // cotação por e-mail foi aposentado; virou a etapa "Cotação" dentro de
+    // Compras (ver comentário em FornecedoresView.jsx:171), que já aparece
+    // como "Compra aguardando aprovação" (appr-purchase, acima). As funções
+    // approveAndSendQuote/rejectQuote continuam no banco mas não têm mais
+    // nenhuma UI que as chame — não reviver sem decisão explícita nova.
 
     if (hasAnyRole(currentUser, ["admin", "marketing", "gerente_marketing"])) {
       for (const r of (marketingRequests || [])) {
@@ -552,6 +540,10 @@ export function useMyTasks({ currentUser } = {}) {
           out.push({
             id: `alert-aniversario-${c.id}`,
             bucket: "alert",
+            // Aviso puro (tom --success, ninguém "resolve" um aniversário) —
+            // não deve inflar o contador de "Alertas ativos", que existe pra
+            // sinalizar urgência. Continua aparecendo na aba Alertas.
+            informational: true,
             module: "colaboradores",
             moduleLabel: "Conformidade RH",
             icon: Users,
@@ -570,6 +562,7 @@ export function useMyTasks({ currentUser } = {}) {
           out.push({
             id: `alert-bodas-${c.id}`,
             bucket: "alert",
+            informational: true,
             module: "colaboradores",
             moduleLabel: "Conformidade RH",
             icon: Users,

@@ -467,6 +467,16 @@ export default function App() {
   const [selectedFeriasId, setSelectedFeriasId] = useState(null);
   const [selectedViagemId, setSelectedViagemId] = useState(null);
 
+  // Mesmo mecanismo, agora pra fila de Pendências (Copiloto, 27/08/2026) —
+  // esses 4 destinos ainda não tinham nenhum jeito de abrir um registro
+  // específico de fora da própria tela (cada um só tinha um `selected`
+  // local); subimos pra cá seguindo exatamente o padrão acima, não um novo.
+  const [selectedDeliverableId, setSelectedDeliverableId] = useState(null);
+  const [selectedPurchaseRequestId, setSelectedPurchaseRequestId] = useState(null);
+  const [selectedVagaId, setSelectedVagaId] = useState(null);
+  const [selectedPosvendaCaseId, setSelectedPosvendaCaseId] = useState(null);
+  const [expandedMarketingRequestId, setExpandedMarketingRequestId] = useState(null);
+
   const { markViewed: markLeadViewed } = useRecordViews("leads", currentUser?.id);
   useEffect(() => { if (selectedLead?.id) markLeadViewed(selectedLead.id); }, [selectedLead?.id]);
 
@@ -1045,6 +1055,43 @@ export default function App() {
     leads, setSelectedLead, setSection, navigate,
     setSelectedCampaignId, setSelectedFeriasId, setSelectedAvaliacaoId,
     setSelectedTreinamentoAtribuicaoId, setSelectedMovimentacaoId, setSelectedEmployeeId,
+  ]);
+
+  // Mesmo espírito de handleNotificationNavigate acima, pra fila de
+  // Pendências (Copiloto, 27/08/2026) — a chave aqui é `task.module` (como
+  // vem de use-my-tasks.js), não o nome de tabela usado pelas notificações,
+  // por isso é um mapa à parte em vez de reaproveitar
+  // notificationDeepLinkSetters — mas os SETTERS por trás são os mesmos
+  // (nunca duplicar o estado, só o roteamento até ele).
+  const handleOpenPendingTask = useCallback((task) => {
+    setSection(task.section);
+    const id = task.raw?.id ?? null;
+    switch (task.module) {
+      case "campaigns": setSelectedCampaignId(id); break;
+      case "feedback": setSelectedAvaliacaoId(id); break;
+      case "ferias": setSelectedFeriasId(id); break;
+      case "treinamentos": setSelectedTreinamentoAtribuicaoId(id); break;
+      case "colaboradores":
+      case "beneficios":
+        // RHFuncionariosView casa por id de USUÁRIO (profiles.id), não pelo
+        // id da linha de rh_colaboradores — são PKs diferentes (achado real
+        // da pesquisa de deep-link). Colaborador sem conta vinculada
+        // (profileId nulo) não tem card de usuário pra abrir — a seção já
+        // muda, só não abre um card específico.
+        if (task.raw?.profileId) setSelectedEmployeeId(task.raw.profileId);
+        break;
+      case "deliverables": setSelectedDeliverableId(id); break;
+      case "purchases": setSelectedPurchaseRequestId(id); break;
+      case "vagas": setSelectedVagaId(id); break;
+      case "posvenda": setSelectedPosvendaCaseId(id); break;
+      case "requests": setExpandedMarketingRequestId(id); break;
+      default: break;
+    }
+  }, [
+    setSection, setSelectedCampaignId, setSelectedAvaliacaoId, setSelectedFeriasId,
+    setSelectedTreinamentoAtribuicaoId, setSelectedEmployeeId, setSelectedDeliverableId,
+    setSelectedPurchaseRequestId, setSelectedVagaId, setSelectedPosvendaCaseId,
+    setExpandedMarketingRequestId,
   ]);
 
   // Toast Nível 1 de mensagem nova do Chat (spec seção 5,
@@ -1925,6 +1972,7 @@ export default function App() {
                 users={users}
                 onNavigate={setSection}
                 onLeadClick={setSelectedLead}
+                onOpenPending={handleOpenPendingTask}
               />
             )
           } />
@@ -2278,7 +2326,11 @@ export default function App() {
           } />
           <Route path={ROUTES["marketing-entregas"]} element={
             (isMarketingUser || isAgencia || isDiretoria)
-              ? <EntregasView user={currentUser} users={users} notifyMentions={notifyMentions} />
+              ? <EntregasView
+                  user={currentUser} users={users} notifyMentions={notifyMentions}
+                  initialSelectedDeliverableId={selectedDeliverableId}
+                  onInitialDeliverableConsumed={() => setSelectedDeliverableId(null)}
+                />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Sem isAgencia aqui (ao contrário de marketing-entregas) — pedido
