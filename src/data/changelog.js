@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.70.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Busca de CNPJ: quando a Receita não encontra a empresa ou a consulta falha, a mensagem agora explica o motivo em português (antes aparecia um erro técnico em inglês, igual pra qualquer causa).",
+      },
+      {
+        kind: "correcao",
+        text: "Funil de Vendas: a automação que preenche dados do CNPJ (setor, cidade, UF, CNAE) agora também preenche a razão social do lead, que já era buscada e ficava sem uso.",
+      },
+    ],
+  },
+  {
     version: "4.69.0",
     items: [
       {
