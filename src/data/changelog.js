@@ -24,6 +24,38 @@
 
 export const CHANGELOG = [
   {
+    version: "4.71.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Cadastro de cliente: a busca por CNPJ agora também preenche a Razão Social (com selo de situação cadastral na Receita), e dá pra já cadastrar o contato principal — nome, cargo, e-mail e telefone — direto na criação, sem precisar salvar e reabrir.",
+      },
+      {
+        kind: "correcao",
+        text: "Férias & Licenças: quando outro gestor já decidiu o pedido, o card mostra quem aprovou ou recusou e quando, em vez dos botões simplesmente sumirem sem explicação.",
+        roles: ["admin", "gerente_rh"],
+      },
+      {
+        kind: "correcao",
+        text: "Pendências: o nome do colaborador voltou a aparecer certo nos pedidos de férias aguardando aprovação (antes mostrava só 'Colaborador'), e o alerta de treinamento vencido parou de sumir sozinho quando o sistema atualiza o status pra 'vencido'.",
+        roles: ["admin", "gerente_rh"],
+      },
+    ],
+  },
+  {
+    version: "4.70.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Busca de CNPJ: quando a Receita não encontra a empresa ou a consulta falha, a mensagem agora explica o motivo em português (antes aparecia um erro técnico em inglês, igual pra qualquer causa).",
+      },
+      {
+        kind: "correcao",
+        text: "Funil de Vendas: a automação que preenche dados do CNPJ (setor, cidade, UF, CNAE) agora também preenche a razão social do lead, que já era buscada e ficava sem uso.",
+      },
+    ],
+  },
+  {
     version: "4.69.0",
     items: [
       {

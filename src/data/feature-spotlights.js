@@ -25,6 +25,18 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "clientes-novo-cliente",
+    route: "clients",
+    // Alvo é o botão da rota, não o campo novo em si — o formulário só
+    // existe dentro do modal de criação, que não está montado ao entrar na
+    // tela. Mesmo ajuste que o comitê de compra devia ter tido (registrado
+    // no CLAUDE.md como lição da 4.61.0, onde o spotlight foi pulado por
+    // viver dentro de um modal e a feature não pegou tração nenhuma).
+    target: '[data-tour="clientes-novo-cliente"]',
+    text: "Novo: ao buscar o CNPJ aqui, a Razão Social também é preenchida (com o selo de situação na Receita), e dá pra já cadastrar o contato principal — sem precisar salvar e reabrir.",
+    version: "4.71.0",
+  },
+  {
     id: "registrar-caso-header",
     route: "crm",
     target: '[data-tour="registrar-caso-header"]',

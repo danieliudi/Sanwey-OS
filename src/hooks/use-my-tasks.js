@@ -364,13 +364,18 @@ export function useMyTasks({ currentUser } = {}) {
       for (const r of (feriasRequests || [])) {
         if (r.status !== "pendente") continue;
         const label = RH_LEAVE_TYPES.find(t => t.id === r.type)?.label || r.type;
+        // `r.profiles?.name` nunca existe — o SELECT de rh_ferias não faz
+        // esse join — então todo card da fila mostrava o literal "Colaborador".
+        // O nome certo já está resolvido em colaboradoresById (mesmo padrão
+        // usado por Feedback/Treinamentos logo acima/abaixo).
+        const colaborador = colaboradoresById.get(r.user_id);
         out.push({
           id: `appr-ferias-${r.id}`,
           bucket: "approval",
           module: "ferias",
           moduleLabel: "Férias & Licenças",
           icon: CalendarClock,
-          title: r.profiles?.name || "Colaborador",
+          title: colaborador?.fullName || "Colaborador",
           subtitle: label,
           badge: r.start_date ? formatDateBR(r.start_date) : "—",
           badgeTone: "var(--warning)",
@@ -604,7 +609,11 @@ export function useMyTasks({ currentUser } = {}) {
       // (validade) × colaborador ativo. Janela de 30d (inclui já-vencido).
       const treinamentosById = new Map((treinamentos || []).map(t => [t.id, t]));
       for (const atr of (atribuicoes || [])) {
-        if (atr.status !== "concluido") continue;
+        // use-rh-treinamentos.js reconcilia "concluido" pra "vencido" assim
+        // que a validade passa (roda ao abrir aquela tela) — com o filtro
+        // restrito a "concluido", o alerta se auto-apagava bem na hora que
+        // ficava mais urgente (já vencido), sem ninguém ter resolvido nada.
+        if (atr.status !== "concluido" && atr.status !== "vencido") continue;
         const tr = treinamentosById.get(atr.treinamento_id);
         if (!tr) continue;
         const col = colaboradoresById.get(atr.colaborador_id);

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt, Loader2, AlertTriangle, CheckCircle2, Mic } from "lucide-react";
 import { Modal } from "../ui/Modal";
+import { AppToast } from "../shared/AppToast";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
 import { SalesCaseVoicePanel } from "../shared/SalesCaseVoicePanel";
 import { ClientProductsTab } from "./ClientProductsTab";
@@ -17,11 +18,13 @@ import { formatDateBR, parseDateInput } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
 import { activityTypeMeta } from "../../utils/activity-types";
 import { findClientByCnpj, DuplicateClientError } from "../../utils/client-dedup";
+import { formatPhone } from "../../utils/masks";
 import { AtaVozPanel } from "../lead/AtaVozPanel";
 
 const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
-const EMPTY = { name: "", category: "", city: "", state: "", cnpj: "", address: "", companyIds: [], ownerIds: [], notes: "" };
+const EMPTY = { name: "", razaoSocial: "", category: "", city: "", state: "", cnpj: "", address: "", companyIds: [], ownerIds: [], notes: "" };
+const EMPTY_CONTACT = { name: "", jobTitle: "", email: "", phone: "" };
 
 const STAGE_LABELS = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
 
@@ -60,8 +63,10 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null); // null = novo, obj = editando
   const [form, setForm] = useState(EMPTY);
+  const [contactDraft, setContactDraft] = useState(EMPTY_CONTACT);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [contactWarning, setContactWarning] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [activeTab, setActiveTab] = useState("dados");
   const [sortCol, setSortCol] = useState(null); // null = ordem natural
@@ -164,16 +169,19 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     setPage(0);
   };
 
-  const openNew = () => { setEditing(null); setForm(EMPTY); setSaveError(null); setActiveTab("dados"); setModalOpen(true); };
+  const openNew = () => { setEditing(null); setForm(EMPTY); setContactDraft(EMPTY_CONTACT); setSaveError(null); setActiveTab("dados"); setModalOpen(true); };
   const openDetail = (c, tab = "dados") => {
     setEditing(c);
     setSaveError(null);
     setForm({
-      name: c.name || "", category: c.category || "", city: c.city || "",
+      name: c.name || "", razaoSocial: c.razaoSocial || "", category: c.category || "", city: c.city || "",
       state: c.state || "", cnpj: c.cnpj || "", address: c.address || "",
       companyIds: c.companyIds || [],
       ownerIds: c.ownerIds || [], notes: c.notes || "",
     });
+    // Contato principal só existe no fluxo de CRIAÇÃO (ver regra 2 do
+    // CLAUDE.md — editar contato já tem lar próprio na aba "Contatos").
+    setContactDraft(EMPTY_CONTACT);
     setActiveTab(tab);
     setModalOpen(true);
   };
@@ -195,11 +203,17 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     setSaving(true);
     try {
       if (editing) await onUpdate?.(editing.id, form);
-      else await onCreate?.(form);
+      else await onCreate?.(form, contactDraft);
       setModalOpen(false);
     } catch (err) {
       if (err instanceof DuplicateClientError) {
         setForm(f => ({ ...f, cnpj: err.existingClient.cnpj || f.cnpj }));
+      } else if (err?.clientSaved) {
+        // Cliente foi criado — não é um erro que trava a tela, só o contato
+        // que não gravou. Fecha o modal (cliente já está na lista) e avisa
+        // em vez de deixar a pessoa achando que nada foi salvo.
+        setModalOpen(false);
+        setContactWarning(err.message);
       } else {
         throw err;
       }
@@ -243,6 +257,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
           )}
           <button
             onClick={openNew}
+            data-tour="clientes-novo-cliente"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-white"
             style={{ background: "var(--color-industria)", border: "none", cursor: "pointer" }}
           >
@@ -477,6 +492,15 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         </>
       )}
 
+      {contactWarning && (
+        <AppToast
+          variant="danger"
+          title="Contato não salvo"
+          description={contactWarning}
+          onDismiss={() => setContactWarning(null)}
+        />
+      )}
+
       {/* Perfil do cliente — Dados + Conexões (Negócios, Viagens) */}
       <ClientDetailModal
         open={modalOpen}
@@ -484,6 +508,8 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         editing={editing}
         form={form}
         setForm={setForm}
+        contactDraft={contactDraft}
+        setContactDraft={setContactDraft}
         saving={saving}
         onSave={save}
         saveError={saveError}
@@ -536,7 +562,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
 }
 
 function ClientDetailModal({
-  open, onClose, editing, form, setForm, saving, onSave, saveError,
+  open, onClose, editing, form, setForm, contactDraft, setContactDraft, saving, onSave, saveError,
   duplicateMatch, onUseDuplicate,
   activeTab, onTabChange, toggleCompany, inputStyle, onFocusRed, onBlurRed,
   stats, dealsByClient, onOpenLead, onOpenViagem, canReleaseProducts = false,
@@ -550,6 +576,7 @@ function ClientDetailModal({
   // sobrescreve o que a pessoa já digitou à mão.
   const { loading: cnpjLoading, error: cnpjError, lookup: cnpjLookupFn, reset: cnpjReset } = useCnpjLookup();
   const [cnpjFilled, setCnpjFilled] = useState(false);
+  const [situacaoCadastral, setSituacaoCadastral] = useState(null);
 
   // Aprendizado de venda (mockup "Registrar um Caso", aprovado 21/08/2026) —
   // mesmo padrão do botão "Gravar ata" no header do LeadDetailDrawer: abre
@@ -564,6 +591,7 @@ function ClientDetailModal({
   useEffect(() => {
     cnpjReset();
     setCnpjFilled(false);
+    setSituacaoCadastral(null);
   }, [open, editing?.id, cnpjReset]);
 
   // BrasilAPI (via cnpj-lookup) devolve "—" como placeholder de UI quando não
@@ -581,10 +609,17 @@ function ClientDetailModal({
     const cidadeLimpa = cleanLookupValue(data.city).split("/")[0].trim();
     setForm(f => ({
       ...f,
+      // `company` já vem com a razão social na frente (precedência decidida
+      // 27/08/2026) — usado só pra sugerir o Nome quando ainda vazio; nunca
+      // sobrescreve o que a pessoa já digitou. `razaoSocial` é campo à parte,
+      // sempre a razão social, mesmo quando o Nome for editado depois.
+      name: f.name || cleanLookupValue(data.company),
+      razaoSocial: f.razaoSocial || cleanLookupValue(data.razaoSocial),
       address: f.address || cleanLookupValue(data.address),
       city: f.city || cidadeLimpa,
       state: f.state || cleanLookupValue(data.state),
     }));
+    setSituacaoCadastral(cleanLookupValue(data.situacao) || null);
     setCnpjFilled(true);
   };
 
@@ -643,6 +678,23 @@ function ClientDetailModal({
               className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} onFocus={onFocusRed} onBlur={onBlurRed} />
           </div>
 
+          <div>
+            <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Razão social</label>
+            <input value={form.razaoSocial} onChange={e => setForm(f => ({ ...f, razaoSocial: e.target.value }))}
+              placeholder="Razão social (Receita Federal)"
+              className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} onFocus={onFocusRed} onBlur={onBlurRed} />
+            {situacaoCadastral && (
+              <p className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5" style={{
+                fontSize: 10.5, fontWeight: 700,
+                background: situacaoCadastral.toUpperCase() === "ATIVA" ? "var(--success-bg)" : "var(--warning-bg)",
+                color: situacaoCadastral.toUpperCase() === "ATIVA" ? "var(--success)" : "var(--warning)",
+              }}>
+                {situacaoCadastral.toUpperCase() === "ATIVA" ? <CheckCircle2 size={11} /> : <AlertTriangle size={11} />}
+                {situacaoCadastral}
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Categoria</label>
@@ -656,7 +708,7 @@ function ClientDetailModal({
               <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>CNPJ</label>
               <div className="flex gap-1.5 items-start">
                 <input value={form.cnpj}
-                  onChange={e => { setForm(f => ({ ...f, cnpj: e.target.value })); setCnpjFilled(false); cnpjReset(); }}
+                  onChange={e => { setForm(f => ({ ...f, cnpj: e.target.value })); setCnpjFilled(false); setSituacaoCadastral(null); cnpjReset(); }}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); runCnpjLookup(); } }}
                   placeholder="00.000.000/0000-00"
                   className="flex-1 min-w-0 rounded-lg border px-3 py-2 text-sm" style={{ ...inputStyle, borderColor: duplicateMatch ? "var(--danger)" : inputStyle.borderColor }} onFocus={onFocusRed} onBlur={onBlurRed} />
@@ -746,6 +798,34 @@ function ClientDetailModal({
               </div>
             )}
           </div>
+
+          {/* Contato principal — só no cadastro NOVO (editar contato já tem
+              a aba "Contatos" própria, regra 2 do CLAUDE.md). Reaproveita
+              exatamente os 4 campos e o insert de client_contacts que
+              ClientContactsTab/use-client-contacts.js já usam — sem isso,
+              cadastrar um contato exigia salvar o cliente, reabrir e ir na
+              aba Contatos, por dois passos que quase ninguém dava (achado
+              real: 0 linhas em client_contacts pra 38 clientes). Escondido
+              pra quem não pode gravar (mesmo predicado de
+              current_user_can_manage_client — admin/gerente/vendedor, não
+              inclui consultor) em vez de deixar preencher e falhar depois. */}
+          {!editing && canReleaseProducts && (
+            <div className="rounded-lg border px-3 py-3" style={{ borderColor: "var(--border)", borderStyle: "dashed" }}>
+              <div className="flex items-center gap-1.5 mb-2.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <Users size={12} /> Contato principal <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(opcional)</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <input value={contactDraft.name} onChange={e => setContactDraft(c => ({ ...c, name: e.target.value }))}
+                  placeholder="Nome" className="rounded-lg border px-3 py-2 text-sm" style={inputStyle} onFocus={onFocusRed} onBlur={onBlurRed} />
+                <input value={contactDraft.jobTitle} onChange={e => setContactDraft(c => ({ ...c, jobTitle: e.target.value }))}
+                  placeholder="Cargo" className="rounded-lg border px-3 py-2 text-sm" style={inputStyle} onFocus={onFocusRed} onBlur={onBlurRed} />
+                <input value={contactDraft.email} onChange={e => setContactDraft(c => ({ ...c, email: e.target.value }))}
+                  type="email" placeholder="E-mail" className="rounded-lg border px-3 py-2 text-sm" style={inputStyle} onFocus={onFocusRed} onBlur={onBlurRed} />
+                <input value={contactDraft.phone} onChange={e => setContactDraft(c => ({ ...c, phone: formatPhone(e.target.value) }))}
+                  placeholder="Telefone" className="rounded-lg border px-3 py-2 text-sm" style={inputStyle} onFocus={onFocusRed} onBlur={onBlurRed} />
+              </div>
+            </div>
+          )}
 
           {/* Vendedor responsável — quem toma conta da conta. É por isso que
               a coluna existe: decide quem pode liberar produto com preço

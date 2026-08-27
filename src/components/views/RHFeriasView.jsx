@@ -727,6 +727,21 @@ function FeriasDrawer({
         </div>
       )}
 
+      {/* Antes os botões só desapareciam quando outra pessoa decidia — quem
+          estava com o card aberto perdia o contexto sem explicação. O dado
+          já vinha no fetch (approver:approved_by(name)) e ficava sem uso. */}
+      {canWrite && (req.status === "aprovado" || req.status === "recusado") && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600,
+          background: req.status === "aprovado" ? "var(--success-bg)" : "var(--danger-bg)",
+          color: req.status === "aprovado" ? "var(--success)" : "var(--danger)",
+        }}>
+          {req.status === "aprovado" ? <Check size={13} /> : <X size={13} />}
+          {req.status === "aprovado" ? "Aprovado" : "Recusado"} por {req.approver?.name || "outra pessoa"}
+          {req.approved_at ? ` em ${formatDateBR(req.approved_at)}` : ""}
+        </div>
+      )}
+
       {canWrite && moveTargets.length > 0 && (
         <div>
           <div style={labelSt}>Mover para</div>
@@ -1046,12 +1061,19 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
           return false;
         }
       }
-      await changeStatus(req.id, "aprovado", { approved_by: currentUser?.id, approved_at: new Date().toISOString() });
+      await changeStatus(
+        req.id, "aprovado",
+        { approved_by: currentUser?.id, approved_at: new Date().toISOString() },
+        { expectedStatus: "pendente" }
+      );
       const sent = await sendRhEmail("ferias_aprovadas", req, colaborador, { APPROVED_BY: currentUser?.name || currentUser?.email || "" });
       if (!sent) alert(`Aprovação registrada, mas o e-mail de notificação não pôde ser enviado a ${colaborador?.fullName || "o colaborador"}.`);
       return true;
     } catch (e) {
-      setBoardError(`Erro ao aprovar: ${e?.message || "tente novamente."}`);
+      // e.current (populado pelo hook quando expectedStatus não bate) já
+      // atualizou `requests` com o registro real — o card some dos
+      // pendentes/reflete quem decidiu sem precisar de F5.
+      setBoardError(e?.current ? e.message : `Erro ao aprovar: ${e?.message || "tente novamente."}`);
       return false;
     } finally {
       setBusyId(null);
@@ -1073,11 +1095,20 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
 
   const confirmarRecusa = useCallback(async (motivo) => {
     if (!recusaModal) return;
-    const { req, resolve } = recusaModal;
+    const { req: reqSnapshot, resolve } = recusaModal;
+    // Re-deriva de `requests` em vez de usar o snapshot capturado quando o
+    // modal abriu — sem isso, se o pedido mudasse de status enquanto a
+    // pessoa digitava o motivo (ex.: outro gestor já decidiu), a gravação
+    // ia sobrescrever a decisão do colega usando dados velhos.
+    const req = requests.find(r => r.id === reqSnapshot.id) || reqSnapshot;
     const colaborador = colaboradoresById.get(req.user_id);
     setBusyId(req.id);
     try {
-      await changeStatus(req.id, "recusado");
+      await changeStatus(
+        req.id, "recusado",
+        { approved_by: currentUser?.id, approved_at: new Date().toISOString() },
+        { expectedStatus: "pendente" }
+      );
       // Grava no histórico do card pra ficar durável (não só no e-mail).
       await addActivity(req.id, {
         type: "recusa",
@@ -1089,13 +1120,13 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       if (!sent) setBoardError(`Recusa registrada, mas o e-mail de notificação não pôde ser enviado a ${colaborador?.fullName || "o colaborador"}.`);
       resolve(true);
     } catch (e) {
-      setBoardError(`Erro ao recusar: ${e?.message || "tente novamente."}`);
+      setBoardError(e?.current ? e.message : `Erro ao recusar: ${e?.message || "tente novamente."}`);
       resolve(false);
     } finally {
       setBusyId(null);
       setRecusaModal(null);
     }
-  }, [recusaModal, changeStatus, addActivity, currentUser, colaboradoresById]);
+  }, [recusaModal, requests, changeStatus, addActivity, currentUser, colaboradoresById]);
 
   // Mover genérico pra qualquer etapa do pipeline dinâmico de férias (além
   // dos atalhos Aprovar/Recusar) — cobre pipelines com mais de

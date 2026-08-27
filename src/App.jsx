@@ -1163,11 +1163,21 @@ export default function App() {
             const current = leads.find(l => l.id === effect.leadId);
             const patch = {};
             if (current) {
-              if (!current.sector && res.sector) patch.sector = res.sector;
-              if (!current.city && res.city) patch.city = res.city;
-              if (!current.state && res.state) patch.state = res.state;
+              // A edge function usa "—" como placeholder de UI quando não tem o
+              // dado, e `city` chega como "Município/UF" combinado — sem tratar,
+              // o guard `!current.x && res.x` gravava o caractere "—" como setor
+              // e UF reais, e a UF duplicada dentro da cidade. Mesmo tratamento
+              // que ClientsManager.jsx já aplica (achado de QA de lá).
+              const clean = (v) => (v && v !== "—" ? v : "");
+              const cidade = clean(res.city).split("/")[0].trim();
+              if (!current.sector && clean(res.sector)) patch.sector = clean(res.sector);
+              if (!current.city && cidade) patch.city = cidade;
+              if (!current.state && clean(res.state)) patch.state = clean(res.state);
               if (!current.cnae && res.cnae) patch.cnae = res.cnae;
               if (!current.situacao && res.situacao) patch.situacao = res.situacao;
+              // A razão social já vinha no retorno e era descartada, apesar de
+              // `leads.razao_social` existir e ser exibida no drawer.
+              if (!current.razaoSocial && res.razaoSocial) patch.razaoSocial = res.razaoSocial;
             }
             if (Object.keys(patch).length > 0) {
               await updateLeadRemote(effect.leadId, patch).catch(() => {});
