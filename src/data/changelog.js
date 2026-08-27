@@ -24,11 +24,20 @@
 
 export const CHANGELOG = [
   {
-    version: "4.66.0",
+    version: "4.67.0",
     items: [
       {
         kind: "novo",
         text: "Configurações → Integrações → \"Secretária de IA\": gere sua própria chave de conexão pra criar tarefas no seu Meu To-Do direto pelo WhatsApp/Telegram da Mia. Cada chave é sua — gere uma pra conta do trabalho e outra pra pessoal, e troque qual está conectada a qualquer momento, sem precisar de suporte.",
+      },
+    ],
+  },
+  {
+    version: "4.66.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Meu To-Do ganhou filtro por prioridade e por prazo, ao lado do filtro de etiqueta que já existia — dá pra ver só as tarefas de Alta prioridade, ou só as de hoje, por exemplo.",
       },
     ],
   },

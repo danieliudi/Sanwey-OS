@@ -250,13 +250,13 @@ export const FEATURE_SPOTLIGHTS = [
   //     anunciar com spotlight uma aba que não faz nada seria pior que só
   //     deixar quem abrir um negócio notar sozinho.
   //
-  // 4.66.0 — conexão da Secretária de IA (chave de API pessoal, Configurações
+  // 4.67.0 — conexão da Secretária de IA (chave de API pessoal, Configurações
   // → Integrações → Secretária de IA): DECIDIDO PULAR o spotlight. Mesmo
   // motivo já registrado pra "Gestão" (4.43.0) e "Histórico"/"Conexões"
   // (4.40.0) — o mecanismo ancora num elemento visível ao ENTRAR na rota
   // ("settings"), mas este alvo fica atrás de dois cliques a mais (aba
   // "Integrações", depois sub-aba "Secretária de IA"), nenhum dos dois é o
-  // padrão de quem abre Configurações. Coberto pelo changelog 4.66.0.
+  // padrão de quem abre Configurações. Coberto pelo changelog 4.67.0.
   //
   // 4.60.1 — título editável (lápis) em Vaga e Candidato (RH Recrutamento):
   // DECIDIDO PULAR o spotlight. Mesmo componente `EditableTitle` já em uso
@@ -266,6 +266,13 @@ export const FEATURE_SPOTLIGHTS = [
   // lápis fica sempre visível ao lado do título (não escondido atrás de
   // hover/menu), então já se autoexplica ao abrir qualquer card de
   // Vaga/Candidato. Coberto pelo changelog 4.60.1.
+  {
+    id: "lista-pessoal-filtros",
+    route: "personal-tasks",
+    target: '[data-tour="lista-pessoal-filtros"]',
+    text: "Novo: dá pra filtrar o Meu To-do por prioridade e por prazo, além de etiqueta — clique aqui.",
+    version: "4.66.0",
+  },
 ];
 
 export default FEATURE_SPOTLIGHTS;

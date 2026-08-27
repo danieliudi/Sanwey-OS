@@ -111,6 +111,71 @@ function taskMoveTargets(task, columns) {
   return columns.filter(c => c.id !== task.status).map(c => ({ key: c.id, name: c.name, color: c.color }));
 }
 
+/* ── Filtro de prioridade ────────────────────────────────────── */
+// Mesmos pares tinta/borda que PriorityPill (via Badge) já usa pras 3
+// prioridades — reaproveita a leitura visual que a pílula do card já
+// ensinou, só troca "informativo" (bg neutro) por "ativo/filtrando".
+
+const PRIORITY_FILTER_TOKENS = {
+  alta:  { bg: "var(--danger-bg)",  fg: "var(--danger)"  },
+  media: { bg: "var(--warning-bg)", fg: "var(--warning)" },
+  baixa: { bg: "var(--success-bg)", fg: "var(--success)" },
+};
+
+function PriorityFilterBar({ activePriorities, onToggle }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[10px] font-bold uppercase tracking-wide mr-0.5" style={{ color: "var(--text-dim)" }}>Prioridade</span>
+      {Object.entries(PRIORITY_BADGE).map(([p, cfg]) => {
+        const active = activePriorities.includes(p);
+        const tokens = PRIORITY_FILTER_TOKENS[p];
+        return (
+          <button
+            key={p}
+            onClick={() => onToggle(p)}
+            className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
+            style={{
+              background: active ? tokens.bg : "var(--surface)",
+              color: active ? tokens.fg : "var(--text-dim)",
+              border: `1px solid ${active ? tokens.fg : "var(--border)"}`,
+              cursor: "pointer",
+            }}
+          >
+            {cfg.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Filtro de prazo ─────────────────────────────────────────── */
+// Reaproveita os mesmos 3 baldes que bucketFor() já calcula pra agrupar a
+// view Lista — não é uma 2ª forma de calcular data só pro filtro.
+
+const DATE_BUCKET_OPTIONS = [
+  { value: "",         label: "Todos os prazos" },
+  { value: "hoje",     label: "Hoje (inclui atrasadas)" },
+  { value: "semana",   label: "Esta semana" },
+  { value: "sem_data", label: "Sem prazo" },
+];
+
+function DateBucketFilter({ value, onChange }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[10px] font-bold uppercase tracking-wide mr-0.5" style={{ color: "var(--text-dim)" }}>Prazo</span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="text-[11px] font-semibold rounded-lg border px-2 py-1 cursor-pointer"
+        style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+      >
+        {DATE_BUCKET_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
 /* ── Filtro de etiquetas ─────────────────────────────────────── */
 
 function TagFilterBar({ allTags, activeTags, onToggle }) {
@@ -437,6 +502,8 @@ export function PersonalTasksView({ currentUser }) {
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [activeTags, setActiveTags] = useState([]);
+  const [activePriorities, setActivePriorities] = useState([]);
+  const [dateBucketFilter, setDateBucketFilter] = useState("");
   const [listSort, setListSort] = useState("recent");
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
   const [editingFieldsStageKey, setEditingFieldsStageKey] = useState(null);
@@ -452,10 +519,20 @@ export function PersonalTasksView({ currentUser }) {
     setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   }, []);
 
+  const togglePriorityFilter = useCallback((priority) => {
+    setActivePriorities(prev => prev.includes(priority) ? prev.filter(p => p !== priority) : [...prev, priority]);
+  }, []);
+
+  // Único ponto de filtro — Lista/Kanban/Agenda consomem só o que sai daqui
+  // (regra 11: nenhuma view reimplementa escopo próprio).
   const filteredTasks = useMemo(() => {
-    if (activeTags.length === 0) return tasks;
-    return tasks.filter(t => activeTags.every(tag => (t.tags || []).includes(tag)));
-  }, [tasks, activeTags]);
+    return tasks.filter(t => {
+      if (activeTags.length > 0 && !activeTags.every(tag => (t.tags || []).includes(tag))) return false;
+      if (activePriorities.length > 0 && !activePriorities.includes(t.priority)) return false;
+      if (dateBucketFilter && bucketFor(t) !== dateBucketFilter) return false;
+      return true;
+    });
+  }, [tasks, activeTags, activePriorities, dateBucketFilter]);
 
   const sortedFilteredTasks = useMemo(
     () => sortKanbanItems(filteredTasks, listSort, personalSortGetters),
@@ -681,6 +758,10 @@ export function PersonalTasksView({ currentUser }) {
               Nenhuma tarefa ainda — clique em "Nova tarefa" pra começar.
             </div>
           )}
+          <div className="flex flex-wrap items-center gap-4 mb-2" data-tour="lista-pessoal-filtros">
+            <DateBucketFilter value={dateBucketFilter} onChange={setDateBucketFilter} />
+            <PriorityFilterBar activePriorities={activePriorities} onToggle={togglePriorityFilter} />
+          </div>
           <TagFilterBar allTags={allTags} activeTags={activeTags} onToggle={toggleTagFilter} />
           {viewMode === "list" ? (
             <div>
