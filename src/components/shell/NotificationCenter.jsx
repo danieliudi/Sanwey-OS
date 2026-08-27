@@ -127,23 +127,32 @@ export function NotificationCenter({
       if (anchorRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
       setOpen(false);
     };
-    // Fecha ao rolar a PÁGINA, nunca ao rolar a própria lista do painel:
-    // o listener é de captura (3º argumento true), então também alcança o
+    const close = () => setOpen(false);
+    // Fecha ao rolar a PÁGINA, nunca ao rolar a própria lista do painel: o
+    // listener é de captura (3º argumento true), então também alcança o
     // scroll interno — sem esta checagem, rolar a lista de notificações
     // fechava o painel na cara do usuário. Mesma checagem de ref que
     // handleOutside acima já faz.
-    const close = (e) => {
-      if (e?.target && panelRef.current?.contains(e.target)) return;
+    //
+    // Precisa ser uma função SEPARADA do `close` do resize (achado da
+    // revisão de QA): num evento de resize o `e.target` é o próprio
+    // `window`, que não é um Node — passar isso pro Node.contains() lança
+    // TypeError, a exceção corta a função antes do setOpen, e o painel
+    // deixava de fechar ao redimensionar a janela. `target instanceof Node`
+    // também blindaria, mas duas funções deixam a intenção óbvia: scroll
+    // filtra por origem, resize sempre fecha.
+    const closeOnScroll = (e) => {
+      if (e.target instanceof Node && panelRef.current?.contains(e.target)) return;
       setOpen(false);
     };
     const handleKey = (e) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", handleOutside);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", closeOnScroll, true);
     window.addEventListener("resize", close);
     document.addEventListener("keydown", handleKey);
     return () => {
       document.removeEventListener("mousedown", handleOutside);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", closeOnScroll, true);
       window.removeEventListener("resize", close);
       document.removeEventListener("keydown", handleKey);
     };
