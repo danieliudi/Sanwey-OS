@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  CheckSquare, Inbox, AlertTriangle, Flame, ChevronDown, RotateCcw, X, BellRing, AlertCircle,
+  CheckSquare, Inbox, AlertTriangle, Flame, ChevronDown, RotateCcw, X, BellRing, AlertCircle, Sparkles,
 } from "lucide-react";
 import { useMyTasks } from "../../hooks/use-my-tasks";
 import { Card, CardGrid, CardSkeleton } from "../shared/Card";
@@ -9,7 +9,10 @@ import { StatCard } from "../ui/StatCard";
 import { StatCardGrid } from "../shared/StatCardGrid";
 import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
+import { Modal } from "../ui/Modal";
 import { AppToast } from "../shared/AppToast";
+import { RecordAIPanel } from "../shared/RecordAIPanel";
+import { emailDraftPrompt, nextStepPrompt } from "../../constants/ai-prompts";
 import { sendRhEmail } from "../../utils/rh-send-email";
 import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
 import { formatDateBR } from "../../utils/date";
@@ -128,6 +131,36 @@ function QuickActionButton({ label, icon: Icon, tone, busy, onClick }) {
   );
 }
 
+// FASE 3 do Copiloto (27/08/2026) — rascunho de IA direto na fila pros 2
+// tipos de pendência de Leads. Reusa `RecordAIPanel` (o mesmo componente por
+// trás de `LeadAIPanel` no drawer completo) com só a feature relevante pra
+// cada tipo, em vez de reimplementar loading/erro/copiar — só falta o
+// histórico de atividades (a fila não carrega isso por lead), então
+// `nextStepPrompt` roda sem elas; a IA ainda responde, só sem o contexto
+// das últimas interações que o drawer completo tem.
+const AI_LEAD_ACTIONS = {
+  "resp-lead-": { label: "Rascunho de e-mail", featureId: "email", featureLabel: "Rascunho de e-mail IA", buildMessages: (lead, tone) => emailDraftPrompt(lead, tone) },
+  "alert-lead-": { label: "Próximo passo", featureId: "nextstep", featureLabel: "Próximo passo", buildMessages: (lead) => nextStepPrompt(lead, []) },
+};
+
+function aiActionFor(taskId) {
+  const prefix = Object.keys(AI_LEAD_ACTIONS).find(p => taskId.startsWith(p));
+  return prefix ? AI_LEAD_ACTIONS[prefix] : null;
+}
+
+function AIDraftButton({ label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 whitespace-nowrap"
+      style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 12%, transparent)", border: "none", cursor: "pointer" }}
+    >
+      <Sparkles size={12} />
+      {label}
+    </button>
+  );
+}
+
 export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadClick, onOpenPending }) {
   const { tasks, loading, counts, reciclarAtribuicao, rejectRequest, rejectPurchase } = useMyTasks({ currentUser });
   const [filter, setFilter] = useState("all");
@@ -140,6 +173,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
   // pra um clique real disparar uma 2ª chamada concorrente na MESMA pendência.
   const [busyIds, setBusyIds] = useState(() => new Set());
   const [actionError, setActionError] = useState(null);
+  const [aiDraftTask, setAiDraftTask] = useState(null);
 
   const runQuickAction = async (task, fn) => {
     setActionError(null);
@@ -307,6 +341,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
                       const meta = BUCKET_META[task.bucket];
                       const isCritical = task.badgeTone === "var(--danger)";
                       const quickAction = quickActionFor(task.id);
+                      const aiAction = !quickAction ? aiActionFor(task.id) : null;
                       return (
                         <div
                           key={task.id}
@@ -330,6 +365,8 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
                                 busy={busyIds.has(task.id)}
                                 onClick={() => handleQuickAction(task, quickAction.key)}
                               />
+                            ) : aiAction ? (
+                              <AIDraftButton label={aiAction.label} onClick={() => setAiDraftTask(task)} />
                             ) : undefined}
                             onClick={() => handleTaskClick(task)}
                             density="list"
@@ -367,6 +404,22 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
           )}
         </>
       )}
+
+      {aiDraftTask && (() => {
+        const action = aiActionFor(aiDraftTask.id);
+        const lead = aiDraftTask.lead || aiDraftTask.raw;
+        return (
+          <Modal open onClose={() => setAiDraftTask(null)} title={`${action.featureLabel} — ${lead.company}`} width={520}>
+            <div className="p-5">
+              <RecordAIPanel
+                currentUser={currentUser}
+                defaultFeatureId={action.featureId}
+                features={[{ id: action.featureId, label: action.featureLabel, buildMessages: (extra) => action.buildMessages(lead, extra) }]}
+              />
+            </div>
+          </Modal>
+        );
+      })()}
     </div>
   );
 }
