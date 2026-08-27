@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const TABLE = "personal_task_stages";
@@ -20,18 +20,24 @@ function rowToStage(r) {
 export function usePersonalTaskStages(userId) {
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
+  const activeRef = useRef(true);
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured || !userId) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !userId) { setStages([]); setLoading(false); return; }
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
       .order("order_idx", { ascending: true });
+    if (!activeRef.current) return;
     if (!error) setStages((data || []).map(rowToStage));
     setLoading(false);
   }, [userId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    activeRef.current = true;
+    fetchAll();
+    return () => { activeRef.current = false; };
+  }, [fetchAll]);
 
   const addStage = useCallback(async (stage) => {
     if (!isSupabaseConfigured || !userId) throw new Error("Supabase não configurado");
