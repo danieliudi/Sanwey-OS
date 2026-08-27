@@ -35,7 +35,7 @@ import { DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
 import { MARKETING_STAGES, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../constants/marketing-pipelines";
 import { RH_LEAVE_TYPES } from "../constants/rh-config";
 import { formatK } from "../utils/currency";
-import { formatDateBR } from "../utils/date";
+import { formatDateBR, parseDateInput } from "../utils/date";
 
 // Same convention used throughout FASE 5: prefer the `_ids` array, fall back
 // to the legacy scalar field wrapped in an array.
@@ -50,7 +50,13 @@ function idsOf(ids, scalar) {
 // they fall to the end instead of faking an urgency they don't have.
 function daysUntil(dateStr, hoje = Date.now()) {
   if (!dateStr) return Infinity;
-  const ts = new Date(dateStr).getTime();
+  // parseDateInput (não new Date() cru) — achado real de QA (Fase 4,
+  // 27/08/2026): uma coluna `date` pura ("AAAA-MM-DD", ex. personal_tasks.
+  // due_date/marketing_purchase_requests.due_date) vira meia-noite UTC com
+  // `new Date()`, não meia-noite local — em UTC-3 isso classificava uma
+  // tarefa "atrasada" horas antes do prazo real vencer. Mesmo fix que
+  // formatDateBR/daysSince já usam (src/utils/date.js).
+  const ts = parseDateInput(dateStr).getTime();
   return Number.isNaN(ts) ? Infinity : (ts - hoje) / 86400000;
 }
 
@@ -339,7 +345,7 @@ export function useMyTasks({ currentUser, personalTasksEnabled = true } = {}) {
     // FASE 4: Tarefas de Marketing — mesmo campo `deadline` de Entregas/Compras.
     for (const t of (marketingTasksList || [])) {
       const stageInfo = marketingTaskStagesByKey.get(t.stage);
-      if (stageInfo?.terminal) continue;
+      if (!stageInfo || stageInfo.terminal) continue;
       if (!idsOf(t.assigneeIds, null).includes(userId)) continue;
       out.push({
         id: `resp-mktask-${t.id}`,
@@ -362,7 +368,7 @@ export function useMyTasks({ currentUser, personalTasksEnabled = true } = {}) {
     // levantamento — sla_days vive na etapa, não na operação).
     for (const op of (comexExportOps || [])) {
       const stageInfo = comexExportStagesByKey.get(op.stage);
-      if (stageInfo?.terminal) continue;
+      if (!stageInfo || stageInfo.terminal) continue;
       if (!idsOf(op.ownerIds, null).includes(userId)) continue;
       const agingDays = op.stageChangedAt ? Math.floor((Date.now() - new Date(op.stageChangedAt).getTime()) / 86400000) : 0;
       out.push({
@@ -382,7 +388,7 @@ export function useMyTasks({ currentUser, personalTasksEnabled = true } = {}) {
     }
     for (const op of (comexImportOps || [])) {
       const stageInfo = comexImportStagesByKey.get(op.stage);
-      if (stageInfo?.terminal) continue;
+      if (!stageInfo || stageInfo.terminal) continue;
       if (!idsOf(op.ownerIds, null).includes(userId)) continue;
       const agingDays = op.stageChangedAt ? Math.floor((Date.now() - new Date(op.stageChangedAt).getTime()) / 86400000) : 0;
       out.push({
@@ -543,7 +549,7 @@ export function useMyTasks({ currentUser, personalTasksEnabled = true } = {}) {
     // responsibility já cobre a tarefa aberta independente do prazo.
     for (const t of (marketingTasksList || [])) {
       const stageInfo = marketingTaskStagesByKey.get(t.stage);
-      if (stageInfo?.terminal) continue;
+      if (!stageInfo || stageInfo.terminal) continue;
       if (!idsOf(t.assigneeIds, null).includes(userId)) continue;
       if (!t.deadline) continue;
       const diasAtraso = -daysUntil(t.deadline);
@@ -568,7 +574,7 @@ export function useMyTasks({ currentUser, personalTasksEnabled = true } = {}) {
     // Pós-venda acima (nenhum alerta pré-existente pra espelhar aqui).
     for (const op of (comexExportOps || [])) {
       const stageInfo = comexExportStagesByKey.get(op.stage);
-      if (stageInfo?.terminal) continue;
+      if (!stageInfo || stageInfo.terminal) continue;
       if (!idsOf(op.ownerIds, null).includes(userId)) continue;
       if (!stageInfo?.slaDays || !op.stageChangedAt) continue;
       const agingDays = Math.floor((Date.now() - new Date(op.stageChangedAt).getTime()) / 86400000);
@@ -590,7 +596,7 @@ export function useMyTasks({ currentUser, personalTasksEnabled = true } = {}) {
     }
     for (const op of (comexImportOps || [])) {
       const stageInfo = comexImportStagesByKey.get(op.stage);
-      if (stageInfo?.terminal) continue;
+      if (!stageInfo || stageInfo.terminal) continue;
       if (!idsOf(op.ownerIds, null).includes(userId)) continue;
       if (!stageInfo?.slaDays || !op.stageChangedAt) continue;
       const agingDays = Math.floor((Date.now() - new Date(op.stageChangedAt).getTime()) / 86400000);
