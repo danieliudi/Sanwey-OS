@@ -13,7 +13,7 @@ import { resolveVisibleFields } from "../../utils/field-conditions";
 import { usePersonalTaskChecklists } from "../../hooks/use-personal-task-checklists";
 import { usePersonalTaskAttachments } from "../../hooks/use-personal-task-attachments";
 import { formatDateBR } from "../../utils/date";
-import { PERSONAL_TASK_PRIORITIES, RECURRENCE_OPTIONS } from "../../constants/personal-tasks";
+import { PERSONAL_TASK_PRIORITIES, RECURRENCE_OPTIONS, TASK_TAGS_CONDITION_KEY } from "../../constants/personal-tasks";
 import { RecurrencePicker } from "./RecurrencePicker";
 import { PersonalTagsPicker } from "./PersonalTagsPicker";
 
@@ -148,7 +148,19 @@ function DetailsTab({ task, onFieldChange, saveStatus, tagsHook, depOptions, dep
 function StageFieldsTab({ task, stageFieldsHook, onFieldChange, onEditFields }) {
   const defs = stageFieldsHook.getFields(task.status);
   const values = task.customFields || {};
-  const visibleDefs = resolveVisibleFields(defs, values);
+
+  // As etiquetas da tarefa entram no mapa de valores como uma chave sintética
+  // (27/08/2026) — é o que permite condicionar campo por etiqueta usando o
+  // motor que já existe, sem coluna nem tabela nova. Lista separada por
+  // vírgula porque o operador `contains` do motor faz substring simples; o
+  // separador com espaço evita que "Compra" case dentro de outra etiqueta
+  // colada. Só de LEITURA: nada aqui grava em customFields, então a chave
+  // nunca é persistida junto com os valores reais dos campos.
+  const conditionValues = useMemo(
+    () => ({ ...values, [TASK_TAGS_CONDITION_KEY]: (task.tags || []).join(", ") }),
+    [values, task.tags]
+  );
+  const visibleDefs = resolveVisibleFields(defs, conditionValues);
 
   if (visibleDefs.length === 0) {
     return (

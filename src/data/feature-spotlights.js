@@ -273,6 +273,20 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: dá pra filtrar o Meu To-do por prioridade e por prazo, além de etiqueta — clique aqui.",
     version: "4.66.0",
   },
+  // 4.68.0 — campo condicional por etiqueta. Mesmo caso já registrado pra
+  // "lista-pessoal-automacoes"/"lead-email-tab" acima: o alvo real (as
+  // etiquetas dentro do card, e o editor de condicionais dentro de "Editar
+  // etapas") só existe com um card aberto / modal aberto, não direto na
+  // rota. Aponta pro botão "Editar etapas", que é o caminho de entrada da
+  // configuração e SEMPRE existe na rota — o texto explica o resto. O
+  // runtime pula em silêncio se o elemento não estiver montado.
+  {
+    id: "lista-pessoal-campos-por-etiqueta",
+    route: "personal-tasks",
+    target: '[data-tour="lista-pessoal-editar-etapas"]',
+    text: "Novo: o formulário da etapa pode mudar conforme o tipo da tarefa. Marque a etiqueta (Compra, Reunião…) no card e configure aqui, em Condicionais de campo, o que cada tipo pede.",
+    version: "4.68.0",
+  },
 ];
 
 export default FEATURE_SPOTLIGHTS;

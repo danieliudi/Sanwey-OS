@@ -5,6 +5,13 @@ import { X, GitBranch, Eye, Asterisk, Pencil, Trash2, Plus } from "lucide-react"
 // isso" → ação), no layout do Pipefy, sobre o MESMO dado de sempre:
 // visible_if / required_if no shape { fieldKey, operator, value } avaliado
 // por src/utils/field-conditions.js. Nenhum motor novo — só a casca.
+//
+// `extraSources` (27/08/2026) permite que a tela dona ofereça origens de
+// condição que NÃO são campos daquela etapa — hoje só o Meu To-Do usa, pra
+// condicionar campo por etiqueta da tarefa (ver PersonalStageFieldsPanel e o
+// `__etiquetas` injetado em PersonalTaskDetailDrawer). Shape:
+// [{ fieldKey, label, hint? }]. Opcional e vazio por padrão: quem não passa
+// (Pipeline/RH) se comporta exatamente como antes.
 
 const OPERATORS = [
   { value: "eq",           label: "é igual a" },
@@ -77,7 +84,7 @@ function FlowConnector({ label }) {
 
 // ── Card de uma condicional (leitura + edição) ───────────────────────────────
 
-function ConditionalCard({ entry, fields, accent, busy, onSave, onDelete, startEditing = false }) {
+function ConditionalCard({ entry, fields, extraSources = [], accent, busy, onSave, onDelete, startEditing = false }) {
   const [editing, setEditing] = useState(startEditing);
   const [confirmDel, setConfirmDel] = useState(false);
 
@@ -88,7 +95,9 @@ function ConditionalCard({ entry, fields, accent, busy, onSave, onDelete, startE
   const [error, setError]       = useState(null);
 
   const target = fields.find(f => f.id === (isNew ? targetId : entry.targetId)) || entry.target;
-  const sourceField = fields.find(f => f.fieldKey === (editing ? cond : entry.condition)?.fieldKey);
+  const activeKey = (editing ? cond : entry.condition)?.fieldKey;
+  const sourceField =
+    fields.find(f => f.fieldKey === activeKey) || extraSources.find(s => s.fieldKey === activeKey);
 
   // Alvos possíveis: qualquer campo != origem; pra "Exigir", campos já
   // obrigatórios sempre ficam de fora (condição não se aplica).
@@ -96,10 +105,17 @@ function ConditionalCard({ entry, fields, accent, busy, onSave, onDelete, startE
     () => fields.filter(f => (kind === "required" ? !f.required : true)),
     [fields, kind]
   );
+  // Origens: as externas primeiro (ex.: etiqueta da tarefa — não pertence a
+  // etapa nenhuma, então nunca colide com o campo alvo), depois os campos da
+  // própria etapa menos o alvo.
   const sourceChoices = useMemo(
-    () => fields.filter(f => f.id !== (isNew ? targetId : entry.targetId)),
-    [fields, isNew, targetId, entry.targetId]
+    () => [
+      ...extraSources,
+      ...fields.filter(f => f.id !== (isNew ? targetId : entry.targetId)),
+    ],
+    [extraSources, fields, isNew, targetId, entry.targetId]
   );
+  const activeExtra = extraSources.find(s => s.fieldKey === cond.fieldKey);
 
   const handleSave = async () => {
     if (!targetId && isNew) { setError("Escolha o campo alvo da ação."); return; }
@@ -194,8 +210,11 @@ function ConditionalCard({ entry, fields, accent, busy, onSave, onDelete, startE
             style={SELECT_STYLE}
           >
             <option value="">Campo da condição…</option>
-            {sourceChoices.map(f => <option key={f.id} value={f.fieldKey}>{f.label}</option>)}
+            {sourceChoices.map(f => <option key={f.id || f.fieldKey} value={f.fieldKey}>{f.label}</option>)}
           </select>
+          {activeExtra?.hint && (
+            <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.45 }}>{activeExtra.hint}</div>
+          )}
           <select
             value={cond.operator}
             onChange={e => setCond(c => ({ ...c, operator: e.target.value }))}
@@ -269,7 +288,7 @@ function ConditionalCard({ entry, fields, accent, busy, onSave, onDelete, startE
 
 // ── Modal principal ──────────────────────────────────────────────────────────
 
-export function StageConditionsModal({ open, onClose, fields, onSaveField, accent = "var(--accent)", busy = false }) {
+export function StageConditionsModal({ open, onClose, fields, extraSources = [], onSaveField, accent = "var(--accent)", busy = false }) {
   const [drafts, setDrafts] = useState([]); // condicionais novas ainda não salvas
 
   useEffect(() => {
@@ -303,7 +322,9 @@ export function StageConditionsModal({ open, onClose, fields, onSaveField, accen
     await onSaveField(entry.targetId, patch);
   };
 
-  const canCreate = (fields || []).length >= 2;
+  // Com origem externa disponível (ex.: etiqueta), 1 campo já basta — a
+  // condição não precisa de um 2º campo da etapa pra comparar contra.
+  const canCreate = (fields || []).length >= (extraSources.length > 0 ? 1 : 2);
 
   return (
     <div
@@ -347,7 +368,9 @@ export function StageConditionsModal({ open, onClose, fields, onSaveField, accen
             >
               {canCreate
                 ? "Nenhuma condicional configurada nesta fase."
-                : "Crie pelo menos 2 campos nesta fase pra poder condicionar um ao outro."}
+                : extraSources.length > 0
+                  ? "Crie pelo menos 1 campo nesta fase pra poder condicioná-lo."
+                  : "Crie pelo menos 2 campos nesta fase pra poder condicionar um ao outro."}
             </div>
           )}
 
@@ -356,6 +379,7 @@ export function StageConditionsModal({ open, onClose, fields, onSaveField, accen
               key={`${entry.targetId}-${entry.kind}`}
               entry={entry}
               fields={fields}
+              extraSources={extraSources}
               accent={accent}
               busy={busy}
               onSave={handleSave}
@@ -368,6 +392,7 @@ export function StageConditionsModal({ open, onClose, fields, onSaveField, accen
               key={`draft-${i}`}
               entry={d}
               fields={fields}
+              extraSources={extraSources}
               accent={accent}
               busy={busy}
               onSave={handleSave}
