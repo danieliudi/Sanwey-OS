@@ -250,6 +250,14 @@ export const FEATURE_SPOTLIGHTS = [
   //     anunciar com spotlight uma aba que não faz nada seria pior que só
   //     deixar quem abrir um negócio notar sozinho.
   //
+  // 4.66.0 — conexão da Secretária de IA (chave de API pessoal, Configurações
+  // → Integrações → Secretária de IA): DECIDIDO PULAR o spotlight. Mesmo
+  // motivo já registrado pra "Gestão" (4.43.0) e "Histórico"/"Conexões"
+  // (4.40.0) — o mecanismo ancora num elemento visível ao ENTRAR na rota
+  // ("settings"), mas este alvo fica atrás de dois cliques a mais (aba
+  // "Integrações", depois sub-aba "Secretária de IA"), nenhum dos dois é o
+  // padrão de quem abre Configurações. Coberto pelo changelog 4.66.0.
+  //
   // 4.60.1 — título editável (lápis) em Vaga e Candidato (RH Recrutamento):
   // DECIDIDO PULAR o spotlight. Mesmo componente `EditableTitle` já em uso
   // desde 29/07/2026 em Campanhas/Entregas/Tarefas/Compras (nunca ganhou
