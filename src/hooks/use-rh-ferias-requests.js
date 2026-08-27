@@ -46,12 +46,42 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
 
   // Mover card entre etapas do Kanban (pendente/aprovado/recusado).
   // approvedBy/approvedAt são preenchidos só ao entrar em aprovado/recusado.
-  const changeStatus = useCallback(async (id, status, extra = {}) => {
+  //
+  // Decisão de fila compartilhada (27/08/2026): quando a etapa de destino é
+  // aprovado/recusado, isto é uma DECISÃO — precisa da mesma trava de
+  // concorrência que Compras/Cotações já têm no banco ("Solicitação já foi
+  // decidida"). Sem isso, dois gerentes com o drawer aberto ao mesmo tempo
+  // podiam sobrescrever a decisão um do outro, e o segundo via a mensagem
+  // genérica de "sem permissão" mesmo tendo permissão de sobra — só chegou
+  // tarde. `.eq("status", ...)` faz o UPDATE não casar nenhuma linha quando
+  // o status já mudou; refetchOnConflict devolve o registro atual pra quem
+  // chamou poder mostrar quem decidiu, em vez de só falhar.
+  const changeStatus = useCallback(async (id, status, extra = {}, { expectedStatus } = {}) => {
     const patch = { status, status_changed_at: new Date().toISOString(), ...extra };
-    const { data, error } = await supabase.from(TABLE).update(patch).eq("id", id).select();
+    let query = supabase.from(TABLE).update(patch).eq("id", id);
+    if (expectedStatus) query = query.eq("status", expectedStatus);
+    const { data, error } = await query.select(SELECT);
     if (error) throw new Error(error.message);
-    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar este pedido de férias.");
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+    if (!data || data.length === 0) {
+      if (expectedStatus) {
+        const { data: atual } = await supabase.from(TABLE).select(SELECT).eq("id", id).maybeSingle();
+        if (atual) {
+          setRequests(prev => prev.map(r => r.id === id ? atual : r));
+          if (atual.status !== expectedStatus) {
+            const err = new Error(
+              atual.status === "pendente"
+                ? "Este pedido não está mais pendente."
+                : `Este pedido já foi ${atual.status === "aprovado" ? "aprovado" : "recusado"} por ${atual.approver?.name || "outra pessoa"}.`
+            );
+            err.current = atual;
+            throw err;
+          }
+        }
+      }
+      throw new Error("Não foi possível salvar — sem permissão pra editar este pedido de férias.");
+    }
+    setRequests(prev => prev.map(r => r.id === id ? data[0] : r));
+    return data[0];
   }, []);
 
   const updateCustomFields = useCallback(async (id, customFields) => {

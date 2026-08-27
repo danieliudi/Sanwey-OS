@@ -44,7 +44,11 @@ function normalizeBrasilApi(raw: Record<string, unknown>) {
     cnpj: cnpj
       ? `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5, 8)}/${cnpj.slice(8, 12)}-${cnpj.slice(12, 14)}`
       : "",
-    company: fantasia || razao,
+    // Decidido com o Daniel 27/08/2026: razão social na frente. Antes o
+    // fantasia vinha primeiro e, sem fantasia cadastrado na Receita, "nome"
+    // virava lixo cadastral tipo "ESTABELECIMENTO UNIFICADO" em vez da razão
+    // social real da empresa. Não migra nenhum lead/cliente já criado.
+    company: razao || fantasia,
     razaoSocial: razao,
     sector: cnaeDesc || "—",
     cnae,
