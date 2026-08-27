@@ -2363,7 +2363,12 @@ export default function App() {
           } />
           <Route path={ROUTES["marketing-solicitacoes"]} element={
             ((isMarketingUser && !isAgencia) || isDiretoria)
-              ? <MarketingRequestsView user={currentUser} users={users} />
+              ? <MarketingRequestsView
+                  user={currentUser}
+                  users={users}
+                  initialExpandedRequestId={expandedMarketingRequestId}
+                  onInitialRequestConsumed={() => setExpandedMarketingRequestId(null)}
+                />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["marketing-fornecedores"]} element={
