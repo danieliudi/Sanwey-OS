@@ -111,7 +111,7 @@ function quickActionFor(taskId) {
 function QuickActionButton({ label, icon: Icon, tone, busy, onClick }) {
   return (
     <button
-      onClick={(e) => { e.stopPropagation(); if (!busy) onClick(); }}
+      onClick={() => { if (!busy) onClick(); }}
       disabled={busy}
       className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 whitespace-nowrap"
       style={{
@@ -132,18 +132,24 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
   const { tasks, loading, counts, reciclarAtribuicao, rejectRequest, rejectPurchase } = useMyTasks({ currentUser });
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState(false);
-  const [actionBusyId, setActionBusyId] = useState(null);
+  // Set, não um id escalar — achado real de QA (27/08/2026): a fila mostra
+  // vários módulos ao mesmo tempo, então "Reciclar" num Treinamento e
+  // "Recusar" numa Compra podem estar em voo juntos. Com um id só, o
+  // `finally` da 1ª chamada a terminar limpava o busy da 2ª ainda em voo —
+  // reabilitando o botão dela antes da mutação terminar, e abrindo brecha
+  // pra um clique real disparar uma 2ª chamada concorrente na MESMA pendência.
+  const [busyIds, setBusyIds] = useState(() => new Set());
   const [actionError, setActionError] = useState(null);
 
   const runQuickAction = async (task, fn) => {
     setActionError(null);
-    setActionBusyId(task.id);
+    setBusyIds(prev => new Set(prev).add(task.id));
     try {
       await fn();
     } catch (e) {
       setActionError(e?.message || "Não foi possível concluir a ação — tente novamente.");
     } finally {
-      setActionBusyId(null);
+      setBusyIds(prev => { const next = new Set(prev); next.delete(task.id); return next; });
     }
   };
 
@@ -321,7 +327,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
                                 label={quickAction.label}
                                 icon={quickAction.icon}
                                 tone={quickAction.tone}
-                                busy={actionBusyId === task.id}
+                                busy={busyIds.has(task.id)}
                                 onClick={() => handleQuickAction(task, quickAction.key)}
                               />
                             ) : undefined}
