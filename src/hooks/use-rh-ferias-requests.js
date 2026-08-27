@@ -68,11 +68,17 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
         if (atual) {
           setRequests(prev => prev.map(r => r.id === id ? atual : r));
           if (atual.status !== expectedStatus) {
-            const err = new Error(
-              atual.status === "pendente"
-                ? "Este pedido não está mais pendente."
-                : `Este pedido já foi ${atual.status === "aprovado" ? "aprovado" : "recusado"} por ${atual.approver?.name || "outra pessoa"}.`
-            );
+            // Pipelines de férias podem ter mais etapas além de
+            // pendente/aprovado/recusado (ex.: "em análise") — o fallback
+            // genérico evita afirmar "recusado" quando na verdade foi
+            // movido pra uma etapa custom qualquer.
+            const quemDecidiu = atual.approver?.name || "outra pessoa";
+            const mensagem =
+              atual.status === "pendente" ? "Este pedido voltou a ficar pendente — confira antes de decidir de novo."
+              : atual.status === "aprovado" ? `Este pedido já foi aprovado por ${quemDecidiu}.`
+              : atual.status === "recusado" ? `Este pedido já foi recusado por ${quemDecidiu}.`
+              : `Este pedido já foi movido para outra etapa por ${quemDecidiu}.`;
+            const err = new Error(mensagem);
             err.current = atual;
             throw err;
           }

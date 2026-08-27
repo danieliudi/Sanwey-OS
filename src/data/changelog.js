@@ -24,6 +24,25 @@
 
 export const CHANGELOG = [
   {
+    version: "4.71.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Cadastro de cliente: a busca por CNPJ agora também preenche a Razão Social (com selo de situação cadastral na Receita), e dá pra já cadastrar o contato principal — nome, cargo, e-mail e telefone — direto na criação, sem precisar salvar e reabrir.",
+      },
+      {
+        kind: "correcao",
+        text: "Férias & Licenças: quando outro gestor já decidiu o pedido, o card mostra quem aprovou ou recusou e quando, em vez dos botões simplesmente sumirem sem explicação.",
+        roles: ["admin", "gerente_rh"],
+      },
+      {
+        kind: "correcao",
+        text: "Pendências: o nome do colaborador voltou a aparecer certo nos pedidos de férias aguardando aprovação (antes mostrava só 'Colaborador'), e o alerta de treinamento vencido parou de sumir sozinho quando o sistema atualiza o status pra 'vencido'.",
+        roles: ["admin", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "4.70.0",
     items: [
       {

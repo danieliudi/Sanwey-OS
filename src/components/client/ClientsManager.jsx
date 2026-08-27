@@ -257,6 +257,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
           )}
           <button
             onClick={openNew}
+            data-tour="clientes-novo-cliente"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-white"
             style={{ background: "var(--color-industria)", border: "none", cursor: "pointer" }}
           >
@@ -707,7 +708,7 @@ function ClientDetailModal({
               <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>CNPJ</label>
               <div className="flex gap-1.5 items-start">
                 <input value={form.cnpj}
-                  onChange={e => { setForm(f => ({ ...f, cnpj: e.target.value })); setCnpjFilled(false); cnpjReset(); }}
+                  onChange={e => { setForm(f => ({ ...f, cnpj: e.target.value })); setCnpjFilled(false); setSituacaoCadastral(null); cnpjReset(); }}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); runCnpjLookup(); } }}
                   placeholder="00.000.000/0000-00"
                   className="flex-1 min-w-0 rounded-lg border px-3 py-2 text-sm" style={{ ...inputStyle, borderColor: duplicateMatch ? "var(--danger)" : inputStyle.borderColor }} onFocus={onFocusRed} onBlur={onBlurRed} />

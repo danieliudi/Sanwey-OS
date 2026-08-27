@@ -130,6 +130,10 @@ export function useClients({ userId } = {}) {
     if (dup) throw new DuplicateClientError(dup);
 
     if (!isSupabaseConfigured) {
+      // Modo local/demo não tem equivalente de client_contacts — um contato
+      // digitado aqui é descartado sem aviso porque não há canal de erro
+      // pra esse caminho hoje (não é o modo real usado em produção).
+      if (contact?.name?.trim()) console.warn("[createClient] Contato principal ignorado — modo local/demo não persiste client_contacts.");
       const local = { ...client, id: `local-${Date.now()}`, createdAt: new Date().toISOString() };
       setFallbackClients(prev => [...prev, local].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
       return local;
