@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.66.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Corrigido erro que travava a tela de Configurações → Módulos (\"Erro ao carregar esta tela\") — dois lugares da plataforma disputavam o mesmo canal de atualização em tempo real.",
+      },
+    ],
+  },
+  {
     version: "4.66.0",
     items: [
       {

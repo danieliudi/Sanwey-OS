@@ -1,5 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+
+// Contador de módulo, não por-hook — mesmo motivo de personalTasksChannelSeq
+// em use-personal-tasks.js: garante nome de canal único mesmo quando duas
+// instâncias deste hook montam ao mesmo tempo (App.jsx, sempre montado, +
+// ModuleStatesPanel.jsx quando a tela "Módulos" abre). Antes disto, as duas
+// usavam o mesmo nome fixo "module-states-changes" — o Supabase devolve o
+// MESMO canal (dedupe por nome/topic) pra 2ª instância, que já está
+// `subscribed` pela 1ª, e chamar `.on()` num canal já inscrito lança
+// "cannot add postgres_changes callbacks ... after subscribe()", derrubando
+// a tela de Configurações inteira (achado do Daniel 27/08/2026).
+let moduleStatesChannelSeq = 0;
 
 // Chave global de liga/desliga por página (Configurações → Módulos).
 // Complementa o "Acesso por módulo" POR PESSOA (use-module-overrides.js):
@@ -13,6 +24,9 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 export function useModuleStates({ enabled = true } = {}) {
   const [states, setStates]   = useState({});
   const [loading, setLoading] = useState(true);
+  // Id só desta instância do hook — ver moduleStatesChannelSeq acima.
+  const instanceIdRef = useRef(null);
+  if (instanceIdRef.current === null) instanceIdRef.current = ++moduleStatesChannelSeq;
 
   const fetchAll = useCallback(async () => {
     if (!isSupabaseConfigured || !enabled) { setStates({}); setLoading(false); return; }
@@ -33,7 +47,7 @@ export function useModuleStates({ enabled = true } = {}) {
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled) return;
     const channel = supabase
-      .channel("module-states-changes")
+      .channel(`module-states-changes_${instanceIdRef.current}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "module_states" }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
