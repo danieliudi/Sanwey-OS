@@ -715,6 +715,7 @@ export function PersonalTasksView({ currentUser }) {
             </button>
             <button
               onClick={() => setStagesEditorOpen(true)}
+              data-tour="lista-pessoal-editar-etapas"
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
               style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}

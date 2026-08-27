@@ -48,15 +48,40 @@ export const PERSONAL_TASK_PRIORITIES = [
   { id: "alta",  label: "Alta",  color: "#DC2626" },
 ];
 
-// Catálogo sugerido de fábrica (decisão B do mockup "Lista Pessoal —
-// ajustes pedidos", 07/08/2026): mistura termos do próprio negócio
-// (fábrica/indústria de big bags, resíduos, compliance) com uso pessoal
-// genérico — só semeado na 1ª vez que o usuário abre o catálogo vazio,
-// nunca reimposto depois (ele pode apagar/renomear à vontade).
-export const DEFAULT_TAG_CATALOG = [
-  "Urgente", "Financeiro", "Reunião", "Fornecedor", "Compliance",
-  "Auditoria", "Logística", "Segurança", "Cliente", "Viagem", "Pessoal",
+// Chave sintética da etiqueta como ORIGEM de condição de campo (27/08/2026,
+// mockup "Etiquetas que puxam campos", aprovado pelo Daniel). Não é coluna
+// nem campo de verdade: o drawer injeta as etiquetas da tarefa no mapa de
+// valores sob esta chave (ver StageFieldsTab em PersonalTaskDetailDrawer),
+// e aí o motor de condicionais que já existe (utils/field-conditions.js)
+// resolve `__etiquetas contains "Compra"` sem saber que é etiqueta. Prefixo
+// `__` pra nunca colidir com um fieldKey real — slugifyKey não gera chave
+// começando com underline.
+export const TASK_TAGS_CONDITION_KEY = "__etiquetas";
+
+// Catálogo sugerido de fábrica. Duas dimensões de propósito (decidido com o
+// Daniel 27/08/2026):
+//
+//   FRENTE — onde a tarefa acontece. É o que ele já usava na prática
+//   (Sanwey/Resibag/Kenjinkai viraram etiqueta por conta própria). Serve pra
+//   filtrar e organizar; NÃO puxa campo, porque uma tarefa de Sanwey e uma
+//   de Resibag precisam exatamente do mesmo formulário.
+//
+//   TIPO — o que a tarefa é. Esta é a dimensão que puxa campo condicional:
+//   uma "Compra" pede fornecedor/valor, uma "Reunião" pede com quem/pauta, e
+//   nenhuma etapa sozinha saberia disso (por isso o formulário por etapa
+//   vivia vazio). Ver TASK_TYPE_TAGS abaixo.
+//
+// Só semeado na 1ª vez que o usuário abre o catálogo vazio, nunca reimposto
+// depois — quem já tem catálogo próprio (o caso do Daniel) não é afetado por
+// mudanças aqui, e adota os tipos pelo botão "+ Tipos sugeridos" do seletor
+// de etiquetas, que só acrescenta o que falta.
+export const TASK_FRENTE_TAGS = ["Sanwey", "Resibag", "Kenjinkai", "Monte Mor", "Pessoal"];
+
+export const TASK_TYPE_TAGS = [
+  "Reunião", "Decisão", "Compra", "Cobrança", "Entrega", "Documento", "Viagem",
 ];
+
+export const DEFAULT_TAG_CATALOG = [...TASK_FRENTE_TAGS, ...TASK_TYPE_TAGS];
 
 export const WEEKDAY_SHORT_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
 export const WEEKDAY_FULL_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];

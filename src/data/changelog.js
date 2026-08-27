@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.68.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Meu To-do: o formulário da etapa agora pode mudar conforme o tipo da tarefa. Marque a tarefa com uma etiqueta de tipo (Compra, Reunião, Cobrança…) e configure em 'Editar etapas' quais campos aparecem pra cada uma — uma Compra pede fornecedor e valor, uma Reunião pede pauta. Use \"Tipos sugeridos\" dentro do card pra já ter as etiquetas prontas.",
+      },
+      {
+        kind: "correcao",
+        text: "Painel de notificações: os filtros (Tudo/Menções/Sistema) não ficam mais espremidos entre o cabeçalho e os cards, e rolar a lista deixou de fechar o painel sozinho.",
+      },
+    ],
+  },
+  {
     version: "4.67.3",
     items: [
       {

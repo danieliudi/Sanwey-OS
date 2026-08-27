@@ -486,6 +486,10 @@ export function StageFieldsPanel({
   showProbability = false,
   isProtectedStage = false,
   protectedLabel = "",
+  // Origens de condição que não são campos desta etapa (ex.: etiqueta da
+  // tarefa, no Meu To-Do) — ver StageConditionsModal. Vazio = comportamento
+  // de sempre (Pipeline/RH).
+  conditionExtraSources = [],
 }) {
   const [addingType, setAddingType] = useState(null);
   const [opError, setOpError] = useState(null);
@@ -790,6 +794,7 @@ export function StageFieldsPanel({
         open={conditionsOpen}
         onClose={() => setConditionsOpen(false)}
         fields={fields}
+        extraSources={conditionExtraSources}
         accent={accent}
         busy={busy}
         onSaveField={(id, patch) => mergePatch(id, patch)}

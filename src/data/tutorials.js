@@ -380,6 +380,10 @@ export const FAQ_ITEMS = [
     answer: "Dependência entre tarefas se marca dentro do card, no campo 'Depende de' — enquanto a tarefa que ela depende não for concluída, um badge 'Bloqueada' aparece e ela não pode ser movida pra etapa final. Automações (ex.: \"quando eu mover uma tarefa pra etapa final, me avisar\") se criam na aba 'Automações' do Meu To-do — são regras só suas, não aparecem pra mais ninguém.",
   },
   {
+    question: "Como faço o Meu To-do pedir campos diferentes conforme o tipo da tarefa?",
+    answer: "Pelas etiquetas. Marque a tarefa com um tipo (Compra, Reunião, Cobrança, Entrega, Documento, Decisão, Viagem) — se você ainda não tem esses no seu catálogo, use \"Tipos sugeridos\" ao lado de \"Nova etiqueta\" dentro do card. Depois, em 'Editar etapas' → campos da etapa → 'Condicionais de campo', crie uma condicional escolhendo 'Etiqueta da tarefa' como origem, operador 'contém' e o nome do tipo. Aí aquele campo só aparece nas tarefas daquele tipo — uma Compra pede fornecedor e valor, uma Reunião pede pauta, e nenhuma das duas vê o campo da outra.",
+  },
+  {
     question: "Dá pra mandar e-mail de verdade pro cliente direto do CRM?",
     answer: "Sim — na aba 'Email' do detalhe do negócio, escreva na hora ou escolha um template reutilizável (criados em Configurações), com confirmação real de entrega. Também dá pra configurar lembrete recorrente pra não esquecer de dar retorno.",
   },

@@ -127,7 +127,15 @@ export function NotificationCenter({
       if (anchorRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
       setOpen(false);
     };
-    const close = () => setOpen(false);
+    // Fecha ao rolar a PÁGINA, nunca ao rolar a própria lista do painel:
+    // o listener é de captura (3º argumento true), então também alcança o
+    // scroll interno — sem esta checagem, rolar a lista de notificações
+    // fechava o painel na cara do usuário. Mesma checagem de ref que
+    // handleOutside acima já faz.
+    const close = (e) => {
+      if (e?.target && panelRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     const handleKey = (e) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", handleOutside);
     window.addEventListener("scroll", close, true);
@@ -245,7 +253,7 @@ export function NotificationCenter({
         >
           {/* Header */}
           <div
-            className="flex items-center justify-between px-4 py-3 border-b"
+            className="flex items-center justify-between px-4 py-3 border-b shrink-0"
             style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
             <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
@@ -290,7 +298,7 @@ export function NotificationCenter({
 
           {/* Filtro por tipo — client-side, sobre o que já foi carregado */}
           {notifications.length > 0 && (
-            <div className="flex items-center gap-1.5 px-4 py-2 border-b overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+            <div className="flex items-center gap-1.5 px-4 py-2 border-b overflow-x-auto shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
               {FILTERS.map(f => {
                 const active = filter === f.id;
                 return (
@@ -318,7 +326,7 @@ export function NotificationCenter({
               localStorage de propósito — volta a lembrar num reload/login
               novo, em vez de sumir de vez. */}
           {desktopPermission === "default" && !permissionBannerDismissed && (
-            <div className="border-b" style={{ borderColor: "var(--border)", background: "var(--amber-bg)" }}>
+            <div className="border-b shrink-0" style={{ borderColor: "var(--border)", background: "var(--amber-bg)" }}>
               <div className="flex items-center justify-between gap-2 px-4 py-2.5 text-xs">
                 <span style={{ color: "var(--warning)" }}>Ativar notificações do navegador?</span>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -351,7 +359,7 @@ export function NotificationCenter({
           {/* Notification list — "Novas" (não lidas) separado de "Antes de
               hoje" (já vistas), pra não precisar escanear a lista toda
               procurando o que é novo. */}
-          <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1 min-h-0 pt-1">
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2">
                 <Bell size={28} style={{ color: "var(--text-faint)" }} strokeWidth={1.5} />
