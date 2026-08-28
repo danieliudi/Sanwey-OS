@@ -1,0 +1,84 @@
+# Gate de entrada: roda a conferência de consistência e o build em todo PR e
+# em todo push pra main. Até 28/08/2026 o build só era validado no Netlify —
+# ou seja, no caminho de DEPLOY, depois do merge. Aqui ele passa a ser
+# checado antes, que é o ponto do "gate de entrada".
+#
+# `npm run build` já dispara o prebuild (check-consistencia.mjs), então os
+# dois gates rodam num passo só. O check tem uma linha de base
+# (scripts/consistencia-baseline.json): só reprova violação NOVA.
+
+name: CI — consistência e build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    name: Consistência + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      # Roda separado do build pra que a saída do check apareça sozinha no
+      # log quando ele é a causa da falha — dentro do prebuild a mensagem
+      # fica misturada com a do vite.
+      - name: Conferência de consistência
+        run: node scripts/check-consistencia.mjs
+
+      - name: Build de produção
+        run: npx vite build
+
+  rls:
+    name: Matriz de RLS de etapas
+    runs-on: ubuntu-latest
+    # Só roda quando a migration muda — é o gatilho da classe de bug que
+    # este teste existe pra pegar (allowlist de (role, domain) desatualizada
+    # quando um board novo nasce).
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ver se há mudança em migrations
+        id: mudou
+        run: |
+          git fetch origin ${{ github.base_ref || 'main' }} --depth=1 || true
+          if git diff --name-only FETCH_HEAD...HEAD -- supabase/migrations | grep -q .; then
+            echo "sim=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sim=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # supabase/tests/rls_stage_matrix.sql impersona cada papel via
+      # set_config('request.jwt.claims', ...) e termina com RAISE EXCEPTION
+      # se achar divergência — ou seja, já sai com código != 0 sozinho.
+      #
+      # O script CRIA E APAGA usuários/perfis/etapas de teste. Aponte
+      # RLS_TEST_DATABASE_URL pra um BRANCH ou STAGING do Supabase, NUNCA
+      # pra produção (o próprio cabeçalho do .sql avisa isso).
+      #
+      # Sem o secret configurado, o passo avisa e passa — o teste fica
+      # ligado e inerte até alguém apontar um banco, em vez de quebrar o CI
+      # de todo mundo hoje.
+      - name: Rodar matriz de RLS
+        if: steps.mudou.outputs.sim == 'true'
+        env:
+          RLS_TEST_DATABASE_URL: ${{ secrets.RLS_TEST_DATABASE_URL }}
+        run: |
+          if [ -z "$RLS_TEST_DATABASE_URL" ]; then
+            echo "::warning::RLS_TEST_DATABASE_URL não configurado — matriz de RLS não rodou."
+            echo "Configure o secret apontando pra um BRANCH/STAGING do Supabase (nunca produção)."
+            exit 0
+          fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          psql "$RLS_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rls_stage_matrix.sql
