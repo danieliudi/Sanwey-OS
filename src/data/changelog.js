@@ -24,6 +24,25 @@
 
 export const CHANGELOG = [
   {
+    version: "4.82.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Consulta de CNPJ: quando a checagem fiscal falhava, o resultado \"Fiscal não verificado\" ficava preso no cliente por uma semana. Agora é tentado de novo em algumas horas.",
+        roles: ["vendedor", "gerente", "consultor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Consulta de CNPJ: CNPJ inexistente passa a ser lembrado por algumas horas, em vez de reconsultar a Receita a cada tentativa.",
+        roles: ["vendedor", "gerente", "consultor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Passa a existir um limite diário de consultas de CNPJ e de uso da IA da empresa nas atas por voz — folgado pro uso normal, protege a cota compartilhada. Quem usa chave de IA própria continua sem limite.",
+      },
+    ],
+  },
+  {
     version: "4.81.0",
     items: [
       {

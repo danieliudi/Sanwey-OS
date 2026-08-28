@@ -13,10 +13,13 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 // Duas decisões de segurança que valem ler antes de mexer (idênticas às de
 // crm-ata-voz, ver aquele arquivo pra contexto completo):
 //
-//  1. Esta function NÃO usa service_role em lugar nenhum. O áudio é baixado
-//     com o JWT de quem chamou, então a RLS do Storage decide se aquela
-//     pessoa pode ler aquele arquivo. Sem isso, bastaria mandar o caminho do
-//     áudio de outro vendedor pra receber a transcrição dele de volta.
+//  1. O áudio é baixado com o JWT de quem chamou, então a RLS do Storage
+//     decide se aquela pessoa pode ler aquele arquivo. Sem isso, bastaria
+//     mandar o caminho do áudio de outro vendedor pra receber a transcrição
+//     dele de volta. Isso vale pra TODO acesso a dado nesta function: o
+//     único uso de service_role aqui é a RPC de cota (ai_org_quota_increment,
+//     que só é executável por service_role), criada sob demanda apenas no
+//     caminho da chave da empresa — nunca para ler nada do usuário.
 //  2. Ela não escreve no banco. Uma IA que propõe e uma tela que grava com
 //     aceite explícito é o mesmo padrão do Time de Agentes — e é o que
 //     impede transcrição errada de virar fato no playbook de vendas.
@@ -30,6 +33,11 @@ const CORS = {
 
 const BUCKET = 'lead-attachments';
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024; // teto do envio inline dos provedores
+// MD-06 (mesma regra do ai-assistant/crm-ata-voz): cota diária só pro
+// fallback da chave da EMPRESA — chave pessoal não é limitada. O contador de
+// ai_org_quota_increment é um só por usuário/dia, compartilhado entre as
+// três functions: 50 chamadas à IA da empresa por dia somando tudo.
+const AI_ORG_DAILY_LIMIT = 50;
 
 // O esquema que a IA tem que devolver. Vive aqui, e não no frontend, pra que
 // a tela de conferência e o prompt nunca saiam de sincronia.
@@ -233,6 +241,23 @@ Deno.serve(async (req: Request) => {
 
     if (!provider || !apiKey || !model) {
       return json({ error: 'IA não configurada. Um admin precisa definir a chave em Configurações, ou os secrets AI_ORG_* no projeto.' }, 400);
+    }
+
+    // Único ponto desta function que usa service_role (ver cabeçalho): a RPC
+    // de cota não é executável pelo JWT do usuário. Criado aqui dentro, e só
+    // quando a chamada vai gastar a chave da empresa.
+    if (!p.apiKey) {
+      const quotaClient = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      );
+      const { data: usadas, error: cotaErr } = await quotaClient.rpc('ai_org_quota_increment', {
+        p_user_id: userData.user.id,
+        p_daily_limit: AI_ORG_DAILY_LIMIT,
+      });
+      if (!cotaErr && typeof usadas === 'number' && usadas > AI_ORG_DAILY_LIMIT) {
+        return json({ error: `Limite diário de uso da IA da empresa atingido (${AI_ORG_DAILY_LIMIT} chamadas/dia). Configure sua própria chave em Configurações → Integrações de IA pra continuar sem limite.` }, 429);
+      }
     }
 
     const ctx = {
