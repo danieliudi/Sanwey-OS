@@ -15,9 +15,11 @@ const CND_FALHA_CACHE_TTL_HOURS = 6;
 // "atualizar" (refresh) ignora o cache de qualquer forma.
 const NOT_FOUND_CACHE_TTL_HOURS = 6;
 // Mesmo padrão de MD-07 já aplicado em places-autocomplete/distance-matrix/
-// reverse-geocode: verify_jwt garante sessão válida, mas nada limitava
-// quantas consultas um usuário dispara contra a BrasilAPI (rate limit por IP,
-// compartilhado por toda a plataforma) e o SERPRO Trial (cota fixa).
+// reverse-geocode. Esta function roda com verify_jwt=false no gateway (a
+// checagem de sessão é feita à mão logo no início do handler), mas sessão
+// válida nunca limitou QUANTAS consultas um usuário dispara contra a
+// BrasilAPI (rate limit por IP, compartilhado por toda a plataforma) e o
+// SERPRO Trial (cota fixa).
 const DAILY_LIMIT = 100;
 
 const corsHeaders = {

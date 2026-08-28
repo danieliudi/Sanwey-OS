@@ -190,7 +190,8 @@ Deno.serve(async (req: Request) => {
   const authorization = req.headers.get('authorization');
   if (!authorization?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401);
 
-  // Cliente com o JWT de quem chamou — nunca service_role (ver cabeçalho).
+  // Cliente com o JWT de quem chamou — é por ele que passa TODA leitura de
+  // dado nesta function, incluindo o download do áudio (ver cabeçalho).
   const userClient = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_ANON_KEY')!,
