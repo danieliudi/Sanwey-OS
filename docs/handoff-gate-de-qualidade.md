@@ -1,0 +1,215 @@
+# Passagem de bastão — passivo do gate de consistência
+
+**Para:** outra sessão do Claude Code neste repositório (`danieliudi/sanwey-crm`).
+**Branch:** `claude/sidebar-employees-sorting-pvtef1`.
+**Status:** o gate já está no ar (commit `12b99da`). O que falta é o **passivo** que ele expôs, mais dois itens de infraestrutura. Nada aqui depende de redescobrir contexto: os arquivos, os gabaritos e o critério de pronto estão todos abaixo.
+
+Leia o `CLAUDE.md` da raiz antes de começar — ele governa este repositório e tem precedência sobre este documento em qualquer conflito.
+
+---
+
+## Contexto em 5 linhas
+
+O único gate automatizado da plataforma era o `vite build`, que pega import quebrado e erro de sintaxe — e mais nada. O problema real nunca foi falta de revisão (o processo de 4 papéis do `CLAUDE.md` acha bug de verdade); é que ele **não propaga**: acha a causa raiz num arquivo e as outras N ocorrências ficam de pé. Em 28/08/2026 foi criado `scripts/check-consistencia.mjs` pra fechar exatamente essa lacuna. Ele roda no `prebuild` e no CI, e trabalha por **catraca**: `scripts/consistencia-baseline.json` guarda a contagem de violações conhecidas por arquivo, e a conferência só reprova quando o número **cresce**.
+
+Este documento é a lista do que consertar pra baixar essa catraca.
+
+**Comandos:**
+```bash
+npm run check                                   # lista todas as violações
+node scripts/check-consistencia.mjs             # confere contra a linha de base (exit 1 se piorou)
+node scripts/check-consistencia.mjs --baseline  # regrava a linha de base (depois de consertar)
+npx vite build                                  # obrigatório antes de reportar pronto
+```
+
+Estado inicial: **100 violações conhecidas** — 67 `update-sem-select`, 33 `guarda-obsoleta`.
+
+---
+
+## Tarefa 1 — `guarda-obsoleta` (33 sítios)
+
+### O bug
+
+O padrão errado, presente hoje em 33 arquivos:
+
+```js
+const activeRef = useRef(true);
+
+const fetchAll = useCallback(async () => {
+  const { data } = await supabase.from("x").select("*");
+  if (!activeRef.current) return;      // <-- guarda inútil
+  setRows(data);
+}, [deps]);
+
+useEffect(() => {
+  activeRef.current = true;            // <-- religa
+  fetchAll();
+  return () => { activeRef.current = false; };
+}, [deps]);
+```
+
+O `ref` é único **da instância do hook**, não **da execução do efeito**. Quando `deps` muda (trocar de canal, de usuário, de board), o React roda o cleanup do efeito antigo e o corpo do efeito novo **no mesmo commit**: o cleanup põe `false`, e o efeito novo põe `true` logo em seguida. Se o fetch do efeito ANTIGO resolver depois disso, a guarda passa e ele planta o dado errado na tela.
+
+Isso não é teórico: foi diagnosticado em `src/hooks/use-chat.js` (comentário nas linhas ~335-341) depois de um bug real de abrir uma conversa e ver a anterior.
+
+### O gabarito
+
+`src/hooks/use-chat.js`, função `useChannelMessages` (~linha 360). Leia esse arquivo inteiro antes de tocar em qualquer outro — ele é a referência canônica.
+
+```js
+// A função de fetch recebe a guarda como parâmetro, com default seguro
+// pra não quebrar chamadas de fora do efeito (ex.: refetch manual).
+const fetchAll = useCallback(async (isActive = () => true) => {
+  const { data } = await supabase.from("x").select("*");
+  if (!isActive()) return;
+  setRows(data);
+}, [deps]);
+
+useEffect(() => {
+  let active = true;                   // <-- por execução do efeito
+  fetchAll(() => active);
+  const canal = supabase.channel(nome).on("postgres_changes", {...}, () => {
+    if (!active) return;
+    fetchAll(() => active);
+  }).subscribe();
+  return () => { active = false; supabase.removeChannel(canal); };
+}, [deps]);
+```
+
+Pontos de atenção, todos vistos no `use-chat.js`:
+
+- **Todo** `setState` dentro do fetch assíncrono passa a checar `isActive()`, inclusive o `setLoading(false)` do `finally` e o `setError` do `catch`.
+- O callback do Realtime também checa `active`, não o ref.
+- `fetchAll` é frequentemente devolvido no retorno do hook como `refetch` — por isso o default `() => true`, senão o refetch manual vira no-op.
+- Quando o hook zera a lista ao trocar de escopo, faça isso **antes** do fetch (síncrono, no corpo do efeito), não dentro do `.then`. Foi um bug separado no chat: a thread abria mostrando a conversa anterior durante todo o fetch.
+
+### Os 33 sítios
+
+Confira sempre com `npm run check`; a lista abaixo é a de 28/08/2026 e as linhas mudam conforme você edita.
+
+**Lote A — hooks de CRM/Comercial (10)**
+`use-leads.js:198` · `use-clients.js:88` · `use-lead-history.js:84` · `use-single-lead-history.js:40` · `use-pipelines.js:71` · `use-pipeline-transitions.js:39` · `use-stage-fields.js:83` · `use-crm-viagens.js:23` · `use-crm-viagem-categorias.js:23` · `use-crm-viagem-prestacoes.js:31`
+
+**Lote B — hooks de RH (14)**
+`use-rh-bemestar.js:33` · `use-rh-cargo-templates.js:23` · `use-rh-colaboradores.js:117` · `use-rh-comunicacao.js:26` · `use-rh-feedback.js:25` · `use-rh-manager-links.js:32` · `use-rh-movimentacoes.js:26` · `use-rh-onboarding.js:28` · `use-rh-pipeline-stages.js:72` · `use-rh-recrutamento.js:86` · `use-rh-report-presets.js:25` · `use-rh-stage-fields.js:85` · `use-rh-stage-history.js:43` · `use-rh-treinamentos.js:36`
+
+**Lote C — resto (9)**
+`use-chat.js:113` (é o hook de topo `useChat`, que ainda usa `activeRef` pra lista de canais — o `useChannelMessages` do mesmo arquivo já está certo) · `use-profiles.js:86` · `use-automations.js:110` · `use-agent-runs-summary.js:35` · `use-invitations.js:49` · `use-marketing-budgets.js:73` · `use-crm-despesas.js:25` · `use-personal-task-stages.js:37` · `src/components/shared/FeatureSpotlight.jsx:99`
+
+> `use-personal-task-stages.js` foi "corrigido" em 26/08 usando justamente o padrão errado. É o exemplo mais claro do problema de propagação — trate como qualquer outro.
+
+> `FeatureSpotlight.jsx:99` (`dismissedOrphanRef`) é o único fora de `hooks/`. Leia o que ele faz antes de converter — se o ref não for de fato uma guarda de resposta assíncrona, o certo é **não converter** e sim registrar isso no comentário, e depois rodar `--baseline` (a regra aceita catraca, não exige zero).
+
+### Pronto quando
+
+- `npm run check` mostra `guarda-obsoleta` zerado (ou só com os sítios que você documentou como não-aplicáveis).
+- `npx vite build` passa.
+- `node scripts/check-consistencia.mjs --baseline` rodado e o baseline commitado junto.
+- Sem changelog: nada disso é visível pra quem usa a plataforma (`CLAUDE.md`, regra 10).
+
+---
+
+## Tarefa 2 — `update-sem-select` (67 sítios, 43 arquivos)
+
+### O bug
+
+Um `UPDATE` barrado pela RLS **não é erro**: o PostgREST devolve `error: null` e `data: []` — zero linha afetada. Como as telas aplicam estado otimista antes, a pessoa vê "salvo" e o banco não mudou. Sem `.select()` na cadeia não dá nem pra saber quantas linhas foram.
+
+Já mordeu de verdade: versão 4.55.1 ("uma edição sem permissão podia ser tratada como salva mesmo sem ter gravado nada"), o comentário da agência em Campanhas que fingia aceitar, e `use-profiles.js` de novo em 28/08.
+
+### O gabarito
+
+`src/hooks/use-clients.js:190-196`:
+
+```js
+const { data, error: err } = await supabase.from("clients").update(row).eq("id", id).select();
+if (err) { setError(err); fetchAll(); throw err; }
+if (!data || data.length === 0) {
+  fetchAll();   // desfaz o otimista, recarregando a verdade do banco
+  throw new Error("Não foi possível salvar as alterações do cliente — verifique suas permissões.");
+}
+```
+
+A mensagem é em português, específica do domínio, e diz o que fazer. Não use texto genérico.
+
+### **Isto é triagem, não substituição cega**
+
+Ao contrário da tarefa 1, aqui **nem todo sítio deve ser convertido**. Antes de editar cada um, decida em qual caso ele cai:
+
+1. **Escrita do usuário com estado otimista** → converta. É a maioria e é o alvo real.
+2. **Fire-and-forget deliberado** (marcar notificação como lida, `updated_at` de telemetria, contador de visualização) → um `throw` aqui transforma ruído de rede em erro na cara do usuário. **Não converta**; deixe um comentário de uma linha dizendo por quê. `use-server-notifications.js` é candidato forte a esta categoria.
+3. **Já tem tratamento equivalente por outro caminho** (RPC que devolve a linha, trigger que valida, checagem de permissão antes) → não converta, comente.
+4. **O chamador não trata exceção** → converter sem ajustar o chamador troca falha silenciosa por tela branca. Ou ajuste o chamador (`try/catch` → `setError`/`AppToast`), ou não converta. **Sempre verifique quem chama antes de adicionar um `throw`.**
+
+Conversões que envolvem `Promise.allSettled` em lote (ex.: ações em massa) já reportam falha por linha — confira antes de mexer.
+
+### Os 43 arquivos (número de sítios entre parênteses)
+
+**4 sítios:** `use-rh-bemestar.js` · `use-crm-viagem-prestacoes.js`
+**3 sítios:** `use-rh-beneficios.js` · `use-pipelines.js` · `use-marketing-campaigns.js`
+**2 sítios:** `use-stage-fields.js` · `use-server-notifications.js` · `use-rh-suppliers.js` · `use-rh-stage-fields.js` · `use-rh-pipeline-stages.js` · `use-posvenda.js` · `use-personal-task-stages.js` · `use-personal-task-stage-fields.js` · `use-marketing-expenses.js` · `use-document-library.js` · `use-client-contacts.js` · `use-chat.js`
+**1 sítio:** `use-rh-onboarding.js` · `use-rh-manager-links.js` · `use-rh-ferias-requests.js` · `use-rh-comunicacao.js` · `use-rh-cargo-templates.js` · `use-proposals.js` · `use-pipeline-transitions.js` · `use-personal-tasks.js` · `use-personal-tasks-api-keys.js` · `use-personal-task-automations.js` · `use-personal-events.js` · `use-marketing-suppliers.js` · `use-marketing-requests.js` · `use-marketing-quotes.js` · `use-marketing-quote-template.js` · `use-marketing-budgets.js` · `use-esg-carbon.js` · `use-email-templates.js` · `use-crm-viagens.js` · `use-crm-viagem-categorias.js` · `use-crm-despesas.js` · `use-client-products.js` · `use-automations.js` · `src/components/views/NovoColaboradorModal.jsx` · `src/components/catalogo/MarginRulesPanel.jsx` · `src/components/campaign/CampaignCalendar.jsx`
+
+### Pronto quando
+
+- Todo sítio convertido **ou** com comentário explicando por que ficou de fora.
+- Nenhum `throw` novo num caminho cujo chamador não trata.
+- `npx vite build` passa, `--baseline` regravado e commitado.
+- **Este aqui provavelmente merece changelog** (`CLAUDE.md`, regra 10): "uma edição sem permissão deixa de parecer salva" é mudança de comportamento visível. Uma entrada `correcao` + bump de `version` no `package.json`. Não precisa de spotlight (é fix, não feature nova — regra 12).
+
+---
+
+## Tarefa 3 — os 4 sub-agentes não existem no repositório
+
+`CLAUDE.md:222-223` diz que os papéis de Design, Frontend, QA e Segurança existem como sub-agentes em `.claude/agents/*.md`, "local ao ambiente, fora do Git". Confirmado em 28/08/2026: **`.claude/` está vazia** e é gitignorada (`.gitignore:11`). Ou seja, o processo mais elaborado do arquivo depende de arquivos que nenhuma sessão nova encontra — ele é reinterpretado do zero toda vez.
+
+**O que fazer:** escrever os quatro arquivos a partir do que o `CLAUDE.md` já especifica (regra 3 e 3.1 descrevem o papel de cada um em detalhe), versioná-los, e remover `.claude/agents/` do `.gitignore` mantendo o resto de `.claude/` ignorado.
+
+Cada arquivo precisa deixar explícito:
+
+- **`design-agent`** — produz spec objetiva com `arquivo:linha` do problema, tokens exatos reaproveitando os que já existem (regra 1), comportamento por estado. Decisão subjetiva: registrar as opções e qual foi escolhida, nunca apresentar uma escolha subjetiva como única resposta possível.
+- **`frontend-agent`** — implementa a menor mudança que resolve a causa raiz, segue a spec ao pé da letra, não decide token/cor por conta própria, roda `npx vite build` (que agora dispara o check) antes de reportar pronto.
+- **`qa-agent`** — não corrige código; aprova ou devolve `arquivo:linha — o que está errado — o que deveria ser`. Roda o build de novo. Confere contra a lista de classes de bug conhecidas do `CLAUDE.md:210-216`.
+- **`security-agent`** — só entra quando a mudança toca schema/migration, RLS, Storage, edge function ou rota de escrita/autenticação. Só revisa, nunca aplica migration. Checklist completo em `CLAUDE.md:253-270`.
+
+**Deixe claro no cabeçalho de cada arquivo que ele foi reconstruído a partir do `CLAUDE.md` em 28/08/2026, e não recuperado de uma versão anterior** — se aparecer um original em outra máquina, quem for comparar precisa saber disso.
+
+Depois, atualize `CLAUDE.md:222-223`: a frase "local ao ambiente, fora do Git" deixou de ser verdade.
+
+---
+
+## Tarefa 4 — ligar de fato o teste de RLS
+
+`supabase/tests/rls_stage_matrix.sql` já existe, é um teste de regressão de verdade (14 personas × 14 domínios × INSERT e DELETE, impersonando cada papel via `set_config('request.jwt.claims', ...)`), documenta no próprio cabeçalho ter havido **3 ocorrências** da mesma classe de bug — e **nunca rodou uma vez**.
+
+O passo de CI já está escrito (`.github/workflows/ci.yml`, job `rls`) e é inerte: sem o secret `RLS_TEST_DATABASE_URL` ele avisa e passa.
+
+**Falta:**
+
+1. **Configurar o secret.** Precisa do Daniel. Aponte pra um **branch ou staging do Supabase, nunca produção** — o script cria e apaga usuários, perfis e etapas de teste (`__audit.invalid` / `_audit_%`). O próprio cabeçalho do `.sql` avisa.
+2. **Atualizar a matriz.** Ela cobre 13 domínios (linhas ~51-66) e o código já usa pelo menos `marketing_purchase_requests` (ver `PurchaseRequestDetailDrawer.jsx:632,656,659`), que não está na lista. Levante os domínios reais com:
+   ```sql
+   select distinct domain from rh_pipeline_stages order by 1;
+   ```
+   e compare com a matriz antes de acrescentar. Aplicar migration continua exigindo confirmação explícita do Daniel (`CLAUDE.md`, regra 5) — mas **este script não é migration**, é leitura + dados de teste que ele mesmo limpa.
+
+---
+
+## Ordem sugerida
+
+1. Tarefa 1 (guardas) — mecânica, gabarito claro, maior redução de risco por hora.
+2. Tarefa 3 (sub-agentes) — barata, e torna o processo executável pras próximas sessões.
+3. Tarefa 2 (updates) — a mais longa, por causa da triagem caso a caso.
+4. Tarefa 4 (RLS no CI) — depende do Daniel pro secret.
+
+Faça uma tarefa por commit, com `--baseline` regravado junto. Não junte as quatro num commit só: se algo regredir, quer dar pra isolar qual lote foi.
+
+## O que NÃO fazer
+
+Está registrado aqui pra você não gastar tempo redescobrindo e propondo de novo:
+
+- **Não migre pra TypeScript.** São 115.853 linhas de JS em 391 arquivos. Custo desproporcional ao que pegaria.
+- **Não crie suíte Playwright de fluxos de negócio.** A plataforma é multi-tenant com RLS por papel e empresa; um fluxo precisaria de dados semeados por persona, e a conta de teste conhecida (`CLAUDE.md`, regra 8) é fake sem caixa de entrada. Manutenção cara num repositório com ~13 commits/dia. Se um dia valer um teste de browser, o que vale é **um só**, varrendo as ~52 rotas de `ROUTES` e falhando se alguma renderizar ErrorBoundary — é ali que estão os bugs de "tela não carrega" que apareceram no changelog.
+- **Não persiga meta de cobertura de teste.** Nenhum dos bugs caros desta plataforma seria pego por cobertura de linha em componente.
+- **Não substitua o processo humano/agente por lint.** Mockup antes de mudança visual (regra 3), QA adversarial (regra 3.1) e `get_advisors` pós-migration pegam coisa que nenhuma regra de grep pega. O gate é complemento, não troca.
+- **Não adicione regra ao `check-consistencia.mjs` que não venha de um bug real desta plataforma.** É a regra de ouro do arquivo, e está escrita no cabeçalho dele. Regra que acusa não-bug vira ruído e o gate inteiro passa a ser ignorado — duas sub-regras já foram estreitadas ou removidas por isso durante a construção.
