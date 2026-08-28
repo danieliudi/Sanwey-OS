@@ -86,34 +86,35 @@ export function useChat({ userId } = {}) {
   // recebida de outra pessoa, pra quem consome (App.jsx) reagir com um
   // useEffect ainda que o conteúdo textual se repita.
   const [incomingMessage, setIncomingMessage] = useState(null);
-  const activeRef = useRef(true);
   const channelsRef = useRef(channels);
   useEffect(() => { channelsRef.current = channels; }, [channels]);
 
   const enabled = isSupabaseConfigured && Boolean(userId);
 
-  const fetchChannels = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchChannels = useCallback(async (isActive = () => true) => {
     if (!enabled) { setChannels([]); setLoading(false); return; }
     setError(null);
     setLoading(true);
     try {
       const { data, error: err } = await supabase.rpc("chat_my_channels");
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setChannels((data || []).map(rowToChannel));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
-    if (!enabled) { setChannels([]); setLoading(false); return () => { activeRef.current = false; }; }
-    fetchChannels();
-    const debouncedFetch = debounce(() => { if (activeRef.current) fetchChannels(); }, 400);
+    let active = true;
+    if (!enabled) { setChannels([]); setLoading(false); return () => { active = false; }; }
+    fetchChannels(() => active);
+    const debouncedFetch = debounce(() => { if (active) fetchChannels(() => active); }, 400);
     // Toast Nível 1 (spec seção 5) — reaproveita o MESMO evento Realtime que
     // já dispara o debouncedFetch acima (não abre uma segunda subscription
     // só pra saber "chegou mensagem nova"). Só busca a linha completa (join
@@ -126,7 +127,7 @@ export function useChat({ userId } = {}) {
         .select(MESSAGE_SELECT)
         .eq("id", payload.new.id)
         .maybeSingle();
-      if (!activeRef.current) return;
+      if (!active) return;
       const message = rowToMessage(data || payload.new);
       const channel = channelsRef.current.find(c => c.id === message.channelId);
       setIncomingMessage({
@@ -151,7 +152,7 @@ export function useChat({ userId } = {}) {
       })
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetch.cancel();
       supabase.removeChannel(channel);
     };

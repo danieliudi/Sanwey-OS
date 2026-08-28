@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -7,32 +7,33 @@ import { debounce } from "../utils/debounce";
 export function useRHReportPresets({ userId } = {}) {
   const [presets, setPresets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data } = await supabase.from("rh_report_presets").select("*").order("name", { ascending: true });
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setPresets(data || []);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
+    let active = true;
+    fetchAll(() => active);
     if (!isSupabaseConfigured) return;
     const channelName = `rh-report-presets-${Math.random().toString(36).slice(2, 9)}`;
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_report_presets" }, debouncedFetchAll)
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };

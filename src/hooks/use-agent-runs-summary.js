@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -9,15 +9,16 @@ import { debounce } from "../utils/debounce";
 // tabela automations, então isto lê o rastro que o agent-runner já deixa.
 export function useAgentRunsSummary() {
   const [summary, setSummary] = useState(new Map());
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) return;
     const { data, error } = await supabase
       .from("agent_actions")
       .select("automation_id, created_at, status")
       .not("automation_id", "is", null);
-    if (error || !activeRef.current) return;
+    if (error || !isActive()) return;
     const map = new Map();
     for (const row of data || []) {
       const id = row.automation_id;
@@ -32,16 +33,16 @@ export function useAgentRunsSummary() {
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
+    let active = true;
+    fetchAll(() => active);
     if (!isSupabaseConfigured) return undefined;
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(`agent-runs-summary-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "agent_actions" }, debouncedFetchAll)
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };

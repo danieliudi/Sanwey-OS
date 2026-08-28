@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { defaultPipelines, DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
 import { debounce } from "../utils/debounce";
@@ -48,16 +48,17 @@ function stageToRow(companyId, s, orderIdx) {
 
 export function usePipelines() {
   const [pipelines, setPipelines] = useState(() => defaultPipelines());
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) return;
     const { data, error } = await supabase
       .from("rh_pipeline_stages")
       .select("*")
       .eq("domain", DOMAIN)
       .order("order_idx", { ascending: true });
-    if (error || !activeRef.current) return;
+    if (error || !isActive()) return;
     const grouped = {};
     for (const row of data || []) {
       (grouped[row.company_id] ||= []).push(rowToStage(row));
@@ -68,20 +69,20 @@ export function usePipelines() {
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) return;
-    fetchAll();
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    fetchAll(() => active);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(`pipeline-stages-comercial-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_pipeline_stages" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         const row = payload.new?.domain === DOMAIN ? payload.new : (payload.old?.domain === DOMAIN ? payload.old : null);
         if (!row) return;
         debouncedFetchAll(); // mudança de company/reorder é mais simples de refetch que reconciliar linha a linha
       })
       .subscribe();
-    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
+    return () => { active = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   // Patch numa etapa específica (não muda ordem, só campos).

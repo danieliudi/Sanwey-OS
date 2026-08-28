@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 // Histórico de etapa de um registro específico de RH — mesma ideia de
@@ -8,9 +8,10 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 export function useRHStageHistory(domain, recordId) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
-  const mountedRef = useRef(true);
 
-  const fetchOne = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchOne = useCallback(async (isActive = () => true) => {
     if (!domain || !recordId || !isSupabaseConfigured) {
       setEntries([]);
       return;
@@ -23,7 +24,7 @@ export function useRHStageHistory(domain, recordId) {
         .eq("domain", domain)
         .eq("record_id", recordId)
         .order("changed_at", { ascending: false });
-      if (!mountedRef.current) return;
+      if (!isActive()) return;
       if (error) throw error;
       setEntries((data || []).map(r => ({
         fromStage: r.from_stage,
@@ -33,16 +34,16 @@ export function useRHStageHistory(domain, recordId) {
         customFieldsSnapshot: r.custom_fields_snapshot || null,
       })));
     } catch {
-      if (mountedRef.current) setEntries([]);
+      if (isActive()) setEntries([]);
     } finally {
-      if (mountedRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [domain, recordId]);
 
   useEffect(() => {
-    mountedRef.current = true;
-    fetchOne();
-    return () => { mountedRef.current = false; };
+    let active = true;
+    fetchOne(() => active);
+    return () => { active = false; };
   }, [fetchOne]);
 
   return { entries, loading, refetch: fetchOne };

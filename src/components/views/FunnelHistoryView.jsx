@@ -198,7 +198,10 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
           </p>
         </div>
         <button
-          onClick={refetch}
+          // Chamada sem argumento de propósito: refetch (useLeadHistory) recebe
+          // a guarda `isActive` como 1º parâmetro, então passar o handler direto
+          // entregaria o evento de clique no lugar dela.
+          onClick={() => refetch()}
           disabled={loading}
           className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border transition-opacity"
           style={{

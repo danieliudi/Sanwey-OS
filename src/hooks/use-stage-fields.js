@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 // Catálogo único em src/constants/field-types.js; reexportado aqui pra
@@ -58,9 +58,10 @@ export function useStageFields() {
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setError(null);
     try {
@@ -69,27 +70,27 @@ export function useStageFields() {
         .select("*")
         .order("order_idx", { ascending: true });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setFields((data || []).map(rowToField));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) { setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     // Nome de canal único por instância — evita colisão quando o hook é
     // usado por múltiplos componentes ao mesmo tempo (CRMView + Drawer).
     const channelName = `pipeline-stage-fields-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "pipeline_stage_fields" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         if (payload.eventType === "DELETE") {
           setFields(prev => prev.filter(f => f.id !== payload.old.id));
         } else if (payload.eventType === "INSERT") {
@@ -103,7 +104,7 @@ export function useStageFields() {
         }
       })
       .subscribe();
-    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+    return () => { active = false; supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   // Lookup helpers

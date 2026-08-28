@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const TABLE = "rh_pipeline_stage_fields";
@@ -59,9 +59,10 @@ export function useRHStageFields(domain) {
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setError(null);
     try {
@@ -71,27 +72,27 @@ export function useRHStageFields(domain) {
         .eq("domain", domain)
         .order("order_idx", { ascending: true });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setFields((data || []).map(rowToField));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [domain]);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) { setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     // Nome de canal único por instância — evita colisão quando o hook é
     // usado por múltiplos componentes ao mesmo tempo (CRMView + Drawer).
     const channelName = `rh-pipeline-stage-fields-${domain}-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         const matches = payload.new?.domain === domain || payload.old?.domain === domain;
         if (!matches) return;
         if (payload.eventType === "DELETE") {
@@ -107,7 +108,7 @@ export function useRHStageFields(domain) {
         }
       })
       .subscribe();
-    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+    return () => { active = false; supabase.removeChannel(channel); };
   }, [fetchAll, domain]);
 
   // Lookup helpers

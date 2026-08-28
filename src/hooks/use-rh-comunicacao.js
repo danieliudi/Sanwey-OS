@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -8,30 +8,31 @@ import { debounce } from "../utils/debounce";
 export function useRHComunicacao({ userId } = {}) {
   const [pesquisas, setPesquisas] = useState([]);
   const [loading, setLoading] = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data } = await supabase.from("rh_pesquisas").select("*").order("created_at", { ascending: false });
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setPesquisas(data || []);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
+    let active = true;
+    fetchAll(() => active);
     if (!isSupabaseConfigured) return;
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(`rh-pesquisas-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_pesquisas" }, debouncedFetchAll)
       .subscribe();
-    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
+    return () => { active = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   // Comunicado: retorna quantos destinatários receberam. `importante` ignora

@@ -62,9 +62,10 @@ export function useClients({ userId } = {}) {
   const [remoteClients, setRemoteClients] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) return;
     setError(null);
     setLoading(true);
@@ -74,27 +75,27 @@ export function useClients({ userId } = {}) {
         .select("*")
         .order("name", { ascending: true });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setRemoteClients((data || []).map(rowToClient));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) { setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     // Nome de canal único por instância — evita colisão quando o hook é
     // usado por múltiplos componentes ao mesmo tempo.
     const channelName = `clients-all-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         if (payload.eventType === "DELETE") {
           setRemoteClients(prev => prev.filter(c => c.id !== payload.old.id));
         } else if (payload.eventType === "INSERT") {
@@ -105,7 +106,7 @@ export function useClients({ userId } = {}) {
       })
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       supabase.removeChannel(channel);
     };
   }, [fetchAll]);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -99,33 +99,34 @@ function colaboradorToRow(c, extras = {}) {
 export function useRHColaboradores({ userId, enabled = true } = {}) {
   const [colaboradores, setColaboradores] = useState([]);
   const [loading, setLoading] = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data } = await supabase.from("rh_colaboradores").select("*").order("full_name", { ascending: true });
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setColaboradores((data || []).map(rowToColaborador));
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!enabled) { setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     if (!isSupabaseConfigured) return;
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channelName = `rh-colaboradores-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_colaboradores" }, debouncedFetchAll)
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };

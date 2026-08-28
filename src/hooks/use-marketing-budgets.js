@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -41,7 +41,6 @@ export function useMarketingBudgets({ userId, role, roles, enabled = true } = {}
   const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured && enabled);
   const [error, setError]     = useState(null);
-  const activeRef = useRef(true);
 
   // roles[] cobre cargo adicional (ex: gerente_marketing como cargo
   // secundário) — role sozinho (cargo principal) fica só de fallback pra
@@ -49,7 +48,9 @@ export function useMarketingBudgets({ userId, role, roles, enabled = true } = {}
   const roleList = Array.isArray(roles) && roles.length ? roles : (role ? [role] : []);
   const canWrite = roleList.some(r => ["admin", "gerente_marketing"].includes(r));
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     setError(null);
@@ -60,19 +61,19 @@ export function useMarketingBudgets({ userId, role, roles, enabled = true } = {}
         .order("period_year", { ascending: false })
         .order("category", { ascending: true });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setBudgets((data || []).map(rowToBudget));
     } catch (e) {
-      if (activeRef.current) setError(e.message || String(e));
+      if (isActive()) setError(e.message || String(e));
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
-    if (!isSupabaseConfigured || !enabled) return () => { activeRef.current = false; };
+    let active = true;
+    fetchAll(() => active);
+    if (!isSupabaseConfigured || !enabled) return () => { active = false; };
     const channelName = `marketing_budgets_rt_${Math.random().toString(36).slice(2, 9)}`;
     // ATENÇÃO (verificado em 10/08/2026 via pg_publication_tables): a tabela
     // marketing_budgets ainda NÃO está na publicação `supabase_realtime` — a
@@ -87,13 +88,13 @@ export function useMarketingBudgets({ userId, role, roles, enabled = true } = {}
     //
     // Debounce: um rollout de tetos (várias categorias salvas em sequência)
     // dispararia um refetch por linha sem isso — regra do CLAUDE.md.
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, debouncedFetchAll)
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };

@@ -1,36 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
 export function useCRMViagens({ userId } = {}) {
   const [registros, setRegistros] = useState([]);
   const [loading, setLoading]     = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data } = await supabase.from("crm_viagem_registros").select("*").order("data_planejada", { ascending: false });
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setRegistros(data || []);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
+    let active = true;
+    fetchAll(() => active);
     if (!isSupabaseConfigured) return;
     const channelName = `crm-viagem-registros-${Math.random().toString(36).slice(2, 9)}`;
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_viagem_registros" }, debouncedFetchAll)
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -23,33 +23,34 @@ const DOMAIN = "comercial";
 
 export function usePipelineTransitions() {
   const [rows, setRows] = useState([]); // linhas cruas do banco, [{company_id, from_stage_key, to_stage_key, allowed}]
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) return;
     const { data, error } = await supabase
       .from("pipeline_stage_transitions")
       .select("*")
       .eq("domain", DOMAIN);
-    if (error || !activeRef.current) return;
+    if (error || !isActive()) return;
     setRows(data || []);
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) return;
-    fetchAll();
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    fetchAll(() => active);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(`pipeline-transitions-comercial-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "pipeline_stage_transitions" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         const domain = payload.new?.domain ?? payload.old?.domain;
         if (domain !== DOMAIN) return;
         debouncedFetchAll();
       })
       .subscribe();
-    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
+    return () => { active = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   // Reconstrói o shape { [companyId]: { [fromStageId]: string[] } } a partir

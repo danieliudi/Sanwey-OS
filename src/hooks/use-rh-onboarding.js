@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -6,9 +6,10 @@ export function useRHOnboarding({ userId } = {}) {
   const [templates, setTemplates] = useState([]);
   const [tarefas, setTarefas]     = useState([]);
   const [loading, setLoading]     = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setLoading(true);
     try {
@@ -16,19 +17,19 @@ export function useRHOnboarding({ userId } = {}) {
         supabase.from("rh_onboarding_templates").select("*").order("created_at", { ascending: false }),
         supabase.from("rh_onboarding_tarefas").select("*").order("data_limite", { ascending: true, nullsFirst: false }),
       ]);
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setTemplates(tplData || []);
       setTarefas(tarefasData || []);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
+    let active = true;
+    fetchAll(() => active);
     if (!isSupabaseConfigured) return;
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channelName = `rh-onboarding-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
@@ -36,7 +37,7 @@ export function useRHOnboarding({ userId } = {}) {
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_onboarding_tarefas" }, debouncedFetchAll)
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };

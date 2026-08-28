@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const TABLE = "personal_task_stages";
@@ -20,23 +20,24 @@ function rowToStage(r) {
 export function usePersonalTaskStages(userId) {
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !userId) { setStages([]); setLoading(false); return; }
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
       .order("order_idx", { ascending: true });
-    if (!activeRef.current) return;
+    if (!isActive()) return;
     if (!error) setStages((data || []).map(rowToStage));
     setLoading(false);
   }, [userId]);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
-    return () => { activeRef.current = false; };
+    let active = true;
+    fetchAll(() => active);
+    return () => { active = false; };
   }, [fetchAll]);
 
   const addStage = useCallback(async (stage) => {

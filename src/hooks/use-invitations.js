@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 function rowToInvitation(r) {
@@ -22,9 +22,10 @@ export function useInvitations({ enabled = true } = {}) {
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured && enabled);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !enabled) return;
     setError(null);
     setLoading(true);
@@ -35,29 +36,29 @@ export function useInvitations({ enabled = true } = {}) {
         .is("accepted_at", null)
         .order("created_at", { ascending: false });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setInvitations((data || []).map(rowToInvitation));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured || !enabled) {
       setInvitations([]);
       setLoading(false);
       return;
     }
-    fetchAll();
+    fetchAll(() => active);
     const channelName = `invitations-list-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "invitations" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         if (payload.eventType === "DELETE") {
           setInvitations(prev => prev.filter(i => i.id !== payload.old.id));
         } else if (payload.eventType === "INSERT") {
@@ -76,7 +77,7 @@ export function useInvitations({ enabled = true } = {}) {
       })
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       supabase.removeChannel(channel);
     };
   }, [enabled, fetchAll]);

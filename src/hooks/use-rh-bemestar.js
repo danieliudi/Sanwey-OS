@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -11,9 +11,10 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
   const [sessoes, setSessoes] = useState([]);
   const [fila, setFila] = useState([]);
   const [loading, setLoading] = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
@@ -21,25 +22,25 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
         supabase.from("rh_bemestar_sessoes").select("*").order("created_at", { ascending: false }),
         supabase.from("rh_bemestar_fila").select("*").order("horario", { ascending: true }),
       ]);
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setSessoes(sData || []);
       setFila(fData || []);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
+    let active = true;
+    fetchAll(() => active);
     if (!isSupabaseConfigured || !enabled) return;
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(`rh-bemestar-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_sessoes" }, debouncedFetchAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_fila" }, debouncedFetchAll)
       .subscribe();
-    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
+    return () => { active = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [enabled, fetchAll]);
 
   const criarSessao = useCallback(async (data) => {
