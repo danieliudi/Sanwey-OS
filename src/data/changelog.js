@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.80.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Chat: trocar de conversa rápido podia deixar as mensagens da conversa anterior grudadas na conversa nova — corrigido.",
+      },
+      {
+        kind: "correcao",
+        text: "Usuários/Funcionários: uma edição de cargo, empresa ou status sem permissão suficiente parecia salva mesmo sem gravar nada no banco — agora aparece um aviso de erro real.",
+      },
+    ],
+  },
+  {
     version: "4.79.0",
     items: [
       {

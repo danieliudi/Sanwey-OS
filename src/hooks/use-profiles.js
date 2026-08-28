@@ -159,11 +159,21 @@ export function useProfiles({ enabled = true } = {}) {
       }
     }
     if (Object.keys(dbPatch).length === 0) return;
-    const { error: err } = await supabase.from("profiles").update(dbPatch).eq("id", id);
+    // .select() + checagem de vazio: sem isso, um UPDATE bloqueado pela RLS
+    // (profiles_update — ex.: gerente_rh editando cargo/empresa, ou gerente
+    // não-admin editando alguém com "admin" em roles[]) volta error:null e
+    // data:[], mas o estado otimista (linha acima) já mostrou como salvo.
+    // Mesmo padrão já aplicado nos outros hooks de update da plataforma
+    // (ver use-clients.js). Achado real de QA, 28/08/2026.
+    const { data, error: err } = await supabase.from("profiles").update(dbPatch).eq("id", id).select();
     if (err) {
       setError(err);
       fetchAll();
       throw err;
+    }
+    if (!data || data.length === 0) {
+      fetchAll();
+      throw new Error("Não foi possível salvar — sem permissão pra editar este usuário.");
     }
   }, [setFallbackUsers, fetchAll]);
 

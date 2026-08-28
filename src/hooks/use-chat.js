@@ -329,11 +329,17 @@ export function useChannelMessages(channelId) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
   const enabled = isSupabaseConfigured && Boolean(channelId);
 
-  const fetchMessages = useCallback(async () => {
+  // `isActive` — checado antes de cada setState, não um ref compartilhado
+  // entre execuções. Achado real de QA (28/08/2026): com um `activeRef`
+  // único do hook, trocar de canal rápido religava o ref pra `true` no
+  // mesmo commit em que o cleanup da conversa anterior o desligava — se o
+  // fetch da conversa ANTIGA resolvesse depois do da nova, ele vencia e a
+  // conversa errada ficava plantada na tela. `refetch` (chamada manual, sem
+  // canal trocando por baixo) usa o default sempre-ativo.
+  const fetchMessages = useCallback(async (isActive = () => true) => {
     if (!enabled) { setMessages([]); setLoading(false); return; }
     setError(null);
     setLoading(true);
@@ -345,20 +351,24 @@ export function useChannelMessages(channelId) {
         .is("deleted_at", null)
         .order("created_at", { ascending: true });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setMessages((data || []).map(rowToMessage));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled, channelId]);
 
   useEffect(() => {
-    activeRef.current = true;
-    if (!enabled) { setMessages([]); setLoading(false); return () => { activeRef.current = false; }; }
-    fetchMessages();
+    let active = true;
+    // Zera o histórico ANTES do fetch — sem isso, `messages` continuava com
+    // o conteúdo do canal anterior durante toda a duração do fetch do novo
+    // (ChatView.jsx só mostra o spinner quando messages.length === 0), então
+    // a thread abria mostrando a conversa errada até a resposta chegar.
+    setMessages([]);
+    fetchMessages(() => active);
     const channelName = `chat-messages-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
@@ -366,20 +376,20 @@ export function useChannelMessages(channelId) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: MESSAGES_TABLE, filter: `channel_id=eq.${channelId}` },
         async (payload) => {
-          if (!activeRef.current || !payload.new?.id) return;
+          if (!active || !payload.new?.id) return;
           const { data } = await supabase
             .from(MESSAGES_TABLE)
             .select(MESSAGE_SELECT)
             .eq("id", payload.new.id)
             .maybeSingle();
-          if (!activeRef.current) return;
+          if (!active) return;
           const message = rowToMessage(data || payload.new);
           setMessages(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
         },
       )
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       supabase.removeChannel(channel);
     };
   }, [enabled, channelId, fetchMessages]);
