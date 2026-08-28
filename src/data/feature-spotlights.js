@@ -355,6 +355,13 @@ export const FEATURE_SPOTLIGHTS = [
   // consegue apontar de forma confiável, mesmo motivo já registrado pro
   // botão de ação de 1 clique em 4.73.0/4.74.0. Coberto pelo changelog
   // 4.76.0.
+  //
+  // 4.77.0 — loading incremental na fila de Pendências (Copiloto Fase 5):
+  // DECIDIDO PULAR o spotlight. É melhoria de performance percebida (o
+  // conteúdo aparece mais cedo, sem esperar as ~16 assinaturas todas
+  // resolverem) — não introduz elemento de UI novo pra apontar, mesmo
+  // critério do fix de `scrollbar-gutter: stable` registrado na regra 11 do
+  // CLAUDE.md. Coberto pelo changelog 4.77.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;

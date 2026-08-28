@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  CheckSquare, Inbox, AlertTriangle, Flame, ChevronDown, RotateCcw, X, BellRing, AlertCircle, Sparkles,
+  CheckSquare, Inbox, AlertTriangle, Flame, ChevronDown, RotateCcw, X, BellRing, AlertCircle, Sparkles, Loader2,
 } from "lucide-react";
 import { useMyTasks } from "../../hooks/use-my-tasks";
 import { Card, CardGrid, CardSkeleton } from "../shared/Card";
@@ -266,14 +266,34 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
         </AppToast>
       )}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+        <div className="flex items-center">
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             {greetingFor(currentUser)}
           </h1>
+          {loading && tasks.length > 0 && (
+            <span
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-dim)",
+                border: "1px solid var(--border)", borderRadius: 999, padding: "3px 10px", marginLeft: 10,
+              }}
+            >
+              <Loader2 size={11} className="animate-spin" />
+              carregando mais…
+            </span>
+          )}
         </div>
       </div>
 
-      {loading ? (
+      {/* Skeleton completo só na primeira carga (cache frio, nenhuma tarefa
+          computada ainda) — Copiloto Fase 5. As ~16 assinaturas de domínio
+          resolvem em momentos diferentes, e cada hook já inicializa como
+          array vazio, então `tasks` (use-my-tasks.js) já cresce
+          incrementalmente a cada uma que chega; uma vez que existe QUALQUER
+          tarefa, o conteúdo real fica visível e o badge acima cobre o
+          intervalo até a última assinatura resolver — em vez de esconder
+          tudo que já chegou atrás de 5 linhas de skeleton até a mais lenta
+          (ex.: Treinamentos) terminar. */}
+      {loading && tasks.length === 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {Array.from({ length: 5 }).map((_, i) => (
             <CardSkeleton key={i} density="list" />

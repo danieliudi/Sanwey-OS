@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.77.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Pendências: a tela não espera mais TODOS os módulos carregarem pra mostrar alguma coisa — o conteúdo aparece assim que a primeira tarefa chega, com um aviso discreto de 'carregando mais…' enquanto o resto termina.",
+      },
+    ],
+  },
+  {
     version: "4.76.0",
     items: [
       {
