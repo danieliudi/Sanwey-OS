@@ -658,7 +658,7 @@ export function LeadCreateModal({
                     }}
                   >
                     {entry.required && (
-                      <span style={{ color: "var(--accent)", marginRight: 2 }}>*</span>
+                      <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>
                     )}
                     {def.label}
                   </label>
@@ -926,7 +926,7 @@ export function LeadCreateModal({
                 {visibleStageFields.map(f => (
                   <div key={f.id} onBlur={() => markTouched(`stage:${f.fieldKey}`)}>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
-                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 2 }}>*</span>}
+                      {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>}
                       {f.label}
                     </label>
                     <StageFieldInput

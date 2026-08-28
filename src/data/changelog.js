@@ -24,6 +24,23 @@
 
 export const CHANGELOG = [
   {
+    version: "4.78.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Modo escuro: botão de aprovação de Solicitação de Marketing, painel de \"Overlap detectado\" no Funil de Vendas e chips de setor/\"Você\" em Usuários ficavam praticamente ilegíveis — corrigido.",
+      },
+      {
+        kind: "correcao",
+        text: "Onboarding: checklist do colaborador sem tarefas ainda mostrava uma caixa vazia, sem explicação — agora mostra uma mensagem.",
+      },
+      {
+        kind: "correcao",
+        text: "Asterisco de campo obrigatório em 8 telas (Férias, Comex, Onboarding, Feedback, Treinamentos, Campanhas, Funil de Vendas) mudava de cor por frente comercial, inclusive ficando verde na Resibag — agora é sempre vermelho.",
+      },
+    ],
+  },
+  {
     version: "4.77.0",
     items: [
       {

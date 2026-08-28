@@ -772,7 +772,7 @@ function UserPickerField({ label, required, value, onChange, users, disabled }) 
   return (
     <div>
       <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-        {required && <span style={{ color: "var(--accent)" }}>* </span>}{label}
+        {required && <span style={{ color: "var(--danger)" }}>* </span>}{label}
       </div>
       {selectedUser ? (
         <div className="flex items-center gap-2 flex-wrap">
@@ -835,7 +835,7 @@ function BriefingFields({ getCf, setCf, users, disabled, onOpenAttachments }) {
 
       <div>
         <div className="text-xs font-semibold mb-2" style={{ color: "var(--text)" }}>
-          <span style={{ color: "var(--accent)" }}>* </span>Status do Planejamento
+          <span style={{ color: "var(--danger)" }}>* </span>Status do Planejamento
         </div>
         <div className="text-xs mb-2" style={{ color: "var(--text-faint)" }}>Informe o status atual do planejamento.</div>
         <div className="space-y-1.5">
@@ -937,7 +937,7 @@ function AprovacaoFields({ getCf, setCf, users, disabled }) {
 
       <div>
         <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-          <span style={{ color: "var(--accent)" }}>* </span>Aprovação do Documento
+          <span style={{ color: "var(--danger)" }}>* </span>Aprovação do Documento
         </div>
         <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Confirmação de que o documento foi aprovado internamente.</div>
         <div className="space-y-1.5">
@@ -969,7 +969,7 @@ function AprovacaoFields({ getCf, setCf, users, disabled }) {
 
       <div>
         <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-          <span style={{ color: "var(--accent)" }}>* </span>Data de Aprovação
+          <span style={{ color: "var(--danger)" }}>* </span>Data de Aprovação
         </div>
         <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Data em que a aprovação foi realizada.</div>
         {disabled
@@ -1006,7 +1006,7 @@ function AprovacaoFields({ getCf, setCf, users, disabled }) {
 
       <div>
         <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-          <span style={{ color: "var(--accent)" }}>* </span>Checklist de Requisitos
+          <span style={{ color: "var(--danger)" }}>* </span>Checklist de Requisitos
         </div>
         <div className="text-xs mb-2" style={{ color: "var(--text-faint)" }}>Lista dos requisitos que devem ser cumpridos para aprovação.</div>
         <div className="space-y-2">
@@ -1052,7 +1052,7 @@ function ProducaoFields({ getCf, setCf, users, disabled }) {
 
       <div>
         <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-          <span style={{ color: "var(--accent)" }}>* </span>Execução da Tarefa
+          <span style={{ color: "var(--danger)" }}>* </span>Execução da Tarefa
         </div>
         <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Descrição detalhada da tarefa a ser executada.</div>
         {disabled
@@ -1072,7 +1072,7 @@ function ProducaoFields({ getCf, setCf, users, disabled }) {
 
       <div>
         <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-          <span style={{ color: "var(--accent)" }}>* </span>Data de Execução
+          <span style={{ color: "var(--danger)" }}>* </span>Data de Execução
         </div>
         <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Data em que a execução da tarefa será realizada.</div>
         {disabled
@@ -1100,7 +1100,7 @@ function ProducaoFields({ getCf, setCf, users, disabled }) {
 
       <div>
         <div className="text-xs font-semibold mb-2" style={{ color: "var(--text)" }}>
-          <span style={{ color: "var(--accent)" }}>* </span>Status da Execução
+          <span style={{ color: "var(--danger)" }}>* </span>Status da Execução
         </div>
         <div className="text-xs mb-2" style={{ color: "var(--text-faint)" }}>Status atual da execução da tarefa.</div>
         <div className="space-y-1.5">
@@ -1151,7 +1151,7 @@ function RevisaoFields({ getCf, setCf, users, disabled }) {
 
       <div>
         <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-          <span style={{ color: "var(--accent)" }}>* </span>Métodos de Análise
+          <span style={{ color: "var(--danger)" }}>* </span>Métodos de Análise
         </div>
         <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Selecione os métodos utilizados para análise dos resultados.</div>
         {disabled
@@ -1170,7 +1170,7 @@ function RevisaoFields({ getCf, setCf, users, disabled }) {
 
       <div>
         <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-          <span style={{ color: "var(--accent)" }}>* </span>Data de Conclusão da Análise
+          <span style={{ color: "var(--danger)" }}>* </span>Data de Conclusão da Análise
         </div>
         <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Informe a data em que a análise dos resultados foi concluída.</div>
         {disabled
@@ -1482,7 +1482,7 @@ export function CampaignDetailDrawer({
             {visibleCustomDefs.map(f => (
               <div key={f.id}>
                 <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-                  {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
+                  {f.effectiveRequired && <span style={{ color: "var(--danger)" }}>* </span>}
                   {f.label}
                 </div>
                 {f.helpText && (

@@ -918,9 +918,9 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
             {isManager && overlaps.length > 0 && (
               <div
                 className="p-3.5 rounded-xl border-l-4"
-                style={{ background: "#FFFBE6", borderLeftColor: "var(--amber)", borderTop: "1px solid #FFE680", borderRight: "1px solid #FFE680", borderBottom: "1px solid #FFE680" }}
+                style={{ background: "var(--amber-bg)", borderLeftColor: "var(--amber)" }}
               >
-                <div className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "#9A7A00" }}>
+                <div className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--amber)" }}>
                   <Network size={12} />
                   Overlap detectado · visível só para gerente
                 </div>

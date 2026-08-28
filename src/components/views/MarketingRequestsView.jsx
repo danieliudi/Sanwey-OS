@@ -228,7 +228,7 @@ function ApproveModal({ request, onConfirm, onClose }) {
             onClick={async () => { setSaving(true); await onConfirm(notes, destination); }}
             disabled={saving}
             className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: isCompra ? "#7C3AED" : destination === "entrega" ? "var(--success)" : "var(--warning)", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
+            style={{ background: isCompra ? "#7C3AED" : destination === "entrega" ? "var(--success)" : "var(--warning)", color: isCompra ? "#fff" : destination === "entrega" ? "var(--on-success)" : "var(--on-warning)", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
           >
             {saving ? "Aprovando…" : isCompra ? "Aprovar e enviar para Compras" : destination === "entrega" ? "Aprovar e criar entrega" : "Aprovar e criar tarefa"}
           </button>

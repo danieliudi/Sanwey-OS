@@ -538,7 +538,7 @@ function OnboardingDrawer({
         {visibleCustomDefs.map((f) => (
           <div key={f.id}>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-              {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+              {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 4 }}>*</span>}
               {f.label}
             </label>
             {f.helpText && (
@@ -963,16 +963,24 @@ function MeuChecklist({ colaborador, tarefas, users, onStatusChange }) {
           <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>{colaborador.fullName}</div>
           <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{done}/{total} tarefas concluídas</div>
         </div>
-        <div style={{ width: 80, height: 6, borderRadius: 99, background: "var(--border)", overflow: "hidden", flexShrink: 0 }}>
-          <div style={{ width: `${progresso}%`, height: "100%", background: progresso === 100 ? "var(--success)" : "var(--accent)" }} />
+        {total > 0 && (
+          <>
+            <div style={{ width: 80, height: 6, borderRadius: 99, background: "var(--border)", overflow: "hidden", flexShrink: 0 }}>
+              <div style={{ width: `${progresso}%`, height: "100%", background: progresso === 100 ? "var(--success)" : "var(--accent)" }} />
+            </div>
+            <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700, flexShrink: 0 }}>{progresso}%</span>
+          </>
+        )}
+      </div>
+      {total === 0 ? (
+        <EmptyState icon={ClipboardCheck} title="Nenhuma tarefa no seu checklist ainda" description="O RH ainda não montou seu checklist de integração — volte aqui em breve." />
+      ) : (
+        <div style={{ padding: "4px 16px 8px" }}>
+          {tarefas.map((t) => (
+            <TaskRow key={t.id} tarefa={t} users={users} canWrite={false} canToggle onStatusChange={onStatusChange} onDelete={() => {}} />
+          ))}
         </div>
-        <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700, flexShrink: 0 }}>{progresso}%</span>
-      </div>
-      <div style={{ padding: "4px 16px 8px" }}>
-        {tarefas.map((t) => (
-          <TaskRow key={t.id} tarefa={t} users={users} canWrite={false} canToggle onStatusChange={onStatusChange} onDelete={() => {}} />
-        ))}
-      </div>
+      )}
     </div>
   );
 }
