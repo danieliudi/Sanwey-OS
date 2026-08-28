@@ -85,9 +85,9 @@ function VideoCard({ video, onNavigate }) {
                 </div>
               ))}
             </div>
-            {video.description && onNavigate && (
+            {video.route && onNavigate && (
               <button
-                onClick={() => { onNavigate(video.description.toLowerCase().replace(/\s+/g, "-")); setOpen(false); }}
+                onClick={() => { onNavigate(video.route); setOpen(false); }}
                 className="inline-flex items-center gap-1.5 font-semibold"
                 style={{ fontSize: 13, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 22 }}
               >

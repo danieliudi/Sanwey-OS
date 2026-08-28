@@ -24,6 +24,23 @@
 
 export const CHANGELOG = [
   {
+    version: "4.79.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Ajuda & Tutoriais: o botão \"Ir para X\" em 148 dos 173 guias não levava a lugar nenhum — corrigido em todos.",
+      },
+      {
+        kind: "correcao",
+        text: "Painel Visão Geral do RH: o bucket \"Férias pendentes\" nunca mostrava as solicitações reais — corrigido.",
+      },
+      {
+        kind: "correcao",
+        text: "Configurações → \"Carregar dados de Marketing e RH\" (ambiente de demonstração) sempre falhava na primeira tabela — corrigido.",
+      },
+    ],
+  },
+  {
     version: "4.78.0",
     items: [
       {
