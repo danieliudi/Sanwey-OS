@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.81.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Entregas: o acesso de edição da agência agora fica restrito às etapas \"Encaminhado à Agência\" e \"Em Produção\" — o resto do fluxo é só do time interno.",
+      },
+    ],
+  },
+  {
     version: "4.80.0",
     items: [
       {
