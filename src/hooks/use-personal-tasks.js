@@ -192,8 +192,12 @@ export function usePersonalTasks({ userId, enabled = true } = {}) {
   const updateTask = useCallback(async (id, patch) => {
     if (!active) return;
     const row = taskToRow(patch);
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou. Vale também pro MoveStageMenu do Kanban, que
+    // chama isto com { status } — sem a checagem o card ficava na etapa nova
+    // só na tela e voltava sozinho no próximo refetch.
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a tarefa — verifique suas permissões.");
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
   }, [active]);
 

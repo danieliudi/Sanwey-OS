@@ -577,7 +577,7 @@ export function UserManagementView({
                       <Badge key={r} variant={roleBadgeVariant(r)} size="sm">+ {roleLabel(r)}</Badge>
                     ))}
                     {isSelf && (
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--surface-alt)", color: "var(--accent)" }}>
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
                         Você
                       </span>
                     )}
@@ -588,7 +588,7 @@ export function UserManagementView({
                     {pendingInvite && <Badge variant="urgent" size="sm">Convite pendente</Badge>}
                     {pending && <Badge variant="urgent" size="sm">Sem empresa</Badge>}
                     {Array.isArray(u.sectors) && u.sectors.map(s => (
-                      <span key={s} className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#EEF2FF", color: "#3730A3" }}>
+                      <span key={s} className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "color-mix(in srgb, #2563EB 12%, var(--surface))", color: "color-mix(in srgb, #2563EB 60%, var(--text))" }}>
                         {s}
                       </span>
                     ))}

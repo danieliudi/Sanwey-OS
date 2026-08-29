@@ -162,8 +162,12 @@ export function useMarketingExpenses({ userId, role } = {}) {
     if (!current) return;
     const merged = { ...current, ...patch };
     const row = expenseToRow(merged);
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou. Importa parar AQUI: logo abaixo vêm os
+    // syncExpenseLinks de entregas/tarefas, que gravariam vínculos pra uma
+    // despesa cuja edição não foi aceita.
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a despesa — verifique suas permissões.");
     if ("deliverableIds" in patch) {
       await syncExpenseLinks(DELIVERABLES_TABLE, "deliverable_id", id, current.deliverableIds, patch.deliverableIds ?? []);
     }
@@ -246,8 +250,10 @@ export function useMarketingExpenseItems() {
     if (patch.description !== undefined) row.description = patch.description;
     if (patch.quantity !== undefined)    row.quantity = patch.quantity;
     if (patch.unitValue !== undefined)   row.unit_value = patch.unitValue;
-    const { error: err } = await supabase.from(ITEMS_TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(ITEMS_TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o item da despesa — verifique suas permissões.");
   }, []);
 
   const deleteExpenseItem = useCallback(async (id) => {

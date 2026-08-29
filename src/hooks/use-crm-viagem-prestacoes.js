@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -13,41 +13,44 @@ import { debounce } from "../utils/debounce";
 export function useCRMViagemPrestacoes({ userId, enabled = true } = {}) {
   const [prestacoes, setPrestacoes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data } = await supabase.from("crm_viagem_prestacoes").select("*").order("created_at", { ascending: false });
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setPrestacoes(data || []);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!enabled) { setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     if (!isSupabaseConfigured) return;
     const channelName = `crm-viagem-prestacoes-${Math.random().toString(36).slice(2, 9)}`;
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_viagem_prestacoes" }, debouncedFetchAll)
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll, enabled]);
 
   const updatePrestacao = useCallback(async (id, patch) => {
-    const { error } = await supabase.from("crm_viagem_prestacoes").update(patch).eq("id", id);
+    const { data, error } = await supabase.from("crm_viagem_prestacoes").update(patch).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a prestação de contas — verifique suas permissões.");
     setPrestacoes(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
   }, []);
 
@@ -73,15 +76,32 @@ export function useCRMViagemPrestacoes({ userId, enabled = true } = {}) {
       .single();
     if (error) throw new Error(error.message);
 
-    const { error: linkErr } = await supabase
+    // `.select()` aqui não é só pra pegar erro: um UPDATE barrado pela RLS
+    // volta error:null/data:[], então sem contar as linhas a prestação podia
+    // nascer com MENOS despesas do que a pessoa selecionou (ou nenhuma) e
+    // ainda assim aparecer como criada com sucesso.
+    const { data: vinculadas, error: linkErr } = await supabase
       .from("crm_viagem_despesas")
       .update({ prestacao_id: nova.id })
-      .in("id", despesaIds);
-    if (linkErr) {
-      // Não deixa uma prestação vazia (sem despesa nenhuma vinculada) órfã
-      // no banco por causa de uma falha no meio do caminho.
-      await supabase.from("crm_viagem_prestacoes").delete().eq("id", nova.id).catch(() => {});
-      throw new Error(linkErr.message);
+      .in("id", despesaIds)
+      .select();
+    if (linkErr || (vinculadas?.length ?? 0) !== despesaIds.length) {
+      // Não deixa uma prestação vazia/parcial órfã no banco por causa de uma
+      // falha no meio do caminho.
+      //
+      // `try/catch` em vez de `.catch()` encadeado: o PostgrestBuilder do
+      // supabase-js implementa SÓ `then` — não tem `catch` nem `finally`.
+      // Encadear `.catch()` lançava TypeError, e como o builder é preguiçoso
+      // (só dispara no `then`), o DELETE nem chegava a sair: a prestação
+      // órfã ficava no banco e a pessoa via "…catch is not a function" no
+      // lugar da mensagem. Passou despercebido enquanto esta linha só era
+      // alcançada com erro de rede; virou caminho principal quando a
+      // checagem de linha afetada entrou logo acima.
+      try {
+        await supabase.from("crm_viagem_prestacoes").delete().eq("id", nova.id);
+      } catch { /* limpeza best-effort — o throw abaixo é o que importa */ }
+      throw new Error(linkErr?.message
+        || "Não foi possível vincular todas as despesas selecionadas — verifique suas permissões e tente de novo.");
     }
 
     let final = nova;
@@ -114,6 +134,13 @@ export function useCRMViagemPrestacoes({ userId, enabled = true } = {}) {
   // crm_viagem_prestacoes_recompute_status cuida de virar a prestação pra
   // "aprovada"/"rejeitada" (ou "parcial", se alguma já tiver sido decidida
   // diferente antes, item a item).
+  // Sem `.select()` + checagem de vazio de propósito: o filtro é
+  // (prestacao_id, status_reembolso='pendente'), não uma linha por id. Zero
+  // linha afetada aqui é um resultado LEGÍTIMO — significa que já não havia
+  // nada pendente (outro gestor decidiu antes, ou a tela estava velha) —, não
+  // um UPDATE barrado pela RLS. Lançar erro nesse caso acusaria não-bug. Quem
+  // garante o desfecho é o trigger crm_viagem_prestacoes_recompute_status,
+  // que recalcula o status da prestação a partir das despesas reais.
   const decidirLote = useCallback(async (prestacaoId, novoStatus, observacaoGestor) => {
     const { error } = await supabase
       .from("crm_viagem_despesas")
@@ -132,6 +159,11 @@ export function useCRMViagemPrestacoes({ userId, enabled = true } = {}) {
   // integração automática com folha/financeiro. Só permitido quando a
   // prestação já está "aprovada" (RLS/UI garantem isso antes de chamar).
   const marcarPaga = useCallback(async (prestacaoId) => {
+    // Mesmo caso do decidirLote: filtro por (prestacao_id, status='aprovado'),
+    // não por id — zero linha é legítimo (nada aprovado sobrando), não RLS
+    // barrando. A garantia de permissão vem do updatePrestacao logo abaixo,
+    // que é UPDATE por id e JÁ checa linha afetada: se a RLS barrar, ele
+    // lança e a prestação não fica marcada como paga na tela.
     const { error: despErr } = await supabase
       .from("crm_viagem_despesas")
       .update({ status_reembolso: "pago" })

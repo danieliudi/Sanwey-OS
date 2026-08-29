@@ -26,6 +26,19 @@ const SETTLE_MS = 900;
 
 export function FeatureSpotlight({ spotlight, onDismiss }) {
   const [rect, setRect] = useState(null);
+  // NÃO é a guarda de resposta obsoleta que o check-consistencia acusa aqui
+  // (regra `guarda-obsoleta`) — conferido no rollout de 28/08/2026 e mantido
+  // de propósito. A regra procura `<ref>.current` ligado e desligado no mesmo
+  // useEffect, e acha estes dois; mas a polaridade é INVERTIDA em relação ao
+  // bug: lá o ref nasce `true` no topo do efeito e vira `false` no cleanup
+  // (por isso uma troca rápida de escopo religa a guarda e deixa passar a
+  // resposta velha). Aqui ele nasce `false` e só vira `true` quando o timeout
+  // de órfão dispara — é um trinco de "isso já aconteceu uma vez", pra não
+  // chamar onDismiss duas vezes, resetado quando o spotlight muda. A guarda
+  // de ciclo de vida de verdade deste efeito é o `disposed` logo abaixo, que
+  // já é `let` por execução — ou seja, o padrão correto já está aplicado.
+  // Convertê-lo pra `let` quebraria o trinco (voltaria a `false` a cada
+  // execução). Fica na linha de base do gate como não-aplicável.
   const dismissedOrphanRef = useRef(false);
 
   useEffect(() => {

@@ -122,8 +122,10 @@ export function useRHSuppliers({ userId, enabled = true } = {}) {
     const current = suppliers.find(s => s.id === id);
     if (!current) return;
     const row = supplierToRow({ ...current, ...patch });
-    const { error } = await supabase.from("rh_fornecedores").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id);
+    const { data, error } = await supabase.from("rh_fornecedores").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o fornecedor — verifique suas permissões.");
   }, [suppliers]);
 
   // rh_fornecedor_contratos/eventos são ON DELETE CASCADE (FK) — apagar o
@@ -145,8 +147,10 @@ export function useRHSuppliers({ userId, enabled = true } = {}) {
     const current = contratos.find(c => c.id === id);
     if (!current) return;
     const row = contratoToRow({ ...current, ...patch });
-    const { error } = await supabase.from("rh_fornecedor_contratos").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id);
+    const { data, error } = await supabase.from("rh_fornecedor_contratos").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o contrato — verifique suas permissões.");
   }, [contratos]);
 
   const addEvento = useCallback(async (evento) => {

@@ -128,7 +128,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
 
     supabase
       .from("rh_ferias")
-      .select("*, profiles:user_id(name, job_title)")
+      .select("*, profiles:user_id(full_name, job_title)")
       .eq("status", "pendente")
       .then(({ data }) => {
         setFerias(data || []);
@@ -222,7 +222,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
       items: ferias.slice(0, 4).map((req) => {
         const dias = calcDias(req.start_date, req.end_date);
         return {
-          key: req.id, primary: req.profiles?.name || "—",
+          key: req.id, primary: req.profiles?.full_name || "—",
           secondary: `${leaveTypeLabel(req.type)} · ${formatDateBR(req.start_date)} → ${formatDateBR(req.end_date)}`,
           badge: dias > 0 ? `${dias}d` : "—", badgeTone: "var(--amber)",
           onClick: () => onNavigate?.("rh-ferias"),

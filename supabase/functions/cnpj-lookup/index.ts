@@ -4,6 +4,23 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const BRASILAPI_BASE = "https://brasilapi.com.br/api/cnpj/v1";
 const CACHE_TTL_DAYS = 7;
 const CND_CACHE_TTL_HOURS = 24;
+// Consulta CND configurada mas que falhou (SERPRO fora do ar / cota Trial
+// estourada): guarda por pouco tempo. Antes caía no TTL de 7 dias, ou seja,
+// uma indisponibilidade de minutos deixava "Fiscal não verificado" colado no
+// cliente por uma semana inteira mesmo depois do SERPRO voltar.
+const CND_FALHA_CACHE_TTL_HOURS = 6;
+// CNPJ inexistente na Receita: sem isto, um dígito errado digitado no
+// formulário batia na BrasilAPI a cada tecla/tentativa, sem nunca cachear.
+// Curto de propósito — CNPJ recém-aberto passa a existir, e o botão
+// "atualizar" (refresh) ignora o cache de qualquer forma.
+const NOT_FOUND_CACHE_TTL_HOURS = 6;
+// Mesmo padrão de MD-07 já aplicado em places-autocomplete/distance-matrix/
+// reverse-geocode. Esta function roda com verify_jwt=false no gateway (a
+// checagem de sessão é feita à mão logo no início do handler), mas sessão
+// válida nunca limitou QUANTAS consultas um usuário dispara contra a
+// BrasilAPI (rate limit por IP, compartilhado por toda a plataforma) e o
+// SERPRO Trial (cota fixa).
+const DAILY_LIMIT = 100;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -93,10 +110,13 @@ function cndStatusFromCode(code: number): { status: CndStatus; label: string } {
   return { status: "positiva", label: "Débitos na União" };
 }
 
-async function checkCndSerpro(cnpj: string): Promise<CndResult | null> {
+// "sem_credencial" ≠ null: sem SERPRO configurado não há nada a re-tentar
+// (cachear por 7 dias está certo), enquanto null = configurado mas a consulta
+// falhou, e aí vale voltar a tentar em algumas horas.
+async function checkCndSerpro(cnpj: string): Promise<CndResult | null | "sem_credencial"> {
   const consumerKey = Deno.env.get("SERPRO_CONSUMER_KEY");
   const consumerSecret = Deno.env.get("SERPRO_CONSUMER_SECRET");
-  if (!consumerKey || !consumerSecret) return null;
+  if (!consumerKey || !consumerSecret) return "sem_credencial";
 
   try {
     // 1. Obter token OAuth2
@@ -173,8 +193,22 @@ Deno.serve(async (req: Request) => {
       .eq("cache_key", cacheKey)
       .maybeSingle();
     if (cached && new Date(cached.expires_at as string) > new Date()) {
-      return jsonResponse({ cached: true, ...(cached.payload as object) });
+      const payload = (cached.payload || {}) as Record<string, unknown>;
+      if (payload.notFound) {
+        return jsonResponse({ error: "CNPJ não encontrado na Receita Federal", cached: true }, 404);
+      }
+      return jsonResponse({ cached: true, ...payload });
     }
+  }
+
+  // Cota só conta consulta que de fato sai pra fora — cache hit acima não
+  // custa nada a ninguém e por isso nem chega aqui.
+  const { data: count, error: quotaErr } = await admin.rpc("external_api_daily_increment", {
+    p_bucket: "cnpj_lookup",
+    p_user_id: userData.user.id,
+  });
+  if (!quotaErr && typeof count === "number" && count > DAILY_LIMIT) {
+    return jsonResponse({ error: `Limite diário de consultas de CNPJ atingido (${DAILY_LIMIT}/dia).` }, 429);
   }
 
   // Dados da Receita Federal via BrasilAPI
@@ -183,6 +217,12 @@ Deno.serve(async (req: Request) => {
   });
 
   if (upstream.status === 404) {
+    await admin.from("external_cache").upsert({
+      cache_key: cacheKey,
+      source: "cnpj",
+      payload: { notFound: true },
+      expires_at: new Date(Date.now() + NOT_FOUND_CACHE_TTL_HOURS * 3_600_000).toISOString(),
+    });
     return jsonResponse({ error: "CNPJ não encontrado na Receita Federal" }, 404);
   }
   if (upstream.status === 429) {
@@ -203,7 +243,9 @@ Deno.serve(async (req: Request) => {
   const normalized = normalizeBrasilApi(raw);
 
   // CND Federal via SERPRO Trial (gratuito — requer SERPRO_CONSUMER_KEY e SERPRO_CONSUMER_SECRET)
-  const cnd = await checkCndSerpro(cnpj);
+  const cndRaw = await checkCndSerpro(cnpj);
+  const cnd = cndRaw === "sem_credencial" ? null : cndRaw;
+  const cndFalhou = cndRaw === null;
 
   const response = {
     cached: false,
@@ -212,8 +254,14 @@ Deno.serve(async (req: Request) => {
     fetchedAt: new Date().toISOString(),
   };
 
-  // Cache com TTL baseado no que tiver mais valor (CND = 24h, dados cadastrais = 7 dias)
-  const cacheTtlHours = cnd ? CND_CACHE_TTL_HOURS : CACHE_TTL_DAYS * 24;
+  // Cache com TTL baseado no que tiver mais valor (CND = 24h, dados cadastrais
+  // = 7 dias) — mas consulta CND que FALHOU volta a ser tentada em 6h em vez
+  // de grudar "Fiscal não verificado" por uma semana.
+  const cacheTtlHours = cnd
+    ? CND_CACHE_TTL_HOURS
+    : cndFalhou
+      ? CND_FALHA_CACHE_TTL_HOURS
+      : CACHE_TTL_DAYS * 24;
   const expiresAt = new Date(Date.now() + cacheTtlHours * 3_600_000).toISOString();
   await admin.from("external_cache").upsert({
     cache_key: cacheKey,

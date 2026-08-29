@@ -172,10 +172,15 @@ export function MarginRulesPanel({ products = [], accessibleCompanies = [] }) {
   const handleSave = async (payload) => {
     const userId = (await supabase.auth.getUser()).data?.user?.id ?? null;
     if (editing) {
-      const { error } = await supabase.from("margin_rules")
+      const { data, error } = await supabase.from("margin_rules")
         .update({ margem_aviso_pct: payload.margem_aviso_pct, margem_minima_pct: payload.margem_minima_pct, updated_by: userId })
-        .eq("id", editing.id);
+        .eq("id", editing.id)
+        .select();
       if (error) throw new Error(error.message);
+      // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+      if (!data || data.length === 0) {
+        throw new Error("Não foi possível salvar a regra de margem — verifique suas permissões.");
+      }
     } else {
       const { error } = await supabase.from("margin_rules").insert({ ...payload, updated_by: userId });
       if (error) throw new Error(error.message);

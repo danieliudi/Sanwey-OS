@@ -55,6 +55,11 @@ export function useServerNotifications({ currentUser } = {}) {
     return () => { supabase.removeChannel(channel); };
   }, [userId]);
 
+  // markRead/markAllRead ficam DE PROPÓSITO sem `.select()` + throw (o padrão
+  // que use-clients.js usa pra escrita do usuário): marcar notificação como
+  // lida é fire-and-forget. Transformar uma falha de rede aqui em erro na cara
+  // de quem só abriu o sininho seria pior que o sintoma — e a subscription de
+  // Realtime logo acima já reconcilia o estado real na volta.
   const markRead = useCallback(async (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     await supabase.from(TABLE).update({ read_at: new Date().toISOString() }).eq("id", id);

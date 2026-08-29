@@ -64,10 +64,17 @@ export function useProposals(leadId, companyId) {
       p = data;
     }
 
-    const { error: textErr } = await supabase.from(PROPOSALS_TABLE)
+    const { data: textoSalvo, error: textErr } = await supabase.from(PROPOSALS_TABLE)
       .update({ ai_draft_text: draftText })
-      .eq("id", p.id);
+      .eq("id", p.id)
+      .select();
     if (textErr) throw new Error(textErr.message);
+    // Zero linha = RLS barrou. Importa parar AQUI: logo abaixo os itens da
+    // proposta são apagados e regravados, e sem isso o texto ficava o antigo
+    // com os itens novos — proposta inconsistente, sem nenhum aviso.
+    if (!textoSalvo || textoSalvo.length === 0) {
+      throw new Error("Não foi possível salvar a proposta — verifique suas permissões. Nenhum item foi alterado.");
+    }
 
     const { error: delErr } = await supabase.from(ITEMS_TABLE).delete().eq("proposal_id", p.id);
     if (delErr) throw new Error(delErr.message);

@@ -206,7 +206,12 @@ porque passaram pelo QA.
    escolha subjetiva como única resposta possível.
 2. **Frontend** — implementa a menor mudança que resolve a causa raiz, seguindo
    a spec ao pé da letra (não decide token/cor por conta própria). Roda
-   `npx vite build` antes de reportar pronto.
+   `npm run build` antes de reportar pronto. **`npm run build`, não
+   `npx vite build`**: o gate de consistência (`scripts/check-consistencia.mjs`)
+   está pendurado no `prebuild` do `package.json`, que é hook de ciclo de vida
+   do npm — `npx vite build` chama o Vite direto e passa por cima do gate em
+   silêncio. (Corrigido em 28/08/2026: esta linha dizia `npx vite build`, de
+   antes de o gate existir.)
 3. **QA** — não corrige código diretamente, só aprova ou devolve com
    `arquivo:linha — o que está errado — o que deveria ser`. Roda o build de
    novo, confere contra a spec, e verifica que nenhuma classe de bug já
@@ -218,11 +223,18 @@ porque passaram pelo QA.
    toca schema/migration, RLS, Storage, edge function, ou qualquer rota de
    escrita/autenticação) — ver 3.1 pro checklist completo.
 
-Se estiver rodando como sessão do Claude Code, os quatro papéis já existem
-como sub-agentes em `.claude/agents/design-agent.md` / `frontend-agent.md` /
-`qa-agent.md` / `security-agent.md` (local ao ambiente, fora do Git) — use-os
-via `Agent`/`Task`. Se não estiverem disponíveis na sessão, siga a sequência
-acima manualmente.
+Se estiver rodando como sessão do Claude Code, os quatro papéis existem como
+sub-agentes **versionados no repositório**, em `.claude/agents/design-agent.md`
+/ `frontend-agent.md` / `qa-agent.md` / `security-agent.md` — use-os via
+`Agent`/`Task`.
+
+Até 28/08/2026 esta seção dizia que eles eram "local ao ambiente, fora do
+Git": `.claude/` inteira era gitignorada e estava **vazia**, ou seja, o
+processo mais elaborado deste arquivo apontava pra arquivos que nenhuma
+sessão nova encontrava — era reinterpretado do zero toda vez. Os quatro foram
+reescritos a partir desta regra 3 e da 3.1 (não recuperados de um original) e
+o `.gitignore` passou a liberar só `.claude/agents/`, mantendo o resto de
+`.claude/` fora do Git. Cada arquivo diz isso no próprio cabeçalho.
 
 ### 3.1 QA multi-lente (mudança não-trivial) e o papel de Segurança
 

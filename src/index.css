@@ -31,9 +31,11 @@
   --warning:       #B45309;
   --danger:        #B91C1C;
 
-  /* Texto sobre fundo sólido success/danger — mesmo racional do --on-accent:
-     no dark os tons clareiam e texto branco fixo perde contraste. */
+  /* Texto sobre fundo sólido success/warning/danger — mesmo racional do
+     --on-accent: no dark os tons clareiam e texto branco fixo perde
+     contraste. */
   --on-success:    #FFFFFF;
+  --on-warning:    #FFFFFF;
   --on-danger:     #FFFFFF;
 
   /* Shape */
@@ -132,6 +134,10 @@
      ~30 arquivos) ficaria com texto escuro sobre fundo escuro, ilegível. */
   --danger:        #C8203B;
   --on-success:    #14251C;
+  /* --warning também clareia no escuro (#FBBF24) — mesmo racional acima:
+     branco fixo (usado hoje em MarketingRequestsView.jsx) fica quase
+     ilegível (1.67:1), achado real da auditoria de 28/08/2026. */
+  --on-warning:    #402C06;
   --on-danger:     #FFFFFF;
   --amber:         #FBBF24;
   --amber-bg:      rgba(251, 191, 36, 0.12);

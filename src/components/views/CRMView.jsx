@@ -331,12 +331,16 @@ function KpiCard({ label, value, sub }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, pipelineTransitions, onViewExistingLead, clients, onCreateClient, onCreateClientContact, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage }) {
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
+  // Mesmo predicado de current_user_can_manage_client (RLS de
+  // client_contacts) — admin/gerente/vendedor, sem consultor. Gate do
+  // bloco "Pessoa de contato" na criação do card (27/08/2026).
+  const canAddContact = isManager || userRoleList.includes("vendedor");
   // Altura disponível até o rodapé da janela, medida ao vivo a partir do
   // topo do board — pra barra de scroll horizontal do Kanban nunca ficar
   // abaixo da dobra, em qualquer tamanho de janela (ver use-available-height.js).
@@ -820,6 +824,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         <KanbanFab
           label="Nova oportunidade"
           flush
+          dataTour="crm-nova-oportunidade"
           onClick={() => {
             const firstStage = stages.find(s => !s.terminal);
             if (firstStage) setCreateModalStage({ stageId: firstStage.id, stage: firstStage, companyId: isGroupView ? firstValidCompany : activeCompany });
@@ -1074,6 +1079,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         }}
         clients={clients}
         createClient={onCreateClient}
+        createClientContact={onCreateClientContact}
+        canAddContact={canAddContact}
       />
 
       {/* Form builder — acessível pelo modal de criação */}

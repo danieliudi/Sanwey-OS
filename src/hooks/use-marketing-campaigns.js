@@ -145,8 +145,10 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
     if (!current) return;
     const merged = { ...current, ...patch };
     const row = campaignToRow(merged);
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a campanha — verifique suas permissões.");
     // Optimistic update
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   }, [canWrite, campaigns]);
@@ -193,11 +195,15 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
     const stageName = MARKETING_STAGES.find(s => s.id === stage)?.name || stage;
     const activity  = { text: `Movido para ${stageName}`, at: now };
     const activities = [...(current?.activities || []), activity];
-    const { error: err } = await supabase
+    const { data, error: err } = await supabase
       .from(TABLE)
       .update({ stage, stage_changed_at: now, activities })
-      .eq("id", id);
+      .eq("id", id)
+      .select();
     if (err) throw err;
+    // Zero linha = RLS barrou. Sem isso o card ficava na etapa nova só na
+    // tela e voltava sozinho no próximo refetch, sem explicação nenhuma.
+    if (!data || data.length === 0) throw new Error("Não foi possível mover a campanha de etapa — verifique suas permissões.");
     setCampaigns(prev =>
       prev.map(c => c.id === id ? { ...c, stage, stageChangedAt: now, activities } : c)
     );
@@ -208,8 +214,10 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
     const campaign = campaigns.find(c => c.id === id);
     if (!campaign || !isSupabaseConfigured) return;
     const starred = !campaign.starred;
-    const { error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível favoritar a campanha — verifique suas permissões.");
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, starred } : c));
   }, [campaigns, canWrite]);
 

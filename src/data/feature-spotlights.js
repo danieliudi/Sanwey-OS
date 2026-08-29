@@ -299,6 +299,69 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: o formulário da etapa pode mudar conforme o tipo da tarefa. Marque a etiqueta (Compra, Reunião…) no card e configure aqui, em Condicionais de campo, o que cada tipo pede.",
     version: "4.68.0",
   },
+  // Igual a "clientes-novo-cliente": o alvo é o botão da rota que abre o
+  // modal, não o campo em si — o CNPJ/aviso de duplicidade/contato só
+  // existem dentro do LeadCreateModal, que não está montado ao entrar na
+  // tela. Achado real que motivou (caso Casa Granado, 27/08/2026): sem CNPJ
+  // visível e sem aviso de nome parecido, um vendedor criou um cliente
+  // duplicado sem perceber.
+  {
+    id: "crm-nova-oportunidade-cnpj",
+    route: "crm",
+    target: '[data-tour="crm-nova-oportunidade"]',
+    text: "Novo: ao criar uma oportunidade, dá pra buscar o CNPJ (preenche a Razão Social), o sistema avisa se o nome digitado parece muito com um cliente já cadastrado, e já dá pra registrar quem te atendeu (nome, cargo, e-mail, telefone) — clique aqui.",
+    version: "4.72.0",
+  },
+  //
+  // 4.72.0 — dropdown "Pesquisar" (ex-4 ícones) e acordeão "Amostras
+  // enviadas" no card do Funil de Vendas: DECIDIDO PULAR o spotlight. Mesmo
+  // critério das colunas mais largas em 4.59.0 — decluttering passivo, não
+  // uma capacidade nova pra "descobrir": os links de pesquisa continuam
+  // fazendo a mesma coisa de antes, só atrás de um clique a mais; o
+  // acordeão de amostras já abre sozinho quando tem dado, então quem tinha
+  // amostra registrada nem percebe a mudança de comportamento. Coberto pelo
+  // changelog 4.72.0.
+  //
+  // 4.73.0 — botões de ação de 1 clique na fila de Pendências (Copiloto
+  // Fase 2): DECIDIDO PULAR o spotlight. O alvo real (o botão "Reciclar"/
+  // "Recusar"/"Enviar lembrete") só existe em CIMA de um card de um dos 4
+  // tipos específicos — pode não haver nenhum pendente no momento em que a
+  // pessoa entra na rota "dashboard" (mecanismo ancora num elemento fixo por
+  // rota, não serve bem pra "o card X, quando X existir", mesmo motivo já
+  // registrado pro ícone de "em teste" em 4.57.0). Além disso é um atalho
+  // pra uma ação que já existia (abrir o card e agir de lá) — não uma
+  // capacidade nova, mesmo critério das colunas mais largas em 4.59.0.
+  // Coberto pelo changelog 4.73.0.
+  //
+  // 4.74.0 — botão de IA ("Rascunho de e-mail"/"Próximo passo") na fila de
+  // Pendências pros 2 tipos de pendência de Leads (Copiloto Fase 3):
+  // DECIDIDO PULAR o spotlight — mesmo motivo exato da 4.73.0 acima, o alvo
+  // só existe em cima de um card de lead responsável/parado, que pode não
+  // haver nenhum no momento em que a pessoa entra na rota "dashboard".
+  // Coberto pelo changelog 4.74.0.
+  //
+  // 4.75.0 — Tarefas de Marketing/Comex/Meu To-do entrando na fila de
+  // Pendências (Copiloto Fase 4): DECIDIDO PULAR o spotlight. É cobertura de
+  // dado numa lista que já existe (mais tipos de item aparecendo na mesma
+  // fila, mesmo mecanismo de clique-pra-abrir de sempre) — não um elemento
+  // de UI novo pra apontar; mesmo critério das colunas mais largas em
+  // 4.59.0. Coberto pelo changelog 4.75.0.
+  //
+  // 4.76.0 — responsável(is) em tarefa de Onboarding (avatar na lista +
+  // picker ao criar tarefa ad-hoc): DECIDIDO PULAR o spotlight. O alvo real
+  // (o picker de responsável) só existe DENTRO do drawer de um colaborador
+  // específico em `OnboardingDrawer` — não é um elemento fixo de rota que
+  // o mecanismo (ancorado por `route`+`target` na primeira visita à tela)
+  // consegue apontar de forma confiável, mesmo motivo já registrado pro
+  // botão de ação de 1 clique em 4.73.0/4.74.0. Coberto pelo changelog
+  // 4.76.0.
+  //
+  // 4.77.0 — loading incremental na fila de Pendências (Copiloto Fase 5):
+  // DECIDIDO PULAR o spotlight. É melhoria de performance percebida (o
+  // conteúdo aparece mais cedo, sem esperar as ~16 assinaturas todas
+  // resolverem) — não introduz elemento de UI novo pra apontar, mesmo
+  // critério do fix de `scrollbar-gutter: stable` registrado na regra 11 do
+  // CLAUDE.md. Coberto pelo changelog 4.77.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;

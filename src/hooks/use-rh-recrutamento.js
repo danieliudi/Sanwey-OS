@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -62,9 +62,10 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
   const [candidatosPool, setCandidatosPool] = useState([]); // talent pool bruto (rh_candidatos)
   const [aplicacoes, setAplicacoes] = useState([]);
   const [loading, setLoading]       = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
@@ -73,24 +74,24 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
         supabase.from("rh_candidatos").select("*").order("created_at", { ascending: false }),
         supabase.from("rh_aplicacoes").select("*").order("created_at", { ascending: false }),
       ]);
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setVagas(vagasData || []);
       setCandidatosPool(candData || []);
       setAplicacoes(aplicData || []);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!enabled) { setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     if (!isSupabaseConfigured) return;
     // Realtime: qualquer mudança nas 3 tabelas recarrega tudo. O volume do
     // módulo de RH é baixo, então um refetch simples é mais robusto do que
     // reconciliar patches otimistas em 3 tabelas relacionadas.
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channelName = `rh-recrutamento-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
@@ -99,7 +100,7 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_aplicacoes" }, debouncedFetchAll)
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };

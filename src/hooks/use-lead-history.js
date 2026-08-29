@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 /**
@@ -38,9 +38,10 @@ export function useLeadHistory({ enabled = true } = {}) {
   const [byLead, setByLead] = useState(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const mountedRef = useRef(true);
 
-  const fetchHistory = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchHistory = useCallback(async (isActive = () => true) => {
     if (!enabled) return;
 
     // Mock / no-backend mode — return empty gracefully.
@@ -58,7 +59,7 @@ export function useLeadHistory({ enabled = true } = {}) {
         .select("lead_id, from_stage, to_stage, changed_at")
         .order("changed_at", { ascending: true });
 
-      if (!mountedRef.current) return;
+      if (!isActive()) return;
       if (sbError) throw sbError;
 
       // Group rows by lead_id into Map<leadId, HistoryEntry[]> oldest → newest.
@@ -74,16 +75,16 @@ export function useLeadHistory({ enabled = true } = {}) {
       }
       setByLead(map);
     } catch (err) {
-      if (mountedRef.current) setError(err);
+      if (isActive()) setError(err);
     } finally {
-      if (mountedRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    mountedRef.current = true;
-    fetchHistory();
-    return () => { mountedRef.current = false; };
+    let active = true;
+    fetchHistory(() => active);
+    return () => { active = false; };
   }, [fetchHistory]);
 
   return { byLead, loading, error, refetch: fetchHistory };

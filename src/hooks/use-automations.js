@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { matchOperator, evaluateConditionGroups } from "../utils/condition-operators";
 
@@ -89,9 +89,10 @@ function ruleToRow(rule, extras = {}) {
 export function useAutomations({ userId } = {}) {
   const [automations, setAutomations] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     try {
       const { data, error } = await supabase
@@ -99,21 +100,21 @@ export function useAutomations({ userId } = {}) {
         .select("*")
         .order("created_at", { ascending: true });
       if (error) throw error;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setAutomations((data || []).map(rowToRule));
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
+    let active = true;
+    fetchAll(() => active);
     if (!isSupabaseConfigured) return;
     const channel = supabase
       .channel(`automations-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "automations" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         if (payload.eventType === "DELETE") {
           setAutomations(prev => prev.filter(a => a.id !== payload.old.id));
         } else if (payload.eventType === "INSERT") {
@@ -125,7 +126,7 @@ export function useAutomations({ userId } = {}) {
         }
       })
       .subscribe();
-    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+    return () => { active = false; supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   const addAutomation = useCallback(async (rule) => {
@@ -142,8 +143,13 @@ export function useAutomations({ userId } = {}) {
     if (!isSupabaseConfigured) return;
     const current = automations.find(a => a.id === id);
     const row = ruleToRow({ ...current, ...patch }, { updated_at: new Date().toISOString() });
-    const { error } = await supabase.from("automations").update(row).eq("id", id);
+    const { data, error } = await supabase.from("automations").update(row).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    // Não precisa de refetch: o estado local só é atualizado depois daqui.
+    if (!data || data.length === 0) {
+      throw new Error("Não foi possível salvar a automação — verifique suas permissões.");
+    }
     setAutomations(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
   }, [automations]);
 

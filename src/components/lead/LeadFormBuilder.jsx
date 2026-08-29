@@ -386,7 +386,7 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
       <span className="flex-1 text-sm font-medium" style={{ color: "var(--text)" }}>
         {field.label}
         {field.required && (
-          <span className="ml-1 text-xs font-bold" style={{ color: "var(--accent)" }}>*</span>
+          <span className="ml-1 text-xs font-bold" style={{ color: "var(--danger)" }}>*</span>
         )}
       </span>
       {field.locked ? (

@@ -138,13 +138,15 @@ export function useMarketingQuotes({ userId, role, roles, enabled = true } = {})
 
   const recordResponse = useCallback(async (id, { notes, value }) => {
     if (!isSupabaseConfigured || !canWrite) return;
-    const { error: err } = await supabase.from(TABLE).update({
+    const { data, error: err } = await supabase.from(TABLE).update({
       status: "respondida",
       response_notes: notes ?? null,
       response_value: value ?? null,
       updated_at: new Date().toISOString(),
-    }).eq("id", id);
+    }).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível registrar a resposta da cotação — verifique suas permissões.");
     setQuotes(prev => prev.map(q => q.id === id ? { ...q, status: "respondida", responseNotes: notes ?? null, responseValue: value ?? null } : q));
   }, [canWrite]);
 

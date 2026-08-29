@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import {
   AlertTriangle, Clock, Layers, Megaphone, Package, ShoppingCart, Truck,
   Inbox, CalendarClock, MessageSquareText, BriefcaseBusiness, Users, Gift,
-  Handshake,
+  Handshake, ListTodo, Ship, ListChecks,
 } from "lucide-react";
 import { useLeads } from "./use-leads";
 import { usePipelines } from "./use-pipelines";
@@ -13,6 +13,12 @@ import { useMarketingDeliverables } from "./use-marketing-deliverables";
 import { useMarketingPurchaseRequests, PURCHASE_STAGES } from "./use-marketing-purchase-requests";
 import { useMarketingQuotes } from "./use-marketing-quotes";
 import { useMarketingRequests } from "./use-marketing-requests";
+import { useMarketingTasks } from "./use-marketing-tasks";
+import { useComexExportOperations } from "./use-comex-export-operations";
+import { useComexImportOperations } from "./use-comex-import-operations";
+import { usePersonalTasks } from "./use-personal-tasks";
+import { usePersonalTaskStages } from "./use-personal-task-stages";
+import { STATUS_COLUMNS as PERSONAL_TASK_STATUS_COLUMNS } from "../constants/personal-tasks";
 import { useRHFeedback } from "./use-rh-feedback";
 import { useRHFeriasRequests } from "./use-rh-ferias-requests";
 import { useRHRecrutamento } from "./use-rh-recrutamento";
@@ -29,7 +35,7 @@ import { DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
 import { MARKETING_STAGES, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../constants/marketing-pipelines";
 import { RH_LEAVE_TYPES } from "../constants/rh-config";
 import { formatK } from "../utils/currency";
-import { formatDateBR } from "../utils/date";
+import { formatDateBR, parseDateInput } from "../utils/date";
 
 // Same convention used throughout FASE 5: prefer the `_ids` array, fall back
 // to the legacy scalar field wrapped in an array.
@@ -44,7 +50,13 @@ function idsOf(ids, scalar) {
 // they fall to the end instead of faking an urgency they don't have.
 function daysUntil(dateStr, hoje = Date.now()) {
   if (!dateStr) return Infinity;
-  const ts = new Date(dateStr).getTime();
+  // parseDateInput (não new Date() cru) — achado real de QA (Fase 4,
+  // 27/08/2026): uma coluna `date` pura ("AAAA-MM-DD", ex. personal_tasks.
+  // due_date/marketing_purchase_requests.due_date) vira meia-noite UTC com
+  // `new Date()`, não meia-noite local — em UTC-3 isso classificava uma
+  // tarefa "atrasada" horas antes do prazo real vencer. Mesmo fix que
+  // formatDateBR/daysSince já usam (src/utils/date.js).
+  const ts = parseDateInput(dateStr).getTime();
   return Number.isNaN(ts) ? Infinity : (ts - hoje) / 86400000;
 }
 
@@ -90,7 +102,7 @@ function leadStageLabel(companyStages, stage) {
 // fields on this end would just duplicate that normalization on an object
 // nothing currently reads (`raw` has zero consumers today), so it's
 // intentionally left as a documented passthrough instead of invented here.
-export function useMyTasks({ currentUser } = {}) {
+export function useMyTasks({ currentUser, personalTasksEnabled = true } = {}) {
   const userId = currentUser?.id;
   const role = currentUser?.role;
   const roles = currentUser?.roles;
@@ -105,25 +117,67 @@ export function useMyTasks({ currentUser } = {}) {
   const { stages: posvendaStages } = useRHPipelineStages("posvenda");
   const { campaigns, loading: campaignsLoading } = useMarketingCampaigns({ userId, role, roles });
   const { deliverables, loading: deliverablesLoading } = useMarketingDeliverables({ userId, role, roles });
-  const { purchases, loading: purchasesLoading } = useMarketingPurchaseRequests({});
+  const { purchases, loading: purchasesLoading, rejectPurchase } = useMarketingPurchaseRequests({});
   const { quotes, loading: quotesLoading } = useMarketingQuotes({ userId, role, roles });
-  const { requests: marketingRequests, loading: marketingRequestsLoading } = useMarketingRequests({ userId, role, roles });
+  const { requests: marketingRequests, loading: marketingRequestsLoading, rejectRequest } = useMarketingRequests({ userId, role, roles });
   const { feedbacks, loading: feedbacksLoading } = useRHFeedback({ userId });
   const { requests: feriasRequests, loading: feriasLoading } = useRHFeriasRequests({});
   const { vagas, loading: recrutamentoLoading } = useRHRecrutamento({ userId });
   const { colaboradores, loading: colaboradoresLoading } = useRHColaboradores({ userId });
   const { colaboradorBeneficios, loading: beneficiosLoading } = useRHBeneficios({ userId });
-  const { treinamentos, atribuicoes, loading: treinamentosLoading } = useRHTreinamentos({ userId });
+  const { treinamentos, atribuicoes, loading: treinamentosLoading, reciclarAtribuicao } = useRHTreinamentos({ userId });
+  // FASE 4 (cobertura de domínios, 27/08/2026): Tarefas de Marketing, Comex
+  // (Exportação + Importação) e Meu To-do — os 3 domínios que faltavam no
+  // agregador. Nenhum dos 3 tinha alerta/notificação pré-existente pra
+  // espelhar (levantamento confirmou); a regra de urgência abaixo (prazo
+  // vencido, ou aging vs. SLA da etapa) segue o mesmo espírito já usado pra
+  // Leads/Pós-venda, não inventa um conceito novo.
+  const { tasks: marketingTasksList, loading: marketingTasksLoading } = useMarketingTasks({ userId, role, roles });
+  const { stages: marketingTaskStages } = useRHPipelineStages("marketing_tasks");
+  const { operations: comexExportOps, loading: comexExportLoading } = useComexExportOperations({ userId, role, roles });
+  const { operations: comexImportOps, loading: comexImportLoading } = useComexImportOperations({ userId, role, roles });
+  const { stages: comexExportStages } = useRHPipelineStages("comex_exportacao");
+  const { stages: comexImportStages } = useRHPipelineStages("comex_importacao");
+  // Meu To-do é pessoal (RLS já filtra por user_id) — sem conceito de
+  // responsável, e só entra como ALERTA quando atrasada (uma responsibility
+  // pra CADA tarefa pessoal aberta inflaria a fila com itens que já têm o
+  // próprio board "Meu To-do" pra viver; ver decisão em CLAUDE.md-adjacent
+  // no commit desta mudança). `enabled` respeita o mesmo opt-out de
+  // Configurações que a própria tela usa — hook fica inerte se desligado.
+  const { tasks: personalTasksList, loading: personalTasksLoading } = usePersonalTasks({ userId, enabled: personalTasksEnabled });
+  const { stages: personalTaskStagesRaw, loading: personalTaskStagesLoading } = usePersonalTaskStages(personalTasksEnabled ? userId : null);
 
   const loading = leadsLoading || campaignsLoading || deliverablesLoading || purchasesLoading
     || quotesLoading || marketingRequestsLoading || feedbacksLoading || feriasLoading
     || recrutamentoLoading || colaboradoresLoading || beneficiosLoading || treinamentosLoading
-    || posvendaLoading;
+    || posvendaLoading || marketingTasksLoading || comexExportLoading || comexImportLoading
+    || (personalTasksEnabled && (personalTasksLoading || personalTaskStagesLoading));
 
   const posvendaStagesByKey = useMemo(
     () => new Map((posvendaStages || []).map(s => [s.stageKey, s])),
     [posvendaStages],
   );
+  const marketingTaskStagesByKey = useMemo(
+    () => new Map((marketingTaskStages || []).map(s => [s.stageKey, s])),
+    [marketingTaskStages],
+  );
+  const comexExportStagesByKey = useMemo(
+    () => new Map((comexExportStages || []).map(s => [s.stageKey, s])),
+    [comexExportStages],
+  );
+  const comexImportStagesByKey = useMemo(
+    () => new Map((comexImportStages || []).map(s => [s.stageKey, s])),
+    [comexImportStages],
+  );
+  // Mesmo padrão de PersonalTasksView.jsx (não usa o catálogo fixo isolado —
+  // etapas são customizáveis por usuário, cai pro catálogo só quando a
+  // pessoa nunca abriu o editor).
+  const personalTaskTerminalKeys = useMemo(() => {
+    const columns = (personalTaskStagesRaw || []).length > 0
+      ? personalTaskStagesRaw
+      : PERSONAL_TASK_STATUS_COLUMNS.map(c => ({ stageKey: c.id, terminal: c.terminal }));
+    return new Set(columns.filter(c => c.terminal).map(c => c.stageKey));
+  }, [personalTaskStagesRaw]);
 
   const isRHManagerUser = hasAnyRole(currentUser, ["admin", "gerente_rh"]);
 
@@ -288,6 +342,71 @@ export function useMyTasks({ currentUser } = {}) {
       });
     }
 
+    // FASE 4: Tarefas de Marketing — mesmo campo `deadline` de Entregas/Compras.
+    for (const t of (marketingTasksList || [])) {
+      const stageInfo = marketingTaskStagesByKey.get(t.stage);
+      if (!stageInfo || stageInfo.terminal) continue;
+      if (!idsOf(t.assigneeIds, null).includes(userId)) continue;
+      out.push({
+        id: `resp-mktask-${t.id}`,
+        bucket: "responsibility",
+        module: "marketing_tasks",
+        moduleLabel: "Tarefas de Marketing",
+        icon: ListTodo,
+        title: t.title,
+        subtitle: stageInfo?.name || t.stage,
+        badge: t.deadline ? formatDateBR(t.deadline) : "Sem prazo",
+        badgeTone: "var(--text-dim)",
+        urgencyRank: daysUntil(t.deadline),
+        section: "marketing-tarefas",
+        raw: t,
+      });
+    }
+
+    // FASE 4: Comex — Exportação e Importação, mesmo aging-por-SLA-de-etapa
+    // do bloco de Pós-venda acima (não tem campo de prazo por registro, ver
+    // levantamento — sla_days vive na etapa, não na operação).
+    for (const op of (comexExportOps || [])) {
+      const stageInfo = comexExportStagesByKey.get(op.stage);
+      if (!stageInfo || stageInfo.terminal) continue;
+      if (!idsOf(op.ownerIds, null).includes(userId)) continue;
+      const agingDays = op.stageChangedAt ? Math.floor((Date.now() - new Date(op.stageChangedAt).getTime()) / 86400000) : 0;
+      out.push({
+        id: `resp-comex-export-${op.id}`,
+        bucket: "responsibility",
+        module: "comex",
+        moduleLabel: "Comex · Exportação",
+        icon: Ship,
+        title: op.title,
+        subtitle: `${stageInfo?.name || op.stage} · ${op.buyerName || "—"}`,
+        badge: formatK(op.saleValue || 0),
+        badgeTone: "var(--text-dim)",
+        urgencyRank: -agingDays,
+        section: "comex",
+        raw: op,
+      });
+    }
+    for (const op of (comexImportOps || [])) {
+      const stageInfo = comexImportStagesByKey.get(op.stage);
+      if (!stageInfo || stageInfo.terminal) continue;
+      if (!idsOf(op.ownerIds, null).includes(userId)) continue;
+      const agingDays = op.stageChangedAt ? Math.floor((Date.now() - new Date(op.stageChangedAt).getTime()) / 86400000) : 0;
+      out.push({
+        id: `resp-comex-import-${op.id}`,
+        bucket: "responsibility",
+        module: "comex",
+        moduleLabel: "Comex · Importação",
+        icon: Ship,
+        title: op.title,
+        subtitle: `${stageInfo?.name || op.stage} · ${op.supplierName || "—"}`,
+        badge: formatK(op.fobValue || 0),
+        badgeTone: "var(--text-dim)",
+        urgencyRank: -agingDays,
+        section: "comex",
+        raw: op,
+      });
+    }
+
     // ── Aguardando minha aprovação ───────────────────────────────────────
     // Role gates below mirror the real frontend gates: PurchaseRequestDetailDrawer.jsx
     // (`canApprove` = admin/marketing/gerente_marketing — ampliado, ver
@@ -320,25 +439,13 @@ export function useMyTasks({ currentUser } = {}) {
       }
     }
 
-    if (hasAnyRole(currentUser, ["admin", "gerente_marketing"])) {
-      for (const q of (quotes || [])) {
-        if (q.status !== "pendente") continue;
-        out.push({
-          id: `appr-quote-${q.id}`,
-          bucket: "approval",
-          module: "quotes",
-          moduleLabel: "Fornecedores",
-          icon: Truck,
-          title: q.title,
-          subtitle: q.supplier?.name || "—",
-          badge: q.deadline ? formatDateBR(q.deadline) : "Sem prazo",
-          badgeTone: "var(--warning)",
-          urgencyRank: daysUntil(q.deadline),
-          section: "marketing-fornecedores",
-          raw: q,
-        });
-      }
-    }
+    // "Aprovar cotação" foi removido da fila em 27/08/2026 (decisão do
+    // Daniel) — apontava pra uma tela que não existe mais. O fluxo de
+    // cotação por e-mail foi aposentado; virou a etapa "Cotação" dentro de
+    // Compras (ver comentário em FornecedoresView.jsx:171), que já aparece
+    // como "Compra aguardando aprovação" (appr-purchase, acima). As funções
+    // approveAndSendQuote/rejectQuote continuam no banco mas não têm mais
+    // nenhuma UI que as chame — não reviver sem decisão explícita nova.
 
     if (hasAnyRole(currentUser, ["admin", "marketing", "gerente_marketing"])) {
       for (const r of (marketingRequests || [])) {
@@ -433,6 +540,109 @@ export function useMyTasks({ currentUser } = {}) {
         section: "posvenda",
         raw: kase,
       });
+    }
+
+    // FASE 4: Tarefa de Marketing com prazo vencido — nenhum alerta/
+    // notificação pré-existente pra espelhar (levantamento confirmou); segue
+    // o mesmo critério já usado em Entregas/Compras (prazo < hoje, etapa não
+    // terminal), só que aqui vira alerta (não responsibility) porque a
+    // responsibility já cobre a tarefa aberta independente do prazo.
+    for (const t of (marketingTasksList || [])) {
+      const stageInfo = marketingTaskStagesByKey.get(t.stage);
+      if (!stageInfo || stageInfo.terminal) continue;
+      if (!idsOf(t.assigneeIds, null).includes(userId)) continue;
+      if (!t.deadline) continue;
+      const diasAtraso = -daysUntil(t.deadline);
+      if (diasAtraso <= 0) continue;
+      out.push({
+        id: `alert-mktask-${t.id}`,
+        bucket: "alert",
+        module: "marketing_tasks",
+        moduleLabel: "Tarefa de Marketing atrasada",
+        icon: Clock,
+        title: t.title,
+        subtitle: stageInfo?.name || t.stage,
+        badge: `Vencido há ${Math.round(diasAtraso)}d`,
+        badgeTone: "var(--danger)",
+        urgencyRank: -diasAtraso,
+        section: "marketing-tarefas",
+        raw: t,
+      });
+    }
+
+    // FASE 4: Comex parado — mesmo critério de aging vs. SLA da etapa do
+    // Pós-venda acima (nenhum alerta pré-existente pra espelhar aqui).
+    for (const op of (comexExportOps || [])) {
+      const stageInfo = comexExportStagesByKey.get(op.stage);
+      if (!stageInfo || stageInfo.terminal) continue;
+      if (!idsOf(op.ownerIds, null).includes(userId)) continue;
+      if (!stageInfo?.slaDays || !op.stageChangedAt) continue;
+      const agingDays = Math.floor((Date.now() - new Date(op.stageChangedAt).getTime()) / 86400000);
+      if (agingDays < stageInfo.slaDays) continue;
+      out.push({
+        id: `alert-comex-export-${op.id}`,
+        bucket: "alert",
+        module: "comex",
+        moduleLabel: "Comex parado · Exportação",
+        icon: Clock,
+        title: op.title,
+        subtitle: stageInfo?.name || op.stage,
+        badge: `${agingDays}d na etapa`,
+        badgeTone: "var(--warning)",
+        urgencyRank: -agingDays,
+        section: "comex",
+        raw: op,
+      });
+    }
+    for (const op of (comexImportOps || [])) {
+      const stageInfo = comexImportStagesByKey.get(op.stage);
+      if (!stageInfo || stageInfo.terminal) continue;
+      if (!idsOf(op.ownerIds, null).includes(userId)) continue;
+      if (!stageInfo?.slaDays || !op.stageChangedAt) continue;
+      const agingDays = Math.floor((Date.now() - new Date(op.stageChangedAt).getTime()) / 86400000);
+      if (agingDays < stageInfo.slaDays) continue;
+      out.push({
+        id: `alert-comex-import-${op.id}`,
+        bucket: "alert",
+        module: "comex",
+        moduleLabel: "Comex parado · Importação",
+        icon: Clock,
+        title: op.title,
+        subtitle: stageInfo?.name || op.stage,
+        badge: `${agingDays}d na etapa`,
+        badgeTone: "var(--warning)",
+        urgencyRank: -agingDays,
+        section: "comex",
+        raw: op,
+      });
+    }
+
+    // FASE 4: Meu To-do atrasado — só entra como ALERTA, não responsibility
+    // (uma pendência pra CADA tarefa pessoal aberta inflaria a fila com o
+    // que já vive no próprio board "Meu To-do"; só a atrasada de fato precisa
+    // furar pra cá). Sem conceito de responsável — é sempre do próprio dono
+    // (RLS de personal_tasks já filtra por user_id).
+    if (personalTasksEnabled) {
+      for (const pt of (personalTasksList || [])) {
+        if (personalTaskTerminalKeys.has(pt.status)) continue;
+        if (!pt.dueDate) continue;
+        const diasAtraso = -daysUntil(pt.dueDate);
+        if (diasAtraso <= 0) continue;
+        out.push({
+          id: `alert-personal-task-${pt.id}`,
+          bucket: "alert",
+          module: "personal_tasks",
+          moduleLabel: "Meu To-do atrasado",
+          icon: ListChecks,
+          title: pt.title,
+          subtitle: pt.tags?.length ? pt.tags.join(", ") : "—",
+          badge: `Vencido há ${Math.round(diasAtraso)}d`,
+          badgeTone: "var(--danger)",
+          urgencyRank: -diasAtraso,
+          section: "personal-tasks",
+          raw: pt,
+        });
+      }
     }
 
     // RH compliance alerts — only for RH managers (mirrors the isRHManager
@@ -552,6 +762,10 @@ export function useMyTasks({ currentUser } = {}) {
           out.push({
             id: `alert-aniversario-${c.id}`,
             bucket: "alert",
+            // Aviso puro (tom --success, ninguém "resolve" um aniversário) —
+            // não deve inflar o contador de "Alertas ativos", que existe pra
+            // sinalizar urgência. Continua aparecendo na aba Alertas.
+            informational: true,
             module: "colaboradores",
             moduleLabel: "Conformidade RH",
             icon: Users,
@@ -570,6 +784,7 @@ export function useMyTasks({ currentUser } = {}) {
           out.push({
             id: `alert-bodas-${c.id}`,
             bucket: "alert",
+            informational: true,
             module: "colaboradores",
             moduleLabel: "Conformidade RH",
             icon: Users,
@@ -658,6 +873,11 @@ export function useMyTasks({ currentUser } = {}) {
           badgeTone: "var(--danger)",
           urgencyRank: avalDias,
           section: "rh-feedback",
+          // `colaborador` (não dentro de `raw`, mesmo espírito do campo
+          // `lead` nos itens de Leads) — o botão "Enviar lembrete" (FASE 2)
+          // precisa de nome/cargo/departamento pro e-mail, que `raw: f` (a
+          // linha de rh_feedback) sozinha não carrega.
+          colaborador: col,
           raw: f,
         });
       }
@@ -694,6 +914,9 @@ export function useMyTasks({ currentUser } = {}) {
     userId, currentUser, leads, pipelines, campaigns, deliverables, purchases, quotes,
     marketingRequests, feedbacks, feriasRequests, vagas, colaboradores, colaboradoresById,
     meuColaborador, isRHManagerUser, colaboradorBeneficios, treinamentos, atribuicoes,
+    posvendaCases, posvendaStagesByKey, marketingTasksList, marketingTaskStagesByKey,
+    comexExportOps, comexImportOps, comexExportStagesByKey, comexImportStagesByKey,
+    personalTasksEnabled, personalTasksList, personalTaskTerminalKeys,
   ]);
 
   const counts = useMemo(() => ({
@@ -702,7 +925,14 @@ export function useMyTasks({ currentUser } = {}) {
     alert: tasks.filter(t => t.bucket === "alert").length,
   }), [tasks]);
 
-  return { tasks, loading, counts };
+  // Botões de ação de 1 clique na fila (FASE 2 do Copiloto) — só os 3 tipos
+  // com função de mutação já pronta no próprio hook do domínio, sem input
+  // extra genuinamente obrigatório e sem lógica de guarda vivendo só dentro
+  // da View (achado real: appr-ferias aprovar/recusar tinha ficado de fora
+  // do escopo original por depender de checagem de documento obrigatório +
+  // captura de motivo, ambos vivendo em RHFeriasView — não duplicado aqui).
+  // MinhasTarefasView chama estas direto, sem reimplementar a mutação.
+  return { tasks, loading, counts, reciclarAtribuicao, rejectRequest, rejectPurchase };
 }
 
 export default useMyTasks;

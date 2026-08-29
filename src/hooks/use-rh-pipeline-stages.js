@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const TABLE = "rh_pipeline_stages";
@@ -46,9 +46,10 @@ export function useRHPipelineStages(domain) {
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setError(null);
     try {
@@ -58,27 +59,27 @@ export function useRHPipelineStages(domain) {
         .eq("domain", domain)
         .order("order_idx", { ascending: true });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setStages((data || []).map(rowToStage));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [domain]);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) { setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     // Nome de canal único por instância — evita colisão quando o hook é
     // usado por múltiplos componentes ao mesmo tempo.
     const channelName = `rh-pipeline-stages-${domain}-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         const matches = payload.new?.domain === domain || payload.old?.domain === domain;
         if (!matches) return;
         if (payload.eventType === "DELETE") {
@@ -94,7 +95,7 @@ export function useRHPipelineStages(domain) {
         }
       })
       .subscribe();
-    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+    return () => { active = false; supabase.removeChannel(channel); };
   }, [fetchAll, domain]);
 
   const addStage = useCallback(async (stage) => {
@@ -121,9 +122,11 @@ export function useRHPipelineStages(domain) {
     for (const [key, column] of Object.entries(ROW_COLUMN_BY_KEY)) {
       if (key in patch) row[column] = patch[key];
     }
-    const { error: err } = await supabase
-      .from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase
+      .from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a etapa — verifique suas permissões.");
   }, []);
 
   const deleteStage = useCallback(async (id) => {
@@ -133,13 +136,20 @@ export function useRHPipelineStages(domain) {
     if (err) throw err;
   }, []);
 
+  // Reordenar NÃO lança de propósito: quem chama é handler de drag-and-drop
+  // (PosVendaView/EntregasView chamam sem await e sem try/catch), então um
+  // throw viraria unhandled rejection sem mostrar nada. Em vez disso segue o
+  // padrão que use-pipelines.js já usa no reorder: detecta a falha —
+  // inclusive a silenciosa da RLS, via `.select()` — e refaz o fetch, pra
+  // ordem na tela voltar pra verdade do banco em vez de ficar fantasma.
   const reorderStages = useCallback(async (orderedIds) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado");
     // Atualiza order_idx em sequência.
-    await Promise.all(orderedIds.map((id, idx) =>
-      supabase.from(TABLE).update({ order_idx: idx }).eq("id", id)
+    const results = await Promise.all(orderedIds.map((id, idx) =>
+      supabase.from(TABLE).update({ order_idx: idx }).eq("id", id).select()
     ));
-  }, []);
+    if (results.some(r => r?.error || !r?.data || r.data.length === 0)) await fetchAll();
+  }, [fetchAll]);
 
   // Memoizado — sem isso, cada render devolvia um array novo (mesmo com o
   // mesmo conteúdo), e qualquer useEffect com `stages` na dependência (ex:

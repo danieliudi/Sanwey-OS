@@ -26,6 +26,18 @@ async function deleteDemo(table) {
   if (error) throw error;
 }
 
+// marketing_campaigns/marketing_deliverables/marketing_expenses/rh_colaboradores
+// não têm coluna `is_demo` (só leads e marketing_requests têm) — achado real
+// da auditoria de 28/08/2026, DELETE por is_demo nessas 4 tabelas falharia
+// com "column does not exist". Os geradores usam PRNG com seed fixo (ver
+// generate-demo-data.js), então chamar de novo reproduz exatamente os mesmos
+// ids — dá pra apagar por id sem precisar de coluna nova.
+async function deleteDemoByIds(table, ids) {
+  if (ids.length === 0) return;
+  const { error } = await supabase.from(table).delete().in("id", ids);
+  if (error) throw error;
+}
+
 export function useDemoData() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
@@ -72,11 +84,11 @@ export function useDemoData() {
     setLoading(true);
     setError(null);
     try {
-      await deleteDemo("marketing_campaigns");
-      await deleteDemo("marketing_deliverables");
-      await deleteDemo("marketing_expenses");
+      await deleteDemoByIds("marketing_campaigns",    generateDemoCampaigns().map(r => r.id));
+      await deleteDemoByIds("marketing_deliverables", generateDemoDeliverables().map(r => r.id));
+      await deleteDemoByIds("marketing_expenses",     generateDemoExpenses().map(r => r.id));
       await deleteDemo("marketing_requests");
-      await deleteDemo("rh_colaboradores");
+      await deleteDemoByIds("rh_colaboradores",       generateDemoColaboradores().map(r => r.id));
       setCounts(null);
     } catch (e) {
       setError(e.message || String(e));

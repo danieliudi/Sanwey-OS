@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -23,33 +23,34 @@ const DOMAIN = "comercial";
 
 export function usePipelineTransitions() {
   const [rows, setRows] = useState([]); // linhas cruas do banco, [{company_id, from_stage_key, to_stage_key, allowed}]
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) return;
     const { data, error } = await supabase
       .from("pipeline_stage_transitions")
       .select("*")
       .eq("domain", DOMAIN);
-    if (error || !activeRef.current) return;
+    if (error || !isActive()) return;
     setRows(data || []);
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) return;
-    fetchAll();
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    fetchAll(() => active);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(`pipeline-transitions-comercial-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "pipeline_stage_transitions" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         const domain = payload.new?.domain ?? payload.old?.domain;
         if (domain !== DOMAIN) return;
         debouncedFetchAll();
       })
       .subscribe();
-    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
+    return () => { active = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   // Reconstrói o shape { [companyId]: { [fromStageId]: string[] } } a partir
@@ -170,10 +171,14 @@ export function usePipelineTransitions() {
 
     if (!isSupabaseConfigured) return;
     if (existing) {
-      const { error } = await supabase.from("pipeline_stage_transitions")
+      // `.select()`: os 4 `.eq` identificam UMA linha, então zero aqui é RLS
+      // barrando (volta error:null/data:[]), não "nada a fazer". Segue o
+      // mesmo caminho do erro — refetch — porque o chamador não trata exceção.
+      const { data, error } = await supabase.from("pipeline_stage_transitions")
         .update({ condition_groups: conditionGroups })
-        .eq("domain", DOMAIN).eq("company_id", companyId).eq("from_stage_key", fromStageId).eq("to_stage_key", toStageId);
-      if (error) await fetchAll();
+        .eq("domain", DOMAIN).eq("company_id", companyId).eq("from_stage_key", fromStageId).eq("to_stage_key", toStageId)
+        .select();
+      if (error || !data || data.length === 0) await fetchAll();
     } else {
       // Linha ainda não existia (destino nunca tinha sido tocado) — "sem
       // linha" já significava permitido, então grava allowed:true explícito

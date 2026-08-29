@@ -56,6 +56,13 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
   // tarde. `.eq("status", ...)` faz o UPDATE não casar nenhuma linha quando
   // o status já mudou; refetchOnConflict devolve o registro atual pra quem
   // chamou poder mostrar quem decidiu, em vez de só falhar.
+  // O check-consistencia acusa `update-sem-select` aqui, mas é falso
+  // positivo: ele lê o statement `supabase.from(TABLE).update(patch).eq(...)`
+  // isolado, e o `.select(SELECT)` está na linha do `await query.select(...)`
+  // logo abaixo, porque a cadeia é montada em duas etapas (o `.eq("status")`
+  // é condicional). A checagem de linha afetada que a regra quer JÁ existe,
+  // e aqui ela é ainda mais rica: zero linha não vira erro genérico, vira o
+  // refetchOnConflict que mostra quem decidiu antes. Segue na linha de base.
   const changeStatus = useCallback(async (id, status, extra = {}, { expectedStatus } = {}) => {
     const patch = { status, status_changed_at: new Date().toISOString(), ...extra };
     let query = supabase.from(TABLE).update(patch).eq("id", id);

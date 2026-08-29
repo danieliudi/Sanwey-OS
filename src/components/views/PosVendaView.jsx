@@ -844,7 +844,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 
 // ── PosVendaView ──────────────────────────────────────────────────────────────
 
-export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, users, clients = [], onCreateClient, onOpenLead }) {
+export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, users, clients = [], onCreateClient, onOpenLead, initialSelectedCaseId, onInitialCaseConsumed }) {
   const isGroupView = activeCompany === "all";
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
@@ -915,6 +915,15 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const [draggedColumnKey, setDraggedColumnKey] = useState(null);
   const [editingFieldsStage, setEditingFieldsStage] = useState(null); // { stageKey, name }
   const [selectedCaseId, setSelectedCaseId] = useState(null);
+
+  // Deep-link vindo da fila de Pendências (Copiloto, 27/08/2026) — mesmo
+  // padrão simples de RHRecrutamentoView/vagaDrawerId (o case resolve via
+  // `cases.find` assim que `cases` chegar, sem precisar de loading gate).
+  useEffect(() => {
+    if (!initialSelectedCaseId) return;
+    setSelectedCaseId(initialSelectedCaseId);
+    onInitialCaseConsumed?.();
+  }, [initialSelectedCaseId, onInitialCaseConsumed]);
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
 
   const trailingRef = useRef(null);
@@ -1001,6 +1010,28 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
     [caseViewedAt, user?.id]
   );
   useEffect(() => { if (selectedCaseId) markCaseViewed(selectedCaseId); }, [selectedCaseId]);
+
+  // updateCase passou a lançar quando a RLS recusa (linha afetada = 0). Estas
+  // duas eram arrows bare na JSX do drawer: sem catch a rejeição não chegava a
+  // ninguém e a edição parecia aceita. Reaproveitam o stageError/AppToast que
+  // esta tela já tem, em vez de abrir um slot de erro novo.
+  const handleLinkClientToCase = useCallback(async (clientId) => {
+    if (!selectedCaseId) return;
+    try {
+      await updateCase(selectedCaseId, { clientId });
+    } catch (e) {
+      setStageError(e?.message || "Não foi possível vincular o cliente.");
+    }
+  }, [selectedCaseId, updateCase]);
+
+  const handleUpdateCaseCustomFields = useCallback(async (merged) => {
+    if (!selectedCaseId) return;
+    try {
+      await updateCase(selectedCaseId, { customFields: merged });
+    } catch (e) {
+      setStageError(e?.message || "Não foi possível salvar o campo.");
+    }
+  }, [selectedCaseId, updateCase]);
 
   const handleAddActivity = useCallback(async (entry) => {
     const current = cases.find(c => c.id === selectedCaseId);
@@ -1344,11 +1375,11 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           currentUser={user}
           clients={clients}
           onCreateClient={onCreateClient}
-          onLinkClient={(id) => updateCase(selectedCase.id, { clientId: id })}
+          onLinkClient={handleLinkClientToCase}
           onClose={() => setSelectedCaseId(null)}
           onMove={(stageKey, onBlocked) => attemptStageChange(selectedCase.id, stageKey, onBlocked)}
           onDelete={() => deleteCase(selectedCase.id)}
-          onUpdateCustomFields={(merged) => updateCase(selectedCase.id, { customFields: merged })}
+          onUpdateCustomFields={handleUpdateCaseCustomFields}
           onAddActivity={handleAddActivity}
           onUpdateActivity={handleUpdateActivity}
           onOpenLead={onOpenLead}

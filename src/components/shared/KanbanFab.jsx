@@ -16,11 +16,12 @@ import { Plus } from "lucide-react";
 // aparecia em cima do menu lateral). Boards com a coluna encostando em x=0
 // (Pipeline/Entregas, ver KanbanBoardScrollArea.jsx) passam `flush` pra tirar
 // esse respiro de 24px.
-export function KanbanFab({ label, onClick, flush = false }) {
+export function KanbanFab({ label, onClick, flush = false, dataTour }) {
   if (!onClick) return null;
   return (
     <button
       onClick={onClick}
+      data-tour={dataTour}
       className="hidden lg:flex fixed bottom-6 z-50 items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
       style={{ left: `calc(var(--sidebar-width) + ${flush ? 0 : 24}px)`, background: "var(--accent)", color: "var(--on-accent)", boxShadow: "var(--shadow-pop)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}

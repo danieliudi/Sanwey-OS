@@ -81,11 +81,14 @@ export function usePersonalEvents({ userId } = {}) {
 
   const updateEvent = useCallback(async (id, patch) => {
     if (!isSupabaseConfigured) return;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from(TABLE)
       .update({ ...eventToRow(patch), updated_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .select();
     if (error) throw error;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o evento — verifique suas permissões.");
   }, []);
 
   const deleteEvent = useCallback(async (id) => {

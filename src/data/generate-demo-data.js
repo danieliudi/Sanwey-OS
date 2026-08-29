@@ -45,9 +45,15 @@ function daysFromNow(rand, min, max) {
   return new Date(Date.now() + (min + Math.floor(rand() * (max - min))) * 86400000).toISOString().slice(0, 10);
 }
 
+// UUID v4-shaped, sem prefixo "demo-" — a coluna `id` das 5 tabelas de demo é
+// `uuid` de verdade em produção; um id como "demo-campaign-1" quebra o upsert
+// com 22P02 (invalid input syntax for type uuid). Determinístico via `rand`
+// (mesmo PRNG com seed fixo do resto do arquivo), então recriar os dados
+// sempre gera os MESMOS ids — é o que permite `clearAllDemo` (use-demo-data.js)
+// apagar exatamente essas linhas sem precisar de coluna `is_demo` nova.
 function uuid(rand) {
   const hex = () => Math.floor(rand() * 16).toString(16);
-  return `demo-${[...Array(8)].map(hex).join("")}-${[...Array(4)].map(hex).join("")}-4${[...Array(3)].map(hex).join("")}-${(8 + Math.floor(rand() * 4)).toString(16)}${[...Array(3)].map(hex).join("")}-${[...Array(12)].map(hex).join("")}`;
+  return `${[...Array(8)].map(hex).join("")}-${[...Array(4)].map(hex).join("")}-4${[...Array(3)].map(hex).join("")}-${(8 + Math.floor(rand() * 4)).toString(16)}${[...Array(3)].map(hex).join("")}-${[...Array(12)].map(hex).join("")}`;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -92,7 +98,7 @@ export function generateDemoCampaigns() {
     const endDate    = new Date(now + (launchDays + 30 + Math.floor(rand() * 60)) * 86400000).toISOString().slice(0, 10);
 
     return {
-      id:               `demo-campaign-${i + 1}`,
+      id:               uuid(rand),
       company_ids:      [companyId],
       name,
       channel:          pick(rand, MARKETING_CHANNELS),
@@ -114,7 +120,6 @@ export function generateDemoCampaigns() {
       starred:          rand() > 0.8,
       custom_fields:    {},
       created_by:       null,
-      is_demo:          true,
     };
   });
 }
@@ -150,7 +155,7 @@ export function generateDemoDeliverables() {
     const reqType    = pick(rand, DELIVERABLE_REQUEST_TYPES);
 
     return {
-      id:               `demo-deliverable-${i + 1}`,
+      id:               uuid(rand),
       company_ids:      [companyId],
       campaign_id:      null,
       title,
@@ -168,7 +173,6 @@ export function generateDemoDeliverables() {
       activities:       [],
       notes:            [],
       created_by:       null,
-      is_demo:          true,
     };
   });
 }
@@ -200,7 +204,7 @@ export function generateDemoExpenses() {
     const amount    = 500 + Math.floor(rand() * 29500);
 
     return {
-      id:          `demo-expense-${i + 1}`,
+      id:          uuid(rand),
       company_ids: [companyId],
       campaign_id: null,
       description,
@@ -214,7 +218,6 @@ export function generateDemoExpenses() {
       notes:       null,
       receipt_url: null,
       created_by:  null,
-      is_demo:     true,
     };
   });
 }
@@ -259,7 +262,7 @@ export function generateDemoRequests() {
     const companyId = pick(rand, COMPANY_IDS);
 
     return {
-      id:              `demo-request-${i + 1}`,
+      id:              uuid(rand),
       title,
       description:     `Solicitação do departamento de ${dept} para criação de material de ${reqType.toLowerCase()}. Favor priorizar conforme prazo indicado.`,
       department:      dept,
@@ -319,7 +322,7 @@ export function generateDemoColaboradores() {
     const admission    = daysAgo(rand, 90, 1460);
 
     return {
-      id:                 `demo-colab-${i + 1}`,
+      id:                 uuid(rand),
       profile_id:         null,
       full_name:          fullName,
       cpf:                null,
@@ -348,7 +351,6 @@ export function generateDemoColaboradores() {
       onboarding_stage_changed_at: null,
       custom_fields:      {},
       activities:         [],
-      is_demo:            true,
     };
   });
 }

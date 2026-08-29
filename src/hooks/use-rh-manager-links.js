@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const LINK_TTL_DAYS = 7;
@@ -13,9 +13,10 @@ function generateToken() {
 export function useRHManagerLinks(vagaId) {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchLinks = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchLinks = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !vagaId) { setLoading(false); return; }
     setLoading(true);
     const { data } = await supabase
@@ -23,15 +24,15 @@ export function useRHManagerLinks(vagaId) {
       .select("*")
       .eq("vaga_id", vagaId)
       .order("created_at", { ascending: false });
-    if (!activeRef.current) return;
+    if (!isActive()) return;
     setLinks(data || []);
     setLoading(false);
   }, [vagaId]);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchLinks();
-    return () => { activeRef.current = false; };
+    let active = true;
+    fetchLinks(() => active);
+    return () => { active = false; };
   }, [fetchLinks]);
 
   const createLink = useCallback(async ({ managerName, managerEmail, vagaTitle, userId }) => {
@@ -77,11 +78,15 @@ export function useRHManagerLinks(vagaId) {
   }, [vagaId]);
 
   const revokeLink = useCallback(async (linkId) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("rh_vaga_manager_links")
       .update({ revoked_at: new Date().toISOString() })
-      .eq("id", linkId);
+      .eq("id", linkId)
+      .select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou. Crítico aqui: sem isso a tela mostrava o link
+    // do gestor como revogado e ele continuava valendo.
+    if (!data || data.length === 0) throw new Error("Não foi possível revogar o link — ele continua válido. Verifique suas permissões.");
     setLinks(prev => prev.map(l => l.id === linkId ? { ...l, revoked_at: new Date().toISOString() } : l));
   }, []);
 

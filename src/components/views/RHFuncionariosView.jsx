@@ -67,6 +67,19 @@ function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
   const [picking, setPicking] = useState(false);
   const [pickedId, setPickedId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState(null);
+
+  // Aprovar benefício é decisão, não ajuste de tela: quando a RLS recusa, a
+  // pessoa precisa saber. O botão chamava aprovarBeneficio bare — desde que
+  // o hook passou a checar linha afetada isso viraria rejeição sem dono.
+  const handleAprovar = async (id) => {
+    setErro(null);
+    try {
+      await aprovarBeneficio(id);
+    } catch (e) {
+      setErro(e?.message || "Não foi possível aprovar o benefício.");
+    }
+  };
 
   const meus = colaboradorBeneficios.filter(b => b.colaboradorId === colaboradorId);
   const catalogoById = new Map(catalogo.filter(c => c.isActive).map(c => [c.id, c]));
@@ -103,7 +116,7 @@ function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
                 </span>
                 {canWrite && b.status === "solicitado" && (
                   <button
-                    onClick={() => aprovarBeneficio(b.id)}
+                    onClick={() => handleAprovar(b.id)}
                     title="Aprovar"
                     style={{ background: "none", border: "none", color: "var(--success)", cursor: "pointer", display: "flex" }}
                   >
@@ -115,6 +128,11 @@ function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
           );
         })}
       </div>
+      {erro && (
+        <div style={{ fontSize: 11, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "6px 10px" }}>
+          {erro}
+        </div>
+      )}
       {canWrite && (
         picking ? (
           <div className="flex items-center gap-2">

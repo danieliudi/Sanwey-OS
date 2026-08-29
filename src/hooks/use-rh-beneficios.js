@@ -82,8 +82,13 @@ export function useRHBeneficios({ userId, enabled = true } = {}) {
     const { error } = await supabase.from("rh_beneficios_catalogo").delete().eq("id", id);
     if (!error) return { deactivated: false };
     if (error.code === "23503") {
-      const { error: updErr } = await supabase.from("rh_beneficios_catalogo").update({ is_active: false }).eq("id", id);
+      const { data: desativado, error: updErr } = await supabase.from("rh_beneficios_catalogo").update({ is_active: false }).eq("id", id).select();
       if (updErr) throw new Error(updErr.message);
+      // Zero linha = RLS barrou. Sem isso a função devolvia deactivated:true
+      // e a tela dizia "desativado" com o benefício ainda ativo no banco.
+      if (!desativado || desativado.length === 0) {
+        throw new Error("Não foi possível desativar o benefício — verifique suas permissões.");
+      }
       return { deactivated: true };
     }
     throw new Error(error.message);
@@ -103,12 +108,15 @@ export function useRHBeneficios({ userId, enabled = true } = {}) {
   }, []);
 
   const aprovarBeneficio = useCallback(async (id) => {
-    const { error } = await supabase.from("rh_colaborador_beneficios").update({
+    const { data, error } = await supabase.from("rh_colaborador_beneficios").update({
       status: "aprovado",
       aprovado_em: new Date().toISOString(),
       aprovado_por: userId ?? null,
-    }).eq("id", id);
+    }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou. Aprovação é justamente o caminho que a RLS
+    // restringe — sem a checagem a tela mostrava "aprovado" sem ter aprovado.
+    if (!data || data.length === 0) throw new Error("Não foi possível aprovar o benefício — verifique suas permissões.");
   }, [userId]);
 
   const updateColaboradorBeneficio = useCallback(async (id, patch) => {
@@ -116,8 +124,10 @@ export function useRHBeneficios({ userId, enabled = true } = {}) {
     if (patch.status !== undefined) row.status = patch.status;
     if (patch.valor !== undefined) row.valor = patch.valor;
     if (patch.notes !== undefined) row.notes = patch.notes;
-    const { error } = await supabase.from("rh_colaborador_beneficios").update(row).eq("id", id);
+    const { data, error } = await supabase.from("rh_colaborador_beneficios").update(row).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o benefício do colaborador — verifique suas permissões.");
   }, []);
 
   return {

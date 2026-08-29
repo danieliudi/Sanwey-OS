@@ -315,7 +315,7 @@ async function runSweep(admin: any) {
 
     // Chave do criador do agente (BYOLLM) — resolvida uma vez por automação,
     // não por contrato/vaga.
-    const { data: creatorProfile } = await admin.from("profiles").select("ai_config").eq("id", automation.created_by).maybeSingle();
+    const { data: creatorProfile } = await admin.from("profile_secrets").select("ai_config").eq("id", automation.created_by).maybeSingle();
     const providerConfig = resolveProviderConfig(creatorProfile?.ai_config);
     if (!providerConfig) {
       await admin.from("automations").update({
@@ -570,7 +570,7 @@ async function runPreview(admin: any, body: any, userId: string, roles: string[]
   // Preview usa a chave de QUEM ESTÁ TESTANDO (a sessão autenticada), não a
   // do dono do agente — o agente pode nem ter sido salvo ainda. Comum aos
   // dois módulos, resolvida uma vez só.
-  const { data: profile } = await admin.from("profiles").select("ai_config").eq("id", userId).maybeSingle();
+  const { data: profile } = await admin.from("profile_secrets").select("ai_config").eq("id", userId).maybeSingle();
   const providerConfig = resolveProviderConfig(profile?.ai_config);
   if (!providerConfig) {
     return json({ error: "Configure sua chave de IA em Configurações → Integrações de IA pra testar o agente." }, 400);

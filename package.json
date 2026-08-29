@@ -1,12 +1,14 @@
 {
   "name": "grupo-sanwey",
   "private": true,
-  "version": "4.71.0",
+  "version": "4.83.0",
   "type": "module",
   "description": "Grupo Sanwey · Commercial Intelligence platform (multi-tenant)",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/check-consistencia.mjs",
     "build": "vite build",
+    "check": "node scripts/check-consistencia.mjs --lista",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -24,8 +24,8 @@
 -- 20260801: qualquer código que volte a checar a coluna singular em vez do
 -- array reprova aqui na hora.
 --
--- Efeito colateral: cria e apaga usuários/perfis/etapas marcados com
--- '__audit.invalid' / '_audit_%'. Limpa tudo no final mesmo se alguma
+-- Efeito colateral: cria e apaga usuários/perfis/colaboradores/etapas marcados
+-- com '__audit.invalid' / '_audit_%'. Limpa tudo no final mesmo se alguma
 -- asserção falhar (bloco cleanup roda sempre). Ainda assim, rode preferencialmente
 -- num branch/staging do Supabase, nunca direto em produção.
 --
@@ -62,8 +62,30 @@ declare
     "comex_importacao":        ["comex"],
     "comex_exportacao":        ["comex"],
     "posvenda":                ["gerente"],
+    "marketing_purchase_requests": ["marketing","gerente_marketing"],
+    "bugs":                    [],
     "zz_nonexistent_canary":   []
   }'::jsonb;
+  -- Conferência de cobertura da matriz acima contra o banco real
+  -- (28/08/2026): `select distinct domain from rh_pipeline_stages` devolve 14
+  -- domínios; a matriz cobria 13. Os dois acrescentados agora:
+  --
+  --  * "bugs" — existe em rh_pipeline_stages (4 etapas) e NÃO está na
+  --    allowlist da rh_pipeline_stages_write, ou seja hoje só admin escreve.
+  --    Isso está certo, não é lacuna: BugsView.jsx:85 só LÊ as etapas
+  --    (`const { stages } = useRHPipelineStages("bugs")`), não expõe
+  --    addStage/reorderStages. O `[]` aqui trava esse desenho — se alguém
+  --    der escrita de etapa de bugs a um papel sem querer, reprova.
+  --
+  --  * "marketing_purchase_requests" — o inverso: ESTÁ na allowlist da
+  --    policy (marketing/gerente_marketing) mas tem ZERO linha em
+  --    rh_pipeline_stages, porque Compras usa o modelo hardcoded
+  --    PURCHASE_STAGES (exceção deliberada, CLAUDE.md regra 2). O domínio é
+  --    usado de verdade só pra histórico/anexos/checklist
+  --    (PurchaseRequestDetailDrawer.jsx:632,656,659). Fica na matriz pra
+  --    afirmar que a permissão é intencional: se um dia Compras migrar pro
+  --    modelo configurável, o teste já cobre; e se alguém remover a linha da
+  --    policy achando que é resto, reprova aqui.
 
   -- personas: label -> (role singular legado, roles array). As "_multi" são
   -- o canário de divergência role x roles descrito acima.
@@ -151,7 +173,18 @@ begin
   end loop;
 end $$;
 
--- cleanup incondicional, mesmo que algo acima tenha falhado antes de chegar aqui
+-- cleanup incondicional, mesmo que algo acima tenha falhado antes de chegar aqui.
+-- `rh_colaboradores` NAO e opcional aqui: inserir em auth.users dispara
+-- handle_new_user() -> insert em profiles -> sync_profile_to_colaborador() ->
+-- insert em rh_colaboradores. Esse ultimo tem FK profile_id ON DELETE SET NULL
+-- (nao CASCADE), entao apagar o profile deixa o colaborador orfao, e o indice
+-- unico rh_colaboradores_email_unique_idx faz a 2a execucao do teste falhar la
+-- no setup com "duplicate key ... admin@__audit.invalid" -- erro que nao tem
+-- nada a ver com RLS e so confunde quem for ler o CI. Encontrado ao rodar o
+-- script pela 2a vez no branch staging-rls (29/08/2026): 14 colaboradores
+-- fantasma de uma execucao anterior. Apagar por e-mail, nao por profile_id --
+-- o profile_id ja foi zerado pelo SET NULL.
+delete from public.rh_colaboradores where email like '%@__audit.invalid';
 delete from public.rh_pipeline_stages where stage_key like '_audit_%';
 delete from public.profiles where email like '%@__audit.invalid';
 delete from auth.users where email like '%@__audit.invalid';

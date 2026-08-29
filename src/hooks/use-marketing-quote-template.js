@@ -27,10 +27,12 @@ export function useMarketingQuoteTemplate({ enabled = true } = {}) {
 
   const saveTemplate = useCallback(async ({ subject, bodyHtml }, userId) => {
     if (!isSupabaseConfigured) return;
-    const { error: err } = await supabase.from(TABLE).update({
+    const { data, error: err } = await supabase.from(TABLE).update({
       subject, body_html: bodyHtml, updated_by: userId ?? null, updated_at: new Date().toISOString(),
-    }).eq("id", true);
+    }).eq("id", true).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (a policy de update é só admin/gerente_marketing).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o modelo de e-mail de cotação — verifique suas permissões.");
     setTemplate({ subject, bodyHtml, updatedAt: new Date().toISOString() });
   }, []);
 

@@ -826,7 +826,7 @@ function AtribuicaoDrawer({
         {visibleCustomDefs.map((f) => (
           <div key={f.id}>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-              {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+              {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 4 }}>*</span>}
               {f.label}
             </label>
             {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}

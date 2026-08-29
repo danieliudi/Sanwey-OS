@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
@@ -11,9 +11,10 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
   const [sessoes, setSessoes] = useState([]);
   const [fila, setFila] = useState([]);
   const [loading, setLoading] = useState(true);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
@@ -21,25 +22,25 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
         supabase.from("rh_bemestar_sessoes").select("*").order("created_at", { ascending: false }),
         supabase.from("rh_bemestar_fila").select("*").order("horario", { ascending: true }),
       ]);
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setSessoes(sData || []);
       setFila(fData || []);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
-    fetchAll();
+    let active = true;
+    fetchAll(() => active);
     if (!isSupabaseConfigured || !enabled) return;
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(`rh-bemestar-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_sessoes" }, debouncedFetchAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_fila" }, debouncedFetchAll)
       .subscribe();
-    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
+    return () => { active = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [enabled, fetchAll]);
 
   const criarSessao = useCallback(async (data) => {
@@ -70,16 +71,23 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
       horario_fim: data.horarioFim || null,
       slot_minutos: data.slotMinutos || 30,
     };
-    const { error } = await supabase.from("rh_bemestar_sessoes").update(patch).eq("id", id);
+    // `salvo` em vez de `data`: o parâmetro desta função já se chama `data`.
+    const { data: salvo, error } = await supabase.from("rh_bemestar_sessoes").update(patch).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!salvo || salvo.length === 0) throw new Error("Não foi possível salvar a sessão — verifique suas permissões.");
     setSessoes(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   }, []);
 
   const setSessaoStatus = useCallback(async (id, status) => {
-    const { error } = await supabase.from("rh_bemestar_sessoes").update({ status }).eq("id", id);
+    const { data, error } = await supabase.from("rh_bemestar_sessoes").update({ status }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Não lança em linha-zero: RHBemEstarView.jsx:242 é onClick bare
+    // (sem await/catch), então um throw viraria rejeição sem dono. O
+    // refetch devolve a tela pro estado real do banco.
+    if (!data || data.length === 0) { await fetchAll(); return; }
     setSessoes(prev => prev.map(s => s.id === id ? { ...s, status } : s));
-  }, []);
+  }, [fetchAll]);
 
   const deletarSessao = useCallback(async (id) => {
     const { error } = await supabase.from("rh_bemestar_sessoes").delete().eq("id", id);
@@ -88,13 +96,24 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
   }, []);
 
   const setFilaStatus = useCallback(async (id, status) => {
-    const { error } = await supabase.from("rh_bemestar_fila").update({ status }).eq("id", id);
+    const { data, error } = await supabase.from("rh_bemestar_fila").update({ status }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Não lança em linha-zero: RHBemEstarView.jsx:147,148 é onClick bare
+    // (sem await/catch), então um throw viraria rejeição sem dono. O
+    // refetch devolve a tela pro estado real do banco.
+    if (!data || data.length === 0) { await fetchAll(); return; }
     setFila(prev => prev.map(f => f.id === id ? { ...f, status } : f));
-  }, []);
+  }, [fetchAll]);
 
   // Marca que o lembrete de proximidade (App.jsx) já foi enviado — evita
   // reenviar a cada re-render/poll do efeito.
+  //
+  // Fica DE PROPÓSITO sem `.select()` + checagem de vazio (o padrão de
+  // use-clients.js pra escrita do usuário): isto é fire-and-forget de
+  // telemetria, e o único chamador (App.jsx:770) já engole com
+  // `.catch(() => {})` porque roda dentro de um efeito de lembrete. Uma
+  // checagem a mais aqui não chegaria em ninguém; no pior caso o lembrete é
+  // reenviado, que é bem menos grave que um erro na tela do RH.
   const marcarLembreteEnviado = useCallback(async (id) => {
     const { error } = await supabase.from("rh_bemestar_fila").update({ lembrete_enviado: true }).eq("id", id);
     if (error) throw new Error(error.message);

@@ -141,8 +141,10 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     // reverter silenciosamente um número já alterado por outra pessoa nesse
     // meio tempo (achado da auditoria).
     if (!("requestNumber" in patch)) delete row.request_number;
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a solicitação — verifique suas permissões.");
     setRequests(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
   }, [canWrite, requests]);
 
@@ -234,14 +236,27 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     return { purchaseRequestId: data, ...emailResult };
   }, [canWrite, userId, sendStatusEmail]);
 
+  // `.eq("status", "pendente")` + checagem de linha afetada — achado real de
+  // QA adversarial (27/08/2026, Copiloto Fase 2): sem isso, um gestor
+  // recusando uma solicitação que outro gestor já tinha aprovado por outro
+  // caminho (aba diferente, fila de Pendências) sobrescrevia o status em
+  // silêncio e ainda mandava e-mail de rejeição pro solicitante que já tinha
+  // (ou ia ter) uma entrega/tarefa/compra criada — e uma falha de RLS também
+  // engolia em silêncio, sem erro nenhum (mesma classe de bug já corrigida em
+  // outros 11 hooks de update desta plataforma). O Postgres reavalia o WHERE
+  // depois de travar a linha, então dois cliques concorrentes nunca fazem os
+  // dois passarem — o 2º sempre vê 0 linhas afetadas.
   const rejectRequest = useCallback(async (id, reason) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const patch = {
       status:           "rejeitado",
       rejection_reason: reason ?? null,
     };
-    const { error: err } = await supabase.from(TABLE).update(patch).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(patch).eq("id", id).eq("status", "pendente").select();
     if (err) throw err;
+    if (!data || data.length === 0) {
+      throw new Error("Não foi possível recusar — a solicitação já foi decidida por outra pessoa, ou você não tem permissão.");
+    }
     setRequests(prev => prev.map(r =>
       r.id === id ? { ...r, status: "rejeitado", rejectionReason: reason ?? null } : r
     ));

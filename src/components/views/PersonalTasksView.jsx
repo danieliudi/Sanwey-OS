@@ -575,7 +575,13 @@ export function PersonalTasksView({ currentUser }) {
           continue;
         }
       }
-      updateTask(updatedTask.id, p.patch).catch(() => {});
+      // Reaproveita o setMoveError que o bloco acima já usa: com a checagem
+      // de linha afetada no updateTask, uma automação recusada pela RLS
+      // deixava de gravar em silêncio absoluto. Não interrompe o laço — as
+      // outras regras da rodada continuam valendo.
+      updateTask(updatedTask.id, p.patch).catch((e) => {
+        setMoveError(`A automação "${p.ruleName}" não pôde ser aplicada em "${updatedTask.title}": ${e?.message || "falha ao salvar"}.`);
+      });
     }
     if (notifications.length > 0) setAutomationNotice(notifications[0].message);
     for (const fx of sideEffects) {

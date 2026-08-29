@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
@@ -51,9 +51,10 @@ export function useProfiles({ enabled = true } = {}) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured && enabled);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !enabled) return;
     setError(null);
     setLoading(true);
@@ -72,28 +73,28 @@ export function useProfiles({ enabled = true } = {}) {
         .select("id, name, email, role, roles, companies, initials, avatar_bg, avatar_url, sectors, supervisor_id, supplier_id, mention_notifications_enabled, chat_enabled, created_at")
         .order("created_at", { ascending: true });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setUsers((data || []).map(rowToUser));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) { setLoading(false); return; }
     if (!enabled) { setUsers([]); setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     // Nome de canal único por instância — evita colisão quando o hook é
     // usado por múltiplos componentes ao mesmo tempo (App.jsx + telas de RH).
     const channelName = `profiles-list-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         if (payload.eventType === "DELETE") {
           setUsers(prev => prev.filter(u => u.id !== payload.old.id));
         } else if (payload.eventType === "INSERT") {
@@ -107,7 +108,7 @@ export function useProfiles({ enabled = true } = {}) {
       })
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       supabase.removeChannel(channel);
     };
   }, [enabled, fetchAll]);
@@ -159,11 +160,21 @@ export function useProfiles({ enabled = true } = {}) {
       }
     }
     if (Object.keys(dbPatch).length === 0) return;
-    const { error: err } = await supabase.from("profiles").update(dbPatch).eq("id", id);
+    // .select() + checagem de vazio: sem isso, um UPDATE bloqueado pela RLS
+    // (profiles_update — ex.: gerente_rh editando cargo/empresa, ou gerente
+    // não-admin editando alguém com "admin" em roles[]) volta error:null e
+    // data:[], mas o estado otimista (linha acima) já mostrou como salvo.
+    // Mesmo padrão já aplicado nos outros hooks de update da plataforma
+    // (ver use-clients.js). Achado real de QA, 28/08/2026.
+    const { data, error: err } = await supabase.from("profiles").update(dbPatch).eq("id", id).select();
     if (err) {
       setError(err);
       fetchAll();
       throw err;
+    }
+    if (!data || data.length === 0) {
+      fetchAll();
+      throw new Error("Não foi possível salvar — sem permissão pra editar este usuário.");
     }
   }, [setFallbackUsers, fetchAll]);
 

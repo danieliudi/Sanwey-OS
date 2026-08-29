@@ -62,9 +62,10 @@ export function useClients({ userId } = {}) {
   const [remoteClients, setRemoteClients] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) return;
     setError(null);
     setLoading(true);
@@ -74,27 +75,27 @@ export function useClients({ userId } = {}) {
         .select("*")
         .order("name", { ascending: true });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setRemoteClients((data || []).map(rowToClient));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) { setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     // Nome de canal único por instância — evita colisão quando o hook é
     // usado por múltiplos componentes ao mesmo tempo.
     const channelName = `clients-all-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         if (payload.eventType === "DELETE") {
           setRemoteClients(prev => prev.filter(c => c.id !== payload.old.id));
         } else if (payload.eventType === "INSERT") {
@@ -105,7 +106,7 @@ export function useClients({ userId } = {}) {
       })
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       supabase.removeChannel(channel);
     };
   }, [fetchAll]);
@@ -118,6 +119,29 @@ export function useClients({ userId } = {}) {
   // pra não recriar createClient a cada mudança da lista.
   const clientsRef = useRef(clients);
   useEffect(() => { clientsRef.current = clients; }, [clients]);
+
+  // `contact` (opcional) captura o contato principal já na tela de criação —
+  // sem isso, cadastrar um contato exigia salvar o cliente, reabrir e ir na
+  // aba Contatos (por isso client_contacts nascia praticamente vazia). O
+  // cliente é sempre salvo primeiro: se o INSERT do contato falhar (RLS,
+  // rede), o cliente criado NÃO é desfeito — o erro carrega `clientSaved`
+  // pra quem chamou decidir como avisar sem fingir que nada foi salvo.
+  // Extraído de dentro de createClient (27/08/2026) — o Funil de Vendas
+  // agora também grava "Pessoa de contato" na criação do card, mas ali o
+  // cliente pode já EXISTIR (match por CNPJ/nome ou escolhido no aviso de
+  // nome parecido), não só ser recém-criado. Único caminho de escrita em
+  // client_contacts, chamado pelos dois lugares.
+  const createClientContact = useCallback(async (clientId, contact) => {
+    if (!clientId || !contact?.name?.trim() || !isSupabaseConfigured) return;
+    const { error: contactErr } = await supabase.from("client_contacts").insert({
+      client_id: clientId,
+      name: contact.name.trim(),
+      email: contact.email?.trim() || null,
+      phone: contact.phone?.trim() || null,
+      job_title: contact.jobTitle?.trim() || null,
+    });
+    if (contactErr) throw contactErr;
+  }, []);
 
   // `contact` (opcional) captura o contato principal já na tela de criação —
   // sem isso, cadastrar um contato exigia salvar o cliente, reabrir e ir na
@@ -144,22 +168,15 @@ export function useClients({ userId } = {}) {
     const saved = rowToClient(data);
     setRemoteClients(prev => prev.some(c => c.id === saved.id) ? prev : [...prev, saved]);
 
-    if (contact?.name?.trim()) {
-      const { error: contactErr } = await supabase.from("client_contacts").insert({
-        client_id: saved.id,
-        name: contact.name.trim(),
-        email: contact.email?.trim() || null,
-        phone: contact.phone?.trim() || null,
-        job_title: contact.jobTitle?.trim() || null,
-      });
-      if (contactErr) {
-        const wrapped = new Error(`Cliente criado, mas o contato não foi salvo: ${contactErr.message}`);
-        wrapped.clientSaved = saved;
-        throw wrapped;
-      }
+    try {
+      await createClientContact(saved.id, contact);
+    } catch (contactErr) {
+      const wrapped = new Error(`Cliente criado, mas o contato não foi salvo: ${contactErr.message}`);
+      wrapped.clientSaved = saved;
+      throw wrapped;
     }
     return saved;
-  }, [setFallbackClients, userId]);
+  }, [setFallbackClients, userId, createClientContact]);
 
   const updateClient = useCallback(async (id, patch) => {
     if (!isSupabaseConfigured) {
@@ -216,9 +233,10 @@ export function useClients({ userId } = {}) {
     loading,
     error,
     createClient,
+    createClientContact,
     updateClient,
     deleteClient,
     upsertClientBillingHistory,
     refetch: fetchAll,
-  }), [clients, loading, error, createClient, updateClient, deleteClient, upsertClientBillingHistory, fetchAll]);
+  }), [clients, loading, error, createClient, createClientContact, updateClient, deleteClient, upsertClientBillingHistory, fetchAll]);
 }

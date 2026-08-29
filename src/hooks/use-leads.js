@@ -157,7 +157,6 @@ export function useLeads({ userId, role, companies } = {}) {
   const [remoteLeads, setRemoteLeads] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
   const { isOnline } = useConnectivity();
   // Idade do snapshot lido do IndexedDB quando o app abre já offline — só a
@@ -171,7 +170,9 @@ export function useLeads({ userId, role, companies } = {}) {
     (role === "vendedor" && Array.isArray(companies))
   );
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured || !userId) return;
     setError(null);
     setLoading(true);
@@ -181,24 +182,24 @@ export function useLeads({ userId, role, companies } = {}) {
         .select("*")
         .order("created_at", { ascending: false });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       const mapped = (data || []).map(rowToLead);
       setRemoteLeads(mapped);
       // Fire-and-forget — não bloqueia o state update por causa do cache.
       saveLeadsSnapshot(mapped).catch(() => {});
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [userId]);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) { setLoading(false); return; }
     if (!userId) { setRemoteLeads([]); setLoading(false); return; }
-    fetchAll();
+    fetchAll(() => active);
     // Realtime — pushes any INSERT/UPDATE/DELETE from other sessions/devices.
     // Nome do canal precisa ser único por instância do hook (mesmo padrão de
     // todo outro hook no app) — `leads-${userId}` sem sufixo aleatório
@@ -213,7 +214,7 @@ export function useLeads({ userId, role, companies } = {}) {
     const channel = supabase
       .channel(`leads-${userId}-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         if (payload.eventType === "DELETE") {
           setRemoteLeads(prev => prev.filter(l => l.id !== payload.old.id));
         } else if (payload.eventType === "INSERT") {
@@ -227,7 +228,7 @@ export function useLeads({ userId, role, companies } = {}) {
       })
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       supabase.removeChannel(channel);
     };
   }, [userId, fetchAll]);
@@ -242,12 +243,16 @@ export function useLeads({ userId, role, companies } = {}) {
     if (cacheAttemptedRef.current) return;
     if (remoteLeads.length > 0) return;
     cacheAttemptedRef.current = true;
+    // Guarda própria deste efeito — antes ele lia o `activeRef` do efeito de
+    // cima, que já religava pra true quando o userId trocava.
+    let active = true;
     readLeadsSnapshot().then(({ leads: cachedLeads, cachedAt }) => {
-      if (!activeRef.current || !cachedLeads.length) return;
+      if (!active || !cachedLeads.length) return;
       setRemoteLeads(cachedLeads);
       setCacheAge(cachedAt);
       setLoading(false);
     }).catch(() => {});
+    return () => { active = false; };
   }, [isOnline, userId, remoteLeads.length]);
 
   // Public leads array — from Supabase or localStorage depending on mode.

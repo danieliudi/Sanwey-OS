@@ -56,6 +56,12 @@ export const FIELD_DEFS_ARRAY = Object.values(FIELD_DEFS);
 
 export const DEFAULT_FORM_CONFIG = [
   { id: "company",  required: true,  locked: true  },
+  // Achado real (27/08/2026): sem CNPJ visível, o dedup de cliente cai pro
+  // nome digitado batendo EXATO com a razão social cadastrada — nome curto
+  // não bate com razão social completa, e um cliente duplicado nasce em
+  // silêncio (caso real: Casa Granado). Visível por padrão a partir daqui;
+  // não travado, pra quem prospecta sem o CNPJ em mãos ainda poder seguir.
+  { id: "cnpj",     required: false, locked: false },
   { id: "value",    required: false, locked: false },
   { id: "sector",   required: true,  locked: false },
   { id: "owner",    required: false, locked: false },

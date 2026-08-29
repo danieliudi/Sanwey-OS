@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  CheckSquare, Inbox, AlertTriangle, Flame, ChevronDown,
+  CheckSquare, Inbox, AlertTriangle, Flame, ChevronDown, RotateCcw, X, BellRing, AlertCircle, Sparkles, Loader2,
 } from "lucide-react";
 import { useMyTasks } from "../../hooks/use-my-tasks";
 import { Card, CardGrid, CardSkeleton } from "../shared/Card";
@@ -9,6 +9,13 @@ import { StatCard } from "../ui/StatCard";
 import { StatCardGrid } from "../shared/StatCardGrid";
 import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
+import { Modal } from "../ui/Modal";
+import { AppToast } from "../shared/AppToast";
+import { RecordAIPanel } from "../shared/RecordAIPanel";
+import { emailDraftPrompt, nextStepPrompt } from "../../constants/ai-prompts";
+import { sendRhEmail } from "../../utils/rh-send-email";
+import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
+import { formatDateBR } from "../../utils/date";
 
 // "Minhas Tarefas" — landing page after login (FASE 6). Aggregates every
 // card across every module where the current user is a responsible person,
@@ -86,16 +93,142 @@ function UrgencyPill({ tone, label }) {
   );
 }
 
-export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadClick }) {
-  const { tasks, loading, counts } = useMyTasks({ currentUser });
+// Ícone/tom/rótulo do botão de ação de 1 clique por id-prefixo de pendência —
+// FASE 2 do Copiloto (27/08/2026). Só os 4 tipos abaixo têm uma mutação
+// pronta no hook do próprio domínio, sem input extra genuinamente obrigatório
+// nem lógica de guarda vivendo só na View (appr-ferias aprovar/recusar ficou
+// de fora: RHFeriasView exige checar documento obrigatório e capturar motivo
+// de recusa, não é uma chamada de 1 função só — duplicar isso aqui arriscaria
+// pular uma checagem de compliance real).
+const QUICK_ACTIONS = [
+  { prefix: "alert-treino-", label: "Reciclar", icon: RotateCcw, tone: "default", key: "reciclar" },
+  { prefix: "appr-request-", label: "Recusar", icon: X, tone: "danger", key: "recusarRequest" },
+  { prefix: "appr-purchase-", label: "Recusar", icon: X, tone: "danger", key: "recusarPurchase" },
+  { prefix: "alert-avaliacao-", label: "Enviar lembrete", icon: BellRing, tone: "default", key: "lembrete" },
+];
+
+function quickActionFor(taskId) {
+  return QUICK_ACTIONS.find(a => taskId.startsWith(a.prefix)) || null;
+}
+
+function QuickActionButton({ label, icon: Icon, tone, busy, onClick }) {
+  return (
+    <button
+      onClick={() => { if (!busy) onClick(); }}
+      disabled={busy}
+      className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 whitespace-nowrap"
+      style={{
+        color: tone === "danger" ? "var(--danger)" : "var(--accent)",
+        background: tone === "danger" ? "var(--danger-bg)" : "color-mix(in srgb, var(--accent) 12%, transparent)",
+        border: "none",
+        cursor: busy ? "default" : "pointer",
+        opacity: busy ? 0.6 : 1,
+      }}
+    >
+      <Icon size={12} />
+      {busy ? "…" : label}
+    </button>
+  );
+}
+
+// FASE 3 do Copiloto (27/08/2026) — rascunho de IA direto na fila pros 2
+// tipos de pendência de Leads. Reusa `RecordAIPanel` (o mesmo componente por
+// trás de `LeadAIPanel` no drawer completo) com só a feature relevante pra
+// cada tipo, em vez de reimplementar loading/erro/copiar — só falta o
+// histórico de atividades (a fila não carrega isso por lead), então
+// `nextStepPrompt` roda sem elas; a IA ainda responde, só sem o contexto
+// das últimas interações que o drawer completo tem.
+const AI_LEAD_ACTIONS = {
+  "resp-lead-": { label: "Rascunho de e-mail", featureId: "email", featureLabel: "Rascunho de e-mail IA", buildMessages: (lead, tone) => emailDraftPrompt(lead, tone) },
+  "alert-lead-": { label: "Próximo passo", featureId: "nextstep", featureLabel: "Próximo passo", buildMessages: (lead) => nextStepPrompt(lead, []) },
+};
+
+function aiActionFor(taskId) {
+  const prefix = Object.keys(AI_LEAD_ACTIONS).find(p => taskId.startsWith(p));
+  return prefix ? AI_LEAD_ACTIONS[prefix] : null;
+}
+
+function AIDraftButton({ label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 whitespace-nowrap"
+      style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 12%, transparent)", border: "none", cursor: "pointer" }}
+    >
+      <Sparkles size={12} />
+      {label}
+    </button>
+  );
+}
+
+export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadClick, onOpenPending, personalTasksEnabled = true }) {
+  const { tasks, loading, counts, reciclarAtribuicao, rejectRequest, rejectPurchase } = useMyTasks({ currentUser, personalTasksEnabled });
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState(false);
+  // Set, não um id escalar — achado real de QA (27/08/2026): a fila mostra
+  // vários módulos ao mesmo tempo, então "Reciclar" num Treinamento e
+  // "Recusar" numa Compra podem estar em voo juntos. Com um id só, o
+  // `finally` da 1ª chamada a terminar limpava o busy da 2ª ainda em voo —
+  // reabilitando o botão dela antes da mutação terminar, e abrindo brecha
+  // pra um clique real disparar uma 2ª chamada concorrente na MESMA pendência.
+  const [busyIds, setBusyIds] = useState(() => new Set());
+  const [actionError, setActionError] = useState(null);
+  const [aiDraftTask, setAiDraftTask] = useState(null);
+
+  const runQuickAction = async (task, fn) => {
+    setActionError(null);
+    setBusyIds(prev => new Set(prev).add(task.id));
+    try {
+      await fn();
+    } catch (e) {
+      setActionError(e?.message || "Não foi possível concluir a ação — tente novamente.");
+    } finally {
+      setBusyIds(prev => { const next = new Set(prev); next.delete(task.id); return next; });
+    }
+  };
+
+  const handleQuickAction = (task, actionKey) => {
+    switch (actionKey) {
+      case "reciclar":
+        return runQuickAction(task, () => reciclarAtribuicao(task.raw.id));
+      case "recusarRequest":
+        return runQuickAction(task, () => rejectRequest(task.raw.id));
+      case "recusarPurchase":
+        return runQuickAction(task, () => rejectPurchase(task.raw.id));
+      case "lembrete":
+        return runQuickAction(task, async () => {
+          const f = task.raw;
+          const col = task.colaborador;
+          const destinatarios = users.filter(u => (u.roles || []).some(r => ["gerente_rh", "admin"].includes(r)) && u.email);
+          if (destinatarios.length === 0) throw new Error("Nenhum gestor de RH com e-mail cadastrado pra receber o lembrete.");
+          const results = await Promise.all(destinatarios.map(dest => sendRhEmail("avaliacao_proxima", dest.email, {
+            EMPLOYEE_NAME: col?.fullName || "",
+            JOB_TITLE: col?.jobTitle || "—",
+            DEPARTMENT: col?.department || "—",
+            TIPO_CICLO: cicloTipoLabel(f.tipo) || f.cycle || "—",
+            DUE_DATE: f.period_end ? formatDateBR(f.period_end) : "—",
+            DUE_LABEL: task.badge,
+          }, { colaboradorId: col?.id })));
+          if (!results.some(Boolean)) throw new Error("Não foi possível enviar o lembrete por e-mail — tente novamente.");
+        });
+      default:
+        return;
+    }
+  };
 
   useEffect(() => { setExpanded(false); }, [filter]);
 
   const totalTasks = counts.responsibility + counts.approval + counts.alert;
   const urgentNowCount = useMemo(
     () => tasks.filter(t => t.badgeTone === "var(--danger)").length,
+    [tasks],
+  );
+  // Aniversário/bodas de empresa (informational: true) continuam listados
+  // na aba Alertas — só não contam pro headline "Alertas ativos", que
+  // existe pra sinalizar urgência (achado real: os dois usam tom --success
+  // e não têm nenhuma ação de resolução).
+  const activeAlertCount = useMemo(
+    () => tasks.filter(t => t.bucket === "alert" && !t.informational).length,
     [tasks],
   );
 
@@ -121,20 +254,46 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
       onNavigate?.("crm");
       return;
     }
+    if (onOpenPending) { onOpenPending(task); return; }
     onNavigate?.(task.section);
   };
 
   return (
     <div className="space-y-7">
+      {actionError && (
+        <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setActionError(null)}>
+          {actionError}
+        </AppToast>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
+        <div className="flex items-center">
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             {greetingFor(currentUser)}
           </h1>
+          {loading && tasks.length > 0 && (
+            <span
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-dim)",
+                border: "1px solid var(--border)", borderRadius: 999, padding: "3px 10px", marginLeft: 10,
+              }}
+            >
+              <Loader2 size={11} className="animate-spin" />
+              carregando mais…
+            </span>
+          )}
         </div>
       </div>
 
-      {loading ? (
+      {/* Skeleton completo só na primeira carga (cache frio, nenhuma tarefa
+          computada ainda) — Copiloto Fase 5. As ~16 assinaturas de domínio
+          resolvem em momentos diferentes, e cada hook já inicializa como
+          array vazio, então `tasks` (use-my-tasks.js) já cresce
+          incrementalmente a cada uma que chega; uma vez que existe QUALQUER
+          tarefa, o conteúdo real fica visível e o badge acima cobre o
+          intervalo até a última assinatura resolver — em vez de esconder
+          tudo que já chegou atrás de 5 linhas de skeleton até a mais lenta
+          (ex.: Treinamentos) terminar. */}
+      {loading && tasks.length === 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {Array.from({ length: 5 }).map((_, i) => (
             <CardSkeleton key={i} density="list" />
@@ -159,7 +318,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
             <StatCard icon={Inbox} value={counts.approval} label="Aguardando aprovação" />
             <StatCard
               icon={AlertTriangle}
-              value={counts.alert}
+              value={activeAlertCount}
               label="Alertas ativos"
               sublabel="Recalculado em tempo real"
             />
@@ -201,6 +360,8 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
                     {group.items.map(task => {
                       const meta = BUCKET_META[task.bucket];
                       const isCritical = task.badgeTone === "var(--danger)";
+                      const quickAction = quickActionFor(task.id);
+                      const aiAction = !quickAction ? aiActionFor(task.id) : null;
                       return (
                         <div
                           key={task.id}
@@ -216,6 +377,17 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
                             meta={`${task.moduleLabel} · ${task.subtitle}`}
                             status={{ color: meta.dotColor, label: meta.label }}
                             footer={<UrgencyPill tone={task.badgeTone} label={task.badge} />}
+                            headerAction={quickAction ? (
+                              <QuickActionButton
+                                label={quickAction.label}
+                                icon={quickAction.icon}
+                                tone={quickAction.tone}
+                                busy={busyIds.has(task.id)}
+                                onClick={() => handleQuickAction(task, quickAction.key)}
+                              />
+                            ) : aiAction ? (
+                              <AIDraftButton label={aiAction.label} onClick={() => setAiDraftTask(task)} />
+                            ) : undefined}
                             onClick={() => handleTaskClick(task)}
                             density="list"
                           />
@@ -252,6 +424,22 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
           )}
         </>
       )}
+
+      {aiDraftTask && (() => {
+        const action = aiActionFor(aiDraftTask.id);
+        const lead = aiDraftTask.lead || aiDraftTask.raw;
+        return (
+          <Modal open onClose={() => setAiDraftTask(null)} title={`${action.featureLabel} — ${lead.company}`} width={520}>
+            <div className="p-5">
+              <RecordAIPanel
+                currentUser={currentUser}
+                defaultFeatureId={action.featureId}
+                features={[{ id: action.featureId, label: action.featureLabel, buildMessages: (extra) => action.buildMessages(lead, extra) }]}
+              />
+            </div>
+          </Modal>
+        );
+      })()}
     </div>
   );
 }

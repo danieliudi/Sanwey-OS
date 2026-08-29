@@ -83,8 +83,10 @@ export function usePersonalTaskStageFields(userId) {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado");
     const row = fieldToRow({ ...patch });
     Object.keys(row).forEach(k => row[k] === undefined && delete row[k]);
-    const { error } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (error) throw error;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o campo — verifique suas permissões.");
   }, []);
 
   const deleteField = useCallback(async (id) => {
@@ -93,10 +95,16 @@ export function usePersonalTaskStageFields(userId) {
     if (error) throw error;
   }, []);
 
+  // Mesmo raciocínio do reorderStages em use-personal-task-stages.js: não
+  // lança (chamador é drag-and-drop, sem await/catch), mas detecta a falha —
+  // inclusive a silenciosa da RLS, via `.select()` — e refaz o fetch pra não
+  // deixar ordem fantasma na tela.
   const reorderFields = useCallback(async (orderedIds) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado");
-    await Promise.all(orderedIds.map((id, idx) => supabase.from(TABLE).update({ order_idx: idx }).eq("id", id)));
-  }, []);
+    const results = await Promise.all(orderedIds.map((id, idx) =>
+      supabase.from(TABLE).update({ order_idx: idx }).eq("id", id).select()));
+    if (results.some(r => r?.error || !r?.data || r.data.length === 0)) await fetchAll();
+  }, [fetchAll]);
 
   return { fields, loading, getFields, addField, updateField, deleteField, reorderFields, refetch: fetchAll };
 }

@@ -24,6 +24,165 @@
 
 export const CHANGELOG = [
   {
+    version: "4.83.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Uma edição que você não tem permissão pra fazer deixa de parecer salva. Antes, em várias telas, o registro aparecia como gravado e só voltava atrás ao recarregar a página. Agora a tela avisa na hora — e, nos casos em que não cabe um aviso (um botão de ligar/desligar, por exemplo), ela volta sozinha pro que está no banco em vez de mostrar a mudança que não foi aceita.",
+      },
+    ],
+  },
+  {
+    version: "4.82.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Consulta de CNPJ: quando a checagem fiscal falhava, o resultado \"Fiscal não verificado\" ficava preso no cliente por uma semana. Agora é tentado de novo em algumas horas.",
+        roles: ["vendedor", "gerente", "consultor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Consulta de CNPJ: CNPJ inexistente passa a ser lembrado por algumas horas, em vez de reconsultar a Receita a cada tentativa.",
+        roles: ["vendedor", "gerente", "consultor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Passa a existir um limite diário de consultas de CNPJ e de uso da IA da empresa nas atas por voz — folgado pro uso normal, protege a cota compartilhada. Quem usa chave de IA própria continua sem limite.",
+      },
+    ],
+  },
+  {
+    version: "4.81.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Entregas: o acesso de edição da agência agora fica restrito às etapas \"Encaminhado à Agência\" e \"Em Produção\" — o resto do fluxo é só do time interno.",
+      },
+    ],
+  },
+  {
+    version: "4.80.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Chat: trocar de conversa rápido podia deixar as mensagens da conversa anterior grudadas na conversa nova — corrigido.",
+      },
+      {
+        kind: "correcao",
+        text: "Usuários/Funcionários: uma edição de cargo, empresa ou status sem permissão suficiente parecia salva mesmo sem gravar nada no banco — agora aparece um aviso de erro real.",
+      },
+    ],
+  },
+  {
+    version: "4.79.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Ajuda & Tutoriais: o botão \"Ir para X\" em 148 dos 173 guias não levava a lugar nenhum — corrigido em todos.",
+      },
+      {
+        kind: "correcao",
+        text: "Painel Visão Geral do RH: o bucket \"Férias pendentes\" nunca mostrava as solicitações reais — corrigido.",
+      },
+      {
+        kind: "correcao",
+        text: "Configurações → \"Carregar dados de Marketing e RH\" (ambiente de demonstração) sempre falhava na primeira tabela — corrigido.",
+      },
+    ],
+  },
+  {
+    version: "4.78.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Modo escuro: botão de aprovação de Solicitação de Marketing, painel de \"Overlap detectado\" no Funil de Vendas e chips de setor/\"Você\" em Usuários ficavam praticamente ilegíveis — corrigido.",
+      },
+      {
+        kind: "correcao",
+        text: "Onboarding: checklist do colaborador sem tarefas ainda mostrava uma caixa vazia, sem explicação — agora mostra uma mensagem.",
+      },
+      {
+        kind: "correcao",
+        text: "Asterisco de campo obrigatório em 8 telas (Férias, Comex, Onboarding, Feedback, Treinamentos, Campanhas, Funil de Vendas) mudava de cor por frente comercial, inclusive ficando verde na Resibag — agora é sempre vermelho.",
+      },
+    ],
+  },
+  {
+    version: "4.77.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Pendências: a tela não espera mais TODOS os módulos carregarem pra mostrar alguma coisa — o conteúdo aparece assim que a primeira tarefa chega, com um aviso discreto de 'carregando mais…' enquanto o resto termina.",
+      },
+    ],
+  },
+  {
+    version: "4.76.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Onboarding: agora dá pra atribuir um ou mais responsáveis a cada tarefa criada — aparece como avatar na lista, inclusive pro colaborador ver no próprio checklist.",
+      },
+    ],
+  },
+  {
+    version: "4.75.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pendências: Tarefas de Marketing, Comex (Exportação e Importação) e Meu To-do agora entram na sua fila — tarefa de marketing atribuída a você, operação de Comex parada há tempo demais na etapa, e tarefa pessoal atrasada.",
+      },
+    ],
+  },
+  {
+    version: "4.74.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pendências: leads sob sua responsabilidade e leads parados agora têm um botão de IA direto no card — 'Rascunho de e-mail' ou 'Próximo passo' — sem precisar abrir o Funil de Vendas primeiro.",
+      },
+    ],
+  },
+  {
+    version: "4.73.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pendências: 4 tipos de tarefa agora resolvem direto na fila, sem precisar abrir o card — reciclar um treinamento vencido, recusar uma solicitação de marketing ou uma compra, e reenviar o lembrete de avaliação de desempenho atrasada pro RH.",
+        roles: ["admin", "gerente_rh", "marketing", "gerente_marketing"],
+      },
+      {
+        kind: "correcao",
+        text: "Recusar uma solicitação de marketing agora avisa se ela já tinha sido decidida por outra pessoa, em vez de sobrescrever em silêncio.",
+        roles: ["admin", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
+    version: "4.72.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Funil de Vendas: o card novo agora tem campo de CNPJ com busca automática (preenche razão social, cidade e estado), e avisa quando o nome digitado parece muito com um cliente já cadastrado, pra evitar duplicidade.",
+        roles: ["admin", "gerente", "vendedor", "consultor"],
+      },
+      {
+        kind: "novo",
+        // Bloco "Pessoa de contato" só aparece pra quem já podia editar o
+        // cadastro do cliente (canAddContact em CRMView.jsx) — consultor não
+        // vê esse campo, então não entra no roles daqui (achado de QA
+        // 27/08/2026: o item anterior incluía consultor por engano).
+        text: "Funil de Vendas: já dá pra registrar a pessoa de contato — nome, cargo, e-mail e telefone — direto na criação do card, sem precisar abrir o cadastro do cliente depois.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Funil de Vendas: os 4 ícones de 'Pesquisar empresa' no card viraram um único botão 'Pesquisar', e 'Amostras enviadas' agora é um bloco recolhido por padrão (abre sozinho quando já tem amostra registrada) — coluna esquerda do card menos poluída.",
+        roles: ["admin", "gerente", "vendedor", "consultor"],
+      },
+    ],
+  },
+  {
     version: "4.71.0",
     items: [
       {

@@ -86,34 +86,35 @@ export function useChat({ userId } = {}) {
   // recebida de outra pessoa, pra quem consome (App.jsx) reagir com um
   // useEffect ainda que o conteúdo textual se repita.
   const [incomingMessage, setIncomingMessage] = useState(null);
-  const activeRef = useRef(true);
   const channelsRef = useRef(channels);
   useEffect(() => { channelsRef.current = channels; }, [channels]);
 
   const enabled = isSupabaseConfigured && Boolean(userId);
 
-  const fetchChannels = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchChannels = useCallback(async (isActive = () => true) => {
     if (!enabled) { setChannels([]); setLoading(false); return; }
     setError(null);
     setLoading(true);
     try {
       const { data, error: err } = await supabase.rpc("chat_my_channels");
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setChannels((data || []).map(rowToChannel));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled]);
 
   useEffect(() => {
-    activeRef.current = true;
-    if (!enabled) { setChannels([]); setLoading(false); return () => { activeRef.current = false; }; }
-    fetchChannels();
-    const debouncedFetch = debounce(() => { if (activeRef.current) fetchChannels(); }, 400);
+    let active = true;
+    if (!enabled) { setChannels([]); setLoading(false); return () => { active = false; }; }
+    fetchChannels(() => active);
+    const debouncedFetch = debounce(() => { if (active) fetchChannels(() => active); }, 400);
     // Toast Nível 1 (spec seção 5) — reaproveita o MESMO evento Realtime que
     // já dispara o debouncedFetch acima (não abre uma segunda subscription
     // só pra saber "chegou mensagem nova"). Só busca a linha completa (join
@@ -126,7 +127,7 @@ export function useChat({ userId } = {}) {
         .select(MESSAGE_SELECT)
         .eq("id", payload.new.id)
         .maybeSingle();
-      if (!activeRef.current) return;
+      if (!active) return;
       const message = rowToMessage(data || payload.new);
       const channel = channelsRef.current.find(c => c.id === message.channelId);
       setIncomingMessage({
@@ -151,7 +152,7 @@ export function useChat({ userId } = {}) {
       })
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       debouncedFetch.cancel();
       supabase.removeChannel(channel);
     };
@@ -220,23 +221,39 @@ export function useChat({ userId } = {}) {
     if (!enabled || !channelId) return;
     const now = new Date().toISOString();
     setChannels(prev => prev.map(c => c.id === channelId ? { ...c, archivedAt: now } : c));
-    const { error: err } = await supabase
+    // `.select()` + checagem de vazio: um UPDATE barrado pela RLS volta
+    // error:null/data:[], e o otimista acima já arquivou na tela. Lança
+    // porque ChatView.handleToggleArchive trata (try/catch -> setSendError)
+    // E porque, no sucesso, ele ainda faz setSelectedId(null): sem o throw a
+    // conversa sumia da tela como se tivesse sido arquivada.
+    const { data, error: err } = await supabase
       .from("chat_channel_members")
       .update({ archived_at: now })
       .eq("channel_id", channelId)
-      .eq("user_id", userId);
-    if (err) { setError(err); fetchChannels(); }
+      .eq("user_id", userId)
+      .select();
+    if (err) { setError(err); fetchChannels(); throw err; }
+    if (!data || data.length === 0) {
+      fetchChannels();
+      throw new Error("Não foi possível arquivar a conversa — verifique suas permissões.");
+    }
   }, [enabled, userId, fetchChannels]);
 
   const unarchiveChannel = useCallback(async (channelId) => {
     if (!enabled || !channelId) return;
     setChannels(prev => prev.map(c => c.id === channelId ? { ...c, archivedAt: null } : c));
-    const { error: err } = await supabase
+    // Mesmo raciocínio de archiveChannel acima (chamador trata via try/catch).
+    const { data, error: err } = await supabase
       .from("chat_channel_members")
       .update({ archived_at: null })
       .eq("channel_id", channelId)
-      .eq("user_id", userId);
-    if (err) { setError(err); fetchChannels(); }
+      .eq("user_id", userId)
+      .select();
+    if (err) { setError(err); fetchChannels(); throw err; }
+    if (!data || data.length === 0) {
+      fetchChannels();
+      throw new Error("Não foi possível desarquivar a conversa — verifique suas permissões.");
+    }
   }, [enabled, userId, fetchChannels]);
 
   // Gerenciamento de grupo/canal (nome, tipo, membros) — mockup aprovado
@@ -329,11 +346,17 @@ export function useChannelMessages(channelId) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const activeRef = useRef(true);
 
   const enabled = isSupabaseConfigured && Boolean(channelId);
 
-  const fetchMessages = useCallback(async () => {
+  // `isActive` — checado antes de cada setState, não um ref compartilhado
+  // entre execuções. Achado real de QA (28/08/2026): com um `activeRef`
+  // único do hook, trocar de canal rápido religava o ref pra `true` no
+  // mesmo commit em que o cleanup da conversa anterior o desligava — se o
+  // fetch da conversa ANTIGA resolvesse depois do da nova, ele vencia e a
+  // conversa errada ficava plantada na tela. `refetch` (chamada manual, sem
+  // canal trocando por baixo) usa o default sempre-ativo.
+  const fetchMessages = useCallback(async (isActive = () => true) => {
     if (!enabled) { setMessages([]); setLoading(false); return; }
     setError(null);
     setLoading(true);
@@ -345,20 +368,24 @@ export function useChannelMessages(channelId) {
         .is("deleted_at", null)
         .order("created_at", { ascending: true });
       if (err) throw err;
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setMessages((data || []).map(rowToMessage));
     } catch (e) {
-      if (!activeRef.current) return;
+      if (!isActive()) return;
       setError(e);
     } finally {
-      if (activeRef.current) setLoading(false);
+      if (isActive()) setLoading(false);
     }
   }, [enabled, channelId]);
 
   useEffect(() => {
-    activeRef.current = true;
-    if (!enabled) { setMessages([]); setLoading(false); return () => { activeRef.current = false; }; }
-    fetchMessages();
+    let active = true;
+    // Zera o histórico ANTES do fetch — sem isso, `messages` continuava com
+    // o conteúdo do canal anterior durante toda a duração do fetch do novo
+    // (ChatView.jsx só mostra o spinner quando messages.length === 0), então
+    // a thread abria mostrando a conversa errada até a resposta chegar.
+    setMessages([]);
+    fetchMessages(() => active);
     const channelName = `chat-messages-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
@@ -366,20 +393,20 @@ export function useChannelMessages(channelId) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: MESSAGES_TABLE, filter: `channel_id=eq.${channelId}` },
         async (payload) => {
-          if (!activeRef.current || !payload.new?.id) return;
+          if (!active || !payload.new?.id) return;
           const { data } = await supabase
             .from(MESSAGES_TABLE)
             .select(MESSAGE_SELECT)
             .eq("id", payload.new.id)
             .maybeSingle();
-          if (!activeRef.current) return;
+          if (!active) return;
           const message = rowToMessage(data || payload.new);
           setMessages(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
         },
       )
       .subscribe();
     return () => {
-      activeRef.current = false;
+      active = false;
       supabase.removeChannel(channel);
     };
   }, [enabled, channelId, fetchMessages]);

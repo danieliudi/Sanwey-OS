@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { defaultPipelines, DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
 import { debounce } from "../utils/debounce";
@@ -48,16 +48,17 @@ function stageToRow(companyId, s, orderIdx) {
 
 export function usePipelines() {
   const [pipelines, setPipelines] = useState(() => defaultPipelines());
-  const activeRef = useRef(true);
 
-  const fetchAll = useCallback(async () => {
+  // `isActive` é a guarda por execução do efeito (não um ref da instância)
+  // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
+  const fetchAll = useCallback(async (isActive = () => true) => {
     if (!isSupabaseConfigured) return;
     const { data, error } = await supabase
       .from("rh_pipeline_stages")
       .select("*")
       .eq("domain", DOMAIN)
       .order("order_idx", { ascending: true });
-    if (error || !activeRef.current) return;
+    if (error || !isActive()) return;
     const grouped = {};
     for (const row of data || []) {
       (grouped[row.company_id] ||= []).push(rowToStage(row));
@@ -68,20 +69,20 @@ export function usePipelines() {
   }, []);
 
   useEffect(() => {
-    activeRef.current = true;
+    let active = true;
     if (!isSupabaseConfigured) return;
-    fetchAll();
-    const debouncedFetchAll = debounce(fetchAll, 400);
+    fetchAll(() => active);
+    const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channel = supabase
       .channel(`pipeline-stages-comercial-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_pipeline_stages" }, (payload) => {
-        if (!activeRef.current) return;
+        if (!active) return;
         const row = payload.new?.domain === DOMAIN ? payload.new : (payload.old?.domain === DOMAIN ? payload.old : null);
         if (!row) return;
         debouncedFetchAll(); // mudança de company/reorder é mais simples de refetch que reconciliar linha a linha
       })
       .subscribe();
-    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
+    return () => { active = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   // Patch numa etapa específica (não muda ordem, só campos).
@@ -96,8 +97,12 @@ export function usePipelines() {
     if (!current?.dbId) return;
     const row = stageToRow(companyId, { ...current, ...patch }, undefined);
     delete row.order_idx; // não mexe em ordem aqui
-    const { error } = await supabase.from("rh_pipeline_stages").update(row).eq("id", current.dbId);
-    if (error) await fetchAll(); // reverte o otimista pro estado real do banco
+    // `.select()`: um UPDATE barrado pela RLS volta error:null/data:[], então
+    // sem contar linha o otimista acima ficava de pé como se tivesse gravado.
+    // Não lança (o chamador deste hook não trata exceção) — segue o mesmo
+    // caminho do erro, que é refetch pra voltar ao estado real do banco.
+    const { data, error } = await supabase.from("rh_pipeline_stages").update(row).eq("id", current.dbId).select();
+    if (error || !data || data.length === 0) await fetchAll();
   }, [pipelines, fetchAll]);
 
   // Reordena. orderedIds deve conter todos os IDs da empresa (não remove,
@@ -115,9 +120,11 @@ export function usePipelines() {
     const results = await Promise.all(orderedIds.map((stageId, idx) => {
       const s = list.find(x => x.id === stageId);
       if (!s?.dbId) return null;
-      return supabase.from("rh_pipeline_stages").update({ order_idx: idx }).eq("id", s.dbId);
+      return supabase.from("rh_pipeline_stages").update({ order_idx: idx }).eq("id", s.dbId).select();
     }));
-    if (results.some(r => r?.error)) await fetchAll(); // reverte o otimista pro estado real do banco
+    // Zero linha conta como falha junto com o erro: RLS barrando o reorder
+    // volta error:null/data:[], e sem isso a ordem nova ficava só na tela.
+    if (results.some(r => r?.error || (r && (!r.data || r.data.length === 0)))) await fetchAll();
   }, [pipelines, fetchAll]);
 
   const resetCompanyPipeline = useCallback(async (companyId) => {
@@ -166,10 +173,13 @@ export function usePipelines() {
       const s = stages[i];
       const row = stageToRow(companyId, s, i);
       const existing = existingByKey.get(s.id);
-      const { error } = existing
-        ? await supabase.from("rh_pipeline_stages").update(row).eq("id", existing.id)
-        : await supabase.from("rh_pipeline_stages").insert(row);
-      if (error) hadError = true;
+      // No ramo de UPDATE, `.select()` + zero linha entra no mesmo hadError:
+      // a RLS barrando volta error:null/data:[], e sem isso o editor salvava
+      // "com sucesso" um pipeline que o banco não aceitou.
+      const { data: escrito, error } = existing
+        ? await supabase.from("rh_pipeline_stages").update(row).eq("id", existing.id).select()
+        : await supabase.from("rh_pipeline_stages").insert(row).select();
+      if (error || !escrito || escrito.length === 0) hadError = true;
     }
 
     // replacePipeline não é atômico (várias escritas sequenciais) — se

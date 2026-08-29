@@ -849,8 +849,15 @@ export function SettingsView({
   }
   async function handleSecretariaRevoke(id) {
     setSecretariaRevoking(id);
+    setSecretariaGenError(null);
     try {
       await secretariaRevokeKey(id);
+    } catch (e) {
+      // Havia `try/finally` sem `catch` e o onClick chama isto sem tratar:
+      // desde que revokeKey passou a checar linha afetada, uma recusa da RLS
+      // virava rejeição sem dono — o botão não fazia nada e não dizia nada,
+      // com a chave seguindo válida.
+      setSecretariaGenError(e?.message || "Não foi possível revogar a chave.");
     } finally {
       setSecretariaRevoking(null);
     }

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Inbox, CheckCircle2, XCircle, Clock, Filter, Plus, ChevronDown,
   CalendarDays, Building2, Tag, AlertCircle, ExternalLink,
@@ -228,7 +228,7 @@ function ApproveModal({ request, onConfirm, onClose }) {
             onClick={async () => { setSaving(true); await onConfirm(notes, destination); }}
             disabled={saving}
             className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: isCompra ? "#7C3AED" : destination === "entrega" ? "var(--success)" : "var(--warning)", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
+            style={{ background: isCompra ? "#7C3AED" : destination === "entrega" ? "var(--success)" : "var(--warning)", color: isCompra ? "#fff" : destination === "entrega" ? "var(--on-success)" : "var(--on-warning)", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
           >
             {saving ? "Aprovando…" : isCompra ? "Aprovar e enviar para Compras" : destination === "entrega" ? "Aprovar e criar entrega" : "Aprovar e criar tarefa"}
           </button>
@@ -239,16 +239,22 @@ function ApproveModal({ request, onConfirm, onClose }) {
 }
 
 /* ── Request Card ─────────────────────────────────────────────────── */
-function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNumber, onResendEmail, sendingEmail }) {
+function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNumber, onResendEmail, sendingEmail, cardRef, forceExpanded, highlighted }) {
   const [expanded, setExpanded] = useState(false);
+  // Deep-link via Pendências (Copiloto): abre a descrição sozinho e destaca
+  // o card por um instante, em vez de só rolar até um card fechado igual a
+  // qualquer outro na lista.
+  useEffect(() => { if (forceExpanded) setExpanded(true); }, [forceExpanded]);
 
   return (
     <div
+      ref={cardRef}
       className="rounded-xl border p-4 transition-shadow"
       style={{
         background: "var(--surface)",
-        borderColor: "var(--border)",
-        boxShadow: "var(--shadow-card)",
+        borderColor: highlighted ? "var(--accent)" : "var(--border)",
+        boxShadow: highlighted ? "0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent)" : "var(--shadow-card)",
+        transition: "border-color 0.3s, box-shadow 0.3s",
       }}
     >
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -406,7 +412,7 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
 }
 
 /* ── Main View ────────────────────────────────────────────────────── */
-export function MarketingRequestsView({ user, users }) {
+export function MarketingRequestsView({ user, users, initialExpandedRequestId, onInitialRequestConsumed }) {
   const {
     requests, loading, error, canWrite,
     approveAndCreateDeliverable, approveAndCreateTask, approveAndCreatePurchase, rejectRequest, sendStatusEmail, updateRequest,
@@ -417,6 +423,42 @@ export function MarketingRequestsView({ user, users }) {
   const [rejectingReq, setRejectingReq]   = useState(null);
   const [actionError,  setActionError]    = useState(null);
   const [sendingEmailId, setSendingEmailId] = useState(null);
+  const [highlightId, setHighlightId] = useState(null);
+  const cardRefs = useRef({});
+
+  // Deep-link via Pendências (Copiloto) — mesma trava de `use-marketing-
+  // requests.js` ter `loading` iniciando `false` (ver EntregasView/
+  // ComprasMarketingView): sem esperar o 1º `loading:true` observado, a
+  // busca abaixo rodaria contra `requests` ainda vazio.
+  const hasLoadedOnceRef = useRef(false);
+  useEffect(() => { if (loading) hasLoadedOnceRef.current = true; }, [loading]);
+
+  useEffect(() => {
+    if (!initialExpandedRequestId || !hasLoadedOnceRef.current || loading) return;
+    const target = requests.find(r => r.id === initialExpandedRequestId);
+    if (target) {
+      // Garante que o card esteja visível na aba de status atual — sem
+      // isso, uma pendência de solicitação já aprovada/rejeitada mas ainda
+      // na fila (ex.: "Recusar" ainda não processado) poderia cair fora do
+      // filtro padrão ("Pendentes") e nunca aparecer pra rolar até ele.
+      setStatusFilter(prev => {
+        if (prev === "all" || prev === target.status) return prev;
+        return target.status;
+      });
+      setHighlightId(target.id);
+      // Espera o próximo frame — o filtro acima pode remontar a lista antes
+      // do ref do card existir.
+      requestAnimationFrame(() => {
+        cardRefs.current[target.id]?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      const timer = setTimeout(() => setHighlightId(null), 2500);
+      onInitialRequestConsumed?.();
+      return () => clearTimeout(timer);
+    }
+    // Não achou (id inválido/já excluído) — consome mesmo assim, senão o
+    // efeito tentaria de novo a cada render.
+    onInitialRequestConsumed?.();
+  }, [initialExpandedRequestId, requests, loading, onInitialRequestConsumed]);
 
   const filtered = useMemo(() => {
     if (statusFilter === "all") return requests;
@@ -566,6 +608,9 @@ export function MarketingRequestsView({ user, users }) {
               onUpdateRequestNumber={(id, next) => updateRequest(id, { requestNumber: next })}
               onResendEmail={handleResendEmail}
               sendingEmail={sendingEmailId === req.id}
+              cardRef={(el) => { cardRefs.current[req.id] = el; }}
+              forceExpanded={highlightId === req.id}
+              highlighted={highlightId === req.id}
             />
           ))}
         </div>
