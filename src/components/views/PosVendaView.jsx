@@ -1011,6 +1011,28 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   );
   useEffect(() => { if (selectedCaseId) markCaseViewed(selectedCaseId); }, [selectedCaseId]);
 
+  // updateCase passou a lançar quando a RLS recusa (linha afetada = 0). Estas
+  // duas eram arrows bare na JSX do drawer: sem catch a rejeição não chegava a
+  // ninguém e a edição parecia aceita. Reaproveitam o stageError/AppToast que
+  // esta tela já tem, em vez de abrir um slot de erro novo.
+  const handleLinkClientToCase = useCallback(async (clientId) => {
+    if (!selectedCaseId) return;
+    try {
+      await updateCase(selectedCaseId, { clientId });
+    } catch (e) {
+      setStageError(e?.message || "Não foi possível vincular o cliente.");
+    }
+  }, [selectedCaseId, updateCase]);
+
+  const handleUpdateCaseCustomFields = useCallback(async (merged) => {
+    if (!selectedCaseId) return;
+    try {
+      await updateCase(selectedCaseId, { customFields: merged });
+    } catch (e) {
+      setStageError(e?.message || "Não foi possível salvar o campo.");
+    }
+  }, [selectedCaseId, updateCase]);
+
   const handleAddActivity = useCallback(async (entry) => {
     const current = cases.find(c => c.id === selectedCaseId);
     if (!current) return;
@@ -1353,11 +1375,11 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           currentUser={user}
           clients={clients}
           onCreateClient={onCreateClient}
-          onLinkClient={(id) => updateCase(selectedCase.id, { clientId: id })}
+          onLinkClient={handleLinkClientToCase}
           onClose={() => setSelectedCaseId(null)}
           onMove={(stageKey, onBlocked) => attemptStageChange(selectedCase.id, stageKey, onBlocked)}
           onDelete={() => deleteCase(selectedCase.id)}
-          onUpdateCustomFields={(merged) => updateCase(selectedCase.id, { customFields: merged })}
+          onUpdateCustomFields={handleUpdateCaseCustomFields}
           onAddActivity={handleAddActivity}
           onUpdateActivity={handleUpdateActivity}
           onOpenLead={onOpenLead}

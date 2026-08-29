@@ -64,8 +64,10 @@ export function usePersonalTasksApiKeys(userId) {
       .eq("profile_id", userId)
       .select();
     if (err) throw err;
-    // Zero linha = RLS barrou. Crítico aqui: sem isso a tela mostrava a
-    // chave como revogada e ela continuava valendo.
+    // Zero linha = RLS barrou. Não havia estado otimista aqui (o fetchKeys
+    // abaixo recarrega a verdade), então a chave nunca chegou a APARECER como
+    // revogada — o problema era o silêncio: clicar em "Revogar" não dava erro
+    // nenhum e a chave seguia na lista, ativa, sem explicação.
     if (!data || data.length === 0) throw new Error("Não foi possível revogar a chave — ela continua ativa. Verifique suas permissões.");
     await fetchKeys();
   }, [userId, fetchKeys]);

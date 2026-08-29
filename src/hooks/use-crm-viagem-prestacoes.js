@@ -88,7 +88,18 @@ export function useCRMViagemPrestacoes({ userId, enabled = true } = {}) {
     if (linkErr || (vinculadas?.length ?? 0) !== despesaIds.length) {
       // Não deixa uma prestação vazia/parcial órfã no banco por causa de uma
       // falha no meio do caminho.
-      await supabase.from("crm_viagem_prestacoes").delete().eq("id", nova.id).catch(() => {});
+      //
+      // `try/catch` em vez de `.catch()` encadeado: o PostgrestBuilder do
+      // supabase-js implementa SÓ `then` — não tem `catch` nem `finally`.
+      // Encadear `.catch()` lançava TypeError, e como o builder é preguiçoso
+      // (só dispara no `then`), o DELETE nem chegava a sair: a prestação
+      // órfã ficava no banco e a pessoa via "…catch is not a function" no
+      // lugar da mensagem. Passou despercebido enquanto esta linha só era
+      // alcançada com erro de rede; virou caminho principal quando a
+      // checagem de linha afetada entrou logo acima.
+      try {
+        await supabase.from("crm_viagem_prestacoes").delete().eq("id", nova.id);
+      } catch { /* limpeza best-effort — o throw abaixo é o que importa */ }
       throw new Error(linkErr?.message
         || "Não foi possível vincular todas as despesas selecionadas — verifique suas permissões e tente de novo.");
     }

@@ -41,15 +41,17 @@ export function useClientProducts(clientId) {
     await fetchAll();
   }, [clientId, fetchAll]);
 
+  // Mesmo desenho do setActive de use-client-contacts.js: sem throw em
+  // linha-zero porque ClientProductsTab.jsx:282 chama sem await e sem catch.
+  // O `fetchAll()` abaixo recarrega a verdade do banco, então uma recusa da
+  // RLS faz o botão voltar sozinho em vez de exibir troca não gravada. O
+  // `.select()` fica pra o UPDATE devolver linha em vez de mascarar a recusa.
   const setActive = useCallback(async (productId, active) => {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("client_products").update({ active })
       .eq("client_id", clientId).eq("product_id", productId)
       .select();
     if (error) throw new Error(error.message);
-    // Zero linha = RLS barrou. O filtro é a chave composta (cliente, produto),
-    // ou seja identifica UMA linha — zero aqui não é "nada a fazer".
-    if (!data || data.length === 0) throw new Error("Não foi possível alterar o produto do cliente — verifique suas permissões.");
     await fetchAll();
   }, [clientId, fetchAll]);
 

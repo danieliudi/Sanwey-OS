@@ -96,11 +96,15 @@ export function useRHOnboarding({ userId } = {}) {
   const updateTarefaStatus = useCallback(async (tarefaId, status) => {
     const { data, error } = await supabase.from("rh_onboarding_tarefas").update({ status, updated_at: new Date().toISOString() }).eq("id", tarefaId).select();
     if (error) throw new Error(error.message);
-    // Zero linha = RLS barrou. A policy de update aqui tem guarda própria
-    // (o colaborador só mexe nas tarefas dele), então é um caso real.
-    if (!data || data.length === 0) throw new Error("Não foi possível atualizar a tarefa de onboarding — verifique suas permissões.");
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    // NÃO lança: src/components/views/RHOnboardingView.jsx:230,251 (checkbox e "Iniciar") chama sem await
+    // e sem catch, então um throw viraria rejeição sem dono, sem avisar
+    // ninguém. Refaz o fetch — a tela volta pro estado real do banco em
+    // vez de exibir uma mudança que não foi gravada (mesmo desenho do
+    // reorder em use-pipelines.js).
+    if (!data || data.length === 0) { await fetchAll(); return; }
     setTarefas(prev => prev.map(t => t.id === tarefaId ? { ...t, status } : t));
-  }, []);
+  }, [fetchAll]);
 
   const deleteTarefa = useCallback(async (tarefaId) => {
     const { error } = await supabase.from("rh_onboarding_tarefas").delete().eq("id", tarefaId);

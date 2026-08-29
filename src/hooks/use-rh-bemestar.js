@@ -82,10 +82,12 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
   const setSessaoStatus = useCallback(async (id, status) => {
     const { data, error } = await supabase.from("rh_bemestar_sessoes").update({ status }).eq("id", id).select();
     if (error) throw new Error(error.message);
-    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
-    if (!data || data.length === 0) throw new Error("Não foi possível alterar o status da sessão — verifique suas permissões.");
+    // Não lança em linha-zero: RHBemEstarView.jsx:242 é onClick bare
+    // (sem await/catch), então um throw viraria rejeição sem dono. O
+    // refetch devolve a tela pro estado real do banco.
+    if (!data || data.length === 0) { await fetchAll(); return; }
     setSessoes(prev => prev.map(s => s.id === id ? { ...s, status } : s));
-  }, []);
+  }, [fetchAll]);
 
   const deletarSessao = useCallback(async (id) => {
     const { error } = await supabase.from("rh_bemestar_sessoes").delete().eq("id", id);
@@ -96,10 +98,12 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
   const setFilaStatus = useCallback(async (id, status) => {
     const { data, error } = await supabase.from("rh_bemestar_fila").update({ status }).eq("id", id).select();
     if (error) throw new Error(error.message);
-    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
-    if (!data || data.length === 0) throw new Error("Não foi possível alterar o status do agendamento — verifique suas permissões.");
+    // Não lança em linha-zero: RHBemEstarView.jsx:147,148 é onClick bare
+    // (sem await/catch), então um throw viraria rejeição sem dono. O
+    // refetch devolve a tela pro estado real do banco.
+    if (!data || data.length === 0) { await fetchAll(); return; }
     setFila(prev => prev.map(f => f.id === id ? { ...f, status } : f));
-  }, []);
+  }, [fetchAll]);
 
   // Marca que o lembrete de proximidade (App.jsx) já foi enviado — evita
   // reenviar a cada re-render/poll do efeito.

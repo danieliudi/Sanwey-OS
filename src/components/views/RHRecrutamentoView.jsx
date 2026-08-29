@@ -1001,6 +1001,20 @@ function VagaDrawer({
   // Encaminhar candidatos da vaga pro gestor de área avaliar sem login
   // (item 8) — link seguro por e-mail, escopado a essa vaga específica.
   const { links: managerLinks, createLink: createManagerLink, revokeLink: revokeManagerLink } = useRHManagerLinks(vaga.id);
+  const [linkErro, setLinkErro] = useState(null);
+
+  // Revogar link do gestor é ação de segurança: se a RLS recusar, o link
+  // continua VÁLIDO e quem clicou precisa saber. O botão chamava revokeLink
+  // bare — com a checagem de linha afetada no hook isso viraria rejeição sem
+  // dono, e o link seguiria ativo sem ninguém perceber.
+  const handleRevokeManagerLink = async (linkId) => {
+    setLinkErro(null);
+    try {
+      await revokeManagerLink(linkId);
+    } catch (e) {
+      setLinkErro(e?.message || "Não foi possível revogar o link — ele continua válido.");
+    }
+  };
   const [managerModalOpen, setManagerModalOpen] = useState(false);
 
   const stageInfo = findStage(stages, vaga.stage);
@@ -1131,7 +1145,7 @@ function VagaDrawer({
                         </span>
                         {!revoked && !expired && (
                           <button
-                            onClick={() => revokeManagerLink(link.id)}
+                            onClick={() => handleRevokeManagerLink(link.id)}
                             style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--danger)", fontSize: 11, fontWeight: 600 }}
                           >
                             Revogar
@@ -1141,6 +1155,11 @@ function VagaDrawer({
                     </div>
                   );
                 })}
+                {linkErro && (
+                  <div style={{ fontSize: 11, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "6px 10px" }}>
+                    {linkErro}
+                  </div>
+                )}
               </div>
             )}
           </div>

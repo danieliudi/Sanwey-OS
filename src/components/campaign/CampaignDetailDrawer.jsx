@@ -464,14 +464,27 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
 function ChecklistPanel({ campaign, onUpdate, readOnly }) {
   const [items, setItems]       = useState(campaign.approvalChecklist || []);
   const [newLabel, setNewLabel] = useState("");
+  const [erro, setErro]         = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => { setItems(campaign.approvalChecklist || []); }, [campaign.id, campaign.approvalChecklist]);
 
-  const save = useCallback((updated) => {
+  // `save` aplica o estado otimista e PRECISA desfazê-lo se a gravação não
+  // for aceita. Antes chamava onUpdate sem await e sem catch: quando o
+  // UPDATE passou a checar linha afetada, uma recusa da RLS virava rejeição
+  // sem dono e o item ficava marcado na tela sem ter sido salvo — o
+  // "checklist que finge aceitar" que originou esta tarefa.
+  const save = useCallback(async (updated) => {
+    const anterior = items;
     setItems(updated);
-    onUpdate(campaign.id, updated);
-  }, [campaign.id, onUpdate]);
+    setErro(null);
+    try {
+      await onUpdate(campaign.id, updated);
+    } catch (e) {
+      setItems(anterior);
+      setErro(e?.message || "Não foi possível salvar o checklist.");
+    }
+  }, [campaign.id, onUpdate, items]);
 
   const toggle    = (idx) => save(items.map((item, i) => i === idx ? { ...item, done: !item.done } : item));
   const removeItem = (idx) => save(items.filter((_, i) => i !== idx));
@@ -489,6 +502,11 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
     <div className="space-y-3">
       {items.length > 0 && (
         <div className="text-xs" style={{ color: "var(--text-dim)" }}>{done}/{items.length} itens confirmados</div>
+      )}
+      {erro && (
+        <div className="text-xs px-2.5 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+          {erro}
+        </div>
       )}
       <div className="space-y-1.5">
         {items.map((item, idx) => (
@@ -1262,6 +1280,7 @@ export function CampaignDetailDrawer({
   const [sideTab, setSideTab]           = useState("form");
   const [draft, setDraft]               = useState({});
   const [attemptedMove, setAttemptedMove] = useState(false);
+  const [saveErro, setSaveErro] = useState(null);
   const saveTimeout  = useRef(null);
   const pendingPatch = useRef({});
 
@@ -1283,7 +1302,13 @@ export function CampaignDetailDrawer({
     if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
     const patch = pendingPatch.current;
     pendingPatch.current = {};
-    if (campaign?.id && Object.keys(patch).length > 0) onUpdate?.(campaign.id, patch);
+    // Roda no unmount / troca de campanha: não há mais tela pra mostrar erro,
+    // então a rejeição é engolida de propósito. O `Promise.resolve` existe
+    // porque desde que updateCampaign passou a checar linha afetada isto pode
+    // rejeitar, e uma rejeição sem dono aqui não avisaria ninguém mesmo.
+    if (campaign?.id && Object.keys(patch).length > 0) {
+      Promise.resolve(onUpdate?.(campaign.id, patch)).catch(() => {});
+    }
   }, [campaign?.id, onUpdate]);
 
   useEffect(() => () => { flushPending(); }, [campaign?.id, flushPending]);
@@ -1302,11 +1327,20 @@ export function CampaignDetailDrawer({
     setDraft(prev => ({ ...prev, [field]: value }));
     pendingPatch.current = { ...pendingPatch.current, [field]: value };
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(() => {
+    saveTimeout.current = setTimeout(async () => {
       const patch = pendingPatch.current;
       pendingPatch.current = {};
       saveTimeout.current = null;
-      if (Object.keys(patch).length > 0) onUpdate?.(campaign.id, patch);
+      if (Object.keys(patch).length === 0) return;
+      // Autosave: com a checagem de linha afetada no updateCampaign, uma
+      // recusa da RLS rejeita aqui. Sem este catch a rejeição não chegava a
+      // ninguém e o `draft` seguia mostrando o valor não gravado.
+      try {
+        setSaveErro(null);
+        await onUpdate?.(campaign.id, patch);
+      } catch (e) {
+        setSaveErro(e?.message || "Não foi possível salvar a alteração.");
+      }
     }, 600);
   }, [campaign?.id, onUpdate, isAgencia]);
 
@@ -1754,7 +1788,16 @@ export function CampaignDetailDrawer({
         />
         {canWrite && (
           <button
-            onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
+            onClick={async () => {
+              // Chamada tratada: onUpdate rejeita quando a RLS recusa, e sem
+              // catch aqui a estrela não mudava e nada era dito.
+              try {
+                setSaveErro(null);
+                await onUpdate?.(campaign.id, { starred: !campaign.starred });
+              } catch (e) {
+                setSaveErro(e?.message || "Não foi possível alterar o destaque.");
+              }
+            }}
             className="p-1 rounded-lg shrink-0"
             style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "var(--text-faint)" }}
             title={campaign.starred ? "Remover destaque" : "Destacar campanha"}
@@ -1763,6 +1806,11 @@ export function CampaignDetailDrawer({
           </button>
         )}
       </div>
+      {saveErro && (
+        <div className="text-xs mt-2 px-2.5 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+          {saveErro}
+        </div>
+      )}
     </div>
   );
 

@@ -28,7 +28,7 @@ export const CHANGELOG = [
     items: [
       {
         kind: "correcao",
-        text: "Uma edição que você não tem permissão pra fazer deixa de parecer salva. Antes, em várias telas, o registro aparecia como gravado e voltava sozinho ao recarregar — agora aparece um aviso na hora e o dado na tela volta pro que está no banco.",
+        text: "Uma edição que você não tem permissão pra fazer deixa de parecer salva. Antes, em várias telas, o registro aparecia como gravado e só voltava atrás ao recarregar a página. Agora a tela avisa na hora — e, nos casos em que não cabe um aviso (um botão de ligar/desligar, por exemplo), ela volta sozinha pro que está no banco em vez de mostrar a mudança que não foi aceita.",
       },
     ],
   },

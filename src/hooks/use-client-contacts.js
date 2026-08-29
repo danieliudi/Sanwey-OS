@@ -50,11 +50,15 @@ export function useClientContacts(clientId) {
     await fetchAll();
   }, [fetchAll]);
 
+  // Sem throw em linha-zero de propósito: ClientContactsTab.jsx:224 chama sem
+  // await e sem catch, então lançar viraria rejeição sem dono, sem avisar
+  // ninguém. O `fetchAll()` abaixo já cobre o caso — recarrega a verdade do
+  // banco, e o botão volta sozinho pro estado real em vez de exibir uma troca
+  // que não foi gravada. O `.select()` fica porque é ele que faz o UPDATE
+  // devolver linha (ou nenhuma) em vez de mascarar a recusa da RLS.
   const setActive = useCallback(async (id, active) => {
-    const { data, error } = await supabase.from("client_contacts").update({ active }).eq("id", id).select();
+    const { error } = await supabase.from("client_contacts").update({ active }).eq("id", id).select();
     if (error) throw new Error(error.message);
-    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
-    if (!data || data.length === 0) throw new Error("Não foi possível alterar o contato — verifique suas permissões.");
     await fetchAll();
   }, [fetchAll]);
 

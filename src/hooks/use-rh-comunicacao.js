@@ -76,9 +76,14 @@ export function useRHComunicacao({ userId } = {}) {
     const { data, error } = await supabase.from("rh_pesquisas").update({ status }).eq("id", id).select();
     if (error) throw new Error(error.message);
     // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
-    if (!data || data.length === 0) throw new Error("Não foi possível alterar o status da pesquisa — verifique suas permissões.");
+    // NÃO lança: src/components/views/RHComunicacaoView.jsx:498 chama sem await
+    // e sem catch, então um throw viraria rejeição sem dono, sem avisar
+    // ninguém. Refaz o fetch — a tela volta pro estado real do banco em
+    // vez de exibir uma mudança que não foi gravada (mesmo desenho do
+    // reorder em use-pipelines.js).
+    if (!data || data.length === 0) { await fetchAll(); return; }
     setPesquisas(prev => prev.map(p => p.id === id ? { ...p, status } : p));
-  }, []);
+  }, [fetchAll]);
 
   const deletarPesquisa = useCallback(async (id) => {
     const { error } = await supabase.from("rh_pesquisas").delete().eq("id", id);
