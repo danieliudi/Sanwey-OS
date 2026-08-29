@@ -24,8 +24,8 @@
 -- 20260801: qualquer código que volte a checar a coluna singular em vez do
 -- array reprova aqui na hora.
 --
--- Efeito colateral: cria e apaga usuários/perfis/etapas marcados com
--- '__audit.invalid' / '_audit_%'. Limpa tudo no final mesmo se alguma
+-- Efeito colateral: cria e apaga usuários/perfis/colaboradores/etapas marcados
+-- com '__audit.invalid' / '_audit_%'. Limpa tudo no final mesmo se alguma
 -- asserção falhar (bloco cleanup roda sempre). Ainda assim, rode preferencialmente
 -- num branch/staging do Supabase, nunca direto em produção.
 --
@@ -173,7 +173,18 @@ begin
   end loop;
 end $$;
 
--- cleanup incondicional, mesmo que algo acima tenha falhado antes de chegar aqui
+-- cleanup incondicional, mesmo que algo acima tenha falhado antes de chegar aqui.
+-- `rh_colaboradores` NAO e opcional aqui: inserir em auth.users dispara
+-- handle_new_user() -> insert em profiles -> sync_profile_to_colaborador() ->
+-- insert em rh_colaboradores. Esse ultimo tem FK profile_id ON DELETE SET NULL
+-- (nao CASCADE), entao apagar o profile deixa o colaborador orfao, e o indice
+-- unico rh_colaboradores_email_unique_idx faz a 2a execucao do teste falhar la
+-- no setup com "duplicate key ... admin@__audit.invalid" -- erro que nao tem
+-- nada a ver com RLS e so confunde quem for ler o CI. Encontrado ao rodar o
+-- script pela 2a vez no branch staging-rls (29/08/2026): 14 colaboradores
+-- fantasma de uma execucao anterior. Apagar por e-mail, nao por profile_id --
+-- o profile_id ja foi zerado pelo SET NULL.
+delete from public.rh_colaboradores where email like '%@__audit.invalid';
 delete from public.rh_pipeline_stages where stage_key like '_audit_%';
 delete from public.profiles where email like '%@__audit.invalid';
 delete from auth.users where email like '%@__audit.invalid';
