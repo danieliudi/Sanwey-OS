@@ -62,8 +62,30 @@ declare
     "comex_importacao":        ["comex"],
     "comex_exportacao":        ["comex"],
     "posvenda":                ["gerente"],
+    "marketing_purchase_requests": ["marketing","gerente_marketing"],
+    "bugs":                    [],
     "zz_nonexistent_canary":   []
   }'::jsonb;
+  -- Conferência de cobertura da matriz acima contra o banco real
+  -- (28/08/2026): `select distinct domain from rh_pipeline_stages` devolve 14
+  -- domínios; a matriz cobria 13. Os dois acrescentados agora:
+  --
+  --  * "bugs" — existe em rh_pipeline_stages (4 etapas) e NÃO está na
+  --    allowlist da rh_pipeline_stages_write, ou seja hoje só admin escreve.
+  --    Isso está certo, não é lacuna: BugsView.jsx:85 só LÊ as etapas
+  --    (`const { stages } = useRHPipelineStages("bugs")`), não expõe
+  --    addStage/reorderStages. O `[]` aqui trava esse desenho — se alguém
+  --    der escrita de etapa de bugs a um papel sem querer, reprova.
+  --
+  --  * "marketing_purchase_requests" — o inverso: ESTÁ na allowlist da
+  --    policy (marketing/gerente_marketing) mas tem ZERO linha em
+  --    rh_pipeline_stages, porque Compras usa o modelo hardcoded
+  --    PURCHASE_STAGES (exceção deliberada, CLAUDE.md regra 2). O domínio é
+  --    usado de verdade só pra histórico/anexos/checklist
+  --    (PurchaseRequestDetailDrawer.jsx:632,656,659). Fica na matriz pra
+  --    afirmar que a permissão é intencional: se um dia Compras migrar pro
+  --    modelo configurável, o teste já cobre; e se alguém remover a linha da
+  --    policy achando que é resto, reprova aqui.
 
   -- personas: label -> (role singular legado, roles array). As "_multi" são
   -- o canário de divergência role x roles descrito acima.
