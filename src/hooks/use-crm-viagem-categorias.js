@@ -45,8 +45,11 @@ export function useCRMViagemCategorias({ userId } = {}) {
   }, [userId]);
 
   const desativarCategoria = useCallback(async (id) => {
-    const { error } = await supabase.from("crm_viagem_categorias").update({ ativo: false }).eq("id", id);
+    const { data, error } = await supabase.from("crm_viagem_categorias").update({ ativo: false }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou. Sem isso a categoria sumia da lista na tela
+    // (o filter abaixo) e voltava no próximo refetch, sem explicação.
+    if (!data || data.length === 0) throw new Error("Não foi possível desativar a categoria — verifique suas permissões.");
     setCategorias(prev => prev.filter(c => c.id !== id));
   }, []);
 

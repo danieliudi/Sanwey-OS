@@ -141,8 +141,10 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     // reverter silenciosamente um número já alterado por outra pessoa nesse
     // meio tempo (achado da auditoria).
     if (!("requestNumber" in patch)) delete row.request_number;
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a solicitação — verifique suas permissões.");
     setRequests(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
   }, [canWrite, requests]);
 

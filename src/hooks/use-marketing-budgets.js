@@ -118,11 +118,19 @@ export function useMarketingBudgets({ userId, role, roles, enabled = true } = {}
     // grava (e sobrescreveria qualquer valor mandado pelo cliente).
     const row = budgetToRow(patch);
     setBudgets(prev => prev.map(b => b.id === id ? { ...b, ...patch } : b));
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) {
       setError(err.message || String(err));
       fetchAll();
       throw err;
+    }
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]) —
+    // mesmo caminho do erro, pra desfazer o otimista aplicado acima.
+    if (!data || data.length === 0) {
+      const vazio = new Error("Não foi possível salvar o orçamento — verifique suas permissões.");
+      setError(vazio.message);
+      fetchAll();
+      throw vazio;
     }
   }, [canWrite, fetchAll]);
 

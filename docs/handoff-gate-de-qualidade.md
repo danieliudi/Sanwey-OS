@@ -4,6 +4,45 @@
 **Branch:** `claude/sidebar-employees-sorting-pvtef1`.
 **Status:** o gate já está no ar (commit `12b99da`). O que falta é o **passivo** que ele expôs, mais dois itens de infraestrutura. Nada aqui depende de redescobrir contexto: os arquivos, os gabaritos e o critério de pronto estão todos abaixo.
 
+---
+
+## ⚠️ Estado em 28/08/2026 — as 4 tarefas foram executadas
+
+Este documento continua valendo como **registro do racional**, mas o trabalho
+já foi feito. Não recomece do zero; confira o que está abaixo antes.
+
+| Tarefa | Estado | Onde |
+|---|---|---|
+| 1 — `guarda-obsoleta` | **Feita.** 32 dos 33 sítios convertidos. | commit `4c61e1d` |
+| 3 — sub-agentes | **Feita.** Os 4 existem e estão versionados. | commit `a6bf5a0` |
+| 2 — `update-sem-select` | **Feita.** 61 dos 67 convertidos, 6 documentados como não-aplicáveis. | ver commit da Tarefa 2 |
+| 4 — RLS no CI | **Metade.** Matriz atualizada; o secret ainda depende do Daniel. | ver commit da Tarefa 4 |
+
+**Linha de base:** de 100 violações conhecidas para 7 (as 6 da Tarefa 2 mais o
+`FeatureSpotlight.jsx` da Tarefa 1) — todas com comentário no próprio arquivo
+explicando por que ficaram.
+
+**Correção de fato aplicada ao `CLAUDE.md` durante a Tarefa 3:** a regra 3
+mandava rodar `npx vite build` antes de reportar pronto, e este documento
+repete isso na Tarefa 3 ("roda `npx vite build` (que agora dispara o
+check)"). **Não dispara.** O gate está no `prebuild` do `package.json`, que é
+hook de ciclo de vida do npm: `npx vite build` chama o Vite direto e passa por
+cima em silêncio. Verificado em 28/08/2026 rodando os dois lado a lado. O
+`CLAUDE.md` e os agentes agora dizem `npm run build`; este documento fica com
+o texto original de propósito, como registro de onde o engano estava.
+
+**O que sobrou de fato pendente:**
+
+1. **Tarefa 4, passo 1 — configurar o secret `RLS_TEST_DATABASE_URL`.**
+   Depende do Daniel. Apontar pra **branch ou staging** do Supabase, nunca
+   produção. Enquanto não existir, o job de CI avisa e passa (inerte).
+2. **A regra `guarda-obsoleta` tem uma classe de falso positivo** conhecida
+   (ref resetado no topo do efeito em vez de desligado no cleanup — é o caso
+   do `FeatureSpotlight.jsx`). Dá pra estreitar exigindo que o `= false`
+   esteja dentro da função de cleanup retornada. Não foi feito: alterar o
+   checker é entrega diferente da de baixar a catraca, e o doc já prescrevia
+   comentar e manter na base.
+
 Leia o `CLAUDE.md` da raiz antes de começar — ele governa este repositório e tem precedência sobre este documento em qualquer conflito.
 
 ---

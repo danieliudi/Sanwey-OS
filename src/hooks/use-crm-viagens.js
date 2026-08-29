@@ -46,8 +46,10 @@ export function useCRMViagens({ userId } = {}) {
   }, [userId]);
 
   const updateRegistro = useCallback(async (id, patch) => {
-    const { error } = await supabase.from("crm_viagem_registros").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
+    const { data, error } = await supabase.from("crm_viagem_registros").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a visita — verifique suas permissões.");
     setRegistros(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
   }, []);
 

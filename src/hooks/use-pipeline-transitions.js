@@ -171,10 +171,14 @@ export function usePipelineTransitions() {
 
     if (!isSupabaseConfigured) return;
     if (existing) {
-      const { error } = await supabase.from("pipeline_stage_transitions")
+      // `.select()`: os 4 `.eq` identificam UMA linha, então zero aqui é RLS
+      // barrando (volta error:null/data:[]), não "nada a fazer". Segue o
+      // mesmo caminho do erro — refetch — porque o chamador não trata exceção.
+      const { data, error } = await supabase.from("pipeline_stage_transitions")
         .update({ condition_groups: conditionGroups })
-        .eq("domain", DOMAIN).eq("company_id", companyId).eq("from_stage_key", fromStageId).eq("to_stage_key", toStageId);
-      if (error) await fetchAll();
+        .eq("domain", DOMAIN).eq("company_id", companyId).eq("from_stage_key", fromStageId).eq("to_stage_key", toStageId)
+        .select();
+      if (error || !data || data.length === 0) await fetchAll();
     } else {
       // Linha ainda não existia (destino nunca tinha sido tocado) — "sem
       // linha" já significava permitido, então grava allowed:true explícito

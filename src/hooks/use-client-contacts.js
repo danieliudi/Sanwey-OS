@@ -38,19 +38,23 @@ export function useClientContacts(clientId) {
   }, [clientId, fetchAll]);
 
   const update = useCallback(async (id, contact) => {
-    const { error } = await supabase.from("client_contacts").update({
+    const { data, error } = await supabase.from("client_contacts").update({
       name: contact.name,
       email: contact.email || null,
       phone: contact.phone || null,
       job_title: contact.jobTitle || null,
-    }).eq("id", id);
+    }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o contato — verifique suas permissões.");
     await fetchAll();
   }, [fetchAll]);
 
   const setActive = useCallback(async (id, active) => {
-    const { error } = await supabase.from("client_contacts").update({ active }).eq("id", id);
+    const { data, error } = await supabase.from("client_contacts").update({ active }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível alterar o contato — verifique suas permissões.");
     await fetchAll();
   }, [fetchAll]);
 

@@ -137,9 +137,11 @@ export function useStageFields() {
     const row = fieldToRow({ ...patch });
     // Remove chaves undefined para não sobrescrever com NULL.
     Object.keys(row).forEach(k => row[k] === undefined && delete row[k]);
-    const { error: err } = await supabase
-      .from("pipeline_stage_fields").update(row).eq("id", id);
+    const { data, error: err } = await supabase
+      .from("pipeline_stage_fields").update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o campo da etapa — verifique suas permissões.");
   }, []);
 
   const deleteField = useCallback(async (id) => {
@@ -149,13 +151,18 @@ export function useStageFields() {
     if (err) throw err;
   }, []);
 
+  // Não lança de propósito — mesmo raciocínio do reorderStages em
+  // use-rh-pipeline-stages.js (chamador é drag-and-drop, sem await/catch):
+  // detecta a falha, inclusive a silenciosa da RLS via `.select()`, e refaz
+  // o fetch pra não deixar ordem fantasma na tela.
   const reorderFields = useCallback(async (companyId, stageId, orderedIds) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado");
     // Atualiza order_idx em sequência.
-    await Promise.all(orderedIds.map((id, idx) =>
-      supabase.from("pipeline_stage_fields").update({ order_idx: idx }).eq("id", id)
+    const results = await Promise.all(orderedIds.map((id, idx) =>
+      supabase.from("pipeline_stage_fields").update({ order_idx: idx }).eq("id", id).select()
     ));
-  }, []);
+    if (results.some(r => r?.error || !r?.data || r.data.length === 0)) await fetchAll();
+  }, [fetchAll]);
 
   // Memoizado: antes retornava um objeto novo a cada render, e componentes
   // que colocavam esse objeto em deps de useEffect (ex.: o scan de nudges em

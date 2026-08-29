@@ -73,8 +73,10 @@ export function useRHComunicacao({ userId } = {}) {
   }, []);
 
   const setPesquisaStatus = useCallback(async (id, status) => {
-    const { error } = await supabase.from("rh_pesquisas").update({ status }).eq("id", id);
+    const { data, error } = await supabase.from("rh_pesquisas").update({ status }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível alterar o status da pesquisa — verifique suas permissões.");
     setPesquisas(prev => prev.map(p => p.id === id ? { ...p, status } : p));
   }, []);
 

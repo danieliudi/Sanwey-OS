@@ -54,8 +54,10 @@ export function useCRMDespesas({ userId, enabled = true } = {}) {
   }, [userId]);
 
   const updateDespesa = useCallback(async (id, patch) => {
-    const { error } = await supabase.from("crm_viagem_despesas").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
+    const { data, error } = await supabase.from("crm_viagem_despesas").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a despesa — verifique suas permissões.");
     setDespesas(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
   }, []);
 

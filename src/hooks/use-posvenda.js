@@ -108,8 +108,10 @@ export function usePosvenda({ userId, role, roles } = {}) {
     const current = cases.find(c => c.id === id);
     if (!current) return;
     const row = caseToRow({ ...current, ...patch });
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o caso de pós-venda — verifique suas permissões.");
     setCases(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   }, [canWrite, cases]);
 
@@ -123,11 +125,15 @@ export function usePosvenda({ userId, role, roles } = {}) {
   const changeStage = useCallback(async (id, stage) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const now = new Date().toISOString();
-    const { error: err } = await supabase
+    const { data, error: err } = await supabase
       .from(TABLE)
       .update({ stage, stage_changed_at: now })
-      .eq("id", id);
+      .eq("id", id)
+      .select();
     if (err) throw err;
+    // Zero linha = RLS barrou. Sem isso o card ficava na etapa nova só na
+    // tela e voltava sozinho no próximo refetch, sem explicação.
+    if (!data || data.length === 0) throw new Error("Não foi possível mover o caso de etapa — verifique suas permissões.");
     setCases(prev => prev.map(c => c.id === id ? { ...c, stage, stageChangedAt: now } : c));
   }, [canWrite]);
 

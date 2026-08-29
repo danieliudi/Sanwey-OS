@@ -192,11 +192,17 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Sessão expirada.");
       const newToken = crypto.randomUUID();
-      const { error: err } = await supabase
+      const { data, error: err } = await supabase
         .from("profile_secrets")
         .update({ calendar_token: newToken })
-        .eq("id", user.id);
+        .eq("id", user.id)
+        .select();
       if (err) throw err;
+      // Zero linha = a RLS barrou (o UPDATE volta error:null/data:[]). Sem
+      // isso o token novo aparecia na tela como se tivesse sido gravado.
+      if (!data || data.length === 0) {
+        throw new Error("Não foi possível gerar um novo link — o token não foi gravado. Recarregue a página e tente de novo.");
+      }
       setLocalToken(newToken);
       setConfirmRegenOpen(false);
     } catch (err) {

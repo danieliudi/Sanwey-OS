@@ -65,11 +65,13 @@ export function useDocumentLibrary() {
   }, []);
 
   const update = useCallback(async (id, patch) => {
-    const { error: err } = await supabase.from(TABLE).update({
+    const { data, error: err } = await supabase.from(TABLE).update({
       title: patch.title, category: patch.category, tags: patch.tags,
       company_ids: patch.companyIds, expires_at: patch.expiresAt || null,
-    }).eq("id", id);
+    }).eq("id", id).select();
     if (err) throw new Error(err.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o documento — verifique suas permissões.");
     await fetchAll();
   }, [fetchAll]);
 
@@ -82,10 +84,16 @@ export function useDocumentLibrary() {
       .from(BUCKET)
       .upload(doc.file_path, file, { contentType: file.type, upsert: true });
     if (storageErr) throw new Error(storageErr.message);
-    const { error: dbErr } = await supabase.from(TABLE).update({
+    const { data, error: dbErr } = await supabase.from(TABLE).update({
       file_name: file.name, file_size: file.size, mime_type: file.type || null,
-    }).eq("id", doc.id);
+    }).eq("id", doc.id).select();
     if (dbErr) throw new Error(dbErr.message);
+    // Zero linha = RLS barrou. Grave: o arquivo novo JÁ subiu por cima do
+    // antigo no Storage (upsert), então sem avisar a lista seguiria mostrando
+    // nome/tamanho do arquivo velho pra um conteúdo que já mudou.
+    if (!data || data.length === 0) {
+      throw new Error("O arquivo foi enviado, mas o documento não foi atualizado — verifique suas permissões.");
+    }
   }, []);
 
   const remove = useCallback(async (doc) => {

@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.83.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Uma edição que você não tem permissão pra fazer deixa de parecer salva. Antes, em várias telas, o registro aparecia como gravado e voltava sozinho ao recarregar — agora aparece um aviso na hora e o dado na tela volta pro que está no banco.",
+      },
+    ],
+  },
+  {
     version: "4.82.0",
     items: [
       {

@@ -97,8 +97,12 @@ export function usePipelines() {
     if (!current?.dbId) return;
     const row = stageToRow(companyId, { ...current, ...patch }, undefined);
     delete row.order_idx; // não mexe em ordem aqui
-    const { error } = await supabase.from("rh_pipeline_stages").update(row).eq("id", current.dbId);
-    if (error) await fetchAll(); // reverte o otimista pro estado real do banco
+    // `.select()`: um UPDATE barrado pela RLS volta error:null/data:[], então
+    // sem contar linha o otimista acima ficava de pé como se tivesse gravado.
+    // Não lança (o chamador deste hook não trata exceção) — segue o mesmo
+    // caminho do erro, que é refetch pra voltar ao estado real do banco.
+    const { data, error } = await supabase.from("rh_pipeline_stages").update(row).eq("id", current.dbId).select();
+    if (error || !data || data.length === 0) await fetchAll();
   }, [pipelines, fetchAll]);
 
   // Reordena. orderedIds deve conter todos os IDs da empresa (não remove,
@@ -116,9 +120,11 @@ export function usePipelines() {
     const results = await Promise.all(orderedIds.map((stageId, idx) => {
       const s = list.find(x => x.id === stageId);
       if (!s?.dbId) return null;
-      return supabase.from("rh_pipeline_stages").update({ order_idx: idx }).eq("id", s.dbId);
+      return supabase.from("rh_pipeline_stages").update({ order_idx: idx }).eq("id", s.dbId).select();
     }));
-    if (results.some(r => r?.error)) await fetchAll(); // reverte o otimista pro estado real do banco
+    // Zero linha conta como falha junto com o erro: RLS barrando o reorder
+    // volta error:null/data:[], e sem isso a ordem nova ficava só na tela.
+    if (results.some(r => r?.error || (r && (!r.data || r.data.length === 0)))) await fetchAll();
   }, [pipelines, fetchAll]);
 
   const resetCompanyPipeline = useCallback(async (companyId) => {
@@ -167,10 +173,13 @@ export function usePipelines() {
       const s = stages[i];
       const row = stageToRow(companyId, s, i);
       const existing = existingByKey.get(s.id);
-      const { error } = existing
-        ? await supabase.from("rh_pipeline_stages").update(row).eq("id", existing.id)
-        : await supabase.from("rh_pipeline_stages").insert(row);
-      if (error) hadError = true;
+      // No ramo de UPDATE, `.select()` + zero linha entra no mesmo hadError:
+      // a RLS barrando volta error:null/data:[], e sem isso o editor salvava
+      // "com sucesso" um pipeline que o banco não aceitou.
+      const { data: escrito, error } = existing
+        ? await supabase.from("rh_pipeline_stages").update(row).eq("id", existing.id).select()
+        : await supabase.from("rh_pipeline_stages").insert(row).select();
+      if (error || !escrito || escrito.length === 0) hadError = true;
     }
 
     // replacePipeline não é atômico (várias escritas sequenciais) — se

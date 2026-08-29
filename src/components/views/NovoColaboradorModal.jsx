@@ -242,8 +242,14 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
         const path = `${targetId}/documento.${ext}`;
         const { error: uploadErr } = await supabase.storage.from(DOC_BUCKET).upload(path, file, { contentType: file.type, upsert: true });
         if (uploadErr) throw new Error(`Funcionário salvo, mas o documento não foi enviado (${uploadErr.message}). Tente anexar novamente editando o cadastro.`);
-        const { error: updateErr } = await supabase.from("rh_colaboradores").update({ document_type: documentType, document_path: path }).eq("id", targetId);
+        const { data: linkData, error: updateErr } = await supabase.from("rh_colaboradores").update({ document_type: documentType, document_path: path }).eq("id", targetId).select();
         if (updateErr) throw new Error(`Funcionário salvo e documento enviado, mas o cadastro não foi vinculado ao arquivo (${updateErr.message}).`);
+        // Zero linha = RLS barrou o UPDATE (volta error:null/data:[]) — sem
+        // esta checagem o arquivo ficava no Storage órfão, sem vínculo, e a
+        // tela fechava como se tivesse dado tudo certo.
+        if (!linkData || linkData.length === 0) {
+          throw new Error("Funcionário salvo e documento enviado, mas o cadastro não foi vinculado ao arquivo — verifique suas permissões e anexe de novo editando o cadastro.");
+        }
       }
       onClose();
     } catch (err) {

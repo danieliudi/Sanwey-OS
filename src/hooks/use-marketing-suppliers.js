@@ -92,8 +92,10 @@ export function useMarketingSuppliers({ userId, role, roles, enabled = true } = 
     if (!current) return;
     const merged = { ...current, ...patch };
     const row = supplierToRow(merged, { updated_at: new Date().toISOString() });
-    const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o fornecedor — verifique suas permissões.");
     setSuppliers(prev => prev.map(s => s.id === id ? merged : s));
   }, [canWrite, suppliers]);
 

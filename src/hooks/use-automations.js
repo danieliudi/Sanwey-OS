@@ -143,8 +143,13 @@ export function useAutomations({ userId } = {}) {
     if (!isSupabaseConfigured) return;
     const current = automations.find(a => a.id === id);
     const row = ruleToRow({ ...current, ...patch }, { updated_at: new Date().toISOString() });
-    const { error } = await supabase.from("automations").update(row).eq("id", id);
+    const { data, error } = await supabase.from("automations").update(row).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    // Não precisa de refetch: o estado local só é atualizado depois daqui.
+    if (!data || data.length === 0) {
+      throw new Error("Não foi possível salvar a automação — verifique suas permissões.");
+    }
     setAutomations(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
   }, [automations]);
 

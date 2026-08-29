@@ -78,11 +78,15 @@ export function useRHManagerLinks(vagaId) {
   }, [vagaId]);
 
   const revokeLink = useCallback(async (linkId) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("rh_vaga_manager_links")
       .update({ revoked_at: new Date().toISOString() })
-      .eq("id", linkId);
+      .eq("id", linkId)
+      .select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou. Crítico aqui: sem isso a tela mostrava o link
+    // do gestor como revogado e ele continuava valendo.
+    if (!data || data.length === 0) throw new Error("Não foi possível revogar o link — ele continua válido. Verifique suas permissões.");
     setLinks(prev => prev.map(l => l.id === linkId ? { ...l, revoked_at: new Date().toISOString() } : l));
   }, []);
 

@@ -59,8 +59,15 @@ function DetailsTab({ task, onFieldChange, saveStatus, tagsHook, depOptions, dep
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
         <SectionLabel>Detalhes da tarefa</SectionLabel>
         {saveStatus && (
-          <span style={{ fontSize: 10, marginLeft: "auto", color: saveStatus === "saved" ? "var(--success)" : "var(--text-dim)" }}>
-            {saveStatus === "saving" ? "Salvando…" : "✓ Salvo"}
+          // saveStatus é "saving" | "saved" | { erro }. O objeto de erro veio
+          // com o autosave passando a checar linha afetada: um UPDATE recusado
+          // pela RLS antes ficava mostrando "✓ Salvo" sem ter salvo nada.
+          <span style={{
+            fontSize: 10,
+            marginLeft: "auto",
+            color: saveStatus?.erro ? "var(--danger)" : saveStatus === "saved" ? "var(--success)" : "var(--text-dim)",
+          }}>
+            {saveStatus?.erro ? saveStatus.erro : saveStatus === "saving" ? "Salvando…" : "✓ Salvo"}
           </span>
         )}
       </div>
@@ -389,16 +396,23 @@ function AttachmentsTab({ taskId, userId }) {
 function NotesTab({ task, onUpdate }) {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState(null);
   const notes = useMemo(() => [...(task.notes || [])].reverse(), [task.notes]);
 
   const handleAdd = async () => {
     const body = draft.trim();
     if (!body) return;
     setSaving(true);
+    setErro(null);
     try {
       const entry = { id: crypto.randomUUID(), body, createdAt: new Date().toISOString() };
       await onUpdate(task.id, { notes: [...(task.notes || []), entry] });
       setDraft("");
+    } catch (e) {
+      // Antes era `try/finally` sem `catch`: a rejeição não chegava a lugar
+      // nenhum. Com o update passando a checar linha afetada, uma recusa da
+      // RLS vira mensagem em vez de silêncio (o texto digitado fica no campo).
+      setErro(e?.message || "Não foi possível salvar a nota.");
     } finally {
       setSaving(false);
     }
@@ -423,6 +437,12 @@ function NotesTab({ task, onUpdate }) {
           <Send size={14} />
         </button>
       </div>
+
+      {erro && (
+        <div className="text-xs px-2.5 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+          {erro}
+        </div>
+      )}
 
       {notes.length === 0 ? (
         <div className="text-xs text-center py-4 italic" style={{ color: "var(--text-dim)" }}>Nenhuma nota registrada ainda.</div>
@@ -496,10 +516,18 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       const patch = draftRef.current;
-      draftRef.current = {};
-      await onUpdate(task.id, patch);
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus(null), 2000);
+      // Só limpa o rascunho depois de gravar: se o UPDATE for recusado (RLS),
+      // o que a pessoa digitou continua na tela em vez de sumir sem aviso.
+      try {
+        await onUpdate(task.id, patch);
+        draftRef.current = {};
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(null), 2000);
+      } catch (e) {
+        // Sem este catch o autosave ficava preso em "Salvando…" pra sempre e
+        // a rejeição não chegava a ninguém (callback async de setTimeout).
+        setSaveStatus({ erro: e?.message || "Não foi possível salvar." });
+      }
     }, 500);
   }, [task.id, onUpdate]);
 

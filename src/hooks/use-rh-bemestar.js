@@ -71,14 +71,19 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
       horario_fim: data.horarioFim || null,
       slot_minutos: data.slotMinutos || 30,
     };
-    const { error } = await supabase.from("rh_bemestar_sessoes").update(patch).eq("id", id);
+    // `salvo` em vez de `data`: o parâmetro desta função já se chama `data`.
+    const { data: salvo, error } = await supabase.from("rh_bemestar_sessoes").update(patch).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!salvo || salvo.length === 0) throw new Error("Não foi possível salvar a sessão — verifique suas permissões.");
     setSessoes(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   }, []);
 
   const setSessaoStatus = useCallback(async (id, status) => {
-    const { error } = await supabase.from("rh_bemestar_sessoes").update({ status }).eq("id", id);
+    const { data, error } = await supabase.from("rh_bemestar_sessoes").update({ status }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível alterar o status da sessão — verifique suas permissões.");
     setSessoes(prev => prev.map(s => s.id === id ? { ...s, status } : s));
   }, []);
 
@@ -89,13 +94,22 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
   }, []);
 
   const setFilaStatus = useCallback(async (id, status) => {
-    const { error } = await supabase.from("rh_bemestar_fila").update({ status }).eq("id", id);
+    const { data, error } = await supabase.from("rh_bemestar_fila").update({ status }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível alterar o status do agendamento — verifique suas permissões.");
     setFila(prev => prev.map(f => f.id === id ? { ...f, status } : f));
   }, []);
 
   // Marca que o lembrete de proximidade (App.jsx) já foi enviado — evita
   // reenviar a cada re-render/poll do efeito.
+  //
+  // Fica DE PROPÓSITO sem `.select()` + checagem de vazio (o padrão de
+  // use-clients.js pra escrita do usuário): isto é fire-and-forget de
+  // telemetria, e o único chamador (App.jsx:770) já engole com
+  // `.catch(() => {})` porque roda dentro de um efeito de lembrete. Uma
+  // checagem a mais aqui não chegaria em ninguém; no pior caso o lembrete é
+  // reenviado, que é bem menos grave que um erro na tela do RH.
   const marcarLembreteEnviado = useCallback(async (id) => {
     const { error } = await supabase.from("rh_bemestar_fila").update({ lembrete_enviado: true }).eq("id", id);
     if (error) throw new Error(error.message);

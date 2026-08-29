@@ -221,23 +221,39 @@ export function useChat({ userId } = {}) {
     if (!enabled || !channelId) return;
     const now = new Date().toISOString();
     setChannels(prev => prev.map(c => c.id === channelId ? { ...c, archivedAt: now } : c));
-    const { error: err } = await supabase
+    // `.select()` + checagem de vazio: um UPDATE barrado pela RLS volta
+    // error:null/data:[], e o otimista acima já arquivou na tela. Lança
+    // porque ChatView.handleToggleArchive trata (try/catch -> setSendError)
+    // E porque, no sucesso, ele ainda faz setSelectedId(null): sem o throw a
+    // conversa sumia da tela como se tivesse sido arquivada.
+    const { data, error: err } = await supabase
       .from("chat_channel_members")
       .update({ archived_at: now })
       .eq("channel_id", channelId)
-      .eq("user_id", userId);
-    if (err) { setError(err); fetchChannels(); }
+      .eq("user_id", userId)
+      .select();
+    if (err) { setError(err); fetchChannels(); throw err; }
+    if (!data || data.length === 0) {
+      fetchChannels();
+      throw new Error("Não foi possível arquivar a conversa — verifique suas permissões.");
+    }
   }, [enabled, userId, fetchChannels]);
 
   const unarchiveChannel = useCallback(async (channelId) => {
     if (!enabled || !channelId) return;
     setChannels(prev => prev.map(c => c.id === channelId ? { ...c, archivedAt: null } : c));
-    const { error: err } = await supabase
+    // Mesmo raciocínio de archiveChannel acima (chamador trata via try/catch).
+    const { data, error: err } = await supabase
       .from("chat_channel_members")
       .update({ archived_at: null })
       .eq("channel_id", channelId)
-      .eq("user_id", userId);
-    if (err) { setError(err); fetchChannels(); }
+      .eq("user_id", userId)
+      .select();
+    if (err) { setError(err); fetchChannels(); throw err; }
+    if (!data || data.length === 0) {
+      fetchChannels();
+      throw new Error("Não foi possível desarquivar a conversa — verifique suas permissões.");
+    }
   }, [enabled, userId, fetchChannels]);
 
   // Gerenciamento de grupo/canal (nome, tipo, membros) — mockup aprovado

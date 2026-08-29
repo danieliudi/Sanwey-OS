@@ -57,12 +57,16 @@ export function usePersonalTasksApiKeys(userId) {
   }, [userId, fetchKeys]);
 
   const revokeKey = useCallback(async (id) => {
-    const { error: err } = await supabase
+    const { data, error: err } = await supabase
       .from("personal_tasks_api_keys")
       .update({ revoked_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("profile_id", userId);
+      .eq("profile_id", userId)
+      .select();
     if (err) throw err;
+    // Zero linha = RLS barrou. Crítico aqui: sem isso a tela mostrava a
+    // chave como revogada e ela continuava valendo.
+    if (!data || data.length === 0) throw new Error("Não foi possível revogar a chave — ela continua ativa. Verifique suas permissões.");
     await fetchKeys();
   }, [userId, fetchKeys]);
 

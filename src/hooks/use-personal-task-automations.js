@@ -95,8 +95,10 @@ export function usePersonalTaskAutomations(userId) {
   const updateAutomation = useCallback(async (id, patch) => {
     if (!isSupabaseConfigured) return;
     const current = automations.find(a => a.id === id);
-    const { error } = await supabase.from(TABLE).update(ruleToRow({ ...current, ...patch }, { updated_at: new Date().toISOString() })).eq("id", id);
+    const { data, error } = await supabase.from(TABLE).update(ruleToRow({ ...current, ...patch }, { updated_at: new Date().toISOString() })).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a automação — verifique suas permissões.");
     setAutomations(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
   }, [automations]);
 

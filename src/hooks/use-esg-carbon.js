@@ -104,11 +104,19 @@ export function useEsgEmissionFactors() {
       throw new Error(`A vigência a partir de ${factor.validFrom} é anterior à vigência atual (${current.validFrom}) -- um fator não pode retroagir antes da vigência aberta.`);
     }
     if (current) {
-      const { error: closeErr } = await supabase
+      const { data: fechado, error: closeErr } = await supabase
         .from(FACTORS_TABLE)
         .update({ valid_to: factor.validFrom })
-        .eq("id", current.id);
+        .eq("id", current.id)
+        .select();
       if (closeErr) throw closeErr;
+      // Zero linha = RLS barrou. Aqui isso importa mais que o normal: se a
+      // vigência anterior NÃO for encerrada e o fator novo for inserido logo
+      // abaixo, ficam dois fatores abertos ao mesmo tempo pro mesmo escopo —
+      // e o cálculo de emissão passa a depender de qual linha vier primeiro.
+      if (!fechado || fechado.length === 0) {
+        throw new Error("Não foi possível encerrar a vigência do fator anterior — verifique suas permissões. Nenhum fator novo foi criado.");
+      }
     }
     const { data, error: err } = await supabase
       .from(FACTORS_TABLE)

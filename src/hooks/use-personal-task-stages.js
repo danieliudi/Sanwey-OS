@@ -64,8 +64,10 @@ export function usePersonalTaskStages(userId) {
     if ("color" in patch) row.color = patch.color;
     if ("orderIdx" in patch) row.order_idx = patch.orderIdx;
     if ("terminal" in patch) row.terminal = !!patch.terminal;
-    const { error } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (error) throw error;
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar a etapa — verifique suas permissões.");
   }, []);
 
   const deleteStage = useCallback(async (id) => {
@@ -74,10 +76,19 @@ export function usePersonalTaskStages(userId) {
     if (error) throw error;
   }, []);
 
+  // Reordenar NÃO lança de propósito: quem chama é handler de drag-and-drop
+  // (ex.: PosVendaView/EntregasView chamam sem await e sem try/catch), então
+  // um throw aqui viraria unhandled rejection sem mostrar nada pra ninguém.
+  // Em vez disso segue o mesmo padrão que use-pipelines.js já usa no reorder:
+  // detecta a falha (inclusive a silenciosa da RLS, via `.select()`) e faz
+  // refetch, pra ordem na tela voltar pra verdade do banco em vez de ficar
+  // uma ordem fantasma que só some no próximo carregamento.
   const reorderStages = useCallback(async (orderedIds) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado");
-    await Promise.all(orderedIds.map((id, idx) => supabase.from(TABLE).update({ order_idx: idx }).eq("id", id)));
-  }, []);
+    const results = await Promise.all(orderedIds.map((id, idx) =>
+      supabase.from(TABLE).update({ order_idx: idx }).eq("id", id).select()));
+    if (results.some(r => r?.error || !r?.data || r.data.length === 0)) await fetchAll();
+  }, [fetchAll]);
 
   const sortedStages = useMemo(() => [...stages].sort((a, b) => a.orderIdx - b.orderIdx), [stages]);
 

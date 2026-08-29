@@ -54,8 +54,10 @@ export function useEmailTemplates(userId) {
     if (patch.bodyHtml !== undefined) row.body_html = patch.bodyHtml;
     if (patch.scope !== undefined) row.scope = patch.scope;
     row.updated_at = new Date().toISOString();
-    const { error } = await supabase.from(TABLE).update(row).eq("id", id);
+    const { data, error } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o modelo de e-mail — verifique suas permissões.");
     setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
   }, []);
 

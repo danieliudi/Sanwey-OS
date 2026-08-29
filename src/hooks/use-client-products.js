@@ -42,10 +42,14 @@ export function useClientProducts(clientId) {
   }, [clientId, fetchAll]);
 
   const setActive = useCallback(async (productId, active) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("client_products").update({ active })
-      .eq("client_id", clientId).eq("product_id", productId);
+      .eq("client_id", clientId).eq("product_id", productId)
+      .select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou. O filtro é a chave composta (cliente, produto),
+    // ou seja identifica UMA linha — zero aqui não é "nada a fazer".
+    if (!data || data.length === 0) throw new Error("Não foi possível alterar o produto do cliente — verifique suas permissões.");
     await fetchAll();
   }, [clientId, fetchAll]);
 

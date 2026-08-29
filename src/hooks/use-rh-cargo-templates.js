@@ -46,8 +46,10 @@ export function useRHCargoTemplates({ userId } = {}) {
   }, [userId]);
 
   const updateCargo = useCallback(async (id, patch) => {
-    const { error } = await supabase.from("rh_cargo_templates").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
+    const { data, error } = await supabase.from("rh_cargo_templates").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o cargo — verifique suas permissões.");
     setCargos(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   }, []);
 

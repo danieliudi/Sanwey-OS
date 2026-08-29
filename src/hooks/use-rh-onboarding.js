@@ -94,8 +94,11 @@ export function useRHOnboarding({ userId } = {}) {
   }, [userId]);
 
   const updateTarefaStatus = useCallback(async (tarefaId, status) => {
-    const { error } = await supabase.from("rh_onboarding_tarefas").update({ status, updated_at: new Date().toISOString() }).eq("id", tarefaId);
+    const { data, error } = await supabase.from("rh_onboarding_tarefas").update({ status, updated_at: new Date().toISOString() }).eq("id", tarefaId).select();
     if (error) throw new Error(error.message);
+    // Zero linha = RLS barrou. A policy de update aqui tem guarda própria
+    // (o colaborador só mexe nas tarefas dele), então é um caso real.
+    if (!data || data.length === 0) throw new Error("Não foi possível atualizar a tarefa de onboarding — verifique suas permissões.");
     setTarefas(prev => prev.map(t => t.id === tarefaId ? { ...t, status } : t));
   }, []);
 
