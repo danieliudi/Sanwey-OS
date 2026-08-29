@@ -77,9 +77,22 @@ jobs:
       # RLS_TEST_DATABASE_URL pra um BRANCH ou STAGING do Supabase, NUNCA
       # pra produção (o próprio cabeçalho do .sql avisa isso).
       #
-      # Sem o secret configurado, o passo avisa e passa — o teste fica
-      # ligado e inerte até alguém apontar um banco, em vez de quebrar o CI
-      # de todo mundo hoje.
+      # DECISAO DO DANIEL, 28/08/2026: por ora este job NAO tem banco.
+      # O branch `staging-rls` chegou a existir e foi apagado, junto com o
+      # secret — a US$ 0,01344/hora nao compensava manter um banco de pe pra
+      # pegar um bug que aparece quando nasce um board novo, o que acontece
+      # talvez uma vez por mes. Enquanto isso o teste roda A MAO: crie um
+      # branch no Supabase na hora de mexer em etapa/policy, cole o conteudo
+      # de supabase/tests/rls_stage_matrix.sql no SQL editor DESSE branch,
+      # rode, e apague o branch. Custa centavos por rodada.
+      #
+      # O passo abaixo fica de pe e inerte de proposito: sem o secret ele
+      # avisa e passa, entao religar a automacao um dia e so recriar o branch
+      # e regravar RLS_TEST_DATABASE_URL — nao precisa mexer neste arquivo.
+      #
+      # Validado em 28/08/2026 contra um branch real: 392 checagens, 0
+      # divergencias. O teste funciona; o que nunca foi exercitado e a string
+      # de conexao a partir do runner.
       - name: Rodar matriz de RLS
         if: steps.mudou.outputs.sim == 'true'
         env:

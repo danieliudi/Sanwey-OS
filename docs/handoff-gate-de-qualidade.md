@@ -252,3 +252,27 @@ Está registrado aqui pra você não gastar tempo redescobrindo e propondo de no
 - **Não persiga meta de cobertura de teste.** Nenhum dos bugs caros desta plataforma seria pego por cobertura de linha em componente.
 - **Não substitua o processo humano/agente por lint.** Mockup antes de mudança visual (regra 3), QA adversarial (regra 3.1) e `get_advisors` pós-migration pegam coisa que nenhuma regra de grep pega. O gate é complemento, não troca.
 - **Não adicione regra ao `check-consistencia.mjs` que não venha de um bug real desta plataforma.** É a regra de ouro do arquivo, e está escrita no cabeçalho dele. Regra que acusa não-bug vira ruído e o gate inteiro passa a ser ignorado — duas sub-regras já foram estreitadas ou removidas por isso durante a construção.
+
+
+---
+
+## Adendo — 28/08/2026, depois de tudo executado
+
+As quatro tarefas acima foram feitas e mergeadas na main (PR #126). A catraca
+do `check-consistencia.mjs` desceu de **100 violações para 7**, e as 7 que
+sobraram não são pendência: são as exceções da triagem, cada uma com o motivo
+escrito no próprio código (ex.: `use-server-notifications.js`, onde marcar
+notificação como lida é fire-and-forget de propósito). **Este documento virou
+registro histórico — não é mais fila de trabalho.**
+
+Uma coisa mudou de rumo: a **Tarefa 4 não vai rodar automática por ora.**
+O branch `staging-rls` foi criado, o teste foi validado nele (392 checagens,
+0 divergências, e o trigger de criação de perfil confirmado presente — ou
+seja, o branch é fiel o bastante), e depois **branch e secret foram apagados**
+por decisão do Daniel: US$ 0,01344/hora não se justifica pra pegar um bug que
+aparece quando nasce um board novo.
+
+O passo de CI continua no `ci.yml`, inerte de propósito. Religar é só recriar
+o branch e regravar o secret — nenhum arquivo precisa mudar. Até lá, o
+procedimento manual está descrito no comentário do próprio `ci.yml` e no
+cabeçalho do `rls_stage_matrix.sql`.
