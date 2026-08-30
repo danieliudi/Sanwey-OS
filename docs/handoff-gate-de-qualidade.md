@@ -276,3 +276,27 @@ O passo de CI continua no `ci.yml`, inerte de propósito. Religar é só recriar
 o branch e regravar o secret — nenhum arquivo precisa mudar. Até lá, o
 procedimento manual está descrito no comentário do próprio `ci.yml` e no
 cabeçalho do `rls_stage_matrix.sql`.
+
+**Correção de 30/08/2026 — esta conclusão foi substituída.** O parágrafo
+acima continua valendo como registro do *porquê* (o custo por hora não se
+justifica), mas a saída "job inerte + rodar a mão" durou pouco e teve um
+efeito colateral imediato: com o secret apagado o job voltava a avisar e
+passar, mas **antes disso ele chegou a existir apontando pro branch já
+deletado** — e aí o pooler respondia `(ENOTFOUND) tenant/user postgres.<ref>
+not found`, que deixaria vermelho todo PR com migration, por configuração e
+não por código.
+
+A saída adotada entrega o mesmo custo zero sem abrir mão da automação: o job
+`rls` agora sobe o **Supabase local dentro do runner** (`supabase start`) e
+roda o teste contra ele. Docker já vem nos runners do GitHub, o banco é
+descartável, não existe secret nem conexão externa. Ganho extra: `supabase
+start` aplica as 292 migrations do zero, então o job também passa a provar
+que o repositório consegue reconstruir o banco sozinho — algo que nunca tinha
+sido verificado.
+
+Duas correções de número enquanto isso: a matriz hoje cobre **16 domínios**
+(os dois últimos entraram na Tarefa 4), então são **448 checagens**, não 392;
+e o cleanup do script não apagava `rh_colaboradores` — um gatilho cria um
+colaborador por perfil, com FK `ON DELETE SET NULL`, então sobravam 14
+órfãos e o script rodava exatamente uma vez. Corrigido; a 2ª execução em
+diante passa limpa.
