@@ -300,3 +300,72 @@ e o cleanup do script não apagava `rh_colaboradores` — um gatilho cria um
 colaborador por perfil, com FK `ON DELETE SET NULL`, então sobravam 14
 órfãos e o script rodava exatamente uma vez. Corrigido; a 2ª execução em
 diante passa limpa.
+
+
+---
+
+## Pendência aberta — o repositório não reconstrói o banco
+
+**Achado em 30/08/2026, na primeira execução real do job `rls` com Supabase
+local.** Ele foi criado prometendo "provar que o repositório consegue
+reconstruir o banco sozinho". Rodou e provou o contrário. São dois problemas
+independentes:
+
+**1. Onze migrations são puladas em silêncio.** A CLI exige
+`<timestamp>_nome.sql`, e esses arquivos têm uma letra colada na data:
+
+```
+20260807b_rh_stage_history_custom_fields_snapshot.sql
+20260817b_sec_client_billing_history_delete_scope.sql
+20260820b_sec_rh_treinamento_atrib_guard_fix_vencido.sql
+20260824b_sec_revoke_net_http_from_public.sql
+20260825b_rh_attachments_marketing_deliverables_campaigns_domains.sql
+20260827b_crm_viagem_registros_valor_previsto.sql
+20260828b_agencia_escopo_por_etapa_e_b2b_company_fix.sql
+20260831b_crm_viagem_prestacoes_fix_bypass.sql
+20260902b_chat_count_profiles_matching_filter.sql
+20260902c_chat_channel_groups_sync_security_fix.sql
+20260902d_crm_viagem_despesas_restore_missing_write_policies.sql
+```
+
+Elas **estão aplicadas em produção**, mas sob outro nome — a
+`20260828b_agencia_escopo_por_etapa_e_b2b_company_fix` está em
+`supabase_migrations.schema_migrations` como versão `20260828150215`. Foram
+aplicadas direto no banco (via MCP `apply_migration`), e o arquivo no Git é uma
+cópia com nome que a CLI não reconhece. **`supabase db push` também as
+ignoraria** — não é um problema só de CI.
+
+**2. A primeira migration já quebra.** `20260504_add_client_classification.sql`
+faz `ALTER TABLE public.leads` num banco onde `leads` não existe. Nunca houve
+no repositório uma migration que **cria** as tabelas base: o banco foi montado
+antes de alguém começar a versionar.
+
+### Por que isso importa mais que o CI
+
+É a **causa raiz** do bug crítico do Onboarding de 28/08 — a função de trigger
+`rh_onboarding_tarefas_guard_self_update()` que existia só em produção, nunca
+commitada, e que quebrou quando uma migration derrubou a coluna que ela
+referenciava. Aquilo não foi descuido isolado: é o sintoma previsível de um
+repositório que nunca foi a fonte de verdade do schema. Enquanto for assim,
+qualquer migration nova pode colidir com um objeto que ninguém sabe que existe.
+
+### O conserto
+
+1. `supabase db dump` do schema de produção → salvar como primeira migration
+   (ex.: `00000000000000_baseline.sql`). Isso captura tudo que hoje só existe
+   no banco: triggers, funções, policies aplicadas fora do Git.
+2. Renomear as 11 acima pro nome que a CLI aceita — **com cuidado**: elas já
+   constam em `schema_migrations` com versão numérica própria, então renomear
+   sem reconciliar faz a CLI tratá-las como não-aplicadas.
+3. Remover o `continue-on-error: true` do job `rls` no `ci.yml`.
+
+Envolve dump de produção, então **precisa de confirmação do Daniel** antes
+(regra 5 do `CLAUDE.md` é sobre aplicar migration, mas o espírito vale: mexer
+no histórico de migrations de um banco vivo não se faz sozinho).
+
+### Enquanto isso
+
+O job `rls` está **não-bloqueante** (`continue-on-error: true`). Ele roda,
+aparece no log, e não trava merge. A alternativa — deixar bloqueante — pintaria
+de vermelho todo PR com migration, para sempre, por configuração e não por
+código; e um gate que sempre falha vira ruído que todo mundo aprende a ignorar.
