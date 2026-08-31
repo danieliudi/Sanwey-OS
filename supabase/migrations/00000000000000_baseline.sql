@@ -29,7 +29,8 @@
 -- roda a matriz de 448 checagens de RLS.
 --
 -- O QUE ELE COBRE: extensoes, sequencias, 124 tabelas, 154 funcoes,
--- 491 constraints, indices, views, 101 triggers, RLS nas 124 tabelas,
+-- 492 constraints, indices, views, 101 triggers em `public` + os 3 de
+-- auth.users (ver o bloco final), RLS nas 124 tabelas,
 -- 345 policies, grants de tabela e de funcao, e os 13 buckets de Storage.
 -- NAO cobre dados (so a definicao dos buckets, nao o conteudo), nem os
 -- schemas auth/storage em si — o `supabase start` os cria.
@@ -11822,3 +11823,25 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('rh-curriculos', 'rh-curriculos', false, 10485760, '{application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document}'::text[]) ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('rh-documentos-assinatura', 'rh-documentos-assinatura', false, 10485760, '{application/pdf,image/jpeg,image/png,image/webp}'::text[]) ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('rh-documentos-colaborador', 'rh-documentos-colaborador', false, 10485760, '{application/pdf,image/jpeg,image/png,image/webp}'::text[]) ON CONFLICT (id) DO NOTHING;
+
+-- ============ TRIGGERS EM auth.users ============
+-- Achado no 1o CI do baseline (31/08/2026): a primeira versao filtrava
+-- triggers por nspname = 'public' e perdeu estes tres, que vivem numa tabela
+-- do schema `auth`. O sintoma foi cirurgico — 128 divergencias na matriz de
+-- RLS, exatamente o numero de celulas onde expected = true. Sem
+-- on_auth_user_created, o INSERT em auth.users nao gera a linha em
+-- public.profiles, nenhuma checagem de cargo passa, e TUDO que deveria ser
+-- permitido vira negado.
+--
+-- So estes tres entram: os outros triggers fora de `public` (cron.job,
+-- realtime.subscription, storage.buckets, storage.objects) pertencem a
+-- plataforma e o proprio `supabase start` os cria — recria-los aqui daria
+-- conflito.
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+DROP TRIGGER IF EXISTS on_auth_user_email_change ON auth.users;
+CREATE TRIGGER on_auth_user_email_change AFTER UPDATE OF email ON auth.users FOR EACH ROW WHEN (((old.email)::text IS DISTINCT FROM (new.email)::text)) EXECUTE FUNCTION sync_profile_email();
+
+DROP TRIGGER IF EXISTS on_user_confirmed ON auth.users;
+CREATE TRIGGER on_user_confirmed AFTER UPDATE ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_user_confirmed();
