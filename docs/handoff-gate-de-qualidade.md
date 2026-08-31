@@ -369,3 +369,55 @@ O job `rls` está **não-bloqueante** (`continue-on-error: true`). Ele roda,
 aparece no log, e não trava merge. A alternativa — deixar bloqueante — pintaria
 de vermelho todo PR com migration, para sempre, por configuração e não por
 código; e um gate que sempre falha vira ruído que todo mundo aprende a ignorar.
+
+
+---
+
+## Fechamento da pendência — 31/08/2026
+
+O baseline existe: `supabase/migrations/00000000000000_baseline.sql` (643 KB).
+Os 292 arquivos antigos foram para `supabase/migrations/_historico/`, com um
+LEIA-ME explicando por que não rodam mais.
+
+**A reconciliação foi pior que o diagnóstico original.** Não eram 11 arquivos
+com nome errado: produção tinha **381 migrations registradas contra 292
+arquivos**, e **127 registros sem arquivo nenhum** — incluindo todas as que
+criam as tabelas base. O repositório nunca teve as primeiras semanas de
+schema. Por isso renomear os 11 não resolveria nada, e por isso o baseline
+era a única saída.
+
+**Como foi gerado, e o que isso implica.** Não por `supabase db dump`: a CLI
+exige Docker, que não estava instalado na máquina do Daniel. Foi por
+introspecção do catálogo do Postgres de produção (`pg_get_functiondef`,
+`pg_get_constraintdef`, `pg_get_indexdef`, `pg_get_triggerdef`, `pg_policies`,
+`aclexplode`). Cada bloco veio com md5 calculado pelo próprio Postgres e
+conferido do lado de cá — a **cópia é exata**. O que não se pode afirmar é que
+a **reconstrução** cubra tudo que o `pg_dump` cobriria: é reimplementação, não
+cópia de dump.
+
+As contagens batem uma a uma com produção: 124 tabelas, 154 funções, 492
+constraints, 201 índices (fora os de constraint), 345 policies, 101 triggers,
+RLS nas 124 tabelas, 13 buckets.
+
+**A prova de que valia a pena:** a função `rh_onboarding_tarefas_guard_self_
+update()` — que só existia em produção, nunca foi commitada, e derrubou o
+Onboarding em 28/08 — está capturada no baseline.
+
+### O que ainda falta
+
+**Uma escrita em produção**, e só uma: inserir o baseline em
+`supabase_migrations.schema_migrations` como já aplicado.
+
+```sql
+insert into supabase_migrations.schema_migrations (version, name)
+values ('00000000000000', 'baseline')
+on conflict (version) do nothing;
+```
+
+É metadado — não muda schema. Sem isso, um `supabase db push` futuro tentaria
+aplicar o baseline em produção. **Deve ser feita só depois de o CI provar que
+o baseline sobe um banco do zero e passa a matriz de RLS**, nunca antes: se o
+arquivo estiver torto, é melhor descobrir no runner descartável.
+
+O job `rls` segue com `continue-on-error: true`. Remover essa linha é o último
+passo, depois do primeiro verde.
