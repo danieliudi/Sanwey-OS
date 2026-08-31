@@ -16,3 +16,9 @@ vite.config.ts.timestamp-*.mjs
 .claude/*
 !.claude/agents/
 /screenshots/
+
+# Rascunho da CLI do Supabase — guarda a ultima versao vista da CLI e muda
+# sozinho a cada checagem de update. Entrou no repo por engano em 37db6b3
+# (um `git add -A` logo depois de rodar `npx supabase --version`) e causou
+# conflito de pull em maquina de quem ja tinha o arquivo local.
+supabase/.temp/
