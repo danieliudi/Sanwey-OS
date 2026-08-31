@@ -1,5 +1,13 @@
 project_id = "adizvduyfzfftyswkijj"
 
+# Stack local (usada pelo job `rls` do CI, que sobe o Supabase dentro do
+# runner em vez de depender de um banco na nuvem). `major_version` espelha a
+# producao (Postgres 17) — um teste de RLS que roda numa versao diferente da
+# real vale menos.
+[db]
+port = 54322
+major_version = 17
+
 # `verify_jwt` versionado aqui, e não só no dashboard: o gateway da Supabase
 # valida o JWT ANTES de qualquer linha do nosso código, então uma function que
 # faz a própria autenticação precisa desligar essa checagem — senão ela devolve

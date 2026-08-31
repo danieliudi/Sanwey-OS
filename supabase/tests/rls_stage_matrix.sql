@@ -29,8 +29,17 @@
 -- asserção falhar (bloco cleanup roda sempre). Ainda assim, rode preferencialmente
 -- num branch/staging do Supabase, nunca direto em produção.
 --
--- Rodar: cole no SQL editor do Supabase, ou:
---   psql "$DATABASE_URL" -f supabase/tests/rls_stage_matrix.sql
+-- Onde roda: no CI, o job `rls` do .github/workflows/ci.yml sobe uma stack
+-- LOCAL do Supabase dentro do proprio runner (`supabase start`, que aplica
+-- todas as migrations do zero) e aponta o psql pra ela — banco descartavel,
+-- custo zero, nenhuma conexao com nuvem. Ate 30/08/2026 o job dependia de um
+-- branch do Supabase via secret; o branch foi deletado por custo e o secret
+-- virou orfao, quebrando o CI. Nao volte pra esse modelo.
+--
+-- Pra rodar a mao: `supabase start && psql "$(supabase status -o env |
+-- sed -n 's/^DB_URL=//p' | tr -d '"')" -f supabase/tests/rls_stage_matrix.sql`.
+-- Se for rodar contra um banco REMOTO (nao ha motivo hoje), que seja um
+-- branch/staging — NUNCA producao, pelo efeito colateral descrito acima.
 -- Saída: uma linha por combinação (mismatch = true quer dizer bug) e um
 -- resumo final. Termina com RAISE EXCEPTION se achar qualquer divergência,
 -- pra dar exit code != 0 em CI.

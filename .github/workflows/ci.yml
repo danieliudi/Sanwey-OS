@@ -47,14 +47,50 @@ jobs:
   rls:
     name: Matriz de RLS de etapas
     runs-on: ubuntu-latest
-    # Só roda quando a migration muda — é o gatilho da classe de bug que
-    # este teste existe pra pegar (allowlist de (role, domain) desatualizada
-    # quando um board novo nasce).
+    # Roda quando muda migration (o gatilho da classe de bug que este teste
+    # existe pra pegar: allowlist de (role, domain) desatualizada quando um
+    # board novo nasce), quando muda o proprio teste, ou quando muda este
+    # workflow.
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    # NAO-BLOQUEANTE por ora (30/08/2026). Na primeira execucao real, este job
+    # provou o CONTRARIO do que prometia: o repositorio NAO reconstroi o banco
+    # do zero, por dois motivos independentes.
+    #
+    #   1. Onze migrations sao PULADAS em silencio pela CLI, que exige o
+    #      formato <timestamp>_nome.sql. Elas tem uma letra colada na data
+    #      (20260807b_, 20260817b_, 20260828b_, 20260902b/c/d_ ...). Estao
+    #      aplicadas em producao, mas com outro nome: a 20260828b_agencia_
+    #      escopo... esta la como versao 20260828150215. Ou seja, foram
+    #      aplicadas direto no banco e o arquivo no Git e uma copia com nome
+    #      que a CLI nao reconhece. `supabase db push` tambem as ignoraria.
+    #
+    #   2. A primeira migration ja quebra: 20260504_add_client_classification
+    #      faz ALTER TABLE public.leads num banco onde `leads` nao existe.
+    #      Nunca houve no repositorio uma migration que CRIA as tabelas base
+    #      — o banco foi montado antes de alguem comecar a versionar.
+    #
+    # Isso e a causa raiz do bug critico do Onboarding de 28/08: a funcao de
+    # trigger rh_onboarding_tarefas_guard_self_update() que so existia em
+    # producao nao era descuido isolado, e o sintoma de um repositorio que
+    # nunca foi a fonte de verdade do schema.
+    #
+    # Deixar o job bloqueante hoje deixaria vermelho todo PR com migration,
+    # para sempre, por configuracao e nao por codigo — e um gate que sempre
+    # falha vira ruido que todo mundo aprende a ignorar. Entao ele roda,
+    # aparece no log, e nao trava o merge.
+    #
+    # PARA REMOVER ESTA LINHA: gerar um baseline do schema de producao
+    # (`supabase db dump`) como primeira migration e renomear as 11 com nome
+    # invalido. Ver "Pendencia aberta" em docs/handoff-gate-de-qualidade.md.
+    continue-on-error: true
     steps:
+      # fetch-depth: 0 porque o passo abaixo compara com a base via `...`,
+      # que precisa do merge-base — um clone raso nao tem.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Ver se há mudança em migrations
+      - name: Ver se vale rodar a matriz
         id: mudou
         run: |
           if [ "${{ inputs.forcar_rls }}" = "true" ]; then
@@ -63,36 +99,58 @@ jobs:
             exit 0
           fi
           git fetch origin ${{ github.base_ref || 'main' }} --depth=1 || true
-          if git diff --name-only FETCH_HEAD...HEAD -- supabase/migrations | grep -q .; then
+          if git diff --name-only FETCH_HEAD...HEAD -- supabase/migrations supabase/tests .github/workflows/ci.yml | grep -q .; then
             echo "sim=true" >> "$GITHUB_OUTPUT"
           else
             echo "sim=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # supabase/tests/rls_stage_matrix.sql impersona cada papel via
-      # set_config('request.jwt.claims', ...) e termina com RAISE EXCEPTION
-      # se achar divergência — ou seja, já sai com código != 0 sozinho.
+      # Ate 30/08/2026 este job dependia de um banco na NUVEM, via o secret
+      # RLS_TEST_DATABASE_URL apontando pra um branch do Supabase. Isso tinha
+      # dois problemas: o branch custava dinheiro parado (foi deletado por
+      # isso, e o secret virou orfao — o pooler passou a responder "tenant
+      # nao encontrado", quebrando todo PR com migration), e sem o secret o
+      # teste passava em branco, ou seja ficava ligado e inerte.
       #
-      # O script CRIA E APAGA usuários/perfis/etapas de teste. Aponte
-      # RLS_TEST_DATABASE_URL pra um BRANCH ou STAGING do Supabase, NUNCA
-      # pra produção (o próprio cabeçalho do .sql avisa isso).
+      # Custava US$ 0,01344/hora parado — barato, mas nao se justifica pra um
+      # bug que aparece quando nasce um board novo, talvez uma vez por mes.
+      # Por isso o branch foi apagado (decisao do Daniel, 28/08/2026). A
+      # conclusao daquela sessao foi deixar o job de pe e inerte, rodando o
+      # teste a mao; em 30/08/2026 ela foi SUBSTITUIDA por esta, que entrega
+      # o mesmo custo zero sem abrir mao da automacao — e sem depender de
+      # alguem lembrar de rodar.
       #
-      # Sem o secret configurado, o passo avisa e passa — o teste fica
-      # ligado e inerte até alguém apontar um banco, em vez de quebrar o CI
-      # de todo mundo hoje.
-      - name: Rodar matriz de RLS
+      # Agora o banco sobe DENTRO do runner: Docker ja vem instalado nos
+      # runners do GitHub, entao a stack local do Supabase (Postgres + auth,
+      # com os papeis anon/authenticated/service_role e o schema auth que o
+      # teste precisa pra impersonar) custa zero e morre junto com o job.
+      # Efeito colateral bom: `supabase start` aplica as 292 migrations do
+      # zero, entao o job tambem passa a provar que o repositorio consegue
+      # reconstruir o banco sozinho.
+      - name: Instalar a CLI do Supabase
         if: steps.mudou.outputs.sim == 'true'
-        env:
-          RLS_TEST_DATABASE_URL: ${{ secrets.RLS_TEST_DATABASE_URL }}
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Subir o Supabase local (aplica as migrations do zero)
+        if: steps.mudou.outputs.sim == 'true'
+        run: supabase start
+
+      # O script termina com RAISE EXCEPTION se achar divergencia — ou seja,
+      # ja sai com codigo != 0 sozinho.
+      - name: Rodar a matriz de RLS
+        if: steps.mudou.outputs.sim == 'true'
         run: |
-          if [ -z "$RLS_TEST_DATABASE_URL" ]; then
-            if [ "${{ inputs.forcar_rls }}" = "true" ]; then
-              echo "::error::RLS_TEST_DATABASE_URL não configurado, mas a execução foi forçada."
-              exit 1
-            fi
-            echo "::warning::RLS_TEST_DATABASE_URL não configurado — matriz de RLS não rodou."
-            echo "Configure o secret apontando pra um BRANCH/STAGING do Supabase (nunca produção)."
-            exit 0
+          psql --version >/dev/null 2>&1 || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client; }
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL=//p' | tr -d '"')"
+          if [ -z "$DB_URL" ]; then
+            echo "::error::supabase status nao devolveu DB_URL — a stack local nao subiu."
+            supabase status || true
+            exit 1
           fi
-          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
-          psql "$RLS_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rls_stage_matrix.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rls_stage_matrix.sql
+
+      - name: Derrubar o Supabase local
+        if: always() && steps.mudou.outputs.sim == 'true'
+        run: supabase stop --no-backup || true
