@@ -403,21 +403,35 @@ RLS nas 124 tabelas, 13 buckets.
 update()` — que só existia em produção, nunca foi commitada, e derrubou o
 Onboarding em 28/08 — está capturada no baseline.
 
-### O que ainda falta
+### Fechado em 31/08/2026
 
-**Uma escrita em produção**, e só uma: inserir o baseline em
-`supabase_migrations.schema_migrations` como já aplicado.
+O CI ficou verde: **448 checagens, zero divergências**, contra um banco
+construído do zero pelo baseline. O baseline foi registrado em
+`supabase_migrations.schema_migrations` como versão `00000000000000`
+(metadado, não mudou schema), e o `continue-on-error` saiu do job `rls` — ele
+volta a bloquear.
 
-```sql
-insert into supabase_migrations.schema_migrations (version, name)
-values ('00000000000000', 'baseline')
-on conflict (version) do nothing;
-```
+Levou três rodadas, e as duas falhas foram as partes mais úteis do exercício:
 
-É metadado — não muda schema. Sem isso, um `supabase db push` futuro tentaria
-aplicar o baseline em produção. **Deve ser feita só depois de o CI provar que
-o baseline sobe um banco do zero e passa a matriz de RLS**, nunca antes: se o
-arquivo estiver torto, é melhor descobrir no runner descartável.
+1. **128 divergências** — exatamente o total de células onde `expected = true`.
+   Faltavam os 3 triggers de `auth.users`, porque a geração filtrava por
+   `nspname = 'public'`. Sem `on_auth_user_created` não nasce linha em
+   `profiles`, nenhuma checagem de cargo tem o que consultar, e tudo que
+   deveria ser permitido é negado.
+2. **Cascata de triggers morrendo em `validate_rh_stage()`** — o baseline traz
+   o *schema*, mas `rh_pipeline_stages` é *configuração*, e sete tabelas têm
+   trigger que valida contra ela. Num banco vazio, criar o primeiro usuário é
+   impossível. Resolvido com `supabase/seed.sql` (79 etapas, 14 domínios), que
+   roda só na stack local e não vai para produção.
 
-O job `rls` segue com `continue-on-error: true`. Remover essa linha é o último
-passo, depois do primeiro verde.
+A lição que fica: **schema sem a configuração de que ele próprio depende não é
+um banco funcional.** Se um dia outra tabela de configuração ganhar trigger de
+validação, ela também precisa entrar no seed.
+
+### Como ficou o fluxo de migration
+
+Migration nova entra em `supabase/migrations/`, ao lado do baseline, com nome
+`<timestamp>_nome.sql` — timestamp de 14 dígitos, sem letra colada na data
+(a CLI pula silenciosamente o que não casa com esse formato; foi assim que 11
+arquivos ficaram fora do radar). Todo PR que tocar migration dispara o job
+`rls`, que reconstrói o banco do zero e roda as 448 checagens.
