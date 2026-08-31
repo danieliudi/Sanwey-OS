@@ -8,6 +8,13 @@ project_id = "adizvduyfzfftyswkijj"
 port = 54322
 major_version = 17
 
+# Sem isto o `supabase start` nao aplica o seed, e o banco novo sobe com
+# rh_pipeline_stages vazia — o que quebra qualquer insert de colaborador
+# (ver o cabecalho de seed.sql).
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
 # `verify_jwt` versionado aqui, e não só no dashboard: o gateway da Supabase
 # valida o JWT ANTES de qualquer linha do nosso código, então uma function que
 # faz a própria autenticação precisa desligar essa checagem — senão ela devolve

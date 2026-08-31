@@ -369,3 +369,69 @@ O job `rls` está **não-bloqueante** (`continue-on-error: true`). Ele roda,
 aparece no log, e não trava merge. A alternativa — deixar bloqueante — pintaria
 de vermelho todo PR com migration, para sempre, por configuração e não por
 código; e um gate que sempre falha vira ruído que todo mundo aprende a ignorar.
+
+
+---
+
+## Fechamento da pendência — 31/08/2026
+
+O baseline existe: `supabase/migrations/00000000000000_baseline.sql` (643 KB).
+Os 292 arquivos antigos foram para `supabase/migrations/_historico/`, com um
+LEIA-ME explicando por que não rodam mais.
+
+**A reconciliação foi pior que o diagnóstico original.** Não eram 11 arquivos
+com nome errado: produção tinha **381 migrations registradas contra 292
+arquivos**, e **127 registros sem arquivo nenhum** — incluindo todas as que
+criam as tabelas base. O repositório nunca teve as primeiras semanas de
+schema. Por isso renomear os 11 não resolveria nada, e por isso o baseline
+era a única saída.
+
+**Como foi gerado, e o que isso implica.** Não por `supabase db dump`: a CLI
+exige Docker, que não estava instalado na máquina do Daniel. Foi por
+introspecção do catálogo do Postgres de produção (`pg_get_functiondef`,
+`pg_get_constraintdef`, `pg_get_indexdef`, `pg_get_triggerdef`, `pg_policies`,
+`aclexplode`). Cada bloco veio com md5 calculado pelo próprio Postgres e
+conferido do lado de cá — a **cópia é exata**. O que não se pode afirmar é que
+a **reconstrução** cubra tudo que o `pg_dump` cobriria: é reimplementação, não
+cópia de dump.
+
+As contagens batem uma a uma com produção: 124 tabelas, 154 funções, 492
+constraints, 201 índices (fora os de constraint), 345 policies, 101 triggers,
+RLS nas 124 tabelas, 13 buckets.
+
+**A prova de que valia a pena:** a função `rh_onboarding_tarefas_guard_self_
+update()` — que só existia em produção, nunca foi commitada, e derrubou o
+Onboarding em 28/08 — está capturada no baseline.
+
+### Fechado em 31/08/2026
+
+O CI ficou verde: **448 checagens, zero divergências**, contra um banco
+construído do zero pelo baseline. O baseline foi registrado em
+`supabase_migrations.schema_migrations` como versão `00000000000000`
+(metadado, não mudou schema), e o `continue-on-error` saiu do job `rls` — ele
+volta a bloquear.
+
+Levou três rodadas, e as duas falhas foram as partes mais úteis do exercício:
+
+1. **128 divergências** — exatamente o total de células onde `expected = true`.
+   Faltavam os 3 triggers de `auth.users`, porque a geração filtrava por
+   `nspname = 'public'`. Sem `on_auth_user_created` não nasce linha em
+   `profiles`, nenhuma checagem de cargo tem o que consultar, e tudo que
+   deveria ser permitido é negado.
+2. **Cascata de triggers morrendo em `validate_rh_stage()`** — o baseline traz
+   o *schema*, mas `rh_pipeline_stages` é *configuração*, e sete tabelas têm
+   trigger que valida contra ela. Num banco vazio, criar o primeiro usuário é
+   impossível. Resolvido com `supabase/seed.sql` (79 etapas, 14 domínios), que
+   roda só na stack local e não vai para produção.
+
+A lição que fica: **schema sem a configuração de que ele próprio depende não é
+um banco funcional.** Se um dia outra tabela de configuração ganhar trigger de
+validação, ela também precisa entrar no seed.
+
+### Como ficou o fluxo de migration
+
+Migration nova entra em `supabase/migrations/`, ao lado do baseline, com nome
+`<timestamp>_nome.sql` — timestamp de 14 dígitos, sem letra colada na data
+(a CLI pula silenciosamente o que não casa com esse formato; foi assim que 11
+arquivos ficaram fora do radar). Todo PR que tocar migration dispara o job
+`rls`, que reconstrói o banco do zero e roda as 448 checagens.

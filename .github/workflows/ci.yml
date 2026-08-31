@@ -52,37 +52,23 @@ jobs:
     # board novo nasce), quando muda o proprio teste, ou quando muda este
     # workflow.
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
-    # NAO-BLOQUEANTE por ora (30/08/2026). Na primeira execucao real, este job
-    # provou o CONTRARIO do que prometia: o repositorio NAO reconstroi o banco
-    # do zero, por dois motivos independentes.
+    # Este job foi NAO-BLOQUEANTE entre 30 e 31/08/2026, enquanto o
+    # repositorio nao reconstruia o banco. Voltou a bloquear em 31/08, depois
+    # que o baseline (migrations/00000000000000_baseline.sql) passou: 448
+    # checagens, zero divergencias, contra um banco criado do zero pelo
+    # `supabase start`.
     #
-    #   1. Onze migrations sao PULADAS em silencio pela CLI, que exige o
-    #      formato <timestamp>_nome.sql. Elas tem uma letra colada na data
-    #      (20260807b_, 20260817b_, 20260828b_, 20260902b/c/d_ ...). Estao
-    #      aplicadas em producao, mas com outro nome: a 20260828b_agencia_
-    #      escopo... esta la como versao 20260828150215. Ou seja, foram
-    #      aplicadas direto no banco e o arquivo no Git e uma copia com nome
-    #      que a CLI nao reconhece. `supabase db push` tambem as ignoraria.
-    #
-    #   2. A primeira migration ja quebra: 20260504_add_client_classification
-    #      faz ALTER TABLE public.leads num banco onde `leads` nao existe.
-    #      Nunca houve no repositorio uma migration que CRIA as tabelas base
-    #      — o banco foi montado antes de alguem comecar a versionar.
-    #
-    # Isso e a causa raiz do bug critico do Onboarding de 28/08: a funcao de
-    # trigger rh_onboarding_tarefas_guard_self_update() que so existia em
-    # producao nao era descuido isolado, e o sintoma de um repositorio que
-    # nunca foi a fonte de verdade do schema.
-    #
-    # Deixar o job bloqueante hoje deixaria vermelho todo PR com migration,
-    # para sempre, por configuracao e nao por codigo — e um gate que sempre
-    # falha vira ruido que todo mundo aprende a ignorar. Entao ele roda,
-    # aparece no log, e nao trava o merge.
-    #
-    # PARA REMOVER ESTA LINHA: gerar um baseline do schema de producao
-    # (`supabase db dump`) como primeira migration e renomear as 11 com nome
-    # invalido. Ver "Pendencia aberta" em docs/handoff-gate-de-qualidade.md.
-    continue-on-error: true
+    # Foram tres rodadas ate o verde, e cada falha ensinou algo:
+    #   1a) 128 divergencias — exatamente o total de celulas onde
+    #       expected = true. Faltavam os 3 triggers de auth.users (a geracao
+    #       do baseline filtrava por nspname = 'public'); sem
+    #       on_auth_user_created nao nasce linha em profiles, nenhuma
+    #       checagem de cargo passa, e tudo vira negado.
+    #   2a) cascata de triggers morrendo em validate_rh_stage(): o baseline
+    #       traz o SCHEMA, mas rh_pipeline_stages e CONFIGURACAO, e sete
+    #       tabelas tem trigger que valida contra ela. Resolvido em
+    #       supabase/seed.sql.
+    #   3a) verde.
     steps:
       # fetch-depth: 0 porque o passo abaixo compara com a base via `...`,
       # que precisa do merge-base — um clone raso nao tem.
