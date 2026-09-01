@@ -362,6 +362,25 @@ export const FEATURE_SPOTLIGHTS = [
   // resolverem) — não introduz elemento de UI novo pra apontar, mesmo
   // critério do fix de `scrollbar-gutter: stable` registrado na regra 11 do
   // CLAUDE.md. Coberto pelo changelog 4.77.0.
+  {
+    id: "viagens-calcular-atalho",
+    route: "crm-viagens",
+    target: '[data-tour="viagens-calcular-atalho"]',
+    text: "Montou a agenda? Este atalho abre a calculadora já com os endereços das suas saídas — e agora ela compara a viagem inteira, com hotel e carro alugado no destino.",
+    version: "4.84.0",
+  },
+  // Nota sobre o alvo acima: o banner só existe quando há saída planejada
+  // futura no mês. Sem nenhuma, o elemento não está na tela e o runtime pula
+  // em silêncio (comportamento já documentado no topo deste arquivo) — o que
+  // é o certo aqui: apontar um atalho de agenda pra quem não tem agenda
+  // montada não ensina nada. Quem cadastrar a primeira saída vê o spotlight
+  // na visita seguinte à tela.
+  //
+  // A calculadora em si (hospedagem, aluguel no destino, "Ajustar valores")
+  // NÃO ganhou spotlight próprio: são campos dentro de uma aba que a pessoa
+  // só abre quando já quer calcular algo, e o atalho acima já leva até lá
+  // contando o que mudou. Dois spotlights pro mesmo assunto na mesma rota
+  // viraria ruído. Coberto pelo changelog 4.84.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;

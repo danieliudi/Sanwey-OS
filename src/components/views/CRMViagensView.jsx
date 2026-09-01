@@ -33,6 +33,12 @@ export function CRMViagensView({ currentUser, clients, onCreateClient, users, pu
   const [tab, setTab] = useState(tabs[0]?.id || null);
   const activeTab = tabs.some((t) => t.id === tab) ? tab : tabs[0]?.id;
 
+  // Semente do atalho "calcular viagem" (Planejamento → Calculadora): paradas
+  // do roteiro e noites sugeridas pelo intervalo de datas. Vive aqui porque é o
+  // pai comum das duas abas — evita rota nova ou contexto global só pra isso.
+  const [calcSeed, setCalcSeed] = useState(null);
+  const irParaCalculadora = (seed) => { setCalcSeed(seed); setTab("calculadora"); };
+
   // Vem do painel de Conexões do Cliente — uma viagem pode ter sido registrada
   // por qualquer vendedor, não só o usuário logado. Gestor tem "Gestão" (vê o
   // time inteiro) e é quem consome o id aqui mesmo, já que essa aba não abre
@@ -105,11 +111,12 @@ export function CRMViagensView({ currentUser, clients, onCreateClient, users, pu
           pushNotification={pushNotification}
           initialSelectedViagemId={initialSelectedViagemId}
           onInitialViagemConsumed={onInitialViagemConsumed}
+          onCalcularViagem={irParaCalculadora}
         />
       )}
       {activeTab === "gestao" && <CRMViagensGestorView currentUser={currentUser} users={users} />}
       {activeTab === "relatorios" && <CRMViagensRelatoriosView currentUser={currentUser} users={users} />}
-      {activeTab === "calculadora" && <CRMViagensCalculadoraView />}
+      {activeTab === "calculadora" && <CRMViagensCalculadoraView seed={calcSeed} />}
     </div>
   );
 }

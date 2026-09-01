@@ -21,6 +21,7 @@ import {
   CheckSquare,
   CalendarDays,
   List,
+  Calculator,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
@@ -344,6 +345,11 @@ function NovaVisitaModal({ clients, onCreateClient, eventoCampaigns, onSave, onC
   useEscToClose(onClose);
   const [tipo, setTipo] = useState("visita");
   const [destino, setDestino] = useState("");
+  // placeId do Google, guardado só quando o usuário escolhe da lista. É o que
+  // permite a calculadora abrir com a quilometragem já pronta (migration
+  // 20260901120000). Digitar depois de escolher invalida — o texto passa a ser
+  // livre de novo, mesmo espírito do StopAutocompleteInput da calculadora.
+  const [destinoPlaceId, setDestinoPlaceId] = useState(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const { suggestions, search: searchDestino, clear: clearDestinoSuggestions } = usePlacesAutocomplete();
   const [dataPlanejada, setDataPlanejada] = useState("");
@@ -374,6 +380,7 @@ function NovaVisitaModal({ clients, onCreateClient, eventoCampaigns, onSave, onC
       await onSave({
         tipo,
         destino_planejado: destino.trim(),
+        destino_place_id: destinoPlaceId,
         data_planejada: dataPlanejada,
         objetivo: objetivo.trim() || null,
         valor_previsto: valorPrevisto !== "" ? Number(valorPrevisto) : null,
@@ -416,6 +423,7 @@ function NovaVisitaModal({ clients, onCreateClient, eventoCampaigns, onSave, onC
                 onChange={(e) => {
                   const v = e.target.value;
                   setDestino(v);
+                  setDestinoPlaceId(null);
                   setShowSuggestions(true);
                   searchDestino(v);
                 }}
@@ -443,7 +451,7 @@ function NovaVisitaModal({ clients, onCreateClient, eventoCampaigns, onSave, onC
                       key={s.placeId || s.description}
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => { setDestino(s.description); clearDestinoSuggestions(); setShowSuggestions(false); }}
+                      onClick={() => { setDestino(s.description); setDestinoPlaceId(s.placeId || null); clearDestinoSuggestions(); setShowSuggestions(false); }}
                       style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px", border: "none", background: "none", cursor: "pointer", borderBottom: "1px solid var(--border)" }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
@@ -1331,7 +1339,7 @@ function PrestacaoResumoModal({ prestacao, despesas, onEnviar, onExcluir, onClos
 
 // ── View principal ────────────────────────────────────────────────────────────
 
-export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreateClient, pushNotification, initialSelectedViagemId, onInitialViagemConsumed }) {
+export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreateClient, pushNotification, initialSelectedViagemId, onInitialViagemConsumed, onCalcularViagem }) {
   const userId = currentUser?.id;
   const { registros, loading: loadingRegistros, createRegistro, marcarRealizado, marcarNaoRealizado, deleteRegistro } = useCRMViagens({ userId });
   const { despesas, loading: loadingDespesas, createDespesa, deleteDespesa, uploadComprovante, getComprovanteUrl } = useCRMDespesas({ userId });
@@ -1354,6 +1362,27 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   // também leiam todas as linhas, então filtramos por dono aqui para não
   // misturar visitas/despesas de outras pessoas nesta tela pessoal.
   const registrosProprios = useMemo(() => registros.filter((r) => r.vendedor_id === userId), [registros, userId]);
+
+  // Saídas que ainda vão acontecer, em ordem de data — é o que o atalho da
+  // calculadora manda como paradas. Só as próprias e só as planejadas: já
+  // realizada não se calcula, e de outro vendedor não é da conta desta tela.
+  const visitasPlanejadasFuturas = useMemo(() => {
+    const hoje = new Date().toISOString().slice(0, 10);
+    return registrosProprios
+      .filter((r) => r.status === "planejado" && r.data_planejada && r.data_planejada >= hoje && (r.destino_planejado || "").trim())
+      .sort((a, b) => a.data_planejada.localeCompare(b.data_planejada));
+  }, [registrosProprios]);
+
+  // Noites sugeridas: dias entre a primeira e a última saída do bloco. Uma
+  // saída só = 1 noite (o vendedor ajusta na calculadora; é sugestão, não
+  // regra — o Daniel avisou que "depende muito").
+  const noitesSugeridasDaAgenda = useMemo(() => {
+    if (visitasPlanejadasFuturas.length === 0) return 1;
+    const primeira = visitasPlanejadasFuturas[0].data_planejada;
+    const ultima = visitasPlanejadasFuturas[visitasPlanejadasFuturas.length - 1].data_planejada;
+    const dias = Math.round((new Date(ultima) - new Date(primeira)) / 86400000);
+    return Math.max(1, Number.isFinite(dias) ? dias : 1);
+  }, [visitasPlanejadasFuturas]);
   const despesasProprias = useMemo(() => despesas.filter((d) => d.vendedor_id === userId), [despesas, userId]);
 
   // Busca em `registros` (não `registrosProprios`) porque quem manda o id pode
@@ -1526,6 +1555,39 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
       <div className="flex items-center justify-end">
         <MonthNav mesRef={mesRef} onChange={setMesRef} />
       </div>
+
+      {/* Atalho pra calculadora — ideia do Daniel (01/09/2026): depois de
+          montar a agenda, o vendedor não deveria redigitar endereço nenhum pra
+          descobrir o meio mais barato. Só aparece com saída planejada no mês,
+          e some quando não há nada a calcular. */}
+      {onCalcularViagem && visitasPlanejadasFuturas.length > 0 && (
+        <button
+          type="button"
+          onClick={() => onCalcularViagem({
+            paradas: visitasPlanejadasFuturas.map((r) => ({
+              description: r.destino_planejado || "",
+              placeId: r.destino_place_id || null,
+            })),
+            noites: noitesSugeridasDaAgenda,
+          })}
+          data-tour="viagens-calcular-atalho"
+          className="flex items-center gap-3 rounded-xl border p-3.5 text-left w-full"
+          style={{ background: "var(--accent-tint)", borderColor: "var(--accent)", cursor: "pointer" }}
+        >
+          <Calculator size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+              Quer saber o meio mais barato pra essa viagem?
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
+              {visitasPlanejadasFuturas.length} {visitasPlanejadasFuturas.length === 1 ? "saída planejada" : "saídas planejadas"} · abre a calculadora com os endereços já preenchidos
+            </div>
+          </div>
+          <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "var(--accent)", whiteSpace: "nowrap", flexShrink: 0 }}>
+            Calcular →
+          </span>
+        </button>
+      )}
 
       {/* Visitas */}
       <div>

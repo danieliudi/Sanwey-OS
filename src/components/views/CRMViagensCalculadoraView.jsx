@@ -1,29 +1,59 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Car, Plane, Bike, Check, MapPin, Plus, X, ChevronUp, ChevronDown, Loader2, Navigation, AlertCircle } from "lucide-react";
+import { Car, Plane, Bike, Check, Plus, X, ChevronUp, ChevronDown, ChevronRight, Loader2, Navigation, AlertCircle, Minus } from "lucide-react";
 import { fmtMoney } from "../../utils/viagens";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { usePlacesAutocomplete } from "../../hooks/use-places-autocomplete";
 import { AppToast } from "../shared/AppToast";
 
-// Calculadora de custo de viagem — compara carro próprio, avião e Uber/táxi
+// Calculadora de custo de viagem — compara carro próprio, Uber/táxi e avião
 // pro mesmo trajeto. Puramente client-side (sem persistência): o objetivo é
 // ajudar a decidir o modal antes de planejar a visita, não registrar nada.
-// Parâmetros de R$/km são estimativas editáveis, não tarifas oficiais.
+// Parâmetros de R$/km e diárias são estimativas editáveis, não tarifas
+// oficiais — e não existe política de reembolso na Sanwey (confirmado com o
+// Daniel 01/09/2026), então as faixas abaixo são descritivas, não normativas.
 //
 // Distância: a partir de 08/2026 é calculada automaticamente a partir de uma
 // sequência de paradas (autocomplete Google Places, mesmo hook usado em
 // CRMViagensPlanejamentoView) via edge function distance-matrix — mas o
 // campo de km continua editável na mão como fallback gracioso, caso a
 // chamada falhe ou o usuário prefira digitar (spec aprovada com o Daniel).
+//
+// Rodada de 01/09/2026 (mockup aprovado pelo Daniel):
+//  * Hospedagem entra na conta. Mesma diária pros dois cenários — o que muda
+//    é a quantidade de noites, e de avião é sempre menos (regra do Daniel).
+//  * O aluguel de carro NÃO é uma quarta opção: é o transporte NO DESTINO de
+//    quem foi de avião (voa até Uberlândia, aluga pra visitar a mineradora).
+//    Por isso o combustível dele usa os km LOCAIS, nunca os km da estrada.
+//  * Lavagem na devolução ficou de fora por decisão do Daniel: carro próprio
+//    também lavaria, então não diferencia nada — só somaria um campo.
+//  * Pedágio idem: o R$/km do carro próprio já é média que absorve.
+//  * No destino, aluguel e Uber são calculados JUNTOS e o mais barato entra
+//    na conta — a comparação não custa campo nenhum, já que os km locais e as
+//    duas tarifas já estão na tela.
 
 const LABEL_ST = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 const INPUT_ST = { borderColor: "var(--border)", color: "var(--text)", background: "var(--surface-alt)", fontSize: 13 };
 const INPUT_CLS = "w-full text-sm rounded-xl border px-3 py-2 outline-none";
+const HINT_ST = { fontSize: 11, color: "var(--text-dim)", marginTop: 3 };
+
+// Faixas de valor. Descritivas, não normativas — a Sanwey não tem teto de
+// diária nem categoria obrigatória; existem só pra poupar digitação de quem
+// não tem o número na cabeça. "Outro valor" libera o campo livre.
+const HOTEL_FAIXAS = [
+  { value: "180", label: "Econômico — R$ 180/noite" },
+  { value: "320", label: "Padrão — R$ 320/noite" },
+  { value: "500", label: "Executivo — R$ 500/noite" },
+];
+const CARRO_FAIXAS = [
+  { value: "150", label: "Compacto — R$ 150/diária" },
+  { value: "180", label: "Intermediário — R$ 180/diária" },
+  { value: "260", label: "SUV — R$ 260/diária" },
+];
 
 function NumberField({ label, value, onChange, placeholder, hint }) {
   return (
     <div>
-      <label style={LABEL_ST}>{label}</label>
+      {label && <label style={LABEL_ST}>{label}</label>}
       <input
         type="number"
         min={0}
@@ -35,7 +65,74 @@ function NumberField({ label, value, onChange, placeholder, hint }) {
         className={INPUT_CLS}
         style={INPUT_ST}
       />
-      {hint && <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>{hint}</p>}
+      {hint && <p style={HINT_ST}>{hint}</p>}
+    </div>
+  );
+}
+
+// Faixa pré-definida OU valor livre. O valor guardado é sempre o número —
+// "outro" é só estado de UI, por isso deriva de `value` em vez de virar um
+// segundo estado que poderia divergir do número real.
+function FaixaField({ label, faixas, value, onChange, hint, outroPlaceholder }) {
+  const éFaixa = faixas.some((f) => f.value === value);
+  const [mostrarLivre, setMostrarLivre] = useState(!éFaixa && value !== "");
+  const selecionado = éFaixa && !mostrarLivre ? value : "__outro";
+
+  return (
+    <div>
+      <label style={LABEL_ST}>{label}</label>
+      <select
+        value={selecionado}
+        onChange={(e) => {
+          if (e.target.value === "__outro") { setMostrarLivre(true); return; }
+          setMostrarLivre(false);
+          onChange(e.target.value);
+        }}
+        className={INPUT_CLS}
+        style={{ ...INPUT_ST, appearance: "none", paddingRight: 32,
+          backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+          backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", backgroundSize: 14 }}
+      >
+        {faixas.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+        <option value="__outro">Outro valor…</option>
+      </select>
+      {mostrarLivre && (
+        <div className="mt-1.5">
+          <NumberField value={value} onChange={onChange} placeholder={outroPlaceholder} />
+        </div>
+      )}
+      {hint && <p style={HINT_ST}>{hint}</p>}
+    </div>
+  );
+}
+
+// Contador pra quantidade pequena (noites, diárias): dois cliques em vez de
+// selecionar e digitar. Guarda string pra casar com o resto dos campos.
+function Stepper({ label, value, onChange, hint, max = 60 }) {
+  const n = Math.max(0, Math.min(max, Math.round(Number(value) || 0)));
+  const btnSt = { width: 32, height: 34, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: "var(--surface-alt)", color: "var(--text-dim)", cursor: "pointer" };
+  return (
+    <div>
+      <label style={LABEL_ST}>{label}</label>
+      <div className="inline-flex items-center rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)", height: 34 }}>
+        <button type="button" aria-label="Diminuir" onClick={() => onChange(String(Math.max(0, n - 1)))} style={btnSt}>
+          <Minus size={13} />
+        </button>
+        <input
+          type="number"
+          min={0}
+          max={max}
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="text-center outline-none"
+          style={{ width: 52, height: "100%", border: "none", background: "var(--surface)", color: "var(--text)", fontSize: 14, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
+        />
+        <button type="button" aria-label="Aumentar" onClick={() => onChange(String(Math.min(max, n + 1)))} style={btnSt}>
+          <Plus size={13} />
+        </button>
+      </div>
+      {hint && <p style={HINT_ST}>{hint}</p>}
     </div>
   );
 }
@@ -72,10 +169,20 @@ function ModalCard({ icon: Icon, title, total, breakdown, cheapest, disabled }) 
       </div>
       <div className="space-y-0.5">
         {breakdown.map((b, i) => (
-          <div key={i} className="flex items-center justify-between text-xs" style={{ color: "var(--text-dim)" }}>
-            <span>{b.label}</span>
-            <span>{fmtMoney(b.value)}</span>
-          </div>
+          b.section ? (
+            <div key={i} className="text-[10px] font-bold uppercase pt-2 mt-1" style={{ color: "var(--text-faint)", letterSpacing: "0.08em", borderTop: "1px solid var(--border)" }}>
+              {b.section}
+            </div>
+          ) : (
+            <div
+              key={i}
+              className="flex items-center justify-between text-xs"
+              style={{ color: b.descartado ? "var(--text-faint)" : "var(--text-dim)", textDecoration: b.descartado ? "line-through" : "none" }}
+            >
+              <span>{b.label}</span>
+              <span>{fmtMoney(b.value)}</span>
+            </div>
+          )
         ))}
       </div>
     </div>
@@ -85,9 +192,9 @@ function ModalCard({ icon: Icon, title, total, breakdown, cheapest, disabled }) 
 // ── Paradas (lista ordenada com autocomplete) ──────────────────────────────
 
 let stopIdSeq = 0;
-function newStop(description = "") {
+function newStop(description = "", placeId = null) {
   stopIdSeq += 1;
-  return { id: stopIdSeq, description, placeId: null };
+  return { id: stopIdSeq, description, placeId };
 }
 
 function StopAutocompleteInput({ stop, placeholder, onChange, autoFocus }) {
@@ -141,7 +248,7 @@ function StopAutocompleteInput({ stop, placeholder, onChange, autoFocus }) {
   );
 }
 
-function StopRow({ stop, index, total, onChange, onMoveUp, onMoveDown, onRemove, canRemove }) {
+function StopRow({ stop, index, total, onChange, onMoveUp, onMoveDown, onRemove, canRemove, placeholder }) {
   return (
     <div className="flex items-center gap-2">
       <span
@@ -152,7 +259,7 @@ function StopRow({ stop, index, total, onChange, onMoveUp, onMoveDown, onRemove,
       </span>
       <StopAutocompleteInput
         stop={stop}
-        placeholder={index === 0 ? "Ponto de partida" : index === total - 1 ? "Destino final" : `Parada ${index + 1}`}
+        placeholder={placeholder || (index === 0 ? "Ponto de partida" : index === total - 1 ? "Destino final" : `Parada ${index + 1}`)}
         onChange={onChange}
         autoFocus={false}
       />
@@ -192,15 +299,17 @@ function StopRow({ stop, index, total, onChange, onMoveUp, onMoveDown, onRemove,
   );
 }
 
-export function CRMViagensCalculadoraView() {
+// ── Rota (paradas + distância calculada) ───────────────────────────────────
+//
+// Extraído em 01/09/2026 porque a tela passou a ter DUAS listas de paradas: o
+// trajeto até o destino e os locais visitados lá. Não foi pra shared/ ainda —
+// regra 4 do CLAUDE.md manda extrair na 3ª ocorrência, e esta é a 2ª. Mas
+// duplicar era pior que extrair cedo: o tratamento de resposta obsoleta e o
+// "nunca sobrescrever o que o usuário digitou" são sutis demais pra copiar.
+
+function useRota() {
   const [stops, setStops] = useState(() => [newStop(), newStop()]);
   const [distancia, setDistancia] = useState("");
-  const [idaEVolta, setIdaEVolta] = useState(true);
-  const [rkmCarro, setRkmCarro] = useState("1.00");
-  const [rkmUber, setRkmUber] = useState("2.50");
-  const [passagemAerea, setPassagemAerea] = useState("");
-  const [distanciaAeroporto, setDistanciaAeroporto] = useState("");
-
   const [calc, setCalc] = useState({ loading: false, error: null, totalKm: null });
   const requestIdRef = useRef(0);
   // Último valor de `distancia` preenchido automaticamente pela rota — é o que
@@ -208,9 +317,7 @@ export function CRMViagensCalculadoraView() {
   // do cálculo abaixo.
   const autoDistanciaRef = useRef("");
 
-  const updateStop = (id, patch) => {
-    setStops((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  };
+  const updateStop = (id, patch) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   const moveStop = (index, dir) => {
     setStops((prev) => {
       const next = [...prev];
@@ -220,9 +327,7 @@ export function CRMViagensCalculadoraView() {
       return next;
     });
   };
-  const removeStop = (id) => {
-    setStops((prev) => (prev.length <= 2 ? prev : prev.filter((s) => s.id !== id)));
-  };
+  const removeStop = (id) => setStops((prev) => (prev.length <= 2 ? prev : prev.filter((s) => s.id !== id)));
   const addStop = () => setStops((prev) => [...prev, newStop()]);
 
   // Chave estável que só muda quando a sequência de placeIds muda de fato —
@@ -233,11 +338,11 @@ export function CRMViagensCalculadoraView() {
   useEffect(() => {
     if (!placeIdsKey || !isSupabaseConfigured) {
       // Rota deixou de estar completa (3ª parada vazia, texto apagado): a
-      // distância vinda da rota anterior fica obsoleta e os 3 cards de custo
-      // abaixo seguiriam calculando em cima de um número que não corresponde
-      // mais ao que está na tela. Limpa — mas só o que ESTA tela preencheu
-      // sozinha; se o valor no campo foi digitado à mão, ele é do usuário e
-      // continua valendo (a calculadora funciona sem rota nenhuma).
+      // distância vinda da rota anterior fica obsoleta e os cards de custo
+      // seguiriam calculando em cima de um número que não corresponde mais ao
+      // que está na tela. Limpa — mas só o que ESTA tela preencheu sozinha; se
+      // o valor no campo foi digitado à mão, ele é do usuário e continua
+      // valendo (a calculadora funciona sem rota nenhuma).
       requestIdRef.current++; // invalida resposta em voo da rota anterior
       setDistancia((prev) => (prev !== "" && prev === autoDistanciaRef.current ? "" : prev));
       autoDistanciaRef.current = "";
@@ -273,16 +378,128 @@ export function CRMViagensCalculadoraView() {
       });
   }, [placeIdsKey]);
 
+  return { stops, setStops, distancia, setDistancia, calc, setCalc, allFilled, updateStop, moveStop, removeStop, addStop };
+}
+
+function ListaDeParadas({ rota, label, hint, placeholderPrefix }) {
+  return (
+    <div>
+      <label style={LABEL_ST}>{label}</label>
+      <div className="flex flex-col gap-2">
+        {rota.stops.map((stop, i) => (
+          <StopRow
+            key={stop.id}
+            stop={stop}
+            index={i}
+            total={rota.stops.length}
+            onChange={(patch) => rota.updateStop(stop.id, patch)}
+            onMoveUp={() => rota.moveStop(i, -1)}
+            onMoveDown={() => rota.moveStop(i, 1)}
+            onRemove={() => rota.removeStop(stop.id)}
+            canRemove={rota.stops.length > 2}
+            placeholder={placeholderPrefix ? `${placeholderPrefix} ${i + 1}` : undefined}
+          />
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={rota.addStop}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold mt-2.5"
+        style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+      >
+        <Plus size={13} /> Adicionar parada
+      </button>
+      <div className="mt-2.5" style={{ minHeight: 18 }}>
+        {rota.calc.loading && (
+          <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "var(--text-dim)" }}>
+            <Loader2 size={12} className="animate-spin" /> Calculando distância entre as paradas…
+          </span>
+        )}
+        {!rota.calc.loading && rota.calc.totalKm != null && !rota.calc.error && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--accent)" }}>
+            <Navigation size={12} /> Distância total calculada: {rota.calc.totalKm.toLocaleString("pt-BR")} km
+          </span>
+        )}
+      </div>
+      {hint && <p style={HINT_ST}>{hint}</p>}
+    </div>
+  );
+}
+
+export function CRMViagensCalculadoraView({ seed }) {
+  const rota = useRota();       // trajeto de origem até o destino
+  const local = useRota();      // locais visitados NO destino (não usa ida e volta)
+
+  const [idaEVolta, setIdaEVolta] = useState(true);
+  const [passagemAerea, setPassagemAerea] = useState("");
+
+  // Duração. De avião é sempre menos que por terra (regra do Daniel), por isso
+  // os padrões diferem. Editáveis — ele avisou que "depende muito".
+  const [noitesTerra, setNoitesTerra] = useState("2");
+  const [noitesAviao, setNoitesAviao] = useState("1");
+  const [diariasAluguel, setDiariasAluguel] = useState("0");
+
+  // Parâmetros de custo: da empresa, não do vendedor. Ficam recolhidos.
+  const [mostrarAjustes, setMostrarAjustes] = useState(false);
+  const [diariaHotel, setDiariaHotel] = useState("320");
+  const [diariaAluguel, setDiariaAluguel] = useState("180");
+  const [rkmCarro, setRkmCarro] = useState("1.25");
+  const [rkmUber, setRkmUber] = useState("2.50");
+  const [rkmCombustivel, setRkmCombustivel] = useState("0.75");
+  const [distanciaAeroporto, setDistanciaAeroporto] = useState("");
+
+  // Semente vinda do Planejamento: paradas do roteiro já montadas e noites
+  // sugeridas pelo intervalo de datas. Só na montagem — depois disso a tela é
+  // do usuário, e reaplicar sobrescreveria o que ele ajustou.
+  const seedAplicadaRef = useRef(false);
+  useEffect(() => {
+    if (!seed || seedAplicadaRef.current) return;
+    seedAplicadaRef.current = true;
+    if (Array.isArray(seed.paradas) && seed.paradas.length >= 2) {
+      local.setStops(seed.paradas.map((p) => newStop(p.description || "", p.placeId || null)));
+    }
+    if (seed.noites != null) {
+      setNoitesAviao(String(seed.noites));
+      setNoitesTerra(String(Number(seed.noites) + 1));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed]);
+
   const result = useMemo(() => {
     const mult = idaEVolta ? 2 : 1;
-    const kmTotal = num(distancia) * mult;
+    const kmTotal = num(rota.distancia) * mult;
     const kmAeroportoTotal = num(distanciaAeroporto) * mult;
+    // Os locais do destino já incluem a volta ao aeroporto como parada — por
+    // isso o multiplicador de ida e volta NÃO se aplica aqui.
+    const kmLocal = num(local.distancia);
 
-    const carroTotal = kmTotal * num(rkmCarro);
-    const uberTotal = kmTotal * num(rkmUber);
+    const hotelNoite = num(diariaHotel);
+    const hotelTerra = hotelNoite * num(noitesTerra);
+    const hotelAviao = hotelNoite * num(noitesAviao);
+
+    const carroRodagem = kmTotal * num(rkmCarro);
+    const uberRodagem = kmTotal * num(rkmUber);
+    const carroTotal = carroRodagem + hotelTerra;
+    const uberTotal = uberRodagem + hotelTerra;
+
     const temAviao = num(passagemAerea) > 0;
     const aviaoTraslado = kmAeroportoTotal * num(rkmUber);
-    const aviaoTotal = num(passagemAerea) + aviaoTraslado;
+
+    // No destino: alugar ou usar Uber. Calcula os dois e escolhe o menor — a
+    // comparação não pede campo nenhum, os dados já estão todos na tela.
+    const diarias = num(diariasAluguel);
+    const custoAluguel = diarias > 0 ? diarias * num(diariaAluguel) + kmLocal * num(rkmCombustivel) : null;
+    const custoUberLocal = kmLocal * num(rkmUber);
+
+    let localModo = null;
+    let localCusto = 0;
+    if (custoAluguel != null && (custoUberLocal === 0 || custoAluguel <= custoUberLocal)) {
+      localModo = "aluguel"; localCusto = custoAluguel;
+    } else if (custoUberLocal > 0) {
+      localModo = "uber"; localCusto = custoUberLocal;
+    }
+
+    const aviaoTotal = num(passagemAerea) + aviaoTraslado + localCusto + hotelAviao;
 
     const candidatos = [
       { id: "carro", total: carroTotal },
@@ -292,72 +509,62 @@ export function CRMViagensCalculadoraView() {
     const menor = candidatos.reduce((min, c) => (c.total < min.total ? c : min), candidatos[0]);
 
     return {
-      kmTotal, carroTotal, uberTotal, aviaoTotal, aviaoTraslado, temAviao,
+      kmTotal, kmLocal, carroRodagem, uberRodagem, carroTotal, uberTotal,
+      hotelTerra, hotelAviao, aviaoTotal, aviaoTraslado, temAviao,
+      custoAluguel, custoUberLocal, localModo, diarias,
       cheapest: kmTotal > 0 ? menor.id : null,
     };
-  }, [distancia, idaEVolta, rkmCarro, rkmUber, passagemAerea, distanciaAeroporto]);
+  }, [rota.distancia, local.distancia, idaEVolta, rkmCarro, rkmUber, rkmCombustivel,
+      passagemAerea, distanciaAeroporto, diariaHotel, diariaAluguel,
+      noitesTerra, noitesAviao, diariasAluguel]);
+
+  const erroRota = rota.calc.error || local.calc.error;
+
+  const breakdownAviao = [
+    { label: "Passagem", value: num(passagemAerea) },
+    ...(result.aviaoTraslado > 0 ? [{ label: `Ida ao aeroporto — ${(num(distanciaAeroporto) * (idaEVolta ? 2 : 1)).toFixed(0)} km`, value: result.aviaoTraslado }] : []),
+    ...(result.hotelAviao > 0 ? [{ label: `Hotel — ${num(noitesAviao)} noite(s)`, value: result.hotelAviao }] : []),
+    ...(result.localModo ? [{ section: "No destino — o mais barato entra na conta" }] : []),
+    ...(result.custoAluguel != null ? [{
+      label: `${result.localModo === "aluguel" ? "✓ " : ""}Alugar — ${result.diarias} diária(s) + gasolina`,
+      value: result.custoAluguel,
+      descartado: result.localModo !== "aluguel",
+    }] : []),
+    ...(result.custoUberLocal > 0 ? [{
+      label: `${result.localModo === "uber" ? "✓ " : ""}Uber lá — ${result.kmLocal.toFixed(0)} km × ${fmtMoney(num(rkmUber))}`,
+      value: result.custoUberLocal,
+      descartado: result.localModo !== "uber",
+    }] : []),
+  ];
 
   return (
     <div className="flex flex-col gap-5">
-      {calc.error && (
-        <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setCalc((prev) => ({ ...prev, error: null }))}>
-          {calc.error} Você pode editar a distância manualmente abaixo.
+      {erroRota && (
+        <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => { rota.setCalc((p) => ({ ...p, error: null })); local.setCalc((p) => ({ ...p, error: null })); }}>
+          {erroRota} Você pode editar a distância manualmente abaixo.
         </AppToast>
       )}
 
       <div>
         <h2 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>Calculadora de custo de viagem</h2>
         <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-          Compare carro próprio, avião e Uber/táxi pro mesmo trajeto antes de planejar a visita.
+          Compare carro próprio, Uber/táxi e avião antes de planejar a visita.
         </p>
       </div>
 
-      <div className="rounded-xl border p-4" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
-        <label style={LABEL_ST}>Paradas do trajeto (ordem importa)</label>
-        <div className="flex flex-col gap-2">
-          {stops.map((stop, i) => (
-            <StopRow
-              key={stop.id}
-              stop={stop}
-              index={i}
-              total={stops.length}
-              onChange={(patch) => updateStop(stop.id, patch)}
-              onMoveUp={() => moveStop(i, -1)}
-              onMoveDown={() => moveStop(i, 1)}
-              onRemove={() => removeStop(stop.id)}
-              canRemove={stops.length > 2}
-            />
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={addStop}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold mt-2.5"
-          style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-        >
-          <Plus size={13} /> Adicionar parada
-        </button>
+      {/* 1 · Como você vai até lá */}
+      <div className="rounded-xl border p-4 flex flex-col gap-4" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
+        <div className="text-[10px] font-bold uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.1em" }}>1 · Como você vai até lá</div>
 
-        <div className="mt-2.5" style={{ minHeight: 18 }}>
-          {calc.loading && (
-            <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "var(--text-dim)" }}>
-              <Loader2 size={12} className="animate-spin" /> Calculando distância entre as paradas…
-            </span>
-          )}
-          {!calc.loading && calc.totalKm != null && !calc.error && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--accent)" }}>
-              <Navigation size={12} /> Distância total calculada: {calc.totalKm.toLocaleString("pt-BR")} km
-            </span>
-          )}
-        </div>
+        <ListaDeParadas rota={rota} label="Paradas do trajeto (ordem importa)" />
 
-        <div className="grid md:grid-cols-2 gap-4 mt-3">
+        <div className="grid md:grid-cols-3 gap-4">
           <NumberField
             label="Distância total (km, só ida)"
-            value={distancia}
-            onChange={setDistancia}
+            value={rota.distancia}
+            onChange={rota.setDistancia}
             placeholder="Ex: 120"
-            hint={allFilled ? "Preenchido automaticamente pelas paradas acima — edite se preferir." : "Preenchido automaticamente quando todas as paradas tiverem endereço selecionado, ou digite na mão."}
+            hint={rota.allFilled ? "Preenchido pelas paradas — edite se preferir." : "Escolha os endereços na lista do Google e ele se preenche."}
           />
           <div>
             <label style={LABEL_ST}>Viagem</label>
@@ -366,11 +573,73 @@ export function CRMViagensCalculadoraView() {
               Ida e volta
             </label>
           </div>
-          <NumberField label="R$/km — carro próprio" value={rkmCarro} onChange={setRkmCarro} hint="Combustível + desgaste. Ajuste conforme seu veículo." />
-          <NumberField label="R$/km — Uber/táxi" value={rkmUber} onChange={setRkmUber} hint="Estimativa de corrida intermunicipal." />
-          <NumberField label="Passagem aérea estimada (ida e volta, R$)" value={passagemAerea} onChange={setPassagemAerea} placeholder="Deixe em branco pra não comparar avião" />
-          <NumberField label="Distância até o aeroporto (km, só ida)" value={distanciaAeroporto} onChange={setDistanciaAeroporto} hint="Usado pra estimar o Uber/táxi de ida ao aeroporto." />
+          <NumberField
+            label="Passagem aérea (ida e volta, R$)"
+            value={passagemAerea}
+            onChange={setPassagemAerea}
+            placeholder="Ex: 2308"
+            hint="Em branco = não compara avião."
+          />
         </div>
+      </div>
+
+      {/* 2 · O que você vai fazer lá */}
+      <div className="rounded-xl border p-4 flex flex-col gap-4" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
+        <div className="text-[10px] font-bold uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.1em" }}>2 · O que você vai fazer lá</div>
+
+        <ListaDeParadas
+          rota={local}
+          label="Locais que vai visitar no destino"
+          placeholderPrefix="Local"
+          hint="Mesma busca. Vira a quilometragem rodada lá — usada tanto pro carro alugado quanto pro Uber de lá. Inclua a volta ao aeroporto como última parada."
+        />
+
+        <div className="grid md:grid-cols-3 gap-4">
+          <NumberField
+            label="Km no destino"
+            value={local.distancia}
+            onChange={local.setDistancia}
+            placeholder="Ex: 150"
+            hint={local.allFilled ? "Preenchido pelos locais acima." : "Só os km da visita — não os da estrada."}
+          />
+        </div>
+      </div>
+
+      {/* 3 · Quantos dias */}
+      <div className="rounded-xl border p-4 flex flex-col gap-4" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
+        <div className="text-[10px] font-bold uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.1em" }}>3 · Quantos dias</div>
+        <div className="grid md:grid-cols-3 gap-4">
+          <Stepper label="Noites — indo por terra" value={noitesTerra} onChange={setNoitesTerra} hint="Vale pro carro próprio e pro Uber." />
+          <Stepper label="Noites — indo de avião" value={noitesAviao} onChange={setNoitesAviao} hint="Normalmente menos: economiza a estrada." />
+          <Stepper label="Diárias de carro alugado" value={diariasAluguel} onChange={setDiariasAluguel} hint="Zero = não aluga, compara com Uber de lá." />
+        </div>
+      </div>
+
+      {/* Ajustar valores — parâmetros da empresa, recolhidos */}
+      <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+        <button
+          type="button"
+          onClick={() => setMostrarAjustes((v) => !v)}
+          className="w-full flex items-center gap-2 p-3.5 text-left"
+          style={{ background: "none", border: "none", cursor: "pointer" }}
+          aria-expanded={mostrarAjustes}
+        >
+          <ChevronRight size={15} style={{ color: "var(--text-dim)", transform: mostrarAjustes ? "rotate(90deg)" : "none", transition: "transform .15s" }} />
+          <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>Ajustar valores</span>
+          <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+            hotel {fmtMoney(num(diariaHotel))}/noite · carro {fmtMoney(num(diariaAluguel))}/diária · {fmtMoney(num(rkmCarro))}/km · Uber {fmtMoney(num(rkmUber))}/km
+          </span>
+        </button>
+        {mostrarAjustes && (
+          <div className="grid md:grid-cols-3 gap-4 px-3.5 pb-4">
+            <FaixaField label="Categoria de hotel" faixas={HOTEL_FAIXAS} value={diariaHotel} onChange={setDiariaHotel} outroPlaceholder="R$ por noite" />
+            <FaixaField label="Categoria do carro alugado" faixas={CARRO_FAIXAS} value={diariaAluguel} onChange={setDiariaAluguel} outroPlaceholder="R$ por diária" />
+            <NumberField label="R$/km — carro próprio" value={rkmCarro} onChange={setRkmCarro} hint="Combustível + desgaste." />
+            <NumberField label="R$/km — Uber/táxi" value={rkmUber} onChange={setRkmUber} hint="Estimativa de corrida." />
+            <NumberField label="R$/km — gasolina do alugado" value={rkmCombustivel} onChange={setRkmCombustivel} hint="Só combustível: o desgaste já está na diária." />
+            <NumberField label="Distância até o aeroporto (km, só ida)" value={distanciaAeroporto} onChange={setDistanciaAeroporto} hint="Quase sempre a mesma pra cada vendedor." />
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
@@ -380,15 +649,10 @@ export function CRMViagensCalculadoraView() {
           total={result.carroTotal}
           cheapest={result.cheapest === "carro"}
           disabled={result.kmTotal === 0}
-          breakdown={[{ label: `${result.kmTotal.toFixed(0)} km × ${fmtMoney(num(rkmCarro))}`, value: result.carroTotal }]}
-        />
-        <ModalCard
-          icon={Bike}
-          title="Uber / táxi"
-          total={result.uberTotal}
-          cheapest={result.cheapest === "uber"}
-          disabled={result.kmTotal === 0}
-          breakdown={[{ label: `${result.kmTotal.toFixed(0)} km × ${fmtMoney(num(rkmUber))}`, value: result.uberTotal }]}
+          breakdown={[
+            { label: `${result.kmTotal.toFixed(0)} km × ${fmtMoney(num(rkmCarro))}`, value: result.carroRodagem },
+            ...(result.hotelTerra > 0 ? [{ label: `Hotel — ${num(noitesTerra)} noite(s)`, value: result.hotelTerra }] : []),
+          ]}
         />
         <ModalCard
           icon={Plane}
@@ -396,9 +660,17 @@ export function CRMViagensCalculadoraView() {
           total={result.aviaoTotal}
           cheapest={result.cheapest === "aviao"}
           disabled={!result.temAviao}
+          breakdown={breakdownAviao}
+        />
+        <ModalCard
+          icon={Bike}
+          title="Uber / táxi"
+          total={result.uberTotal}
+          cheapest={result.cheapest === "uber"}
+          disabled={result.kmTotal === 0}
           breakdown={[
-            { label: "Passagem", value: num(passagemAerea) },
-            { label: "Traslado (Uber/táxi)", value: result.aviaoTraslado },
+            { label: `${result.kmTotal.toFixed(0)} km × ${fmtMoney(num(rkmUber))}`, value: result.uberRodagem },
+            ...(result.hotelTerra > 0 ? [{ label: `Hotel — ${num(noitesTerra)} noite(s)`, value: result.hotelTerra }] : []),
           ]}
         />
       </div>
