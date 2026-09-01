@@ -84,6 +84,9 @@ import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
@@ -2795,6 +2798,11 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
   const [viewMode, setViewMode]             = useState("vagas"); // "vagas" | "candidatos"
   const [boardMode, setBoardMode]           = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics" — ortogonal ao viewMode acima
   const [frenteFilter, setFrenteFilter]     = useState("todas"); // "todas" | RH_FRENTES[number]
+  // Dois boards na mesma tela (Vagas e Candidatos) = dois estados de busca
+  // separados: procurar uma vaga não pode recortar a lista de candidatos, e
+  // vice-versa. O campo no header é um só, e mostra o do modo atual.
+  const [vagaSearch, setVagaSearch]         = useState("");
+  const [candSearch, setCandSearch]         = useState("");
   const [selectedVaga, setSelectedVaga]     = useState("todas");
   const [selectedCandidatoId, setSelectedCandidatoId] = useState(null);
   const [quickAddVaga, setQuickAddVaga]     = useState(false);
@@ -3130,15 +3138,43 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
     if (frenteFilter === "todas") return vagas;
     return vagas.filter((v) => (v.company_ids || []).includes(frenteFilter));
   }, [vagas, frenteFilter]);
+  // Escopo por frente SEM a busca de vaga — é ele que decide quais candidatos
+  // pertencem à frente selecionada. Somar a busca de vaga aqui faria digitar
+  // no campo do board de Vagas recortar o board de Candidatos.
   const vagaIdsFrenteFiltradas = useMemo(() => new Set(vagasFrenteFiltradas.map((v) => v.id)), [vagasFrenteFiltradas]);
 
+  // Único array que o board de Vagas consome em Kanban, Tabela, Calendário e
+  // Análise (CLAUDE.md, regra 11). Campos da busca: os que o card mostra —
+  // título da vaga e o cargo/departamento logo abaixo dele.
+  const vagasVisiveis = useMemo(() => {
+    const termo = semAcento(vagaSearch).trim();
+    if (!termo) return vagasFrenteFiltradas;
+    return vagasFrenteFiltradas.filter((v) =>
+      semAcento(v.title).includes(termo) ||
+      semAcento(v.job_title).includes(termo) ||
+      semAcento(v.department).includes(termo)
+    );
+  }, [vagasFrenteFiltradas, vagaSearch]);
+
+  const vagasById = useMemo(() => new Map(vagas.map((v) => [v.id, v])), [vagas]);
+
   // ── Filtered candidatos ────────────────────────────────────────────────────
+  // Mesma ideia do lado das vagas: um array só pras 4 views. A busca daqui é
+  // a `candSearch`, independente da de vagas, e cobre o que o card mostra —
+  // nome do candidato e a vaga a que ele se candidatou.
   const filteredCandidatos = useMemo(() => {
     let list = candidatos;
     if (frenteFilter !== "todas") list = list.filter((c) => vagaIdsFrenteFiltradas.has(c.vaga_id));
-    if (selectedVaga === "todas") return list;
-    return list.filter((c) => c.vaga_id === selectedVaga);
-  }, [candidatos, selectedVaga, frenteFilter, vagaIdsFrenteFiltradas]);
+    if (selectedVaga !== "todas") list = list.filter((c) => c.vaga_id === selectedVaga);
+    const termo = semAcento(candSearch).trim();
+    if (termo) {
+      list = list.filter((c) =>
+        semAcento(c.name).includes(termo) ||
+        semAcento(vagasById.get(c.vaga_id)?.title).includes(termo)
+      );
+    }
+    return list;
+  }, [candidatos, selectedVaga, frenteFilter, vagaIdsFrenteFiltradas, candSearch, vagasById]);
 
   const candByStage = useMemo(() => {
     const map = {};
@@ -3164,7 +3200,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
   const vagasByStage = useMemo(() => {
     const map = {};
     vagaStages.forEach((s) => {
-      const list = vagasFrenteFiltradas.filter((v) => (v.stage || "rascunho") === s.stageKey);
+      const list = vagasVisiveis.filter((v) => (v.stage || "rascunho") === s.stageKey);
       map[s.stageKey] = sortKanbanItems(list, getVagaSortCriteria(s.stageKey), {
         deadline: v => v.hiring_deadline,
         priority: v => v.priority,
@@ -3173,7 +3209,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
       });
     });
     return map;
-  }, [vagasFrenteFiltradas, vagaStages, getVagaSortCriteria]);
+  }, [vagasVisiveis, vagaStages, getVagaSortCriteria]);
 
   const analyticsVagaStages = useMemo(
     () => vagaStages.filter((s) => !s.terminal).map((s) => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
@@ -3196,7 +3232,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
   // entra → aceite). Considera todo hired_at dentro das vagas visíveis no
   // filtro atual, não só as abertas.
   const vagaSpecificStats = useMemo(() => {
-    const open = vagasFrenteFiltradas.filter((v) => !vagaStages.find((s) => s.stageKey === v.stage)?.terminal);
+    const open = vagasVisiveis.filter((v) => !vagaStages.find((s) => s.stageKey === v.stage)?.terminal);
     const withDeadline = open.filter((v) => v.hiring_deadline);
     const avgDaysToDeadline = withDeadline.length > 0
       ? Math.round(withDeadline.reduce((sum, v) => sum + (new Date(v.hiring_deadline).getTime() - Date.now()) / 86400000, 0) / withDeadline.length)
@@ -3209,7 +3245,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
     const hireDays = [];
     for (const c of candidatos) {
       if (!c.hired_at || !c.vaga_id) continue;
-      const vaga = vagasFrenteFiltradas.find((v) => v.id === c.vaga_id);
+      const vaga = vagasVisiveis.find((v) => v.id === c.vaga_id);
       if (!vaga) continue;
       if (vaga.approved_at) fillDays.push(Math.round((new Date(c.hired_at) - new Date(vaga.approved_at)) / 86400000));
       if (c.created_at) hireDays.push(Math.round((new Date(c.hired_at) - new Date(c.created_at)) / 86400000));
@@ -3228,7 +3264,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
       { label: "Time-to-Fill médio", value: avgFill !== null ? `${avgFill}d` : "—" },
       { label: "Time-to-Hire médio", value: avgHire !== null ? `${avgHire}d` : "—" },
     ];
-  }, [vagasFrenteFiltradas, vagaStages, candidatos]);
+  }, [vagasVisiveis, vagaStages, candidatos]);
 
   // Funil de conversão: % de candidatos que já chegaram a cada etapa
   // não-terminal ou além (orderIdx da etapa atual >= orderIdx da etapa do
@@ -3260,15 +3296,19 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
       )}
       {/* Header */}
       <KanbanBoardHeader>
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Briefcase size={22} style={{ color: "var(--text)" }} />
-              <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>
-                Recrutamento
-              </h1>
-            </div>
+            {/* A contagem é resumo AO VIVO (muda com frente, vaga selecionada e
+                busca), não descrição estática — por isso vai em `summary`
+                (ver cabeçalho de PageTitle.jsx). */}
+            <PageTitle
+              icon={Briefcase}
+              title="Recrutamento"
+              summary={viewMode === "vagas"
+                ? `${vagasVisiveis.length} vaga${vagasVisiveis.length !== 1 ? "s" : ""}`
+                : `${filteredCandidatos.length} candidato${filteredCandidatos.length !== 1 ? "s" : ""}`}
+            />
             {/* Troca de modo primária (Vagas/Candidatos) — perto do título, já que é
                 o que decide o que a tela inteira mostra; Kanban/Tabela/Calendário
                 à direita são só a forma de exibir o modo já escolhido. */}
@@ -3287,24 +3327,29 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
               </button>
             </div>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {viewMode === "vagas"
-              ? `${vagasFrenteFiltradas.length} vaga${vagasFrenteFiltradas.length !== 1 ? "s" : ""}`
-              : `${filteredCandidatos.length} candidato${filteredCandidatos.length !== 1 ? "s" : ""}`}
-          </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <select
-            value={frenteFilter}
-            onChange={(e) => setFrenteFilter(e.target.value)}
-            className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-          >
-            <option value="todas">Todas as frentes</option>
-            {RH_FRENTES.map((id) => (
-              <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>
-            ))}
-          </select>
+          {/* Busca + filtro de frente no FilterBar compartilhado, fora de
+              qualquer bloco condicional de view (CLAUDE.md, regra 11): vale
+              em Kanban, Tabela, Calendário e Análise. Um campo só, sempre
+              renderizado — o que muda com o modo é QUAL estado ele edita
+              (vagaSearch ou candSearch), então a linha do header nunca
+              reflui ao alternar Vagas/Candidatos. */}
+          <FilterBar
+            search={viewMode === "vagas"
+              ? { value: vagaSearch, onChange: (e) => setVagaSearch(e.target.value), placeholder: "Buscar vaga…" }
+              : { value: candSearch, onChange: (e) => setCandSearch(e.target.value), placeholder: "Buscar candidato…" }}
+            filters={[{
+              id: "frente",
+              label: "Frente",
+              value: frenteFilter,
+              onChange: (e) => setFrenteFilter(e.target.value),
+              options: [
+                { value: "todas", label: "Todas as frentes" },
+                ...RH_FRENTES.map((id) => ({ value: id, label: RH_FRENTE_LABELS[id] })),
+              ],
+            }]}
+          />
           {/* Toggle Kanban / Tabela / Calendário — como exibir o modo (Vagas/
               Candidatos) já escolhido no título, não o quê exibir. */}
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
@@ -3317,9 +3362,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
           <button
             onClick={() => {
               if (viewMode === "vagas") {
-                exportVagasToCSV(vagasFrenteFiltradas, { stages: vagaStages });
+                exportVagasToCSV(vagasVisiveis, { stages: vagaStages });
               } else {
-                const vagasById = new Map(vagas.map((v) => [v.id, v]));
                 exportCandidatosToCSV(filteredCandidatos, { vagasById, stages: candStages });
               }
             }}
@@ -3372,21 +3416,21 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
         {/* ═══ VAGAS ═══ */}
         {boardMode === "table" ? (
           <VagaTableView
-            vagas={vagasFrenteFiltradas}
+            vagas={vagasVisiveis}
             stages={vagaStages}
             candidatosByVaga={candidatosByVaga}
             onRowClick={(v) => setVagaDrawerId(v.id)}
           />
         ) : boardMode === "calendar" ? (
           <VagaCalendarView
-            vagas={vagasFrenteFiltradas}
+            vagas={vagasVisiveis}
             stages={vagaStages}
             onPillClick={(v) => setVagaDrawerId(v.id)}
           />
         ) : boardMode === "analytics" ? (
           <KanbanAnalyticsPanel
             stages={analyticsVagaStages}
-            records={vagasFrenteFiltradas}
+            records={vagasVisiveis}
             getStageKey={(v) => v.stage}
             getStageEnteredAt={(v) => v.stage_changed_at}
             specificStats={vagaSpecificStats}

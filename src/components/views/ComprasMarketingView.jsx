@@ -30,6 +30,9 @@ import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
@@ -622,6 +625,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions, initial
   const { suppliers } = useMarketingSuppliers({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
+  const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -645,8 +649,30 @@ export function ComprasMarketingView({ user, users = [], notifyMentions, initial
   const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
   const suppliersById = useMemo(() => new Map((suppliers || []).map(s => [s.id, s])), [suppliers]);
 
-  const visiblePurchases = useMemo(() => purchases.filter(p => p.stage !== PURCHASE_REJECTED_STAGE), [purchases]);
-  const rejectedPurchases = useMemo(() => purchases.filter(p => p.stage === PURCHASE_REJECTED_STAGE), [purchases]);
+  // Busca livre nos campos que o usuário realmente vê na solicitação: item,
+  // protocolo, fornecedor e responsável (card e tabela mostram os quatro).
+  // Filtra ANTES de separar visíveis/rejeitadas, pra tira de rejeitadas e
+  // board contarem a mesma coisa; tudo que consome purchases filtradas
+  // (Kanban, Tabela, Calendário, Análise, export CSV) sai daqui — CLAUDE.md,
+  // regra 11.
+  const searchedPurchases = useMemo(() => {
+    const termo = semAcento(search).trim();
+    if (!termo) return purchases;
+    return purchases.filter(p => {
+      const responsibleIds = p.responsibleIds?.length ? p.responsibleIds : (p.responsibleId ? [p.responsibleId] : []);
+      const responsaveis = responsibleIds.map(id => usersById.get(id)?.name || "").join(" ");
+      return (
+        semAcento(p.itemName).includes(termo) ||
+        semAcento(p.requestNumber).includes(termo) ||
+        semAcento(suppliersById.get(p.supplierId)?.name).includes(termo) ||
+        semAcento(p.requesterName).includes(termo) ||
+        semAcento(responsaveis).includes(termo)
+      );
+    });
+  }, [purchases, search, suppliersById, usersById]);
+
+  const visiblePurchases = useMemo(() => searchedPurchases.filter(p => p.stage !== PURCHASE_REJECTED_STAGE), [searchedPurchases]);
+  const rejectedPurchases = useMemo(() => searchedPurchases.filter(p => p.stage === PURCHASE_REJECTED_STAGE), [searchedPurchases]);
 
   // Ordenar cards dentro de cada coluna — cada etapa guarda seu próprio
   // critério (ver KanbanColumnSortMenu). PURCHASE_STAGES é hardcoded (regra
@@ -794,24 +820,27 @@ export function ComprasMarketingView({ user, users = [], notifyMentions, initial
   return (
     <div>
       <KanbanBoardHeader className="mb-4">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex items-center justify-center flex-shrink-0"
-              style={{ width: 38, height: 38, borderRadius: 10, background: "var(--surface-alt)", border: "1px solid var(--border)", color: "var(--text)" }}
-            >
-              <ShoppingCart size={18} />
-            </div>
-            <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-              Compras de Marketing
-            </h1>
-          </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)", marginLeft: 48 }}>
-            Solicitações de compra de itens prontos (brindes, uniformes, materiais impressos) executadas pelo Marketing
-          </p>
-        </div>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        {/* Descrição ESTÁTICA na mesma linha do título (rodada de densidade
+            01/09/2026, ver PageTitle.jsx). Compras não tem resumo ao vivo no
+            header — os números moram na aba Análise —, então nada de
+            `summary`. */}
+        <PageTitle
+          icon={ShoppingCart}
+          title="Compras de Marketing"
+          description="Solicitações de compra de itens prontos (brindes, uniformes, materiais impressos) executadas pelo Marketing"
+        />
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Busca — sempre visível e FORA do bloco condicional de `viewMode`
+              (CLAUDE.md, regra 11): vale igual em Kanban, Tabela, Calendário e
+              Análise, e também na tira de rejeitadas. */}
+          <FilterBar
+            search={{
+              value: search,
+              onChange: e => setSearch(e.target.value),
+              placeholder: "Buscar solicitação…",
+            }}
+          />
           <CopyPublicLinkButton url={`${window.location.origin}/solicitar-compra`} label="Copiar link público" title={`${window.location.origin}/solicitar-compra`} variant="strong" />
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}  label="Kanban" iconOnlyMobile />

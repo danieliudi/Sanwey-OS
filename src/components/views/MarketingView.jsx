@@ -29,10 +29,12 @@ import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
-import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
@@ -716,18 +718,35 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const [filterChannel, setFilterChannel]     = useState("all");
   const [filterStarred, setFilterStarred]     = useState(false);
   const [ownerFilter, setOwnerFilter]         = useState("all");
+  const [search, setSearch]                   = useState("");
   const [viewMode, setViewMode]               = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("marketing-campanhas");
 
   const filteredCampaigns = useMemo(() => {
+    // Busca livre nos campos que o card mostra: nome, canal e as empresas
+    // (badge de sigla no card). Normalizada uma vez por termo, não uma vez por
+    // campanha (ver utils/text-search.js). Sai deste mesmo `filteredCampaigns`
+    // que Kanban, Tabela, Calendário e Análise já consomem — CLAUDE.md, regra
+    // 11: view nenhuma reimplementa o próprio escopo.
+    const termo = semAcento(search).trim();
     return campaigns.filter(c => {
       if (filterCompany !== "all" && !(c.companyIds || []).includes(filterCompany)) return false;
       if (filterChannel !== "all" && c.channel !== filterChannel) return false;
       if (filterStarred && !c.starred) return false;
       if (isManager && ownerFilter !== "all" && !getCampaignOwnerIds(c).includes(ownerFilter)) return false;
+      if (termo) {
+        const empresas = (c.companyIds || [])
+          .map(id => `${COMPANIES[id]?.short || ""} ${COMPANIES[id]?.name || ""}`)
+          .join(" ");
+        const casa =
+          semAcento(c.name).includes(termo) ||
+          semAcento(c.channel).includes(termo) ||
+          semAcento(empresas).includes(termo);
+        if (!casa) return false;
+      }
       return true;
     });
-  }, [campaigns, filterCompany, filterChannel, filterStarred, ownerFilter, isManager]);
+  }, [campaigns, search, filterCompany, filterChannel, filterStarred, ownerFilter, isManager]);
 
   // Ordenar cards dentro de cada coluna do Kanban — cada etapa guarda seu
   // próprio critério agora (ver KanbanColumnSortMenu), então precisa de um
@@ -925,24 +944,26 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           topo chapada e de ponta a ponta (ver KanbanBoardHeader.jsx). */}
       <KanbanBoardHeader className="mb-4">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex items-center justify-center flex-shrink-0"
-              style={{ width: 38, height: 38, borderRadius: 10, background: "var(--surface-alt)", border: "1px solid var(--border)", color: "var(--text)" }}
-            >
-              <Megaphone size={18} />
-            </div>
-            <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-              Marketing
-            </h1>
-          </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)", marginLeft: 48 }}>
-            Kanban de campanhas {isAgencia ? "· acesso de visitante" : ""}
-          </p>
-        </div>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        {/* Descrição ESTÁTICA na mesma linha do título (rodada de densidade
+            01/09/2026, ver PageTitle.jsx) — Campanhas não tem resumo ao vivo,
+            então `summary` fica de fora. */}
+        <PageTitle
+          icon={Megaphone}
+          title="Marketing"
+          description={`Kanban de campanhas${isAgencia ? " · acesso de visitante" : ""}`}
+        />
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Busca — sempre visível e FORA do bloco condicional de `viewMode`
+              (CLAUDE.md, regra 11), então vale igual em Kanban, Tabela,
+              Calendário e Análise. Mesmo lugar/estilo de EntregasView. */}
+          <FilterBar
+            search={{
+              value: search,
+              onChange: e => setSearch(e.target.value),
+              placeholder: "Buscar campanha…",
+            }}
+          />
           <button
             onClick={exportCampaignsCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
@@ -988,14 +1009,6 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               iconOnlyMobile
             />
           </div>
-          {isManager && (
-            <Select
-              value={ownerFilter}
-              onChange={e => setOwnerFilter(e.target.value)}
-              options={ownerOptions}
-              className="w-full sm:w-48"
-            />
-          )}
           {canWrite && (
             <button
               onClick={() => setQuickAddStage("briefing")}
@@ -1022,26 +1035,43 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <select
-          value={filterCompany}
-          onChange={e => setFilterCompany(e.target.value)}
-          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-        >
-          <option value="all">Todas as empresas</option>
-          {COMPANY_IDS.map(id => (
-            <option key={id} value={id}>{COMPANIES[id]?.short}</option>
-          ))}
-        </select>
-        <select
-          value={filterChannel}
-          onChange={e => setFilterChannel(e.target.value)}
-          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-        >
-          <option value="all">Todos os canais</option>
-          {MARKETING_CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        {/* Selects via FilterBar compartilhado — antes eram dois <select> crus
+            com estilo inline (dívida registrada no CLAUDE.md, regras 6 e 11).
+            O filtro de responsável saiu da linha de ações do header e veio
+            pra cá: é filtro, e no header ele aparecia/sumia por cargo, o que
+            mudava a largura da linha de botões. Spread condicional, mesmo
+            padrão de EntregasView. */}
+        <FilterBar
+          filters={[
+            {
+              id: "company",
+              label: "Empresa",
+              value: filterCompany,
+              onChange: e => setFilterCompany(e.target.value),
+              options: [
+                { value: "all", label: "Todas as empresas" },
+                ...COMPANY_IDS.map(id => ({ value: id, label: COMPANIES[id]?.short })),
+              ],
+            },
+            {
+              id: "channel",
+              label: "Canal",
+              value: filterChannel,
+              onChange: e => setFilterChannel(e.target.value),
+              options: [
+                { value: "all", label: "Todos os canais" },
+                ...MARKETING_CHANNELS.map(c => ({ value: c, label: c })),
+              ],
+            },
+            ...(isManager ? [{
+              id: "owner",
+              label: "Responsável",
+              value: ownerFilter,
+              onChange: e => setOwnerFilter(e.target.value),
+              options: ownerOptions,
+            }] : []),
+          ]}
+        />
         <button
           onClick={() => setFilterStarred(v => !v)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl border transition-colors"

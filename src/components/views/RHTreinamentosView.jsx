@@ -37,6 +37,9 @@ import { sortKanbanItems } from "../../utils/kanban-sort";
 import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 // fmt() local removido (mesma classe de bug do resto de RH: parseava
@@ -442,31 +445,51 @@ function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
 
   return (
     <div className="mb-4">
-      <div className="flex items-center gap-2 flex-wrap mb-3">
-        <select value={treinamentoFiltro} onChange={(e) => setTreinamentoFiltro(e.target.value)} className="text-xs rounded-xl border px-3 py-1.5 outline-none" style={selectSt}>
-          <option value="todos">Todos os treinamentos</option>
-          {treinamentos.map((t) => <option key={t.id} value={t.id}>{t.titulo}</option>)}
-        </select>
-        <select value={frenteFiltro} onChange={(e) => setFrenteFiltro(e.target.value)} className="text-xs rounded-xl border px-3 py-1.5 outline-none" style={selectSt}>
-          <option value="todas">Todas as frentes</option>
-          {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
-        </select>
-        <div className="flex items-center gap-1.5 ml-auto">
-          <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 600 }}>Auditoria em</span>
-          <input
-            type="date"
-            value={auditDateStr}
-            onChange={(e) => setAuditDateStr(e.target.value)}
-            className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-            style={selectSt}
-            title="Projeta as pendências que existirão até esta data"
-          />
-          {auditDateStr && (
-            <button onClick={() => setAuditDateStr("")} title="Limpar" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", display: "flex", padding: 2 }}>
-              <X size={14} />
-            </button>
-          )}
-        </div>
+      {/* Os dois selects de filtro passaram do <select> cru com estilo inline
+          pro FilterBar compartilhado (rodada de densidade de 01/09/2026); o
+          seletor de data da auditoria continua sendo um controle próprio,
+          no slot `trailing`. */}
+      <div className="mb-3">
+        <FilterBar
+          filters={[
+            {
+              id: "treinamento",
+              label: "Treinamento",
+              value: treinamentoFiltro,
+              onChange: (e) => setTreinamentoFiltro(e.target.value),
+              options: [
+                { value: "todos", label: "Todos os treinamentos" },
+                ...treinamentos.map((t) => ({ value: t.id, label: t.titulo })),
+              ],
+            },
+            {
+              id: "frente",
+              label: "Frente",
+              value: frenteFiltro,
+              onChange: (e) => setFrenteFiltro(e.target.value),
+              options: [
+                { value: "todas", label: "Todas as frentes" },
+                ...RH_FRENTES.map((id) => ({ value: id, label: RH_FRENTE_LABELS[id] })),
+              ],
+            },
+          ]}
+          trailing={<>
+            <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 600 }}>Auditoria em</span>
+            <input
+              type="date"
+              value={auditDateStr}
+              onChange={(e) => setAuditDateStr(e.target.value)}
+              className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+              style={selectSt}
+              title="Projeta as pendências que existirão até esta data"
+            />
+            {auditDateStr && (
+              <button onClick={() => setAuditDateStr("")} title="Limpar" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", display: "flex", padding: 2 }}>
+                <X size={14} />
+              </button>
+            )}
+          </>}
+        />
       </div>
 
       {preAudit && (
@@ -1156,6 +1179,7 @@ function TreinamentoBoardModal({
   const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("treinamentos");
   const stageFields = useRHStageFields("treinamentos");
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
+  const [search, setSearch] = useState("");
   const [drawerId, setDrawerId] = useState(null);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
   const [addingStage, setAddingStage] = useState(false);
@@ -1197,19 +1221,28 @@ function TreinamentoBoardModal({
     onInitialDrawerIdConsumed?.();
   }, [initialDrawerId, onInitialDrawerIdConsumed]);
 
+  // Único array que Kanban, Tabela, Calendário e Análise deste quadro
+  // consomem (CLAUDE.md, regra 11). O card mostra o colaborador — é por ele
+  // que se busca aqui dentro (o treinamento já é o próprio quadro).
+  const filteredAtribuicoes = useMemo(() => {
+    const termo = semAcento(search).trim();
+    if (!termo) return atribuicoes;
+    return atribuicoes.filter(a => semAcento(colaboradoresById.get(a.colaborador_id)?.fullName).includes(termo));
+  }, [atribuicoes, search, colaboradoresById]);
+
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("rh-treinamentos");
   const byStage = useMemo(() => {
     const map = {};
     const defaultKey = stages[0]?.stageKey || "pendente";
     stages.forEach(s => {
-      const list = atribuicoes.filter(a => (a.status || defaultKey) === s.stageKey);
+      const list = filteredAtribuicoes.filter(a => (a.status || defaultKey) === s.stageKey);
       map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
         name: a => colaboradoresById.get(a.colaborador_id)?.fullName,
         createdAt: a => a.created_at,
       });
     });
     return map;
-  }, [atribuicoes, stages, getSortCriteria, colaboradoresById]);
+  }, [filteredAtribuicoes, stages, getSortCriteria, colaboradoresById]);
 
   const getCompleteness = (a) => getFieldCompleteness(stageFields.getFields(a.status), a.custom_fields || {});
 
@@ -1277,11 +1310,11 @@ function TreinamentoBoardModal({
   );
 
   const boardSpecificStats = useMemo(() => {
-    const concluido = atribuicoes.filter(a => a.status === "concluido").length;
-    const vencido = atribuicoes.filter(a => a.status === "vencido").length;
+    const concluido = filteredAtribuicoes.filter(a => a.status === "concluido").length;
+    const vencido = filteredAtribuicoes.filter(a => a.status === "vencido").length;
     const decided = concluido + vencido;
     const taxaConclusao = decided > 0 ? Math.round((concluido / decided) * 100) : null;
-    const certificados = atribuicoes.filter(a => a.certificado_url).length;
+    const certificados = filteredAtribuicoes.filter(a => a.certificado_url).length;
     return [
       { label: "Taxa de conclusão", value: taxaConclusao !== null ? `${taxaConclusao}%` : "—" },
       // "no período" (sugerido na spec) não existe aqui — este board não tem
@@ -1290,7 +1323,7 @@ function TreinamentoBoardModal({
       // já carregadas deste treinamento.
       { label: "Certificados emitidos", value: String(certificados) },
     ];
-  }, [atribuicoes]);
+  }, [filteredAtribuicoes]);
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", flexDirection: "column" }}>
@@ -1298,9 +1331,19 @@ function TreinamentoBoardModal({
         <div className="flex items-start justify-between flex-wrap gap-3" style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)" }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 18, color: "var(--text)" }}>{treinamento.titulo}</div>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>Board de acompanhamento — {atribuicoes.length} pessoa{atribuicoes.length !== 1 ? "s" : ""} atribuída{atribuicoes.length !== 1 ? "s" : ""}</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>Board de acompanhamento — {filteredAtribuicoes.length} pessoa{filteredAtribuicoes.length !== 1 ? "s" : ""} atribuída{filteredAtribuicoes.length !== 1 ? "s" : ""}</div>
           </div>
           <div className="flex items-center flex-wrap gap-2">
+            {/* Busca sempre visível, fora do bloco condicional de `viewMode`
+                (CLAUDE.md, regra 11) — vale igual em Kanban, Tabela,
+                Calendário e Análise. */}
+            <FilterBar
+              search={{
+                value: search,
+                onChange: e => setSearch(e.target.value),
+                placeholder: "Buscar colaborador…",
+              }}
+            />
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
               <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" iconOnlyMobile />
@@ -1308,7 +1351,7 @@ function TreinamentoBoardModal({
               <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
             </div>
             <button
-              onClick={() => exportTreinamentoAtribuicoesToCSV(atribuicoes, { colaboradoresById, stages })}
+              onClick={() => exportTreinamentoAtribuicoesToCSV(filteredAtribuicoes, { colaboradoresById, stages })}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
@@ -1329,7 +1372,7 @@ function TreinamentoBoardModal({
             <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
           ) : viewMode === "table" ? (
             <TreinamentoTableView
-              atribuicoes={atribuicoes}
+              atribuicoes={filteredAtribuicoes}
               treinamento={treinamento}
               stages={stages}
               colaboradoresById={colaboradoresById}
@@ -1337,7 +1380,7 @@ function TreinamentoBoardModal({
             />
           ) : viewMode === "calendar" ? (
             <TreinamentoCalendarView
-              atribuicoes={atribuicoes}
+              atribuicoes={filteredAtribuicoes}
               treinamento={treinamento}
               stages={stages}
               colaboradoresById={colaboradoresById}
@@ -1346,7 +1389,7 @@ function TreinamentoBoardModal({
           ) : viewMode === "analytics" ? (
             <KanbanAnalyticsPanel
               stages={analyticsStages}
-              records={atribuicoes}
+              records={filteredAtribuicoes}
               getStageKey={(a) => a.status}
               getStageEnteredAt={(a) => a.status_changed_at}
               specificStats={boardSpecificStats}
@@ -1578,11 +1621,21 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
     onInitialTreinamentoAtribuicaoConsumed?.();
   }, [initialSelectedTreinamentoAtribuicaoId, loadingTreinamentos, atribuicoes, treinamentos, onInitialTreinamentoAtribuicaoConsumed]);
 
+  // Busca do catálogo: título do treinamento (como antes) e agora também o
+  // nome de quem está atribuído a ele — os dois aparecem na linha do card,
+  // e procurar "quem ainda não fez o de brigada" era o caso que faltava.
+  // `semAcento` (util compartilhada) no lugar do toLowerCase local: quem
+  // digita "seguranca" acha "Segurança".
   const filteredTreinamentos = useMemo(() => {
-    const q = catalogQuery.trim().toLowerCase();
-    if (!q) return treinamentos;
-    return treinamentos.filter(t => (t.titulo || "").toLowerCase().includes(q));
-  }, [treinamentos, catalogQuery]);
+    const termo = semAcento(catalogQuery).trim();
+    if (!termo) return treinamentos;
+    return treinamentos.filter(t =>
+      semAcento(t.titulo).includes(termo) ||
+      (atribuicoesByTreinamento.get(t.id) || []).some(a =>
+        semAcento(colaboradoresById.get(a.colaborador_id)?.fullName).includes(termo)
+      )
+    );
+  }, [treinamentos, catalogQuery, atribuicoesByTreinamento, colaboradoresById]);
 
   const toggleExpand = (id) => setExpanded(prev => {
     const next = new Set(prev);
@@ -1598,16 +1651,12 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
 
   return (
     <div>
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <GraduationCap size={22} style={{ color: "var(--text)" }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Treinamentos</h1>
-          </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {isRHUser ? "Catálogo, atribuição e conformidade" : "Seus treinamentos atribuídos"}
-          </p>
-        </div>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <PageTitle
+          icon={GraduationCap}
+          title="Treinamentos"
+          description={isRHUser ? "Catálogo, atribuição e conformidade" : "Seus treinamentos atribuídos"}
+        />
         {canWrite && (
           <Button icon={Plus} onClick={() => setNovoOpen(true)}>Novo treinamento</Button>
         )}
@@ -1622,14 +1671,15 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
             <EmptyState icon={GraduationCap} title="Nenhum treinamento cadastrado" description="Cadastre um treinamento para começar a montar o catálogo." />
           ) : (
             <>
-              <input
-                type="text"
-                value={catalogQuery}
-                onChange={(e) => setCatalogQuery(e.target.value)}
-                placeholder="Buscar treinamento por título…"
-                className="w-full text-sm rounded-xl border px-3 py-2 outline-none mb-3"
-                style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", maxWidth: 360 }}
-              />
+              <div className="mb-3">
+                <FilterBar
+                  search={{
+                    value: catalogQuery,
+                    onChange: (e) => setCatalogQuery(e.target.value),
+                    placeholder: "Buscar treinamento ou colaborador…",
+                  }}
+                />
+              </div>
               {filteredTreinamentos.length === 0 ? (
                 <EmptyState icon={GraduationCap} title="Nenhum treinamento encontrado" description="Ajuste a busca." />
               ) : (

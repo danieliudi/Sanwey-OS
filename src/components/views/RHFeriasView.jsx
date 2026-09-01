@@ -41,6 +41,9 @@ import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { AppToast } from "../shared/AppToast";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 // ── Documento obrigatório por tipo de licença ────────────────────────────────
@@ -985,6 +988,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const feriasStageFields = useRHStageFields("ferias");
 
   const [viewMode, setViewMode]           = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
+  const [search, setSearch]               = useState("");
   const [filterStatus, setFilterStatus]   = useState("todas");
   const [onlyMine, setOnlyMine]           = useState(false);
   const [showSolicitar, setShowSolicitar] = useState(false);
@@ -1217,13 +1221,22 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
     return { pendentes, aprovadosMes, diasAtivos };
   }, [requests]);
 
+  // Busca junto com os outros filtros, no MESMO array que Kanban, Tabela,
+  // Calendário e Análise consomem (CLAUDE.md, regra 11 — nenhuma view
+  // reimplementa o próprio escopo). Campos: os que o card mostra — nome do
+  // colaborador e o tipo de afastamento.
   const filtered = useMemo(() => {
+    const termo = semAcento(search).trim();
     return requests.filter((r) => {
       if (filterStatus !== "todas" && r.status !== filterStatus) return false;
       if (onlyMine && r.user_id !== meuColaborador?.id) return false;
+      if (termo) {
+        const nome = colaboradoresById.get(r.user_id)?.fullName;
+        if (!semAcento(nome).includes(termo) && !semAcento(leaveTypeLabel(r.type)).includes(termo)) return false;
+      }
       return true;
     });
-  }, [requests, filterStatus, onlyMine, currentUser]);
+  }, [requests, filterStatus, onlyMine, currentUser, search, colaboradoresById, meuColaborador]);
 
   const reqByStage = useMemo(() => {
     const map = {};
@@ -1273,15 +1286,19 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
         </AppToast>
       )}
       <KanbanBoardHeader className="mb-4">
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <CalendarCheck size={22} style={{ color: "var(--text)" }} />
-              <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Férias & Licenças</h1>
-            </div>
-            <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Gestão de solicitações de afastamento</p>
-          </div>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <PageTitle icon={CalendarCheck} title="Férias & Licenças" description="Gestão de solicitações de afastamento" />
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Busca sempre visível, fora do bloco condicional de `viewMode`
+                (CLAUDE.md, regra 11) — vale igual em Kanban, Tabela,
+                Calendário e Análise. */}
+            <FilterBar
+              search={{
+                value: search,
+                onChange: e => setSearch(e.target.value),
+                placeholder: "Buscar colaborador…",
+              }}
+            />
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
               <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" iconOnlyMobile />

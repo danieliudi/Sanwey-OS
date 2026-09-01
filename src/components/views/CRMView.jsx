@@ -45,6 +45,9 @@ import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { daysSince } from "../../utils/date";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
@@ -366,6 +369,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   }, [users, user.id, user.role]);
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [starredOnly, setStarredOnly] = useState(false);
+  const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "calendar"
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("crm-pipeline");
   const [draggedLead, setDraggedLead] = useState(null);
@@ -437,8 +441,25 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     // não filtrava nada — mesmo padrão "Só favoritos" já usado em
     // Entregas/Marketing.
     if (starredOnly) s = s.filter(l => l.starred);
+    // Busca por último, DENTRO do fluxo já escopado (empresa → vendedor →
+    // setor → responsável → favoritos): nunca sobre `leads` cru, senão a
+    // busca devolveria negócio de outra empresa/vendedor. `scopedLeads` é o
+    // array que as 4 views consomem (Kanban, Tabela, Calendário, Análise),
+    // então a busca vale nas 4 de graça — CLAUDE.md, regra 11.
+    //
+    // Campos = os que o card mostra: nome da empresa, setor e o nome de quem
+    // é responsável (AvatarStack do rodapé). Buscar em campo invisível faz o
+    // usuário não entender por que o card casou.
+    const termo = semAcento(search).trim();
+    if (termo) {
+      s = s.filter(l =>
+        semAcento(l.company).includes(termo) ||
+        semAcento(l.sector).includes(termo) ||
+        getLeadOwnerIds(l).some(id => semAcento(usersById.get(id)?.name).includes(termo))
+      );
+    }
     return s;
-  }, [companyScopedLeads, ownerFilter, isManager, starredOnly]);
+  }, [companyScopedLeads, ownerFilter, isManager, starredOnly, search, usersById]);
 
   const byStage = useMemo(() => {
     const bucket = Object.create(null);
@@ -630,18 +651,31 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           até a borda da janela a partir de `lg`). */}
       <KanbanBoardHeader>
         <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-            Funil de Vendas
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {scopedLeads.length} oportunidades
-            {summary.pipelineValue > 0 && ` · ${formatK(summary.pipelineValue)} em aberto`}
-            {summary.won > 0 && ` · ${summary.won} ganho${summary.won !== 1 ? "s" : ""}`}
-            {summary.lost > 0 && ` · ${summary.lost} perdido${summary.lost !== 1 ? "s" : ""}`}
-          </p>
-        </div>
+        {/* Resumo AO VIVO (conta e valor mudam a cada filtro/busca) vai em
+            `summary`, não em `description` — ver o cabeçalho de PageTitle.jsx.
+            Esta tela não tem texto estático além dele, então não passa
+            `description`. */}
+        <PageTitle
+          title="Funil de Vendas"
+          summary={
+            `${scopedLeads.length} oportunidades`
+            + (summary.pipelineValue > 0 ? ` · ${formatK(summary.pipelineValue)} em aberto` : "")
+            + (summary.won  > 0 ? ` · ${summary.won} ganho${summary.won !== 1 ? "s" : ""}` : "")
+            + (summary.lost > 0 ? ` · ${summary.lost} perdido${summary.lost !== 1 ? "s" : ""}` : "")
+          }
+        />
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Busca sempre visível, fora do bloco condicional de `viewMode`
+              (CLAUDE.md, regra 11) — vale igual em Kanban, Tabela, Calendário
+              e Análise, porque as 4 consomem `scopedLeads`. */}
+          <FilterBar
+            search={{
+              value: search,
+              onChange: e => setSearch(e.target.value),
+              placeholder: "Buscar negócio…",
+              dataTour: "crm-busca-card",
+            }}
+          />
           {/* Importar CSV */}
           {isManager && onOpenImport && (
             <button

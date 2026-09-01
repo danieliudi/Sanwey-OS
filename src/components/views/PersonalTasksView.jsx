@@ -19,6 +19,9 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { Badge } from "../ui/Badge";
 import { formatDateBR, daysSince } from "../../utils/date";
 import { STATUS_COLUMNS, isTaskDone, buildTaskConditionValues } from "../../constants/personal-tasks";
@@ -161,18 +164,23 @@ const DATE_BUCKET_OPTIONS = [
   { value: "sem_data", label: "Sem prazo" },
 ];
 
+// O <select> cru com estilo inline virou uma entrada do FilterBar
+// compartilhado (rodada de densidade 01/09/2026 — CLAUDE.md, regras 6 e 11).
+// O rótulo "Prazo" fica: ele pareia com os rótulos "Prioridade"/"Etiquetas"
+// dos grupos de pílulas ao lado, que o FilterBar não cobre.
 function DateBucketFilter({ value, onChange }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <span className="text-[10px] font-bold uppercase tracking-wide mr-0.5" style={{ color: "var(--text-dim)" }}>Prazo</span>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="text-[11px] font-semibold rounded-lg border px-2 py-1 cursor-pointer"
-        style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
-      >
-        {DATE_BUCKET_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+      <FilterBar
+        filters={[{
+          id: "date-bucket",
+          label: "Prazo",
+          value,
+          onChange: e => onChange(e.target.value),
+          options: DATE_BUCKET_OPTIONS,
+        }]}
+      />
     </div>
   );
 }
@@ -505,6 +513,7 @@ export function PersonalTasksView({ currentUser }) {
   const [activeTags, setActiveTags] = useState([]);
   const [activePriorities, setActivePriorities] = useState([]);
   const [dateBucketFilter, setDateBucketFilter] = useState("");
+  const [search, setSearch] = useState("");
   const [listSort, setListSort] = useState("recent");
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
   const [editingFieldsStageKey, setEditingFieldsStageKey] = useState(null);
@@ -527,13 +536,20 @@ export function PersonalTasksView({ currentUser }) {
   // Único ponto de filtro — Lista/Kanban/Agenda consomem só o que sai daqui
   // (regra 11: nenhuma view reimplementa escopo próprio).
   const filteredTasks = useMemo(() => {
+    // Busca livre no que o card mostra: título e etiquetas (ver
+    // utils/text-search.js). Normaliza o termo uma vez, não uma vez por tarefa.
+    const termo = semAcento(search).trim();
     return tasks.filter(t => {
       if (activeTags.length > 0 && !activeTags.every(tag => (t.tags || []).includes(tag))) return false;
       if (activePriorities.length > 0 && !activePriorities.includes(t.priority)) return false;
       if (dateBucketFilter && bucketFor(t) !== dateBucketFilter) return false;
+      if (termo && !(
+        semAcento(t.title).includes(termo) ||
+        (t.tags || []).some(tag => semAcento(tag).includes(termo))
+      )) return false;
       return true;
     });
-  }, [tasks, activeTags, activePriorities, dateBucketFilter]);
+  }, [tasks, search, activeTags, activePriorities, dateBucketFilter]);
 
   const sortedFilteredTasks = useMemo(
     () => sortKanbanItems(filteredTasks, listSort, personalSortGetters),
@@ -712,18 +728,25 @@ export function PersonalTasksView({ currentUser }) {
       )}
       <KanbanBoardHeader className="mb-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <ListChecks size={22} style={{ color: "var(--text)" }} />
-              <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-                Meu To-do
-              </h1>
-            </div>
-            <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-              Sua lista particular — ninguém mais vê isto.
-            </p>
-          </div>
+          {/* Descrição ESTÁTICA na mesma linha do título (rodada de densidade
+              01/09/2026, ver PageTitle.jsx) — Meu To-do não tem resumo ao
+              vivo, então `summary` fica de fora. */}
+          <PageTitle
+            icon={ListChecks}
+            title="Meu To-do"
+            description="Sua lista particular — ninguém mais vê isto."
+          />
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {/* Busca — sempre visível e FORA do bloco condicional de
+                `viewMode` (CLAUDE.md, regra 11): vale igual em Kanban, Lista e
+                Agenda, sem mudar a largura do header ao trocar de view. */}
+            <FilterBar
+              search={{
+                value: search,
+                onChange: e => setSearch(e.target.value),
+                placeholder: "Buscar tarefa…",
+              }}
+            />
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
               <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "list"}   onClick={() => setViewMode("list")}   icon={List}       label="Lista"  iconOnlyMobile />

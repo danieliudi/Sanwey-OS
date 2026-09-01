@@ -24,6 +24,27 @@
 
 export const CHANGELOG = [
   {
+    version: "4.90.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Todos os boards ganharam BUSCA. Digite no campo ao lado do t\u00edtulo e o quadro filtra na hora \u2014 e vale nas quatro vis\u00f5es (Kanban, Tabela, Calend\u00e1rio e An\u00e1lise), n\u00e3o s\u00f3 no Kanban. Cada board busca pelo que o card mostra: neg\u00f3cio por empresa, setor ou respons\u00e1vel; caso de p\u00f3s-venda por cliente; solicita\u00e7\u00e3o de compra por item, n\u00famero ou fornecedor; colaborador por nome, cargo ou departamento; e assim por diante.",
+      },
+      {
+        kind: "ajuste",
+        text: "O cabe\u00e7alho de todas as p\u00e1ginas de board encolheu: o t\u00edtulo passou de 26 para 19 pixels e a descri\u00e7\u00e3o foi para o lado dele, em vez de ocupar uma linha pr\u00f3pria. O espa\u00e7o foi todo para os cards. Onde o subt\u00edtulo era um resumo que muda com o filtro (Funil de Vendas, P\u00f3s-venda, Onboarding), ele continua embaixo \u2014 \u00e9 informa\u00e7\u00e3o viva, n\u00e3o r\u00f3tulo.",
+      },
+      {
+        kind: "ajuste",
+        text: "Os filtros de sele\u00e7\u00e3o dos boards (respons\u00e1vel, empresa, canal, prazo, departamento, frente) passaram todos a usar o mesmo componente. Antes cada tela desenhava o seu, com pequenas diferen\u00e7as de altura e espa\u00e7amento que apareciam ao trocar de p\u00e1gina.",
+      },
+      {
+        kind: "ajuste",
+        text: "Em Treinamentos, a busca do cat\u00e1logo passou a ignorar acento: procurar por \"seguranca\" agora acha \"Seguran\u00e7a\". Antes n\u00e3o achava, e parecia que o treinamento n\u00e3o existia.",
+      },
+    ],
+  },
+  {
     version: "4.89.1",
     items: [
       {

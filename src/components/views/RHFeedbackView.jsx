@@ -46,6 +46,9 @@ import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 // Avaliadores elegíveis (FASE 5) — mesmo critério admin/RH usado pela ramificação
@@ -1126,22 +1129,25 @@ function FeedbackRemindersView({ colaboradores, feedbacks, onRowClick }) {
       .sort((a, b) => a.info.diasRestantes - b.info.diasRestantes);
   }, [colaboradores, feedbacks, filterDept]);
 
-  const selectSt = { borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" };
-
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3">
-        <select
-          value={filterDept}
-          onChange={(e) => setFilterDept(e.target.value)}
-          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-          style={selectSt}
-        >
-          <option value="all">Todos os departamentos</option>
-          {RH_DEPARTMENTS.map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
-        </select>
+      {/* Filtro específico da view Lembretes — fica DENTRO do conteúdo dela,
+          nunca no header compartilhado, senão a linha do header reflui ao
+          trocar de view (CLAUDE.md, regra 11). Select cru virou FilterBar
+          compartilhado na rodada de densidade de 01/09/2026. */}
+      <div className="mb-3">
+        <FilterBar
+          filters={[{
+            id: "dept",
+            label: "Departamento",
+            value: filterDept,
+            onChange: (e) => setFilterDept(e.target.value),
+            options: [
+              { value: "all", label: "Todos os departamentos" },
+              ...RH_DEPARTMENTS.map((d) => ({ value: d, label: d })),
+            ],
+          }]}
+        />
       </div>
 
       <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
@@ -1313,6 +1319,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const { users } = useProfiles();
 
   const [viewMode, setViewMode]                   = useState("kanban"); // "kanban" | "table" | "calendar" | "lembretes" | "analytics"
+  const [search, setSearch]                       = useState("");
   const [novoOpen, setNovoOpen]                   = useState(false);
   const [completandoId, setCompletandoId]         = useState(null);
   const [autoavaliandoId, setAutoavaliandoId]     = useState(null);
@@ -1523,19 +1530,41 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     if (orderedIds.length === nextOrder.length) reorderStages(orderedIds);
   }, [draggedColumnKey, stages, reorderStages]);
 
+  // Único array que Kanban, Tabela, Calendário e Análise consomem (CLAUDE.md,
+  // regra 11 — nenhuma view reimplementa o próprio escopo). Campos: os que o
+  // card mostra — nome do avaliado e o tipo do ciclo.
+  const filteredFeedbacks = useMemo(() => {
+    const termo = semAcento(search).trim();
+    if (!termo) return feedbacks;
+    return feedbacks.filter((f) =>
+      semAcento(colaboradoresById.get(f.user_id)?.fullName).includes(termo) ||
+      semAcento(tipoLabel(f.tipo)).includes(termo)
+    );
+  }, [feedbacks, search, colaboradoresById]);
+
+  // Lembretes lista COLABORADORES (quem está perto da próxima avaliação), não
+  // ciclos — então a mesma busca recorta a lista de colaboradores, e o
+  // histórico de ciclos entra cru: filtrá-lo faria todo mundo parecer sem
+  // avaliação nenhuma.
+  const filteredColaboradores = useMemo(() => {
+    const termo = semAcento(search).trim();
+    if (!termo) return colaboradores;
+    return colaboradores.filter((c) => semAcento(c.fullName).includes(termo));
+  }, [colaboradores, search]);
+
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("rh-feedback");
   const feedbackByStage = useMemo(() => {
     const map = {};
     const defaultStageKey = stages[0]?.stageKey || "rascunho";
     stages.forEach((s) => {
-      const list = feedbacks.filter((f) => (f.status || defaultStageKey) === s.stageKey);
+      const list = filteredFeedbacks.filter((f) => (f.status || defaultStageKey) === s.stageKey);
       map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
         name: f => colaboradoresById.get(f.user_id)?.fullName,
         createdAt: f => f.created_at,
       });
     });
     return map;
-  }, [feedbacks, stages, getSortCriteria, colaboradoresById]);
+  }, [filteredFeedbacks, stages, getSortCriteria, colaboradoresById]);
 
   const analyticsStages = useMemo(
     () => stages.filter((s) => !s.terminal).map((s) => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
@@ -1549,12 +1578,12 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const feedbackSpecificStats = useMemo(() => {
     // Antes vivia numa faixa fixa acima do board (AvaliacaoStats, visível em
     // toda view) — achado do vídeo, movido pra cá por decisão do Daniel.
-    const ativos = feedbacks.filter((f) => f.status !== "concluido");
+    const ativos = filteredFeedbacks.filter((f) => f.status !== "concluido");
     const atrasados = ativos.filter(isAtrasado);
-    const concluidos = feedbacks.filter((f) => f.status === "concluido");
+    const concluidos = filteredFeedbacks.filter((f) => f.status === "concluido");
     const notas = concluidos.map((f) => f.final_rating).filter((n) => typeof n === "number");
     const media = notas.length > 0 ? notas.reduce((a, b) => a + b, 0) / notas.length : null;
-    const promovidos = feedbacks.filter((f) => f.desfecho === "promovido").length;
+    const promovidos = filteredFeedbacks.filter((f) => f.desfecho === "promovido").length;
     return [
       { label: "Ciclos ativos", value: String(ativos.length) },
       { label: "Atrasados", value: String(atrasados.length) },
@@ -1562,7 +1591,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
       { label: "Nota média", value: media !== null ? media.toFixed(1) : "—" },
       { label: "Resultaram em promoção", value: String(promovidos) },
     ];
-  }, [feedbacks]);
+  }, [filteredFeedbacks]);
 
   const completandoFeedback = completandoId ? feedbacks.find(f => f.id === completandoId) : null;
   const autoavaliandoFeedback = autoavaliandoId ? feedbacks.find(f => f.id === autoavaliandoId) : null;
@@ -1580,9 +1609,8 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     const concluidos = visible.filter(f => f.status === "concluido");
     return (
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <MessageSquare size={22} style={{ color: "var(--text)" }} />
-          <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Avaliação de Desempenho</h1>
+        <div className="mb-4">
+          <PageTitle icon={MessageSquare} title="Avaliação de Desempenho" />
         </div>
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
@@ -1651,15 +1679,19 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <KanbanBoardHeader>
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <MessageSquare size={22} style={{ color: "var(--text)" }} />
-              <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Avaliação de Desempenho</h1>
-            </div>
-            <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Ciclos de avaliação e histórico</p>
-          </div>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <PageTitle icon={MessageSquare} title="Avaliação de Desempenho" description="Ciclos de avaliação e histórico" />
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Busca sempre visível, fora do bloco condicional de `viewMode`
+                (CLAUDE.md, regra 11) — vale igual em Kanban, Tabela,
+                Calendário, Lembretes e Análise. */}
+            <FilterBar
+              search={{
+                value: search,
+                onChange: e => setSearch(e.target.value),
+                placeholder: "Buscar colaborador…",
+              }}
+            />
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
               <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" iconOnlyMobile />
@@ -1667,7 +1699,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
               <ViewToggleButton active={viewMode === "lembretes"} onClick={() => setViewMode("lembretes")} icon={BellRing} label="Lembretes" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
             </div>
-            <Button variant="secondary" size="sm" icon={Download} onClick={() => exportFeedbackToCSV(feedbacks, { colaboradoresById, stages })}>Exportar CSV</Button>
+            <Button variant="secondary" size="sm" icon={Download} onClick={() => exportFeedbackToCSV(filteredFeedbacks, { colaboradoresById, stages })}>Exportar CSV</Button>
             {canWrite && (
               <Button size="sm" icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
             )}
@@ -1679,7 +1711,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : viewMode === "table" ? (
         <FeedbackTableView
-          feedbacks={feedbacks}
+          feedbacks={filteredFeedbacks}
           stages={stages}
           colaboradoresById={colaboradoresById}
           usersById={usersById}
@@ -1687,21 +1719,21 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
         />
       ) : viewMode === "calendar" ? (
         <FeedbackCalendarView
-          feedbacks={feedbacks}
+          feedbacks={filteredFeedbacks}
           stages={stages}
           colaboradoresById={colaboradoresById}
           onPillClick={(f) => setDrawerFeedbackId(f.id)}
         />
       ) : viewMode === "lembretes" ? (
         <FeedbackRemindersView
-          colaboradores={colaboradores}
+          colaboradores={filteredColaboradores}
           feedbacks={feedbacks}
           onRowClick={(c) => setHistoricoColaboradorId(c.id)}
         />
       ) : viewMode === "analytics" ? (
         <KanbanAnalyticsPanel
           stages={analyticsStages}
-          records={feedbacks}
+          records={filteredFeedbacks}
           getStageKey={(f) => f.status}
           getStageEnteredAt={(f) => f.status_changed_at}
           specificStats={feedbackSpecificStats}
