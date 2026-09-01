@@ -285,9 +285,15 @@ A regra do piloto tem três partes, e é o que a folha entregue ao vendedor diz
    qualquer etapa. Card sem próxima ação avança de etapa ou vai pra Perdido.
    A coluna existe (`leads.next_follow_up`), já dispara notificação no dia
    (`use-notifications.js`) e já aparece no painel inicial e no calendário do
-   funil. **Em aberto:** se isso vira trava de sistema (campo obrigatório que
-   barra o salvamento) ou fica como combinado entre gerência e vendedor. Hoje
-   NÃO trava nada.
+   funil. **Vale como combinado, não como trava** (decidido com o Daniel
+   01/09/2026): o campo continua não barrando o salvamento; quem deixar em
+   branco aparece na reunião de segunda. Ligar a trava foi a alternativa
+   oferecida e recusada por ora — campo obrigatório em piloto de primeira
+   semana ensina a burlar, que é a mesma lição já registrada no CLAUDE.md
+   sobre os 28 campos obrigatórios do funil da Resibag. **Gatilho de
+   revisão:** se a reunião de segunda mostrar que não pegou, a trava volta à
+   mesa — e aí é mudança de comportamento visível, então passa por mockup
+   antes (regra 3).
 3. **Ritual** — segunda de manhã, 20 minutos, quadro aberto. Card sem próxima
    ação ou parado além do SLA da etapa entra na pauta, pra decidir junto se
    avança ou encerra.
@@ -438,8 +444,9 @@ semana com 90% de cobertura · primeiro pedido que o cliente fez sozinho.
 Daniel pediu pra pausá-las e começar pelo piloto com os vendedores). A
 sub-decisão da Onda 4 que travava tudo — *o que obriga a existência de um card
 e o que o faz andar* — **está fechada**; o texto acordado está na Onda 4 acima.
-Sobrou dela uma única pergunta técnica: se a "próxima ação com data" vira trava
-de sistema ou fica como combinado.
+A última pergunta técnica que sobrou dela — se a "próxima ação com data" vira
+trava de sistema ou fica como combinado — **foi respondida em 01/09/2026:
+combinado**. Nenhuma mudança de código pendente pro piloto arrancar.
 
 ---
 
