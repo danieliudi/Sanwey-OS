@@ -228,7 +228,12 @@ export function SignalsView({ activeCompany, signals, onAddLead, accessibleCompa
                           if (e.key === "Enter") handleCreateLead(s);
                           if (e.key === "Escape") setExpandedCreate(null);
                         }}
-                        className="flex-1 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
+                        // `min-w-0`: item flex tem `min-width: auto` por
+                        // padrão, e a largura intrínseca de um <input> é a do
+                        // atributo `size` (20 caracteres). Sem isto ele não
+                        // encolhe, e o botão "Cancelar" era empurrado pra fora
+                        // da borda do card (bug reportado pelo Daniel).
+                        className="flex-1 min-w-0 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
                         style={{ borderColor: "var(--border)", color: "var(--text)" }}
                         onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
                         onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
