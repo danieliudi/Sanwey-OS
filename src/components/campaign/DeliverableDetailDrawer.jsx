@@ -385,7 +385,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
 }
 
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], stages = [], canWrite, userId, currentUser, notifyMentions, onEditFields }) {
+export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], stages = [], canWrite, userId, currentUser, notifyMentions, onEditFields, stageError = null }) {
   // Etapas reais (rh_pipeline_stages, domain="marketing_deliverables"), com
   // fallback pro catálogo fixo só enquanto o fetch não resolveu — sem isso,
   // etapa custom criada pelo usuário (ex.: "Encaminhado à Agência") nunca
@@ -585,7 +585,16 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
             { type: "note", description: `Devolvido para ${returnStage.name}: ${motivo}`, at: new Date().toISOString() },
           ],
         });
-      } catch { /* motivo é opcional — falha aqui não impede a devolução */ }
+      } catch (err) {
+        // Antes era um `catch {}` mudo, com a justificativa de que "motivo é
+        // opcional". O motivo é opcional de PREENCHER — depois de digitado,
+        // perdê-lo em silêncio não é aceitável: a pessoa escreveu o porquê da
+        // devolução e a agência precisa dele. Se não gravou, para aqui e
+        // deixa o texto na tela pra ela tentar de novo (bug reportado pelo
+        // Daniel 01/09: devolveu, nada aconteceu, e nada explicou).
+        setMoveError(`O motivo não foi salvo: ${err?.message || "erro desconhecido"}. A entrega não foi devolvida — tente de novo.`);
+        return;
+      }
     }
     setReturnOpen(false);
     setReturnReason("");
@@ -598,7 +607,16 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     // onUpdate direto e contornava a checagem por completo.
     if (onMoveToStage) {
       const ok = await onMoveToStage(item.id, stageId);
-      if (ok === false) return;
+      if (ok === false) {
+        // O motivo da recusa é escrito pelo pai (attemptStageChange, em
+        // EntregasView) num banner do QUADRO — que fica ATRÁS deste drawer
+        // aberto. Até 01/09/2026 isto era só um `return`, então a devolução
+        // recusada era visualmente idêntica a "não aconteceu nada": foi
+        // exatamente o que o Daniel relatou. `stageError` chega por prop e é
+        // exibido aqui; a mensagem genérica cobre o caso de ele não ter vindo.
+        setMoveError(stageError || `Não foi possível mover "${item.title}". Confira se algum campo obrigatório está vazio.`);
+        return;
+      }
       setMoveError(null);
       onClose();
       onStageMoved?.(item.id);

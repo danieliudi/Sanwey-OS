@@ -20,7 +20,7 @@ import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
 } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
-import { formatDateBR, localDateInputToISOString, parseDateInput } from "../../utils/date";
+import { formatDateBR, localDateInputToISOString, parseDateInput, daysSince } from "../../utils/date";
 import { useUsersById }  from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -64,14 +64,20 @@ function isStuckInRevisao(d) {
 // Mesmo critério de "atrasada" já usado no badge do card (DeliverableKanbanCard)
 // e na coluna Prazo da Tabela — o filtro "Vencidas" precisa achar exatamente
 // os mesmos itens que já aparecem em vermelho no board.
+//
+// Passou a usar `daysSince` (01/09/2026) junto com o redesenho do card. O
+// `new Date("AAAA-MM-DD")` anterior parseia como meia-noite UTC: em UTC-3 uma
+// entrega que vence HOJE já contava como vencida às 21h de ontem, no card e
+// no filtro. `daysSince` usa `parseDateInput`, que monta a data em horário
+// local — vencer hoje deixa de ser atraso.
 function isOverdueDeliverable(d) {
-  return Boolean(d.deadline) && new Date(d.deadline) < new Date();
+  return Boolean(d.deadline) && daysSince(d.deadline) > 0;
 }
 
 function isDueSoon(d) {
   if (!d.deadline) return false;
-  const diffMs = new Date(d.deadline).getTime() - Date.now();
-  return diffMs >= 0 && diffMs <= 7 * 86400000;
+  const days = daysSince(d.deadline);
+  return days <= 0 && days >= -7;
 }
 
 /* ── Create modal ────────────────────────────────────────────── */
@@ -997,7 +1003,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
 
           {/* View toggle */}
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     iconOnlyMobile dataTour="entregas-cards-sinais" />
             <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela"     iconOnlyMobile />
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" iconOnlyMobile />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}  label="Análise"    iconOnlyMobile />
@@ -1355,6 +1361,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
         onStageMoved={reopenDeliverableAfterMove}
         onUpdate={handleUpdate}
         onMoveToStage={attemptStageChange}
+        stageError={stageError}
         onDelete={canManage ? handleDelete : undefined}
         onResendCompleteEmail={sendCompleteEmail}
         stages={kanbanStages}

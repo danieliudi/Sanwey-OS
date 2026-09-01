@@ -25,6 +25,16 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "entregas-cards-sinais",
+    route: "marketing-entregas",
+    // Alvo é o botão da view Kanban, não um card: os chips que mudaram só
+    // aparecem em cards que TÊM exceção, então não existe elemento estável
+    // pra apontar — num board saudável não haveria nenhum na tela.
+    target: '[data-tour="entregas-cards-sinais"]',
+    text: "Os cards mudaram: agora um selo só aparece quando pede ação sua — prazo estourado, SLA vencendo ou campo faltando. Card sem selo é card em dia, não card sem informação.",
+    version: "4.85.0",
+  },
+  {
     id: "clientes-novo-cliente",
     route: "clients",
     // Alvo é o botão da rota, não o campo novo em si — o formulário só

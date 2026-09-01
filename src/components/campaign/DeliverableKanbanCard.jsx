@@ -1,18 +1,28 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Star } from "lucide-react";
-import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES, CHANNEL_COLORS } from "../../constants/marketing-pipelines";
-import { formatDateBR } from "../../utils/date";
+import { Star, Calendar, MessageCircle } from "lucide-react";
+import { DELIVERABLE_STAGES, CHANNEL_COLORS } from "../../constants/marketing-pipelines";
+import { formatDateBR, daysSince } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
-import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
+import { KanbanCardStatusChips, hasQuietStatusChips } from "../shared/KanbanCardStatusChips";
+import { StatusChip } from "../shared/StatusChip";
 import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
-
-const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
-const PRIORITY_LABELS = { baixa: "Baixa",   media: "Média",   alta: "Alta"  };
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// Tinta do chip de prazo. Mesmos limiares do `closeDateUrgencyStyle` do Funil
+// (vencido / faltando ≤7 dias / resto) pra não divergir o conceito de
+// "urgente" entre os dois boards — mas aqui o vencido é `solid`, o ÚNICO
+// elemento preenchido do card (decisão do Daniel 01/09/2026: "o único chip
+// preenchido tem que ser a data de vencimento, para sinalizar bem o atraso").
+function deadlineTone(deadline) {
+  const days = daysSince(deadline);
+  if (days > 0)   return "solid";
+  if (days >= -7) return "warning";
+  return "neutral";
 }
 
 function DeliverableKanbanCardImpl({
@@ -34,9 +44,12 @@ function DeliverableKanbanCardImpl({
   const stage       = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
   const daysInStage = daysFromDate(item.stageChangedAt);
   const isTerminal  = Boolean(stage?.terminal);
-  const priColor    = PRIORITY_COLORS[item.priority] || null;
-  const isOverdue   = item.deadline && new Date(item.deadline) < new Date();
+  const accentOp    = terminalAccentOpacity(isTerminal);
   const campaign    = item.campaignId ? campaignsById?.get(item.campaignId) : null;
+  // Só "alta" desenha algo. "Média" é o padrão de quem abre a solicitação e
+  // não carrega informação nenhuma; "baixa" idem, no outro sentido — um pill
+  // em todo card fazia os três estados parecerem igualmente dignos de nota.
+  const isHighPriority = item.priority === "alta";
   // showMoveOptions=false no board desktop (drag-and-drop já cobre mover) —
   // o card então só oferece excluir, com um ícone de lixeira direto no lugar
   // dos "3 pontinhos" (ver MoveStageMenu). O acordeão mobile (sem drag)
@@ -44,6 +57,16 @@ function DeliverableKanbanCardImpl({
   const moveTargets = showMoveOptions
     ? (stages || DELIVERABLE_STAGES).filter(s => s.id !== item.stage && !s.terminal)
     : [];
+
+  // Comentário não lido vira ponto na quina do avatar (ver AvatarStack). Sem
+  // responsável atribuído não há avatar onde pendurar o ponto — nesse caso o
+  // sinal cai de volta pra um chip da mesma família, em vez de sumir.
+  const unreadNeedsChip = Boolean(unread) && resolvedAssignees.length === 0;
+  const hasFooter =
+    resolvedAssignees.length > 0 ||
+    unreadNeedsChip ||
+    Boolean(item.deadline) ||
+    hasQuietStatusChips({ agingDays: daysInStage, slaDays: stage?.sla, completeness });
 
   const shadowBase  = `var(--shadow-card)`;
   const shadowHover = `var(--shadow-pop)`;
@@ -73,55 +96,48 @@ function DeliverableKanbanCardImpl({
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
-      {/* Title + badges + priority + star + move-menu — mesma ordem/posição
-          (aging, completude, domínio, utilitários) dos outros cards do
-          Kanban; antes ficava dividido entre topo e rodapé do card. */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="min-w-0 flex-1">
-          {/* Protocolo em linha própria — concatenado no mesmo texto
-              clampado, ele quebrava no meio do número quando os chips à
-              direita sobravam pouco espaço (achado real, reportado pelo
-              Daniel). Mesmo padrão já usado em ComprasMarketingView.jsx:
-              protocolo nunca entra no texto que pode quebrar/truncar. */}
+      {/* Linha 1 — identidade do registro (o que ele É): protocolo e
+          prioridade à esquerda, utilitários à direita. Os sinais de estado
+          (o que ele ESTÁ) desceram todos pro rodapé; separar os dois é o que
+          dá uma lógica de leitura ao card.
+
+          Esta linha também é a correção do bug reportado pelo Daniel em
+          01/09/2026: o protocolo dividia a coluna esquerda com o título e
+          disputava largura com um grupo de 6 chips `shrink-0` à direita, e
+          em coluna estreita o texto escapava da própria caixa e corria por
+          baixo do badge de comentário. Agora o título tem linha inteira e
+          esta linha carrega só 4 elementos curtos — o `overflow-hidden`
+          abaixo é cinto de segurança, não deve chegar a atuar. */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-hidden">
           {item.requestNumber && (
-            <div className="font-mono font-bold text-[11px]" style={{ color: "var(--accent)", opacity: terminalAccentOpacity(isTerminal) }}>
-              {item.requestNumber}
-            </div>
-          )}
-          <div className="font-semibold text-[13px] leading-snug line-clamp-2" style={{ color: terminalTextColor(isTerminal) }}>
-            {item.title}
-          </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-          <KanbanCardStatusChips
-            unread={unread}
-            agingDays={daysInStage}
-            slaDays={stage?.sla}
-            completeness={completeness}
-            completenessSize={26}
-            muted={isTerminal}
-          />
-          {priColor && (
             <span
-              className="inline-flex items-center px-1.5 py-0.5 rounded-md font-bold"
-              style={{ fontSize: 10, background: priColor + "18", color: priColor, border: `1px solid ${priColor}40`, opacity: terminalAccentOpacity(isTerminal) }}
+              className="font-mono text-[10.5px] font-medium shrink-0"
+              style={{ color: "var(--text-faint)", letterSpacing: "0.03em", opacity: accentOp }}
             >
-              {PRIORITY_LABELS[item.priority]}
+              {item.requestNumber}
             </span>
           )}
+          {isHighPriority && (
+            <StatusChip tone="danger" size="tiny" opacity={accentOp} title="Prioridade alta">
+              Alta
+            </StatusChip>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
           {canWrite && onToggleStar ? (
             <button
               onClick={e => { e.stopPropagation(); onToggleStar?.(item.id); }}
               title={item.starred ? "Remover dos favoritos" : "Favoritar"}
               className="flex items-center justify-center rounded-md p-1 transition-colors"
-              style={{ color: item.starred ? "var(--amber)" : "var(--text-dim)", background: "transparent", border: "none", opacity: terminalAccentOpacity(isTerminal) }}
+              style={{ color: item.starred ? "var(--amber)" : "var(--text-faint)", background: "transparent", border: "none", opacity: accentOp }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               <Star size={12} fill={item.starred ? "var(--amber)" : "none"} />
             </button>
           ) : (
-            item.starred && <Star size={11} fill="var(--amber)" color="var(--amber)" style={{ opacity: terminalAccentOpacity(isTerminal) }} />
+            item.starred && <Star size={11} fill="var(--amber)" color="var(--amber)" style={{ opacity: accentOp }} />
           )}
           {canWrite && ((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
@@ -139,9 +155,14 @@ function DeliverableKanbanCardImpl({
         </div>
       </div>
 
+      {/* Título — linha inteira, o elemento mais forte do card */}
+      <div className="font-semibold text-[13px] leading-snug line-clamp-2 mt-0.5" style={{ color: terminalTextColor(isTerminal) }}>
+        {item.title}
+      </div>
+
       {/* Requester · dept */}
       {item.requesterName && (
-        <div className="text-[11px] mb-1.5" style={{ color: "var(--text-dim)" }}>
+        <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
           {item.requesterName}{item.department ? ` · ${item.department}` : ""}
         </div>
       )}
@@ -151,7 +172,7 @@ function DeliverableKanbanCardImpl({
           placeholder "Sem campanha"). */}
       {campaign && (
         <span
-          className="inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-semibold mb-1.5 truncate max-w-full"
+          className="inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-semibold mt-1.5 truncate max-w-full"
           style={{
             background: (CHANNEL_COLORS[campaign.channel] || { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" }).bg,
             color:      (CHANNEL_COLORS[campaign.channel] || { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" }).text,
@@ -163,21 +184,47 @@ function DeliverableKanbanCardImpl({
         </span>
       )}
 
-      {/* Owner avatars + deadline — só ocupa espaço quando há responsável ou
-          prazo; antes era um div sempre presente (com margem), deixando uma
-          sobra vazia em cards sem nenhum dos dois. */}
-      {(resolvedAssignees.length > 0 || item.deadline) && (
-      <div className="flex items-center justify-between text-[11px] mb-2" style={{ color: "var(--text-dim)", opacity: terminalAccentOpacity(isTerminal) }}>
-        {resolvedAssignees.length > 0
-          ? <AvatarStack users={resolvedAssignees} size={28} max={2} />
-          : <span />
-        }
-        {item.deadline && (
-          <span style={{ color: isOverdue ? "var(--danger)" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
-            {formatDateBR(item.deadline)}
-          </span>
-        )}
-      </div>
+      {/* Linha 2 — estado do registro (o que ele ESTÁ): responsáveis à
+          esquerda, sinais à direita, todos na mesma forma de chip. Cada chip
+          só existe quando há exceção — card em dia fica só com o prazo, e
+          card sem prazo nem responsável não desenha esta linha. */}
+      {hasFooter && (
+        <div className="flex items-center justify-between gap-2 mt-2.5">
+          {resolvedAssignees.length > 0 ? (
+            <AvatarStack
+              users={resolvedAssignees}
+              size={28}
+              max={2}
+              dot={Boolean(unread)}
+              dotTitle="Comentário novo"
+            />
+          ) : unreadNeedsChip ? (
+            <StatusChip tone="danger" icon={MessageCircle} opacity={accentOp} title="Comentário novo">
+              Novo
+            </StatusChip>
+          ) : (
+            <span />
+          )}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <KanbanCardStatusChips
+              variant="quiet"
+              agingDays={daysInStage}
+              slaDays={stage?.sla}
+              completeness={completeness}
+              muted={isTerminal}
+            />
+            {item.deadline && (
+              <StatusChip
+                tone={deadlineTone(item.deadline)}
+                icon={Calendar}
+                opacity={accentOp}
+                title={`Prazo: ${formatDateBR(item.deadline)}`}
+              >
+                {formatDateBR(item.deadline)}
+              </StatusChip>
+            )}
+          </div>
+        </div>
       )}
 
     </div>
