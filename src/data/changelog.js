@@ -24,6 +24,26 @@
 
 export const CHANGELOG = [
   {
+    version: "4.88.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "\"Perguntar \u00e0 IA\" saiu do bot\u00e3o flutuante do Funil de Vendas e passou a viver dentro da vis\u00e3o An\u00e1lise. Ela responde sobre os n\u00fameros do funil \u2014 total, por etapa, por respons\u00e1vel \u2014 que \u00e9 exatamente o que a An\u00e1lise j\u00e1 mostra em gr\u00e1fico; flutuando sobre o Kanban, competia com o bot\u00e3o de criar neg\u00f3cio e n\u00e3o dizia sobre o que respondia.",
+        roles: ["vendedor", "gerente"],
+      },
+      {
+        kind: "ajuste",
+        text: "O chat do funil agora avisa, no rodap\u00e9, que responde s\u00f3 sobre os n\u00fameros daquele funil e que a resposta \u00e9 gerada por IA. Perguntas fora desse assunto passam a ser recusadas com uma frase, em vez de respondidas.",
+        roles: ["vendedor", "gerente"],
+      },
+      {
+        kind: "correcao",
+        text: "No chat do funil, as etapas aparecem pelo nome que voc\u00ea deu a elas, n\u00e3o mais pelo c\u00f3digo interno. E os exemplos de pergunta deixaram de sugerir algo que a IA n\u00e3o consegue responder: ela recebe o resumo do funil, nunca a lista de neg\u00f3cios um a um.",
+        roles: ["vendedor", "gerente"],
+      },
+    ],
+  },
+  {
     version: "4.87.1",
     items: [
       {

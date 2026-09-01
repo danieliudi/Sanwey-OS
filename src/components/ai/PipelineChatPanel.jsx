@@ -19,7 +19,7 @@ function detectChartIntent(question) {
   return null;
 }
 
-export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }) {
+export function PipelineChatPanel({ leads, users, stages, currentUser, isOpen, onClose }) {
   const { complete, isConfigured } = useAI(currentUser);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -40,9 +40,17 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
 
   const aggregate = useMemo(() => aggregatePipeline(leads, users), [leads, users]);
 
+  // O agregado guarda a CHAVE da etapa ("prospeccao"), não o nome. Sem esse
+  // mapa o prompt entregava ids internos pra IA, que os repetia na resposta.
+  const stageNames = useMemo(() => {
+    const map = {};
+    for (const st of (stages || [])) map[st.id] = st.name;
+    return map;
+  }, [stages]);
+
   const systemPrompt = useMemo(() => {
-    return pipelineChatPrompt("", aggregate)[0];
-  }, [aggregate]);
+    return pipelineChatPrompt("", aggregate, stageNames)[0];
+  }, [aggregate, stageNames]);
 
   const handleSend = async () => {
     const question = input.trim();
@@ -147,8 +155,14 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                 <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>
                   Pergunte sobre seu pipeline
                 </p>
+                {/* Os exemplos precisam ser respondíveis pelo que a IA
+                    REALMENTE recebe — só o agregado (total, por etapa, por
+                    responsável), nunca lead individual. O exemplo antigo
+                    ("quais leads estão parados há mais de 15 dias?") pedia
+                    dado que nunca entra no prompt: a resposta certa era
+                    sempre "não tenho essa informação". */}
                 <p className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
-                  Ex: "Quais leads estão parados há mais de 15 dias?" ou "Qual o valor total em negociação?"
+                  Ex: "Qual o valor total em negociação?" ou "Em que etapa está travando mais valor?"
                 </p>
               </div>
             </div>
@@ -252,8 +266,14 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
               {loading ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
             </button>
           </div>
-          <p className="text-[10px] mt-1.5 text-center" style={{ color: "#B0ABA5" }}>
-            Enter para enviar · Shift+Enter para nova linha
+          {/* Rodapé: escopo + natureza da resposta. Decidido com o Daniel
+              01/09/2026 junto com o guardrail de escopo no system prompt
+              (ai-prompts.js, pipelineChatPrompt) — o painel não deixava
+              claro nem SOBRE O QUE ele responde, nem que a resposta é
+              gerada. Hex solto trocado por token na mesma edição. */}
+          <p className="text-[10px] mt-1.5 text-center leading-relaxed" style={{ color: "var(--text-dim)" }}>
+            Enter para enviar · Shift+Enter para nova linha<br />
+            Responde só sobre os números deste funil. Resposta gerada por IA — confira antes de decidir.
           </p>
         </div>
       </div>

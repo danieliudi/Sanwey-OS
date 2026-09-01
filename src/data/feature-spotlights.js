@@ -417,6 +417,27 @@ export const FEATURE_SPOTLIGHTS = [
   // rota também consome em silêncio — inevitável com âncora por rota, e sem
   // prejuízo: o aviso é sobre uma informação que só aparece pro gestor.
   //
+  {
+    id: "crm-ia-na-analise",
+    route: "crm",
+    target: '[data-tour="crm-view-analise"]',
+    text: "\"Perguntar à IA\" saiu do botão flutuante e agora fica dentro da Análise — clique aqui. Ela responde sobre os números do funil (total, por etapa, por responsável), não sobre um negócio específico.",
+    version: "4.88.0",
+  },
+  // Alvo é o botão "Análise" do toggle de views, não o próprio "Perguntar à
+  // IA": o botão novo só existe DENTRO da view Análise, que não é a view
+  // padrão (Kanban é) — ancorar nele significaria não disparar pra quase
+  // ninguém. O toggle existe sempre na rota. Este é um caso em que o
+  // spotlight é mais necessário que o normal: o botão não é novo, ele SUMIU
+  // de onde estava, e quem já usava não tem como adivinhar sozinho pra onde
+  // foi (a regra 12 do CLAUDE.md cobre "novidade não-óbvia"; sumiço de algo
+  // familiar é o mesmo problema, do avesso).
+  //
+  // O guardrail de escopo do prompt e o rodapé do painel NÃO ganharam
+  // spotlight próprio: o texto do spotlight acima já diz sobre o que a IA
+  // responde, e o rodapé é ambiente (se lê ao usar, não se descobre
+  // clicando) — mesmo critério das colunas mais largas em 4.59.0.
+  //
   // 4.87.0 — o fix de "Devolver para a agência" (Entregas) NÃO ganhou
   // spotlight: é correção de algo que já deveria funcionar, mesmo critério
   // de bug fix da regra 12 do CLAUDE.md. Coberto pelo changelog 4.87.0.

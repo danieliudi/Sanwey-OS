@@ -713,6 +713,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               icon={TrendingUp}
               label="Análise"
               iconOnlyMobile
+              dataTour="crm-view-analise"
             />
           </div>
           <button
@@ -847,17 +848,42 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           isGroupView={isGroupView}
         />
       ) : viewMode === "analise" ? (
-        <KanbanAnalyticsPanel
-          stages={stages.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.slaDays }))}
-          records={scopedLeads}
-          getStageKey={l => l.stage}
-          getStageEnteredAt={l => l.stageChangedAt}
-          getOwnerIds={getLeadOwnerIds}
-          usersById={usersById}
-          specificStats={[
-            { label: "CAC médio", value: cac != null ? formatBRL(cac) : "—", title: cacFormulaHint(CAC_PERIOD) },
-          ]}
-        />
+        <div className="flex flex-col gap-3">
+          {/* "Perguntar à IA" mora AQUI, dentro da Análise — não flutuando
+              sobre o Kanban. Decidido com o Daniel 01/09/2026: o botão
+              flutuante aparecia em toda view, competia com o FAB de criar
+              negócio e não dizia sobre o que ele responde. A IA deste painel
+              interpreta o AGREGADO do funil (total, por etapa, por
+              responsável) — é a mesma pergunta que a Análise já responde em
+              gráfico, então é aqui que ela pertence. Controle específico de
+              uma view fica dentro do conteúdo daquela view, nunca no header
+              compartilhado (regra 11 do CLAUDE.md). */}
+          <div className="flex justify-end">
+            <button
+              data-tour="pipeline-ai-chat"
+              onClick={() => setShowAIChat(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+              title="Perguntar à IA sobre os números do funil"
+            >
+              <Bot size={13} />
+              Perguntar à IA
+            </button>
+          </div>
+          <KanbanAnalyticsPanel
+            stages={stages.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.slaDays }))}
+            records={scopedLeads}
+            getStageKey={l => l.stage}
+            getStageEnteredAt={l => l.stageChangedAt}
+            getOwnerIds={getLeadOwnerIds}
+            usersById={usersById}
+            specificStats={[
+              { label: "CAC médio", value: cac != null ? formatBRL(cac) : "—", title: cacFormulaHint(CAC_PERIOD) },
+            ]}
+          />
+        </div>
       ) : (<>
       {/* Mobile kanban: vertical collapsible stages — via RHMobileKanbanAccordion
           (shared/rh-pipeline), consolidação de 08/08/2026. Este arquivo é a
@@ -1115,21 +1141,10 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       />
     </div>
 
-    {/* Floating AI button */}
-    <button
-      onClick={() => setShowAIChat(v => !v)}
-      className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 hidden lg:flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
-      style={{ background: "var(--accent)", color: "var(--on-accent)", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
-      onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
-      onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-    >
-      <Bot size={16} />
-      Perguntar à IA
-    </button>
-
     <PipelineChatPanel
       leads={scopedLeads}
       users={users}
+      stages={stages}
       currentUser={user}
       isOpen={showAIChat}
       onClose={() => setShowAIChat(false)}
