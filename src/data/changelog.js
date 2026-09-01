@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.85.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "O selo de prazo nos cards de Entregas e Tarefas de Marketing ultrapassava a borda do card em colunas estreitas. A data agora aparece como dia/mês (o ano só quando o prazo cai em outro ano), que era como estava desenhado.",
+        roles: ["marketing", "gerente_marketing", "agencia"],
+      },
+    ],
+  },
+  {
     version: "4.85.0",
     items: [
       {

@@ -31,6 +31,23 @@ export function formatDateBR(input) {
   return dateBR.format(d);
 }
 
+// Data curta pro chip do card do Kanban: dia/mês quando o prazo cai no ano
+// corrente, dia/mês/ano-de-2-dígitos quando não cai. `formatDateBR` devolve
+// sempre "28/08/2026" — num chip de card isso é o dobro da largura, e o ano
+// é redundante na esmagadora maioria dos casos. Foi bug real: o chip de
+// prazo estourava a borda do card (reportado pelo Daniel, 01/09/2026).
+const dateBRCurto  = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" });
+const dateBRAno2   = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+
+export function formatDateShortBR(input) {
+  if (!input) return "—";
+  const d = parseDateInput(input);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.getFullYear() === new Date().getFullYear()
+    ? dateBRCurto.format(d)
+    : dateBRAno2.format(d);
+}
+
 export function daysSince(input) {
   if (!input) return 0;
   const d = parseDateInput(input);
