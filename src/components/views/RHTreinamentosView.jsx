@@ -1626,16 +1626,19 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
   // e procurar "quem ainda não fez o de brigada" era o caso que faltava.
   // `semAcento` (util compartilhada) no lugar do toLowerCase local: quem
   // digita "seguranca" acha "Segurança".
+  // Busca do CATÁLOGO: só pelo título do treinamento.
+  //
+  // O nome do colaborador foi removido daqui (QA de fidelidade, 01/09/2026):
+  // ele só é renderizado DENTRO do acordeão expandido, e a linha nasce
+  // fechada. Buscar por ele fazia aparecer um card "NR-35" sem nada visível
+  // que casasse com o que a pessoa digitou — exatamente o que a spec proíbe.
+  // Quem quer achar treinamento POR PESSOA tem o lugar certo pra isso: a
+  // busca dentro do quadro de cada treinamento, que lista colaboradores.
   const filteredTreinamentos = useMemo(() => {
     const termo = semAcento(catalogQuery).trim();
     if (!termo) return treinamentos;
-    return treinamentos.filter(t =>
-      semAcento(t.titulo).includes(termo) ||
-      (atribuicoesByTreinamento.get(t.id) || []).some(a =>
-        semAcento(colaboradoresById.get(a.colaborador_id)?.fullName).includes(termo)
-      )
-    );
-  }, [treinamentos, catalogQuery, atribuicoesByTreinamento, colaboradoresById]);
+    return treinamentos.filter(t => semAcento(t.titulo).includes(termo));
+  }, [treinamentos, catalogQuery]);
 
   const toggleExpand = (id) => setExpanded(prev => {
     const next = new Set(prev);

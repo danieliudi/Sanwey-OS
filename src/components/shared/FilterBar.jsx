@@ -28,6 +28,16 @@ export function FilterBar({ search, filters = [], children, trailing }) {
             borderRadius: 10,
             padding: "6px 12px",
             flex: "1 1 180px",
+            // min-width: 0 é obrigatório aqui. O `<input>` interno tem largura
+            // MÍNIMA INTRÍNSECA (atributo `size`, ~20 caracteres), e num item
+            // flex o `min-width: auto` impede o box de encolher abaixo dela —
+            // então este wrapper não descia de ~220px e empurrava os vizinhos
+            // pra fora da linha. É a MESMA classe de bug que já mordeu esta
+            // plataforma três vezes (protocolo escapando do card, chip de data
+            // saindo do card, "Cancelar" saindo do card nos Sinais). Levantado
+            // pelo QA adversarial de 01/09/2026, quando este componente passou
+            // a viver em 11 headers a mais — alguns lotados, como Compras.
+            minWidth: 0,
             maxWidth: 280,
             transition: "border-color 150ms, box-shadow 150ms",
           }}
@@ -44,19 +54,26 @@ export function FilterBar({ search, filters = [], children, trailing }) {
           }}
         >
           <Search size={13} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
+          {/* `search.disabled`: mantém o campo MONTADO e inerte, em vez de
+              removê-lo. Serve pra view onde a busca não tem o que filtrar (a
+              aba Automações do Meu To-do, p.ex.). Desmontar mudaria a largura
+              do header ao trocar de view, que é justamente o reflow que a
+              regra 11 do CLAUDE.md proíbe. */}
           <input
             ref={searchInputRef}
             type="text"
             value={search.value}
             onChange={search.onChange}
             placeholder={search.placeholder}
+            disabled={Boolean(search.disabled)}
             style={{
               border: "none",
               outline: "none",
               fontSize: 12,
-              color: "var(--text)",
+              color: search.disabled ? "var(--text-faint)" : "var(--text)",
               background: "transparent",
               width: "100%",
+              cursor: search.disabled ? "not-allowed" : "text",
             }}
           />
           {search.value && (

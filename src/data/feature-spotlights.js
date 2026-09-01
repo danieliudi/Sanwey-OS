@@ -417,29 +417,28 @@ export const FEATURE_SPOTLIGHTS = [
   // rota também consome em silêncio — inevitável com âncora por rota, e sem
   // prejuízo: o aviso é sobre uma informação que só aparece pro gestor.
   //
-  // Busca de card DENTRO do board — rollout do padrão de Entregas (4.86.0)
-  // pros outros 11 boards, 01/09/2026. DELIBERADAMENTE 2 entradas, não 11:
-  // o mecanismo dispara por ROTA, então 11 entradas significariam 11 avisos
-  // pra quem circula pela plataforma inteira, todos dizendo a mesma coisa.
-  // Uma por família de departamento resolve — quem entende a busca no board
-  // que usa todo dia entende nos outros. Marketing não precisa de entrada
-  // nova: já recebeu `entregas-busca-card` na 4.86.0.
   {
     id: "crm-busca-card",
     route: "crm",
     target: '[data-tour="crm-busca-card"]',
     text: "Novo: ache um negócio digitando o nome da empresa, o setor ou o responsável. Vale nas quatro visões — Kanban, Tabela, Calendário e Análise.",
-    version: "4.90.0",
+    version: "4.90.1",
   },
   {
     id: "rh-busca-card",
     route: "rh-onboarding",
     target: '[data-tour="rh-onboarding-busca-card"]',
     text: "Novo: os boards de RH ganharam busca. Digite o nome do colaborador (ou cargo, departamento, vaga) e o quadro filtra na hora, em qualquer visão.",
-    version: "4.90.0",
+    version: "4.90.1",
   },
-  // Os outros 9 boards receberam a mesma busca sem spotlight próprio, por
-  // decisão acima. Pós-venda, Comex e Central de Bugs já têm o `data-tour`
+  // As duas entradas acima cobrem a busca de card DENTRO do board — rollout
+  // do padrão de Entregas (4.86.0) pros outros 11 boards, 01/09/2026.
+  // DELIBERADAMENTE 2, não 11: o mecanismo dispara por ROTA, então 11
+  // entradas seriam 11 avisos pra quem circula pela plataforma inteira, todos
+  // dizendo a mesma coisa. Uma por família de departamento resolve — quem
+  // entende a busca no board que usa todo dia entende nos outros. Marketing
+  // não precisa de entrada nova: já recebeu `entregas-busca-card` na 4.86.0.
+  // Os outros 9 boards receberam a mesma busca sem spotlight próprio. Pós-venda, Comex e Central de Bugs já têm o `data-tour`
   // posto (`posvenda-busca-card`, `comex-busca-card`, `bugs-busca-card`) —
   // atributo sem entrada aqui é inerte, não quebra nada, e deixa o alvo
   // pronto se um dia alguém quiser destacar um deles.

@@ -430,7 +430,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     return s;
   }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, subordinateIds]);
 
-  const scopedLeads = useMemo(() => {
+  // Escopo DELIBERADO: empresa → vendedor/setor → responsável → favoritos.
+  // Tudo aqui é escolha que a pessoa fez e que permanece na tela. A busca por
+  // teclado NÃO entra — ver `scopedLeads` logo abaixo e o porquê no comentário
+  // de lá.
+  const filteredLeads = useMemo(() => {
     let s = companyScopedLeads;
     if (isManager && ownerFilter !== "all") {
       // FASE 5: filtro "mostrar leads do fulano" bate se fulano estiver em
@@ -441,25 +445,28 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     // não filtrava nada — mesmo padrão "Só favoritos" já usado em
     // Entregas/Marketing.
     if (starredOnly) s = s.filter(l => l.starred);
-    // Busca por último, DENTRO do fluxo já escopado (empresa → vendedor →
-    // setor → responsável → favoritos): nunca sobre `leads` cru, senão a
-    // busca devolveria negócio de outra empresa/vendedor. `scopedLeads` é o
+    return s;
+  }, [companyScopedLeads, ownerFilter, isManager, starredOnly]);
+
+  const scopedLeads = useMemo(() => {
+    // Busca por último, DENTRO do fluxo já escopado: nunca sobre `leads` cru,
+    // senão devolveria negócio de outra empresa/vendedor. `scopedLeads` é o
     // array que as 4 views consomem (Kanban, Tabela, Calendário, Análise),
     // então a busca vale nas 4 de graça — CLAUDE.md, regra 11.
     //
-    // Campos = os que o card mostra: nome da empresa, setor e o nome de quem
-    // é responsável (AvatarStack do rodapé). Buscar em campo invisível faz o
-    // usuário não entender por que o card casou.
+    // Campos = os que o card REALMENTE mostra: nome da empresa e o nome de
+    // quem é responsável (AvatarStack do rodapé). O setor saiu (QA de
+    // fidelidade, 01/09/2026): ele só aparece no card quando a etapa tem
+    // "sector" em `card_preview_fields` — configurado em ZERO das 79 etapas
+    // em produção. Ou seja, buscar por setor casaria em silêncio, sem nada na
+    // tela explicando o motivo, que é justamente o que a spec proíbe.
     const termo = semAcento(search).trim();
-    if (termo) {
-      s = s.filter(l =>
-        semAcento(l.company).includes(termo) ||
-        semAcento(l.sector).includes(termo) ||
-        getLeadOwnerIds(l).some(id => semAcento(usersById.get(id)?.name).includes(termo))
-      );
-    }
-    return s;
-  }, [companyScopedLeads, ownerFilter, isManager, starredOnly, search, usersById]);
+    if (!termo) return filteredLeads;
+    return filteredLeads.filter(l =>
+      semAcento(l.company).includes(termo) ||
+      getLeadOwnerIds(l).some(id => semAcento(usersById.get(id)?.name).includes(termo))
+    );
+  }, [filteredLeads, search, usersById]);
 
   const byStage = useMemo(() => {
     const bucket = Object.create(null);
@@ -1174,8 +1181,16 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       />
     </div>
 
+    {/* `filteredLeads`, NÃO `scopedLeads`: a IA responde sobre o escopo
+        DELIBERADO (empresa, vendedor, favoritos), nunca sobre o recorte
+        transitório da busca. Achado do QA adversarial (01/09/2026): o painel é
+        `fixed` e ocupa a tela inteira no mobile, então com "acme" ainda
+        digitado a pergunta "quantos negócios tenho em negociação?" devolveria
+        a conta do subconjunto, apresentada como fato, com o campo que causou o
+        recorte escondido atrás do próprio painel. Um número não pode mudar em
+        silêncio atrás de um overlay que esconde a causa. */}
     <PipelineChatPanel
-      leads={scopedLeads}
+      leads={filteredLeads}
       users={users}
       stages={stages}
       currentUser={user}

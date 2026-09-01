@@ -768,16 +768,33 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     return bucket;
   }, [filteredCampaigns, kanbanStages, getSortCriteria]);
 
+  // As opções saem de `campaigns` CRU, não de `filteredCampaigns`.
+  //
+  // Achado do QA adversarial (01/09/2026): derivar do array já filtrado faz o
+  // filtro se auto-recortar — escolhido "Maria", a lista colapsava pra
+  // ["Todos", Maria] e não dava pra trocar direto pra "João"; e se a busca
+  // (nova nesta rodada) zerasse o resultado, o <select> ficava sem nenhuma
+  // <option> correspondente ao valor selecionado, renderizando vazio enquanto
+  // o filtro por Maria continuava valendo.
+  //
+  // É a MESMA classe de bug que o Funil de Vendas já documenta como corrigida
+  // (CRMView.jsx: "com poucos leads atribuídos, o filtro listava só 1 vendedor
+  // mesmo com o time inteiro cadastrado") — lá as opções vêm do roster.
+  // Mantido "só quem tem campanha" de propósito: uma lista com o Grupo inteiro
+  // seria pior aqui. O que muda é a fonte — `campaigns`, que nenhum filtro
+  // desta tela encolhe.
   const ownerOptions = useMemo(() => {
     const idSet = new Set();
-    for (const c of filteredCampaigns) {
+    for (const c of campaigns) {
       for (const id of getCampaignOwnerIds(c)) idSet.add(id);
     }
     return [
       { value: "all", label: "Todos os responsáveis" },
-      ...Array.from(idSet).map(id => ({ value: id, label: usersById.get(id)?.name || id })),
+      ...Array.from(idSet)
+        .map(id => ({ value: id, label: usersById.get(id)?.name || id }))
+        .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")),
     ];
-  }, [filteredCampaigns, usersById]);
+  }, [campaigns, usersById]);
 
   const exportCampaignsCSV = useCallback(() => {
     exportCampaignsToCSV(filteredCampaigns);

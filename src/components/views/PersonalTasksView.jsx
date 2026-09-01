@@ -742,9 +742,16 @@ export function PersonalTasksView({ currentUser }) {
                 Agenda, sem mudar a largura do header ao trocar de view. */}
             <FilterBar
               search={{
-                value: search,
+                value: viewMode === "automacoes" ? "" : search,
                 onChange: e => setSearch(e.target.value),
-                placeholder: "Buscar tarefa…",
+                // A aba Automações não lista tarefa nenhuma — o campo ficava
+                // visível e inerte ali (achado do QA adversarial, 01/09/2026).
+                // Desabilitado em vez de removido: sumir com ele mudaria a
+                // largura do header ao trocar de aba, que é o reflow que a
+                // regra 11 proíbe. O valor também é zerado na exibição pra não
+                // parecer que um termo antigo ainda está filtrando algo.
+                disabled: viewMode === "automacoes",
+                placeholder: viewMode === "automacoes" ? "Busca indisponível aqui" : "Buscar tarefa…",
               }}
             />
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">

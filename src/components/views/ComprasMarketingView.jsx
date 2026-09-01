@@ -828,7 +828,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions, initial
         <PageTitle
           icon={ShoppingCart}
           title="Compras de Marketing"
-          description="Solicitações de compra de itens prontos (brindes, uniformes, materiais impressos) executadas pelo Marketing"
+          description="Compra de itens prontos executada pelo Marketing"
         />
         <div className="flex items-center gap-2 flex-wrap">
           {/* Busca — sempre visível e FORA do bloco condicional de `viewMode`
@@ -849,6 +849,14 @@ export function ComprasMarketingView({ user, users = [], notifyMentions, initial
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
           <button
+            /* `visiblePurchases` exclui as rejeitadas mesmo quando a tira de
+               rejeitadas está expandida na tela. É deliberado e anterior a
+               esta rodada: o CSV de Compras é insumo de acompanhamento do que
+               está EM ANDAMENTO, e uma linha rejeitada no meio da planilha
+               costuma virar erro de leitura. Registrado aqui porque o QA
+               adversarial (01/09/2026) apontou, com razão, que isso destoa do
+               princípio "exporta o array que a view usa" — a exceção fica,
+               mas escrita. */
             onClick={() => exportPurchasesToCSV(visiblePurchases, { suppliersById, usersById })}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
             style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}

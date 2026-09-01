@@ -1214,6 +1214,13 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const getReqCompleteness = (req) => getFieldCompleteness(feriasStageFields.getFields(req.status), req.custom_fields || {});
 
   // ── Stats ──────────────────────────────────────────────────────────────────
+  // DE PROPÓSITO sobre `requests` cru, e não sobre `filtered` como nos outros
+  // boards da rodada de 01/09/2026. Levantado pelo QA de fidelidade como
+  // inconsistência; decisão de manter, com motivo: "Pendentes", "Aprovadas
+  // este mês" e "Dias em férias agora" são um retrato OPERACIONAL da empresa
+  // — quantas pessoas estão fora agora não muda porque alguém digitou um nome
+  // na busca. Não é resumo da lista visível, é indicador. Eles já ignoravam
+  // `filterStatus` e `onlyMine` antes desta rodada, pelo mesmo motivo.
   const stats = useMemo(() => {
     const pendentes  = requests.filter((r) => r.status === "pendente").length;
     const aprovadosMes = requests.filter((r) => r.status === "aprovado" && isThisMonth(r.approved_at || r.start_date)).length;

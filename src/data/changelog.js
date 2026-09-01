@@ -24,8 +24,18 @@
 
 export const CHANGELOG = [
   {
-    version: "4.90.0",
+    version: "4.90.1",
     items: [
+      {
+        kind: "correcao",
+        text: "Em Recrutamento, sele\u00e7\u00e3o em massa de candidatos agora acompanha a busca. Se voc\u00ea selecionava v\u00e1rios, digitava algo no campo de busca e clicava em \"Reprovar e enviar retorno\", a a\u00e7\u00e3o valia tamb\u00e9m para os candidatos que a busca tinha escondido \u2014 e o e-mail de recusa ia para todos eles. Agora a sele\u00e7\u00e3o \u00e9 podada para o que est\u00e1 vis\u00edvel.",
+        roles: ["rh", "gerente_rh"],
+      },
+      {
+        kind: "correcao",
+        text: "Em Campanhas, o filtro \"Respons\u00e1vel\" listava apenas quem sobrou do pr\u00f3prio filtro \u2014 escolhido algu\u00e9m, n\u00e3o dava para trocar direto para outra pessoa sem voltar em \"Todos\". Agora ele lista todo mundo que tem campanha.",
+        roles: ["marketing", "gerente_marketing"],
+      },
       {
         kind: "novo",
         text: "Todos os boards ganharam BUSCA. Digite no campo ao lado do t\u00edtulo e o quadro filtra na hora \u2014 e vale nas quatro vis\u00f5es (Kanban, Tabela, Calend\u00e1rio e An\u00e1lise), n\u00e3o s\u00f3 no Kanban. Cada board busca pelo que o card mostra: neg\u00f3cio por empresa, setor ou respons\u00e1vel; caso de p\u00f3s-venda por cliente; solicita\u00e7\u00e3o de compra por item, n\u00famero ou fornecedor; colaborador por nome, cargo ou departamento; e assim por diante.",

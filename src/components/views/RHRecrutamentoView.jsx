@@ -2893,11 +2893,31 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
     const allSel = list.length > 0 && list.every((c) => prev.has(c.id));
     return allSel ? new Set() : new Set(list.map((c) => c.id));
   });
-  // Limpa a seleção quando sai da tabela de candidatos (evita agir sobre
-  // ids que não estão mais visíveis).
+  // Limpa a seleção quando sai da tabela de candidatos, E poda o que sobrou
+  // pro que está de fato visível sempre que o conjunto filtrado muda.
+  //
+  // ACHADO GRAVE do QA adversarial (01/09/2026), corrigido aqui: a intenção
+  // do guarda ("evitar agir sobre ids que não estão mais visíveis") já estava
+  // escrita, mas o `if` só cobria SAIR da tabela — `selectedVaga` e
+  // `frenteFilter` nas deps eram deps mortas, o efeito rodava e não limpava
+  // nada. A busca por teclado, adicionada no rollout de 01/09, tornou isso
+  // trivial de disparar: selecionar todos (40), digitar 3 letras (sobram 2 na
+  // tela), e "Reprovar e enviar retorno" movia os 40 pra etapa perdida E
+  // disparava e-mail de recusa pros 38 fora da tela. O modal de confirmação
+  // só mostra a CONTAGEM, nunca os nomes, então não havia como perceber.
+  //
+  // Ação irreversível (e-mail enviado não volta) exigindo que a seleção
+  // acompanhe o que está na tela — não é refinamento, é o mínimo.
   useEffect(() => {
-    if (viewMode !== "candidatos" || boardMode !== "table") setSelectedCandIds(new Set());
-  }, [viewMode, boardMode, selectedVaga, frenteFilter]);
+    if (viewMode !== "candidatos" || boardMode !== "table") { setSelectedCandIds(new Set()); return; }
+    const visiveis = new Set(filteredCandidatos.map(c => c.id));
+    setSelectedCandIds(prev => {
+      const next = new Set([...prev].filter(id => visiveis.has(id)));
+      // Devolve a MESMA referência quando nada mudou: `new Set` novo a cada
+      // render dispararia re-render em loop.
+      return next.size === prev.size ? prev : next;
+    });
+  }, [viewMode, boardMode, filteredCandidatos]);
   const vagaDoCandidatoContratando = useMemo(
     () => (hiringCandidato ? vagas.find((v) => v.id === hiringCandidato.vaga_id) : null),
     [hiringCandidato, vagas]
