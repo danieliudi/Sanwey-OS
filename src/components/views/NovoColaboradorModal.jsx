@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check, Camera, Trash2 } from "lucide-react";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";

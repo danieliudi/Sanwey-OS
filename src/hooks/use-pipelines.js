@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { defaultPipelines, DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
 import { debounce } from "../utils/debounce";

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { History, Repeat2, RefreshCw } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES, WON_STAGES } from "../../constants/pipelines";
 import { Select } from "../ui/Select";
 import { useUsersById } from "../../hooks/use-users-by-id";

@@ -4,7 +4,7 @@ import { FilterBar } from "../shared/FilterBar";
 import { KanbanFab } from "../shared/KanbanFab";
 import { AppToast } from "../shared/AppToast";
 import { useAvailableHeight } from "../../hooks/use-available-height";
-import { useOrders, useOrderItems, COLUNAS_INTERNAS, SITUACOES, ORIGENS } from "../../hooks/use-orders";
+import { useOrders, COLUNAS_INTERNAS, SITUACOES, ORIGENS } from "../../hooks/use-orders";
 import { useProducts } from "../../hooks/use-products";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatBRL } from "../../utils/currency";
