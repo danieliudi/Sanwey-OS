@@ -1,7 +1,7 @@
 import React, { memo, useMemo, useRef, useState } from "react";
 import { Star, Calendar, MessageCircle } from "lucide-react";
 import { DELIVERABLE_STAGES, CHANNEL_COLORS } from "../../constants/marketing-pipelines";
-import { formatDateBR, daysSince } from "../../utils/date";
+import { formatDateBR, formatDateShortBR, daysSince } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { KanbanCardStatusChips, hasQuietStatusChips } from "../shared/KanbanCardStatusChips";
@@ -193,7 +193,11 @@ function DeliverableKanbanCardImpl({
           {resolvedAssignees.length > 0 ? (
             <AvatarStack
               users={resolvedAssignees}
-              size={28}
+              // 24, não 28: com dois responsáveis + os três chips de status
+              // faltavam 0,9px pra linha caber, e o rodapé quebrava em duas
+              // linhas (medido com Playwright, 01/09/2026). O mockup aprovado
+              // usava 22 — 24 devolve 6,6px e mantém o avatar legível.
+              size={24}
               max={2}
               dot={Boolean(unread)}
               dotTitle="Comentário novo"
@@ -205,7 +209,12 @@ function DeliverableKanbanCardImpl({
           ) : (
             <span />
           )}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* `flex-wrap` + `min-w-0` em vez de `shrink-0`: com prazo, SLA e
+              completude ao mesmo tempo numa coluna estreita, o grupo passava
+              da borda do card e vazava pra fora (bug reportado pelo Daniel,
+              01/09/2026). Degradar pra uma segunda linha é feio; vazar o card
+              é quebrado. */}
+          <div className="flex items-center justify-end flex-wrap gap-1.5 min-w-0">
             <KanbanCardStatusChips
               variant="quiet"
               agingDays={daysInStage}
@@ -220,7 +229,7 @@ function DeliverableKanbanCardImpl({
                 opacity={accentOp}
                 title={`Prazo: ${formatDateBR(item.deadline)}`}
               >
-                {formatDateBR(item.deadline)}
+                {formatDateShortBR(item.deadline)}
               </StatusChip>
             )}
           </div>
