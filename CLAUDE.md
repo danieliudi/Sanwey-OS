@@ -156,7 +156,8 @@ duas por conta própria — é decisão de produto, não bug a corrigir.
   pg_cron (`agent_runner_daily_cron` usa `net.http_post`) e perder linhas de
   fila pendentes, por um ganho puramente cosmético (o lint some, nenhum
   acesso muda). Risco desproporcional ao ganho — decidido não fazer.
-- **BX-04** (4 tabelas com RLS habilitada e zero policies — deny-all):
+- **BX-04** (tabelas com RLS habilitada e zero policies — deny-all). São
+  **6**, não 4 — a contagem aqui envelheceu (conferido 01/09/2026):
   `marketing_protocol_numbers` e `rh_pesquisa_respostas` já documentam a
   própria intenção na migration de origem ("só SECURITY DEFINER toca essa
   tabela"). `rapp_cargas`/`rapp_ibama` (dados IBAMA RAPP) foram conferidas
@@ -164,7 +165,14 @@ duas por conta própria — é decisão de produto, não bug a corrigir.
   via `service_role`, fora do Git) nem são lidas em nenhuma tela — deny-all
   não é bug, é o comportamento correto pro que existe hoje. Se um dia uma
   tela vier a ler `rapp_cargas`/`rapp_ibama` com sessão de usuário, ela vai
-  precisar de policy nova — não existe hoje.
+  precisar de policy nova — não existe hoje. As outras duas apareceram
+  depois e são igualmente deliberadas, cada uma documentando a intenção na
+  própria migration de origem: `external_cache`
+  (`_historico/20261020_sec_drop_external_cache_broad_read.sql`) e
+  `rh_curriculo_upload_tokens`
+  (`_historico/20261020_sec_rh_curriculos_upload_token.sql`). Deny-all
+  proposital nas 6 — a decisão de 20/08/2026 continua valendo, só o número
+  estava errado.
 - **BX-08** (bucket `chat-stickers` público): confirmado deliberado —
   upload restrito a `chat_is_manager(auth.uid())`, leitura pública (figurinha
   precisa ser vista por todo mundo no chat), 2 MB + MIME `png`/`webp` já

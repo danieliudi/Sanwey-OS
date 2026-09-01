@@ -31,9 +31,16 @@
 --      acrescenta um valor ao array que ela já compara.
 --
 -- POR QUE RECRIAR EM VEZ DE ALTERAR: Postgres não tem "ALTER POLICY ... ADD
--- role ao array". DROP + CREATE dentro da mesma transação da migration é o
--- caminho normal; a janela sem policy não existe pra sessão nenhuma, porque
--- a transação só fica visível no commit.
+-- role ao array". DROP + CREATE dentro da mesma transação: a janela sem
+-- policy não existe pra sessão nenhuma, porque a transação só fica visível no
+-- commit. O begin/commit é EXPLÍCITO aqui de propósito — `supabase db push`,
+-- o apply_migration do MCP e o SQL Editor já envolvem em transação, mas a
+-- garantia estava escrita neste arquivo sem se sustentar sozinha (achado da
+-- revisão de Segurança, 01/09/2026). Se falhasse no meio, falharia FECHADO
+-- (tabela sem clients_read nega pra gerente/vendedor, não abre nada) — ainda
+-- assim, a afirmação e o código agora batem.
+
+BEGIN;
 
 DROP POLICY IF EXISTS clients_read ON public.clients;
 
@@ -48,3 +55,5 @@ CREATE POLICY clients_read ON public.clients AS PERMISSIVE FOR SELECT TO public
 
 COMMENT ON POLICY clients_read ON public.clients IS
   'Leitura do cadastro de clientes: admin sem filtro; gerente/vendedor/suporte restritos às próprias frentes comerciais. suporte entrou em 01/09/2026 — a página Clientes já estava liberada no menu pra esse cargo e a lista vinha vazia. Só SELECT: clients_update continua sem suporte.';
+
+COMMIT;

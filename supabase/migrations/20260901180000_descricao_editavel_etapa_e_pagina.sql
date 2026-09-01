@@ -25,6 +25,12 @@
 --   * rh_pipeline_stages_write → admin, ou gerente no domínio 'comercial', ou
 --     RH/marketing/comex nos domínios de cada um. É a mesma régua de quem já
 --     renomeia e reordena etapa hoje — descrever a etapa é o mesmo ato.
+--   * rh_pipeline_stages_posvenda_write → admin ou gerente, restrito a
+--     domain='posvenda'. Terceira policy de escrita na mesma tabela, que este
+--     cabeçalho não citava (achado da revisão de Segurança, 01/09/2026). O
+--     EFEITO está de acordo com a decisão — gerente descreve etapa de
+--     pós-venda, que é "gerente do domínio" — só não estava escrito, e quem
+--     lesse daqui concluiria que pós-venda era admin-only.
 --   * module_states_write → SOMENTE admin.
 --
 -- ATENÇÃO, DIVERGÊNCIA A CONFIRMAR: a decisão foi "gerente e admin", mas
