@@ -433,11 +433,17 @@ export function CRMViagensCalculadoraView({ seed }) {
   const [idaEVolta, setIdaEVolta] = useState(true);
   const [passagemAerea, setPassagemAerea] = useState("");
 
-  // Duração. De avião é sempre menos que por terra (regra do Daniel), por isso
-  // os padrões diferem. Editáveis — ele avisou que "depende muito".
-  const [noitesTerra, setNoitesTerra] = useState("2");
-  const [noitesAviao, setNoitesAviao] = useState("1");
+  // Duração. De avião é sempre menos que por terra (regra do Daniel).
+  const [noitesTerra, setNoitesTerra] = useState("0");
+  const [noitesAviao, setNoitesAviao] = useState("0");
   const [diariasAluguel, setDiariasAluguel] = useState("0");
+
+  // A sugestão de noites vale só enquanto o vendedor não encostou no contador.
+  // Sem esta trava acontece o pior tipo de bug de formulário: ele corrige pra 3
+  // noites, acrescenta uma parada no trajeto, e o campo volta sozinho pro 2 sem
+  // avisar. Mesmo princípio do `autoDistanciaRef` no useRota acima.
+  const noitesTocadasRef = useRef(false);
+  const marcarNoitesTocadas = (setter) => (v) => { noitesTocadasRef.current = true; setter(v); };
 
   // Parâmetros de custo: da empresa, não do vendedor. Ficam recolhidos.
   const [mostrarAjustes, setMostrarAjustes] = useState(false);
@@ -459,11 +465,27 @@ export function CRMViagensCalculadoraView({ seed }) {
       local.setStops(seed.paradas.map((p) => newStop(p.description || "", p.placeId || null)));
     }
     if (seed.noites != null) {
+      // Veio da agenda: o intervalo de datas real é melhor que qualquer
+      // heurística de distância, então conta como "já definido".
+      noitesTocadasRef.current = true;
       setNoitesAviao(String(seed.noites));
       setNoitesTerra(String(Number(seed.noites) + 1));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed]);
+
+  // Sugestão de noites a partir da distância — só até alguém encostar nos
+  // contadores. Faixas decididas com o Daniel em 01/09/2026: até 150 km é
+  // bate-e-volta, e o padrão fixo em 2/1 que existia antes mostrava hotel em
+  // visita curta que ninguém ia pagar.
+  useEffect(() => {
+    if (noitesTocadasRef.current) return;
+    const kmIda = num(rota.distancia);
+    if (kmIda <= 0) return;
+    const [terra, aviao] = kmIda <= 150 ? [0, 0] : kmIda <= 400 ? [1, 0] : [2, 1];
+    setNoitesTerra(String(terra));
+    setNoitesAviao(String(aviao));
+  }, [rota.distancia]);
 
   const result = useMemo(() => {
     const mult = idaEVolta ? 2 : 1;
@@ -519,6 +541,48 @@ export function CRMViagensCalculadoraView({ seed }) {
       noitesTerra, noitesAviao, diariasAluguel]);
 
   const erroRota = rota.calc.error || local.calc.error;
+
+  // ── Usar como valor previsto ────────────────────────────────────────────
+  // Grava direto em vez de usar o useCRMViagens: o hook mantém assinatura de
+  // realtime e lista completa, e montar uma segunda só pra escrever um campo
+  // custaria mais do que resolve. A tela de Planejamento recarrega sozinha
+  // pelo realtime quando o vendedor volta pra ela.
+  const [previstoState, setPrevistoState] = useState({ saving: false, done: false, error: null });
+  const visitas = Array.isArray(seed?.visitas) ? seed.visitas : [];
+  const melhorTotal = result.cheapest === "carro" ? result.carroTotal
+    : result.cheapest === "aviao" ? result.aviaoTotal
+    : result.cheapest === "uber" ? result.uberTotal : 0;
+  const valorPorVisita = visitas.length > 0 ? melhorTotal / visitas.length : 0;
+
+  const aplicarPrevisto = async () => {
+    if (visitas.length === 0 || melhorTotal <= 0) return;
+    // Divide igual entre as visitas marcadas (decisão A do mockup): mantém o
+    // total certo em qualquer relatório que some, e evita uma saída inflada ao
+    // lado de outra zerada.
+    const jaTinham = visitas.filter((v) => v.valorPrevisto != null && Number(v.valorPrevisto) > 0);
+    if (jaTinham.length > 0) {
+      const lista = jaTinham.map((v) => `${v.destino || "saída"} (${fmtMoney(Number(v.valorPrevisto))})`).join(", ");
+      // Decisão B do mockup: nunca sobrescrever em silêncio um número que
+      // alguém pôs de propósito.
+      if (!window.confirm(`${jaTinham.length === 1 ? "Esta saída já tem" : "Estas saídas já têm"} valor previsto — ${lista}. Substituir por ${fmtMoney(valorPorVisita)} cada?`)) return;
+    }
+    setPrevistoState({ saving: true, done: false, error: null });
+    try {
+      for (const v of visitas) {
+        const { data, error } = await supabase
+          .from("crm_viagem_registros")
+          .update({ valor_previsto: Number(valorPorVisita.toFixed(2)), updated_at: new Date().toISOString() })
+          .eq("id", v.id)
+          .select();
+        if (error) throw new Error(error.message);
+        // Zero linha = RLS barrou (UPDATE bloqueado volta error:null/data:[]).
+        if (!data || data.length === 0) throw new Error("Não foi possível gravar o valor previsto — verifique suas permissões.");
+      }
+      setPrevistoState({ saving: false, done: true, error: null });
+    } catch (err) {
+      setPrevistoState({ saving: false, done: false, error: err?.message || "Não foi possível gravar o valor previsto." });
+    }
+  };
 
   const breakdownAviao = [
     { label: "Passagem", value: num(passagemAerea) },
@@ -609,8 +673,18 @@ export function CRMViagensCalculadoraView({ seed }) {
       <div className="rounded-xl border p-4 flex flex-col gap-4" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
         <div className="text-[10px] font-bold uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.1em" }}>3 · Quantos dias</div>
         <div className="grid md:grid-cols-3 gap-4">
-          <Stepper label="Noites — indo por terra" value={noitesTerra} onChange={setNoitesTerra} hint="Vale pro carro próprio e pro Uber." />
-          <Stepper label="Noites — indo de avião" value={noitesAviao} onChange={setNoitesAviao} hint="Normalmente menos: economiza a estrada." />
+          <Stepper
+            label="Noites — indo por terra"
+            value={noitesTerra}
+            onChange={marcarNoitesTocadas(setNoitesTerra)}
+            hint={noitesTocadasRef.current ? "Vale pro carro próprio e pro Uber." : "Sugerido pela distância — ajuste à vontade."}
+          />
+          <Stepper
+            label="Noites — indo de avião"
+            value={noitesAviao}
+            onChange={marcarNoitesTocadas(setNoitesAviao)}
+            hint="Normalmente menos: economiza a estrada."
+          />
           <Stepper label="Diárias de carro alugado" value={diariasAluguel} onChange={setDiariasAluguel} hint="Zero = não aluga, compara com Uber de lá." />
         </div>
       </div>
@@ -674,6 +748,41 @@ export function CRMViagensCalculadoraView({ seed }) {
           ]}
         />
       </div>
+
+      {/* Só aparece quando a calculadora foi aberta a partir da agenda — sem
+          visitas vinculadas não há onde gravar o previsto. */}
+      {visitas.length > 0 && melhorTotal > 0 && (
+        <div className="rounded-xl border p-3.5 flex items-center gap-3 flex-wrap" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+              Usar {fmtMoney(melhorTotal)} como valor previsto
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
+              {visitas.length === 1
+                ? "Grava na saída que originou este cálculo."
+                : `Dividido igualmente entre as ${visitas.length} saídas — ${fmtMoney(valorPorVisita)} em cada.`}
+            </div>
+            {previstoState.error && (
+              <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>{previstoState.error}</div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={aplicarPrevisto}
+            disabled={previstoState.saving || previstoState.done}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, border: "none", borderRadius: 10,
+              padding: "8px 14px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap",
+              background: previstoState.done ? "var(--surface-alt)" : "var(--accent)",
+              color: previstoState.done ? "var(--text-dim)" : "var(--on-accent)",
+              cursor: previstoState.saving || previstoState.done ? "default" : "pointer",
+              opacity: previstoState.saving ? 0.6 : 1,
+            }}
+          >
+            {previstoState.done ? <><Check size={13} /> Gravado</> : previstoState.saving ? "Gravando…" : "Usar como previsto"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
