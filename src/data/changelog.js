@@ -24,22 +24,43 @@
 
 export const CHANGELOG = [
   {
+    version: "4.89.0",
+    items: [
+      {
+        kind: "novo",
+        text: "A busca do topo (Ctrl+K) agora encontra tamb\u00e9m CLIENTES e ENTREGAS, al\u00e9m de neg\u00f3cios, campanhas e funcion\u00e1rios. Cliente d\u00e1 pra achar por nome, raz\u00e3o social, categoria, cidade ou CNPJ; entrega, por t\u00edtulo, n\u00famero de protocolo, quem pediu ou departamento. O resultado abre a mesma tela de sempre.",
+      },
+      {
+        kind: "ajuste",
+        text: "O texto da busca deixou de prometer o que voc\u00ea n\u00e3o pode achar. Antes dizia sempre \u201cBuscar lead, campanha, funcion\u00e1rio\u2026\u201d, mas campanhas e funcion\u00e1rios s\u00f3 abrem para quem \u00e9 de Marketing e de RH \u2014 agora ele cita s\u00f3 as categorias do seu perfil. E um rodap\u00e9 fixo lembra que a busca cobre apenas o que voc\u00ea j\u00e1 tem acesso, pra n\u00e3o confundir permiss\u00e3o com falha.",
+      },
+      {
+        kind: "ajuste",
+        text: "Sumiu a faixa \u201cArraste para mover \u00b7 \u2018+\u2019 para criar \u00b7 Clique para ver detalhes\u201d do rodap\u00e9 dos boards. As tr\u00eas a\u00e7\u00f5es se aprendem no primeiro uso, e o texto custava altura em toda sess\u00e3o \u2014 o espa\u00e7o foi para os cards.",
+      },
+      {
+        kind: "correcao",
+        text: "Em Ajuda & Tutoriais, o assistente de IA do funil estava descrito pelo bot\u00e3o antigo e oferecia perguntas prontas que ele nunca teve como responder (neg\u00f3cio a neg\u00f3cio, motivo de perda, tempo m\u00e9dio por etapa). O texto e as perguntas passaram a refletir o que ele realmente recebe: o resumo do funil.",
+      },
+    ],
+  },
+  {
     version: "4.88.0",
     items: [
       {
         kind: "ajuste",
         text: "\"Perguntar \u00e0 IA\" saiu do bot\u00e3o flutuante do Funil de Vendas e passou a viver dentro da vis\u00e3o An\u00e1lise. Ela responde sobre os n\u00fameros do funil \u2014 total, por etapa, por respons\u00e1vel \u2014 que \u00e9 exatamente o que a An\u00e1lise j\u00e1 mostra em gr\u00e1fico; flutuando sobre o Kanban, competia com o bot\u00e3o de criar neg\u00f3cio e n\u00e3o dizia sobre o que respondia.",
-        roles: ["vendedor", "gerente"],
+        roles: ["gerente", "vendedor", "consultor"],
       },
       {
         kind: "ajuste",
         text: "O chat do funil agora avisa, no rodap\u00e9, que responde s\u00f3 sobre os n\u00fameros daquele funil e que a resposta \u00e9 gerada por IA. Perguntas fora desse assunto passam a ser recusadas com uma frase, em vez de respondidas.",
-        roles: ["vendedor", "gerente"],
+        roles: ["gerente", "vendedor", "consultor"],
       },
       {
         kind: "correcao",
         text: "No chat do funil, as etapas aparecem pelo nome que voc\u00ea deu a elas, n\u00e3o mais pelo c\u00f3digo interno. E os exemplos de pergunta deixaram de sugerir algo que a IA n\u00e3o consegue responder: ela recebe o resumo do funil, nunca a lista de neg\u00f3cios um a um.",
-        roles: ["vendedor", "gerente"],
+        roles: ["gerente", "vendedor", "consultor"],
       },
     ],
   },

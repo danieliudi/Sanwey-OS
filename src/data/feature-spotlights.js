@@ -418,6 +418,18 @@ export const FEATURE_SPOTLIGHTS = [
   // prejuízo: o aviso é sobre uma informação que só aparece pro gestor.
   //
   {
+    id: "busca-global-escopo",
+    route: "dashboard",
+    target: '[data-tour="busca-global"]',
+    text: "A busca do topo agora acha cliente e entrega, além de negócio — e o texto dela passou a citar só o que VOCÊ encontra, em vez de prometer categorias travadas pro seu cargo.",
+    version: "4.89.0",
+  },
+  // Rota "dashboard" porque o gatilho vive na TopBar, presente em toda tela —
+  // qualquer rota serviria, e o dashboard é onde a maioria entra. Só desktop
+  // (o botão é `isDesktop`); no celular o spotlight não acha alvo e o runtime
+  // pula em silêncio, que é o correto: no celular a busca não tem gatilho
+  // visível pra apontar.
+  {
     id: "crm-ia-na-analise",
     route: "crm",
     target: '[data-tour="crm-view-analise"]',

@@ -147,7 +147,7 @@ export function PipelineChatPanel({ leads, users, stages, currentUser, isOpen, o
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-8">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ background: "#FBE9EB" }}
+                style={{ background: "color-mix(in srgb, var(--accent) 12%, var(--surface))" }}
               >
                 <Bot size={22} style={{ color: RED }} />
               </div>
@@ -198,7 +198,7 @@ export function PipelineChatPanel({ leads, users, stages, currentUser, isOpen, o
                   {isError && <AlertCircle size={12} style={{ display: "inline", marginRight: 4 }} />}
                   {content}
                 </div>
-                {!isError && msg.chart && <PipelineMiniChart type={msg.chart} aggregate={aggregate} />}
+                {!isError && msg.chart && <PipelineMiniChart type={msg.chart} aggregate={aggregate} stageNames={stageNames} />}
               </div>
             );
           })}
@@ -284,7 +284,7 @@ export function PipelineChatPanel({ leads, users, stages, currentUser, isOpen, o
 // Gráfico com os mesmos números já calculados em aggregatePipeline — nunca
 // com valores vindos da resposta da IA, pra não repetir o problema de
 // números "chutados".
-function PipelineMiniChart({ type, aggregate }) {
+function PipelineMiniChart({ type, aggregate, stageNames = {} }) {
   if (type === "byOwner") {
     const data = aggregate.byOwner.slice(0, 8).map(o => ({ name: o.name.split(" ")[0], valor: o.valueWon }));
     if (data.length === 0) return null;
@@ -304,7 +304,9 @@ function PipelineMiniChart({ type, aggregate }) {
   }
 
   if (type === "byStage") {
-    const data = aggregate.byStage.map(s => ({ name: s.stage, count: s.count }));
+    // Mesmo mapa id->nome do prompt: sem isso a IA escrevia "Prospecção" no
+    // texto e o gráfico logo abaixo rotulava "prospeccao".
+    const data = aggregate.byStage.map(s => ({ name: stageNames[s.stage] || s.stage, count: s.count }));
     if (data.length === 0) return null;
     return (
       <div className="w-full rounded-xl border p-2" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>

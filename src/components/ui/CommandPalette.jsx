@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Handshake, Megaphone, Users, X } from "lucide-react";
+import { Search, Handshake, Megaphone, Users, Building2, Package, X } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { MARKETING_STAGES } from "../../constants/marketing-pipelines";
 
@@ -134,11 +134,101 @@ function EmployeeResultRow({ item, highlighted, onSelect }) {
   );
 }
 
+function ClientResultRow({ item, highlighted, onSelect }) {
+  const c = item.data;
+  const local = [c.city, c.state].filter(Boolean).join("/");
+  return (
+    <div
+      role="option"
+      aria-selected={highlighted}
+      onClick={onSelect}
+      className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+      style={{ background: highlighted ? "var(--surface-alt)" : "transparent", transition: "background 100ms" }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = highlighted ? "var(--surface-alt)" : "transparent"; }}
+    >
+      <div className="shrink-0 flex items-center justify-center rounded-lg font-bold select-none"
+        style={{ width: 36, height: 36, fontSize: 15, background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+        {companyInitial(c.name)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Building2 size={10} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
+          <div className="font-semibold truncate" style={{ fontSize: 14, color: "var(--text)" }}>{c.name}</div>
+        </div>
+        <div className="text-xs truncate mt-0.5" style={{ color: "var(--text-dim)" }}>
+          {[c.category, local, c.cnpj].filter(Boolean).join(" · ") || "Cliente cadastrado"}
+        </div>
+      </div>
+      <div className="shrink-0 flex gap-1">
+        {(c.companyIds || []).map(id => (
+          <span key={id} className="rounded px-1.5 py-0.5" style={{ ...companyBadgeStyle(id), fontSize: 9, fontWeight: 700 }}>
+            {COMPANIES[id]?.name?.[0] || "?"}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DeliverableResultRow({ item, highlighted, onSelect }) {
+  const d = item.data;
+  return (
+    <div
+      role="option"
+      aria-selected={highlighted}
+      onClick={onSelect}
+      className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+      style={{ background: highlighted ? "var(--surface-alt)" : "transparent", transition: "background 100ms" }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = highlighted ? "var(--surface-alt)" : "transparent"; }}
+    >
+      <div className="shrink-0 flex items-center justify-center rounded-lg select-none"
+        style={{ width: 36, height: 36, background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+        <Package size={16} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div className="font-semibold truncate" style={{ fontSize: 14, color: "var(--text)" }}>{d.title || "Entrega sem título"}</div>
+        </div>
+        <div className="text-xs truncate mt-0.5" style={{ color: "var(--text-dim)" }}>
+          {[d.protocolNumber, d.requesterName, d.department].filter(Boolean).join(" · ") || "Entrega de campanha"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const SECTION_LABELS = {
-  lead:     "Leads / Negócios",
-  campaign: "Campanhas",
-  employee: "Funcionários",
+  lead:        "Leads / Negócios",
+  client:      "Clientes",
+  campaign:    "Campanhas",
+  deliverable: "Entregas",
+  employee:    "Funcionários",
 };
+
+// Rótulo do campo de busca e do estado vazio, montado a partir do que ESTE
+// usuário realmente encontra. Antes era fixo ("Buscar lead, campanha,
+// funcionário...") e mentia pra maioria: campanhas e funcionários são
+// travados por cargo no App.jsx, então um vendedor lia duas categorias que
+// nunca ia ver. Convenção: `undefined` = categoria não liberada pra este
+// cargo; `[]` = liberada, mas sem nenhum registro ainda. Só a primeira sai
+// do rótulo.
+export function globalSearchScopeWords({ leads, clients, campaigns, deliverables, employees }) {
+  const words = [];
+  if (leads)        words.push("lead");
+  if (clients)      words.push("cliente");
+  if (campaigns)    words.push("campanha");
+  if (deliverables) words.push("entrega");
+  if (employees)    words.push("funcionário");
+  return words;
+}
+
+export function joinPt(words) {
+  if (words.length === 0) return "";
+  if (words.length === 1) return words[0];
+  return `${words.slice(0, -1).join(", ")} ou ${words[words.length - 1]}`;
+}
 
 // ---------------------------------------------------------------------------
 // CommandPalette
@@ -150,8 +240,21 @@ const SECTION_LABELS = {
  *   open            – boolean
  *   onClose         – () => void
  *   leads           – Lead[]
- *   campaigns       – Campaign[] (optional)
+ *   clients         – Client[] (optional, comercial)
+ *   campaigns       – Campaign[] (optional, marketing/agência)
+ *   deliverables    – Deliverable[] (optional, marketing/agência)
  *   employees       – User[] (optional, RH users/employees)
+ *
+ * Cada array opcional segue a convenção `undefined` = cargo não tem acesso a
+ * essa categoria / `[]` = tem acesso, mas não há registro. A diferença
+ * importa: é ela que monta o texto honesto do campo de busca (scopeWords).
+ *
+ * ESTE COMPONENTE NUNCA CONSULTA O BANCO. Ele filtra, em memória, arrays que
+ * a própria aplicação já carregou por hooks com RLS — a mesma lista que o
+ * board e o cadastro já mostram. É isso que faz ampliar o escopo da busca
+ * não abrir porta nenhuma: o servidor já decidiu o que cabe naquele usuário
+ * antes do array existir. Se um dia alguém colocar um supabase.from() aqui
+ * dentro, essa garantia acaba — não faça.
  *   users           – User[]
  *   pipelines       – { [companyId]: Stage[] }
  *   onSelectLead    – (lead) => void
@@ -160,9 +263,9 @@ const SECTION_LABELS = {
  */
 export function CommandPalette({
   open, onClose,
-  leads, campaigns, employees,
+  leads, clients, campaigns, deliverables, employees,
   users, pipelines,
-  onSelectLead, onSelectCampaign, onSelectEmployee,
+  onSelectLead, onSelectClient, onSelectCampaign, onSelectDeliverable, onSelectEmployee,
 }) {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -201,6 +304,28 @@ export function CommandPalette({
     ).slice(0, 4);
     campaignHits.forEach(c => out.push({ type: "campaign", id: "campaign:" + c.id, data: c }));
 
+    // Clientes
+    const clientHits = (clients || []).filter(c =>
+      c.name?.toLowerCase().includes(q) ||
+      c.razaoSocial?.toLowerCase().includes(q) ||
+      c.category?.toLowerCase().includes(q) ||
+      c.city?.toLowerCase().includes(q) ||
+      // CNPJ compara só dígito, pros dois lados (o cadastro guarda formatado).
+      // O /\d/ evita que uma busca sem número case com TODO cliente que tenha
+      // CNPJ — `"123".includes("")` é sempre true.
+      (/\d/.test(q) && (c.cnpj || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")))
+    ).slice(0, 5);
+    clientHits.forEach(c => out.push({ type: "client", id: "client:" + c.id, data: c }));
+
+    // Entregas
+    const deliverableHits = (deliverables || []).filter(d =>
+      d.title?.toLowerCase().includes(q) ||
+      d.protocolNumber?.toLowerCase().includes(q) ||
+      d.requesterName?.toLowerCase().includes(q) ||
+      d.department?.toLowerCase().includes(q)
+    ).slice(0, 4);
+    deliverableHits.forEach(d => out.push({ type: "deliverable", id: "deliverable:" + d.id, data: d }));
+
     // Employees
     const employeeHits = (employees || []).filter(u =>
       u.name?.toLowerCase().includes(q) ||
@@ -210,7 +335,7 @@ export function CommandPalette({
     employeeHits.forEach(u => out.push({ type: "employee", id: "employee:" + u.id, data: u }));
 
     return out;
-  }, [query, leads, campaigns, employees, users]);
+  }, [query, leads, clients, campaigns, deliverables, employees, users]);
 
   useEffect(() => {
     setCursor(c => Math.min(c, Math.max(results.length - 1, 0)));
@@ -224,10 +349,12 @@ export function CommandPalette({
 
   const handleSelect = useCallback((item) => {
     if (item.type === "lead") onSelectLead?.(item.data);
+    else if (item.type === "client") onSelectClient?.(item.data);
     else if (item.type === "campaign") onSelectCampaign?.(item.data);
+    else if (item.type === "deliverable") onSelectDeliverable?.(item.data);
     else if (item.type === "employee") onSelectEmployee?.(item.data);
     onClose?.();
-  }, [onSelectLead, onSelectCampaign, onSelectEmployee, onClose]);
+  }, [onSelectLead, onSelectClient, onSelectCampaign, onSelectDeliverable, onSelectEmployee, onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -266,6 +393,7 @@ export function CommandPalette({
   if (!open) return null;
 
   const trimmedQuery = query.trim();
+  const scope = joinPt(globalSearchScopeWords({ leads, clients, campaigns, deliverables, employees }));
 
   return (
     <div
@@ -296,7 +424,7 @@ export function CommandPalette({
             type="text"
             value={query}
             onChange={e => { setQuery(e.target.value); setCursor(0); }}
-            placeholder="Buscar lead, campanha, funcionário..."
+            placeholder={scope ? `Buscar ${scope}...` : "Buscar..."}
             className="flex-1 outline-none bg-transparent"
             style={{ fontSize: 16, color: "var(--text)", border: "none" }}
             autoComplete="off"
@@ -324,7 +452,9 @@ export function CommandPalette({
           {trimmedQuery === "" && (
             <div className="flex flex-col items-center justify-center py-10 gap-2" style={{ color: "var(--text-dim)" }}>
               <Search size={24} strokeWidth={1} />
-              <span style={{ fontSize: 14 }}>Digite para buscar leads, campanhas ou funcionários</span>
+              <span style={{ fontSize: 14 }}>
+                {scope ? `Digite para buscar ${scope}` : "Nada disponível para buscar no seu perfil"}
+              </span>
               <span style={{ fontSize: 12, color: "var(--text-faint)" }}>Use ↑↓ para navegar · Enter para abrir · Esc para fechar</span>
             </div>
           )}
@@ -357,6 +487,14 @@ export function CommandPalette({
                   <CampaignResultRow key={item.id} item={item}
                     highlighted={highlighted} onSelect={() => handleSelect(item)} />
                 );
+                if (item.type === "client") return (
+                  <ClientResultRow key={item.id} item={item}
+                    highlighted={highlighted} onSelect={() => handleSelect(item)} />
+                );
+                if (item.type === "deliverable") return (
+                  <DeliverableResultRow key={item.id} item={item}
+                    highlighted={highlighted} onSelect={() => handleSelect(item)} />
+                );
                 if (item.type === "employee") return (
                   <EmployeeResultRow key={item.id} item={item}
                     highlighted={highlighted} onSelect={() => handleSelect(item)} />
@@ -367,14 +505,20 @@ export function CommandPalette({
           ))}
         </div>
 
-        {/* Footer hint */}
-        {results.length > 0 && (
-          <div style={{ borderTop: "1px solid var(--surface-alt)", padding: "8px 16px", display: "flex", gap: 16, fontSize: 11, color: "#9CA3AF" }}>
+        {/* Rodapé. Os atalhos só fazem sentido com lista pra navegar; a nota de
+            escopo é PERMANENTE (decidida com o Daniel 01/09/2026, junto com a
+            ampliação da busca): sem ela, não achar um registro que existe se
+            confunde com bug, quando na verdade é permissão. Ela não promete
+            nada — só nomeia a regra que já vale, que é a RLS dos hooks que
+            alimentam estas listas. */}
+        <div style={{ borderTop: "1px solid var(--surface-alt)", padding: "8px 16px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16, fontSize: 11, color: "var(--text-faint)" }}>
+          {results.length > 0 && (<>
             <span>↑↓ navegar</span>
             <span>↵ abrir</span>
             <span>Esc fechar</span>
-          </div>
-        )}
+          </>)}
+          <span style={{ marginLeft: "auto" }}>Busca só o que você já tem acesso.</span>
+        </div>
       </div>
     </div>
   );

@@ -36,6 +36,8 @@ import { useAutomations } from "./hooks/use-automations";
 import { useStageFields } from "./hooks/use-stage-fields";
 import { getMissingRequiredFields } from "./utils/field-conditions";
 import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
+import { useMarketingDeliverables } from "./hooks/use-marketing-deliverables";
+import { globalSearchScopeWords, joinPt } from "./components/ui/CommandPalette";
 import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
@@ -379,6 +381,17 @@ export default function App() {
   }, [automations]);
   const stageFieldsForNudge = useStageFields();
 
+  // Entregas na busca global (Ctrl+K). `enabled` evita cobrar uma assinatura
+  // Realtime de TODO usuário da plataforma por uma categoria que só o time de
+  // Marketing/Agência pode buscar — mesmo padrão do useMarketingCampaigns
+  // logo abaixo. Quem não tem o cargo recebe [] e nenhum canal aberto.
+  const { deliverables: searchableDeliverables } = useMarketingDeliverables({
+    userId: currentUser?.id,
+    role: currentUser?.role,
+    roles: currentUser?.roles,
+    enabled: Boolean(currentUser) && (isMarketingUser || isAgencia),
+  });
+
   const { campaigns } = useMarketingCampaigns({
     userId: currentUser?.id,
     role: currentUser?.role,
@@ -473,6 +486,9 @@ export default function App() {
   // específico de fora da própria tela (cada um só tinha um `selected`
   // local); subimos pra cá seguindo exatamente o padrão acima, não um novo.
   const [selectedDeliverableId, setSelectedDeliverableId] = useState(null);
+  // Deep-link da busca global (Ctrl+K) pro cadastro de Cliente — mesmo par
+  // (estado + consumo) já usado pra entrega/campanha/funcionário.
+  const [selectedClientId, setSelectedClientId] = useState(null);
   const [selectedPurchaseRequestId, setSelectedPurchaseRequestId] = useState(null);
   const [selectedVagaId, setSelectedVagaId] = useState(null);
   const [selectedPosvendaCaseId, setSelectedPosvendaCaseId] = useState(null);
@@ -914,6 +930,25 @@ export default function App() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [crmAutoCreate, setCrmAutoCreate] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+
+  // ÚNICO lugar que decide o que cada cargo busca. Convenção: `undefined` =
+  // categoria não liberada (some do rótulo do campo); `[]` = liberada, sem
+  // registro. Todo array vem de um hook com RLS — a busca filtra em memória,
+  // nunca consulta o banco (ver comentário de cabeçalho do CommandPalette).
+  // `clients` repete o MESMO predicado do guard da rota `clients`: quem seria
+  // redirecionado ao abrir a tela não acha cliente pela busca.
+  const searchScopes = useMemo(() => ({
+    leads,
+    clients: (isAgencia || isPureMarketing || isPureRH) ? undefined : clients,
+    campaigns: (isMarketingUser || isAgencia) ? campaigns : undefined,
+    deliverables: (isMarketingUser || isAgencia) ? searchableDeliverables : undefined,
+    employees: isRHUser ? users.filter(u => u.role === "rh" || u.role === "gerente_rh" || u.department) : undefined,
+  }), [leads, clients, campaigns, searchableDeliverables, users, isAgencia, isPureMarketing, isPureRH, isMarketingUser, isRHUser]);
+
+  const searchPlaceholder = useMemo(() => {
+    const scope = joinPt(globalSearchScopeWords(searchScopes));
+    return scope ? `Buscar ${scope}...` : "Buscar...";
+  }, [searchScopes]);
   const [clientImportOpen, setClientImportOpen] = useState(false);
   // Import de CLIENTES (carteira, sem virar negócio no Funil) — separado do
   // clientImportOpen acima, que abre o importador de LEADS (usado também na
@@ -1886,6 +1921,7 @@ export default function App() {
           title={sectionTitle}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}
           onSearchOpen={() => setCmdOpen(true)}
+          searchPlaceholder={searchPlaceholder}
           notifications={mergedNotifications}
           unreadCount={mergedUnreadCount}
           onMarkAllRead={handleMarkAllNotificationsRead}
@@ -2169,6 +2205,8 @@ export default function App() {
                 <ClientsManager
                   clients={clients}
                   loading={clientsLoading}
+                  initialSelectedClientId={selectedClientId}
+                  onInitialClientConsumed={() => setSelectedClientId(null)}
                   leads={leads}
                   onCreate={createClient}
                   onUpdate={updateClient}
@@ -2602,13 +2640,15 @@ export default function App() {
       <CommandPalette
         open={cmdOpen}
         onClose={() => setCmdOpen(false)}
-        leads={leads}
-        campaigns={isMarketingUser || isAgencia ? campaigns : []}
-        employees={isRHUser ? users.filter(u => u.role === "rh" || u.role === "gerente_rh" || u.department) : []}
+        /* leads/clients/campaigns/deliverables/employees — ver `searchScopes`
+           lá em cima, que é onde o escopo por cargo é decidido. */
+        {...searchScopes}
         users={users}
         pipelines={pipelines}
         onSelectLead={(lead) => { setSelectedLead(lead); setCmdOpen(false); }}
+        onSelectClient={(client) => { setSection("clients"); setSelectedClientId(client.id); setCmdOpen(false); }}
         onSelectCampaign={(campaign) => { setSection("marketing"); setSelectedCampaignId(campaign.id); setCmdOpen(false); }}
+        onSelectDeliverable={(d) => { setSection("marketing-entregas"); setSelectedDeliverableId(d.id); setCmdOpen(false); }}
         onSelectEmployee={(employee) => { setSection("rh-funcionarios"); setSelectedEmployeeId(employee.id); setCmdOpen(false); }}
       />
 

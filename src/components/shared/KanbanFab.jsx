@@ -3,9 +3,11 @@ import { Plus } from "lucide-react";
 
 // Botão flutuante fixo (canto inferior esquerdo da ÁREA DE CONTEÚDO) pra criar
 // um card direto na primeira etapa de qualquer Kanban da plataforma — pedido
-// do usuário, inspirado no botão equivalente do Pipefy. Fica do lado oposto ao
-// botão "Perguntar à IA" (canto inferior direito, ver CRMView.jsx) pra não
-// colidir. Só desktop (`lg:flex`) — no mobile o board vira acordeão, que já
+// do usuário, inspirado no botão equivalente do Pipefy. (Até 01/09/2026 este
+// comentário justificava o lado pelo botão "Perguntar à IA" no canto oposto —
+// esse botão saiu do flutuante e foi pra dentro da view Análise, então a
+// justificativa hoje é só o `var(--sidebar-width)` descrito abaixo.)
+// Só desktop (`lg:flex`) — no mobile o board vira acordeão, que já
 // tem seu próprio "+" por etapa (ver RHMobileKanbanAccordion `addLabel`).
 // `position:fixed` é relativo à viewport, não à área de conteúdo — como o
 // shell (App.jsx) tem uma sidebar fixa a partir do breakpoint `lg` (onde este

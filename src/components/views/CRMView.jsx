@@ -344,14 +344,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // Altura disponível até o rodapé da janela, medida ao vivo a partir do
   // topo do board — pra barra de scroll horizontal do Kanban nunca ficar
   // abaixo da dobra, em qualquer tamanho de janela (ver use-available-height.js).
-  // trailingRef mede o texto de dica que vem depois do board (a Análise do
-  // funil saiu daqui — agora é a própria view "analise", ver ViewToggleButton
-  // abaixo), pra sobrar espaço suficiente pra ele caber sem empurrar a
-  // página além da viewport. marginBottom = 16, o respiro do próprio
-  // KanbanBoardScrollArea (pb-4) — sem isso a barra de scroll horizontal do
-  // board voltaria a vazar da tela visível.
-  const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  // Não há mais nada depois do board (a Análise do funil virou a própria view
+  // "analise", e a dica de rodapé saiu em 01/09/2026 — ver comentário no lugar
+  // dela, mais abaixo), então o hook não precisa mais do 3º argumento.
+  // marginBottom = 16, o respiro do próprio KanbanBoardScrollArea (pb-4) —
+  // sem isso a barra de scroll horizontal do board voltaria a vazar da tela.
+  const [boardRef, boardHeight] = useAvailableHeight(16);
 
   // Mesma regra de permissão do botão de excluir dentro do LeadDetailDrawer
   // (canDelete) — reaproveitada aqui pro atalho de excluir direto no "..."
@@ -1070,14 +1068,15 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       </div>
       </>)}
 
-      {/* ── Dica de uso (apenas no kanban) ── */}
-      {viewMode === "kanban" && (
-        <div ref={trailingRef}>
-          <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
-            Arraste para mover entre etapas · Clique no card para ver detalhes
-          </p>
-        </div>
-      )}
+      {/* A dica "Arraste para mover · '+' para criar · Clique para ver
+          detalhes" vivia aqui, no rodapé do board. Removida 01/09/2026 a
+          pedido do Daniel: as três ações são descobertas no primeiro uso e o
+          texto custava uma faixa de altura em TODA sessão, pra sempre. Com
+          ela foi junto o `trailingRef` — existia só pra medir essa faixa e
+          descontá-la do `useAvailableHeight`; sem conteúdo depois do board,
+          não há o que descontar. Se um dia voltar a existir conteúdo abaixo
+          do board, é o `trailingRef` que precisa voltar (3º argumento de
+          useAvailableHeight), não um valor fixo chutado. */}
 
       {viewMode === "table" && (
         <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>

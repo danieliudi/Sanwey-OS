@@ -639,10 +639,10 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const campaignsById = useMemo(() => new Map(campaigns.map(c => [c.id, c])), [campaigns]);
   const stageFields = useRHStageFields("marketing_tasks");
 
-  // trailingRef mede o texto de dica que vem depois do board, pra sobrar
-  // espaço suficiente pra ele também caber (ver use-available-height.js).
-  const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  // Nada vem depois do board hoje (a dica de rodapé saiu em 01/09/2026 — ver
+  // comentário no lugar dela, mais abaixo), então o hook dispensa o 3º
+  // argumento (ver use-available-height.js).
+  const [boardRef, boardHeight] = useAvailableHeight(16);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing_tasks") — criar/
   // reordenar via "+ Nova etapa" e drag de coluna, excluir dentro de
@@ -1209,13 +1209,15 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         </div>
       </>)}
 
-      {!loading && !loadingStages && viewMode === "kanban" && (
-        <div ref={trailingRef}>
-          <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
-            Arraste para mover · "+" para criar · Clique para ver detalhes
-          </p>
-        </div>
-      )}
+      {/* A dica "Arraste para mover · '+' para criar · Clique para ver
+          detalhes" vivia aqui, no rodapé do board. Removida 01/09/2026 a
+          pedido do Daniel: as três ações são descobertas no primeiro uso e o
+          texto custava uma faixa de altura em TODA sessão, pra sempre. Com
+          ela foi junto o `trailingRef` — existia só pra medir essa faixa e
+          descontá-la do `useAvailableHeight`; sem conteúdo depois do board,
+          não há o que descontar. Se um dia voltar a existir conteúdo abaixo
+          do board, é o `trailingRef` que precisa voltar (3º argumento de
+          useAvailableHeight), não um valor fixo chutado. */}
     </div>
 
     {quickAddStage && (

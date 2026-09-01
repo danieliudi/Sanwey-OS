@@ -95,7 +95,12 @@ function deliverableToRow(d, extras = {}) {
   };
 }
 
-export function useMarketingDeliverables({ userId, role, roles, campaignId } = {}) {
+// `enabled` (default true) segue o mesmo precedente de useMarketingCampaigns:
+// permite montar o hook no App.jsx sem assinar Realtime pra quem não é do
+// time de Marketing/Agência. Foi o que a busca global (CommandPalette) exigiu
+// pra incluir Entregas sem cobrar uma assinatura a mais de TODO usuário da
+// plataforma — quem não tem o cargo recebe [] e nenhum canal aberto.
+export function useMarketingDeliverables({ userId, role, roles, campaignId, enabled = true } = {}) {
   const [deliverables, setDeliverables] = useState([]);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState(null);
@@ -116,7 +121,7 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
   const canWrite = canManage || roleList.includes("agencia");
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !enabled) return;
     setLoading(true);
     setError(null);
     try {
@@ -130,12 +135,12 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     } finally {
       setLoading(false);
     }
-  }, [campaignId]);
+  }, [campaignId, enabled]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll, campaignId]);
+  useEffect(() => { if (enabled) fetchAll(); }, [fetchAll, campaignId, enabled]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !enabled) return;
     const channelName = `marketing_deliverables_rt_${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
@@ -156,7 +161,7 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [campaignId]);
+  }, [campaignId, enabled]);
 
   const createDeliverable = useCallback(async (deliverable) => {
     if (!isSupabaseConfigured || !canManage) return null;

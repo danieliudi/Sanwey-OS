@@ -57,7 +57,11 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
      as automações lead_created como qualquer outro lead novo, onAddLeadActivity/
      onUpdateLead nomeados diferente de `onUpdate` acima de propósito: aquele já
      é o onSave do CLIENTE, usar o mesmo nome pro lead seria colisão silenciosa. */
-  currentUser, onCreateLead, onAddLeadActivity, onUpdateLead, }) {
+  currentUser, onCreateLead, onAddLeadActivity, onUpdateLead,
+  /* Deep-link da busca global (Ctrl+K, 01/09/2026): abre direto o cadastro
+     desse cliente ao entrar na rota. Mesmo par de props que EntregasView já
+     usa pra `initialSelectedDeliverableId` — não é um mecanismo novo. */
+  initialSelectedClientId, onInitialClientConsumed, }) {
   const [query, setQuery] = useState("");
   const [onlyOpportunities, setOnlyOpportunities] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -185,6 +189,18 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     setActiveTab(tab);
     setModalOpen(true);
   };
+
+  // Busca global → cadastro do cliente. Espera `clients` carregar; se o id não
+  // existir na lista (cliente excluído, ou fora do alcance da RLS deste
+  // usuário), consome o pedido em silêncio e não abre nada — a busca é
+  // atalho, nunca um caminho paralelo de permissão.
+  useEffect(() => {
+    if (!initialSelectedClientId || loading) return;
+    const alvo = clients.find(c => c.id === initialSelectedClientId);
+    if (alvo) openDetail(alvo);
+    onInitialClientConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedClientId, clients, loading]);
 
   // Dedup por CNPJ ao criar (não ao editar — aí o form já é o próprio
   // duplicateMatch) — mesma checagem já usada em ClientQuickCreateModal.jsx;
