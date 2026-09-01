@@ -24,6 +24,26 @@
 
 export const CHANGELOG = [
   {
+    version: "4.85.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Os cards de Entregas e Tarefas de Marketing ficaram mais limpos. Antes todo card vinha colorido mesmo sem nada de errado, e não dava pra saber de longe qual precisava de atenção. Agora um selo só aparece quando pede ação: prazo estourado (o único em vermelho cheio), SLA vencendo, campo obrigatório faltando ou prioridade alta. Card sem selo é card em dia — o “2/2” de campos completos, por exemplo, deixou de aparecer justamente por não pedir nada de ninguém. Comentário novo virou um ponto na foto do responsável.",
+        roles: ["marketing", "gerente_marketing", "agencia"],
+      },
+      {
+        kind: "correcao",
+        text: "O número do card (P00112 e afins) não corre mais por baixo dos selos quando a coluna está estreita.",
+        roles: ["marketing", "gerente_marketing", "agencia"],
+      },
+      {
+        kind: "correcao",
+        text: "Entrega ou tarefa que vence hoje não é mais marcada como atrasada. Por causa do fuso, ela passava a contar como vencida às 21h do dia anterior — no card, no filtro “Vencidas” e no contador do resumo.",
+        roles: ["marketing", "gerente_marketing", "agencia"],
+      },
+    ],
+  },
+  {
     version: "4.84.0",
     items: [
       {

@@ -18,7 +18,7 @@ import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { exportMarketingTasksToCSV } from "../../utils/export-csv";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
-import { localDateInputToISOString, formatDateBR, parseDateInput } from "../../utils/date";
+import { localDateInputToISOString, formatDateBR, parseDateInput, daysSince } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MobileTableCards } from "../shared/MobileTableCards";
 import { useUsersById } from "../../hooks/use-users-by-id";
@@ -42,14 +42,22 @@ import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
 import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 
+// Mesmo critério de "atrasada" do chip de prazo do card (DeliverableKanbanCard)
+// — o filtro "Vencidas" e o contador do resumo têm que achar exatamente os
+// itens que aparecem em vermelho no board.
+//
+// Passou a usar `daysSince` (01/09/2026) junto com o redesenho do card. O
+// `new Date("AAAA-MM-DD")` anterior parseia como meia-noite UTC: em UTC-3 uma
+// tarefa que vence HOJE já contava como vencida às 21h de ontem, no card e no
+// filtro. `daysSince` usa `parseDateInput`, que monta a data em horário local.
 function isOverdueTask(t) {
-  return Boolean(t.deadline) && new Date(t.deadline) < new Date();
+  return Boolean(t.deadline) && daysSince(t.deadline) > 0;
 }
 
 function isDueSoon(t) {
   if (!t.deadline) return false;
-  const diffMs = new Date(t.deadline).getTime() - Date.now();
-  return diffMs >= 0 && diffMs <= 7 * 86400000;
+  const days = daysSince(t.deadline);
+  return days <= 0 && days >= -7;
 }
 
 /* ── Tabela (item 9/11: padronização de views — mesmo padrão de EntregasView.jsx) ── */
