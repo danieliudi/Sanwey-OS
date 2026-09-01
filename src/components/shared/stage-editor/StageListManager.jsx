@@ -39,6 +39,7 @@ export function StageListCore({
   protectedLabel = "",
   showCode = false,
   showProbability = true,
+  showDescription = true,
   onSave,          // async (draft) => void — validação/persistência do modo
   onReset = null,
   accent = "var(--accent)",
@@ -262,7 +263,7 @@ export function StageListCore({
                     onClick={() => setAdvIdx(idx)}
                     className="p-1 rounded cursor-pointer justify-self-center"
                     style={{ color: "var(--text-dim)" }}
-                    title="Opções avançadas (probabilidade, SLA, fase final)"
+                    title="Opções avançadas (descrição, probabilidade, SLA, fase final)"
                     onMouseEnter={e => { e.currentTarget.style.color = accent; e.currentTarget.style.background = "var(--surface-alt)"; }}
                     onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
                   >
@@ -348,6 +349,7 @@ export function StageListCore({
         stage={advStage}
         accent={accent}
         showProbability={showProbability}
+        showDescription={showDescription}
         onSave={(p) => { patch(advIdx, p); }}
       />
     </>
@@ -413,6 +415,7 @@ export function RHStageListManager({
           orderIdx: i,
           probability: s.probability,
           slaDays: s.slaDays,
+          description: s.description ?? null,
           terminal: !!s.terminal,
           won: false,
           lost: false,
@@ -425,6 +428,13 @@ export function RHStageListManager({
           orig.color !== s.color ||
           orig.probability !== s.probability ||
           orig.slaDays !== s.slaDays ||
+          // `description` PRECISA estar aqui e no payload abaixo. Sem ela, em
+          // Recrutamento (o único board que edita etapa por este gerenciador)
+          // o usuário digitava a descrição, clicava "Salvar alterações", o
+          // modal fechava sem erro e nada era gravado — e se ele tivesse
+          // mexido SÓ na descrição, `changed` dava false e não havia nem
+          // UPDATE. Achado do QA, 01/09/2026.
+          orig.description !== s.description ||
           orig.terminal !== !!s.terminal
         );
         if (changed) {
@@ -433,6 +443,7 @@ export function RHStageListManager({
             color: s.color,
             probability: s.probability,
             slaDays: s.slaDays,
+            description: s.description ?? null,
             terminal: !!s.terminal,
           });
         }

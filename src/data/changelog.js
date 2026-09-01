@@ -34,6 +34,7 @@ export const CHANGELOG = [
       {
         kind: "novo",
         text: "Cada etapa de quadro pode ganhar uma descrição própria — \"o que precisa acontecer nesta fase\". Escreva em Editar fase → Descrição; ela aparece ao passar o mouse sobre o nome da etapa, tanto no cabeçalho da coluna quanto no menu \"Mover para\", que é onde ela mais ajuda: na hora de decidir pra onde mandar o card.",
+        roles: ["admin", "gerente", "gerente_rh", "gerente_marketing"],
       },
     ],
   },

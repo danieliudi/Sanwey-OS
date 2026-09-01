@@ -306,10 +306,14 @@ function KanbanBoard({ purchasesByStage, suppliersById, usersById, users, onCard
                   background: isOver ? color + "14" : "var(--surface-alt)",
                   boxShadow: isOver ? `0 0 0 2px ${color}30` : "none",
                 }}>
+                {/* Sem `description`: Compras usa PURCHASE_STAGES hardcoded
+                    (exceção deliberada da regra 2 do CLAUDE.md), então não há
+                    onde escrever descrição de etapa aqui. A prop existia e era
+                    sempre undefined — sugeria uma feature que este board não
+                    tem. Achado do QA, 01/09/2026. */}
                 <KanbanColumnHeader
                   color={color}
                   name={stage.name}
-                  description={stage.description}
                   count={items.length}
                   bandHeight={4}
                   letterSpacing="normal"

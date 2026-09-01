@@ -103,7 +103,9 @@ export function useModuleStates({ enabled = true } = {}) {
 
   // Descrição da página. Mesma RLS (module_states_write = só admin) — quem não
   // é admin nem vê o lápis, e se tentasse mesmo assim a gravação volta 0 linha
-  // e o erro sobe pro chamador em vez de sumir em silêncio.
+  // e o erro sobe pro chamador em vez de sumir em silêncio. Vale pros TRÊS
+  // ramos (apagar, atualizar, inserir) — na 1ª versão o de apagar não
+  // checava, e o comentário dizia que checava.
   //
   // Texto vazio LIMPA a descrição (grava NULL). Se depois disso a linha não
   // guardar mais nada de anormal (state 'live'), ela é apagada — mesma
@@ -117,22 +119,50 @@ export function useModuleStates({ enabled = true } = {}) {
       if (valor) next[moduleId] = valor; else delete next[moduleId];
       return next;
     });
+    const SEM_PERMISSAO = "Não foi possível salvar — só administrador edita a descrição da página.";
     try {
       const estadoAtual = states[moduleId] || "live";
+      const userId = (await supabase.auth.getUser()).data?.user?.id ?? null;
+
+      // Limpar a descrição de uma página que já está "live" apaga a linha
+      // inteira (mesma higiene do setModuleState: a tabela só guarda o que
+      // foge do padrão). `.select()` é obrigatório: um DELETE barrado pela
+      // RLS volta error:null e ZERO linha, então sem contar linha o clear
+      // otimista ficaria de pé como se tivesse gravado — a classe de bug que
+      // o CLAUDE.md já registra pros UPDATE (gabarito use-clients.js).
+      // Achado do QA, 01/09/2026: este ramo era o único sem `.select()`.
       if (!valor && estadoAtual === "live") {
-        const { error } = await supabase.from("module_states").delete().eq("module_id", moduleId);
+        const { data, error } = await supabase
+          .from("module_states").delete().eq("module_id", moduleId).select();
         if (error) throw new Error(error.message);
+        // Zero linha com a linha JÁ ausente do estado local é sucesso (não
+        // havia o que apagar); zero linha com descrição conhecida é a RLS.
+        if ((!data || data.length === 0) && previous) throw new Error(SEM_PERMISSAO);
         return;
       }
-      const userId = (await supabase.auth.getUser()).data?.user?.id ?? null;
-      const { data, error } = await supabase
+
+      // UPDATE primeiro, sem mandar `state`. Um upsert com o `state` lido do
+      // estado local ressuscitaria a página: dois admins simultâneos, A
+      // desliga (off) e B salva uma descrição com `states` ainda velho —
+      // a página voltava pro ar sem ninguém pedir (achado do QA). PostgREST
+      // só faz SET das colunas presentes no corpo, então omitir `state`
+      // deixa a coluna intacta.
+      const { data: upd, error: updErr } = await supabase
         .from("module_states")
-        .upsert({ module_id: moduleId, state: estadoAtual, description: valor, updated_by: userId }, { onConflict: "module_id" })
+        .update({ description: valor, updated_by: userId })
+        .eq("module_id", moduleId)
         .select();
-      if (error) throw new Error(error.message);
-      if (!data || data.length === 0) {
-        throw new Error("Não foi possível salvar — só administrador edita a descrição da página.");
-      }
+      if (updErr) throw new Error(updErr.message);
+      if (upd && upd.length > 0) return;
+
+      // Zero linha aqui é ambíguo: ou a linha não existe (caso normal — a
+      // tabela nasce vazia), ou a RLS barrou. Desempata tentando o INSERT:
+      // se a linha existia mesmo, o unique de module_id recusa (23505) e
+      // sabemos que foi permissão.
+      const { error: insErr } = await supabase
+        .from("module_states")
+        .insert({ module_id: moduleId, state: estadoAtual, description: valor, updated_by: userId });
+      if (insErr) throw new Error(insErr.code === "23505" ? SEM_PERMISSAO : insErr.message);
     } catch (err) {
       setDescriptions(prev => {                            // desfaz e propaga
         const next = { ...prev };

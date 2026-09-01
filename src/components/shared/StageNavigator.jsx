@@ -20,7 +20,10 @@ function StagePill({ s, getKey, onMove, disabled, direction }) {
       // decidindo PRA ONDE mover é exatamente quem precisa saber o que cada
       // etapa significa. Sem descrição, o title fica só com o nome — mesmo
       // comportamento de antes.
-      title={s.description ? `${s.name} — ${s.description}` : s.name}
+      // Sem descrição, `undefined` e não `s.name`: o nome já é o rótulo
+      // visível do botão, e um tooltip nativo repetindo o texto que está na
+      // tela é ruído em 13 telas (achado do QA, 01/09/2026).
+      title={s.description ? `${s.name} — ${s.description}` : undefined}
       className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
       style={isBackward ? {
         background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border-strong)",

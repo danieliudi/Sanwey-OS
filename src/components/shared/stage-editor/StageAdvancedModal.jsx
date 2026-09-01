@@ -30,6 +30,11 @@ export function StageAdvancedModal({
   onSave,
   onDelete,
   showProbability = true,
+  // Nem todo consumidor persiste descrição: `personal_task_stages` (Lista
+  // Pessoal) não tem a coluna, e o handleSave de lá não repassa o campo — o
+  // texto era aceito e sumia no Salvar. Mesmo mecanismo do showProbability,
+  // que já existe pra exatamente esse fim. Achado do QA, 01/09/2026.
+  showDescription = true,
   accent = "var(--accent)",
   isProtectedStage = false,
   protectedLabel = "",
@@ -79,10 +84,11 @@ export function StageAdvancedModal({
         name: name.trim(),
         color,
         ...(showProbability ? { probability } : {}),
+        ...(showDescription ? { description: description.trim() || null } : {}),
         slaDays: terminal ? null : slaDays,
-        // Vazio grava NULL, não "": a UI trata NULL como "sem descrição" e
-        // uma string vazia passaria no CHECK mas viraria um tooltip em branco.
-        description: description.trim() || null,
+        // (description acima, condicionado a showDescription) Vazio grava NULL,
+        // não "": a UI trata NULL como "sem descrição" e uma string vazia
+        // passaria no CHECK mas viraria um tooltip em branco.
         terminal: terminalLocked ? true : terminal,
       });
       onClose();
@@ -161,6 +167,7 @@ export function StageAdvancedModal({
               Aparece como `title` nativo no nome da etapa (o padrão de facto
               da plataforma pra hint em elemento que já existe — CLAUDE.md,
               regra 1) e no StageNavigator do "Mover para". */}
+          {showDescription && (
           <div>
             <div style={SECTION_TITLE}>Descrição</div>
             <div style={SECTION_HELP}>
@@ -179,6 +186,7 @@ export function StageAdvancedModal({
               {description.length}/140
             </div>
           </div>
+          )}
 
           {/* Fase final */}
           <div>

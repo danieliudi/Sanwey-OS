@@ -76,7 +76,7 @@ function EditablePageDescription({ estatica }) {
       }
     };
     return (
-      <span className="flex items-center gap-1 min-w-0" style={{ flex: "1 1 0" }}>
+      <span className="flex items-center gap-1 min-w-0" style={{ flex: "1 1 0", position: "relative" }}>
         <input
           autoFocus
           value={draft}
@@ -87,7 +87,7 @@ function EditablePageDescription({ estatica }) {
           className="text-xs"
           style={{ flex: "1 1 0", minWidth: 0, maxWidth: 360, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
         />
-        <button onClick={salvar} disabled={saving} title={error || "Salvar"}
+        <button onClick={salvar} disabled={saving} title="Salvar"
           style={{ background: "none", border: "none", cursor: saving ? "wait" : "pointer", color: error ? "var(--danger)" : "var(--success)", padding: 2, display: "inline-flex", flexShrink: 0 }}>
           <Check size={14} />
         </button>
@@ -95,6 +95,24 @@ function EditablePageDescription({ estatica }) {
           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "inline-flex", flexShrink: 0 }}>
           <X size={14} />
         </button>
+        {/* Erro em texto, não só no `title` do check: falha de CHECK (120),
+            de RLS ou de rede ficava invisível pra quem não passasse o mouse
+            por cima do ícone — o input só ficava aberto, sem explicação
+            (achado do QA, 01/09/2026). Flutua abaixo do campo pra não empurrar
+            o título da página de lugar. */}
+        {error && (
+          <span
+            className="text-xs"
+            style={{
+              position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 5,
+              maxWidth: 360, padding: "4px 8px", borderRadius: 6,
+              background: "var(--danger-bg)", color: "var(--danger)",
+              border: "1px solid var(--danger)",
+            }}
+          >
+            {error}
+          </span>
+        )}
       </span>
     );
   }

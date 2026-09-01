@@ -263,20 +263,6 @@ export default function App() {
   const canSeeExecutive    = isManagerRole || isMarketingManager || isRHManager || isComex || isDiretoria;
   const isAdmin            = hasAnyRole(["admin"]);
 
-  // Descrição editável da página, entregue por contexto pro PageTitle (ver
-  // comentário longo lá). Fica aqui porque só o App sabe qual seção está
-  // aberta — as views que renderizam o título não conhecem o próprio
-  // module_id. `canEdit` só admin: a policy module_states_write é admin-only
-  // e essa policy também liga/desliga página, então afrouxar pra gerente
-  // daria junto o poder de derrubar telas do Grupo (ver cabeçalho da
-  // migration 20260901180000). O botão nem aparece pra quem não pode — e se
-  // aparecesse, a RLS ainda recusaria e o erro subiria na UI.
-  const pageDescriptionCtx = useMemo(() => ({
-    moduleId: section,
-    description: moduleDescriptions[section] ?? null,
-    canEdit: isAdmin,
-    onSave: setModuleDescription,
-  }), [section, moduleDescriptions, isAdmin, setModuleDescription]);
   // isInsightsUser: quem o Painel de Insights (src/hooks/use-insights-metrics.js)
   // de fato consegue ler quase todos os dados — o hook cruza
   // rh_stage_history/rh_fornecedor_contratos/rh_colaborador_beneficios (RLS
@@ -1031,6 +1017,30 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const section = sectionFromPath(location.pathname);
+
+  // Descrição editável da página, entregue por contexto pro PageTitle (ver
+  // comentário longo lá). Fica aqui porque só o App sabe qual seção está
+  // aberta — as views que renderizam o título não conhecem o próprio
+  // module_id. `canEdit` só admin: a policy module_states_write é admin-only
+  // e essa policy também liga/desliga página, então afrouxar pra gerente
+  // daria junto o poder de derrubar telas do Grupo (ver cabeçalho da
+  // migration 20260901180000). O botão nem aparece pra quem não pode — e se
+  // aparecesse, a RLS ainda recusaria e o erro subiria na UI.
+  //
+  // TEM QUE FICAR DEPOIS DE `section` — não mova pra cima junto dos outros
+  // flags de papel. Array de dependência é avaliado NA CHAMADA do useMemo,
+  // não de forma diferida como o factory: com `section` declarado abaixo,
+  // toda renderização de App lançaria "Cannot access 'section' before
+  // initialization" e a plataforma inteira viraria tela branca. Foi
+  // exatamente isso na 1ª versão desta feature (pego pelo QA, 01/09/2026),
+  // e é a MESMA classe do hotfix 32108f7 em Recrutamento. `npm run build`
+  // passa nos dois casos: nem o Vite nem o gate fazem análise de TDZ.
+  const pageDescriptionCtx = useMemo(() => ({
+    moduleId: section,
+    description: moduleDescriptions[section] ?? null,
+    canEdit: isAdmin,
+    onSave: setModuleDescription,
+  }), [section, moduleDescriptions, isAdmin, setModuleDescription]);
   const setSection = useCallback((id) => {
     const path = ROUTES[id];
     if (path) navigate(path);

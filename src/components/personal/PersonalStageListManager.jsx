@@ -94,6 +94,11 @@ export function PersonalStageListManager({ open, onClose, stages, stagesHook, ta
         ...NEW_STAGE_DEFAULTS,
       })}
       showProbability={false}
+      // personal_task_stages não tem coluna `description` e o handleSave
+      // acima não repassa o campo — sem isto, o texto era aceito e sumia
+      // no Salvar. Se um dia a coluna existir, é trocar pra true e
+      // incluir `description` nos payloads de addStage/updateStage.
+      showDescription={false}
       countLabel="Tarefas"
       onSave={handleSave}
       // Decidido com o Daniel 11/08/2026 (Opção A do mockup "Etapa Arquivar
