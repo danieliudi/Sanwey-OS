@@ -37,19 +37,13 @@ import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { FilterBar } from "../shared/FilterBar";
+import { semAcento } from "../../utils/text-search";
 import { PageTitle } from "../shared/PageTitle";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
 import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
-
-// Busca por texto do board — sem acento e sem caixa. Gêmeo do de
-// EntregasView (2ª ocorrência): na 3ª isto vira util compartilhada, não
-// antes (CLAUDE.md, regra 4).
-function semAcento(v) {
-  return (v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
 
 // Mesmo critério de "atrasada" do chip de prazo do card (DeliverableKanbanCard)
 // — o filtro "Vencidas" e o contador do resumo têm que achar exatamente os

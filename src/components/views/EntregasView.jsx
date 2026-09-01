@@ -41,6 +41,7 @@ import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { FilterBar } from "../shared/FilterBar";
+import { semAcento } from "../../utils/text-search";
 import { PageTitle } from "../shared/PageTitle";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { exportDeliverablesToCSV } from "../../utils/export-csv";
@@ -61,16 +62,6 @@ function getDeliverableAssigneeIds(d) {
 function isStuckInRevisao(d) {
   return d.stage === "revisao" && d.stageChangedAt &&
     (Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000 > 3;
-}
-
-// Busca por texto do board. Sem acento e sem caixa, pra "camisa" achar
-// "Camisão" e "acao" achar "Ação" — quem procura um card digita rápido, não
-// digita certo. Fica local de propósito: é a 1ª ocorrência desse uso na
-// plataforma (os outros dois `normalize("NFD")` do repo são slug de etapa e
-// normalização de nome de importação, coisa diferente). Vira util
-// compartilhada na 3ª, não antes — CLAUDE.md, regra 4.
-function semAcento(v) {
-  return (v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 // Mesmo critério de "atrasada" já usado no badge do card (DeliverableKanbanCard)
