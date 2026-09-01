@@ -2030,6 +2030,7 @@ export default function App() {
               <SignalsView
                 activeCompany={activeCompany}
                 signals={signals}
+                clients={clients}
                 onAddLead={handleAddLead}
                 accessibleCompanies={accessibleCompanies}
               />

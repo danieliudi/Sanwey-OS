@@ -37,6 +37,7 @@ import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
@@ -847,15 +848,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
       <KanbanBoardHeader className="mb-4">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <ListTodo size={22} style={{ color: "var(--text)" }} />
-            <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-              Tarefas
-            </h1>
-          </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de tarefas do dia a dia de Marketing</p>
-        </div>
+        <PageTitle icon={ListTodo} title="Tarefas" description="Kanban de tarefas do dia a dia de Marketing" />
         <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
             <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
@@ -1116,6 +1109,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                         name={stage.name}
                         count={stageItems.length}
                         bandHeight={4}
+                        secondaryInline
                         letterSpacing="normal"
                         nameFontSize={14}
                         nameFontWeight={700}
@@ -1149,7 +1143,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                           )}
                         </>}
                       >
-                        {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
+                        {stage.sla ? `SLA ${stage.sla}d` : null}
                       </KanbanColumnHeader>
                     </div>
 

@@ -75,7 +75,12 @@ function useIsMobile() {
   return mobile;
 }
 
-const SIDEBAR_W = 288;
+// 240, não 288 (01/09/2026, rodada de densidade com o Daniel): a 288 o menu
+// ocupava 20% de uma tela de 1440px, acima da faixa usual de aplicativo com
+// menu fixo. A 240 cai pra 17% e todos os rótulos continuam cabendo — foi
+// conferido item a item, o mais longo é "Avaliação de Desempenho". Quem quiser
+// mais board tem o modo rail (72px) logo abaixo.
+const SIDEBAR_W = 240;
 const SIDEBAR_W_RAIL = 72;
 
 const T = {

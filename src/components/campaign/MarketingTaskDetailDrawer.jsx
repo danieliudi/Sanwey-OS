@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, FileText, Activity, Paperclip, ListChecks, History, Sparkles, Layers } from "lucide-react";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
-import { formatDateBR, localDateInputToISOString } from "../../utils/date";
+import { localDateInputToISOString } from "../../utils/date";
 import { stageTextColor } from "../../utils/stage-colors";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -247,7 +247,6 @@ export function MarketingTaskDetailDrawer({
   const priorityColor = PRIORITY_COLORS[priorityValue] || null;
   const priorityLabel = PRIORITY_LABELS[priorityValue] || priorityValue;
   const campaign       = item.campaignId ? (campaigns || []).find(c => c.id === item.campaignId) : null;
-  const isOverdue      = item.deadline && new Date(item.deadline) < new Date();
 
   const handleMoveStage = async (stageId) => {
     // Mesma validação de campo obrigatório (dinâmico) do drag-and-drop/
@@ -304,20 +303,9 @@ export function MarketingTaskDetailDrawer({
 
   const left = (
     <>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Prazo</div>
-          <div className="text-xs font-bold mt-0.5" style={{ color: isOverdue ? "var(--danger)" : "var(--text)" }}>
-            {item.deadline ? formatDateBR(item.deadline) : "—"}
-          </div>
-        </div>
-        <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Etapa</div>
-          <div className="text-xs font-bold mt-0.5 truncate" style={{ color: stageInfo?.color || "var(--text)" }}>
-            {stageInfo?.name || "—"}
-          </div>
-        </div>
-      </div>
+      {/* Caixas de resumo (Prazo/Etapa) removidas em 01/09/2026 — mesma
+          redundância que o Daniel apontou em Entregas: o Prazo é editável no
+          formulário desta mesma tela e a Etapa já está no chip do topo. */}
 
       {resolvedAssignees.length > 0 && (
         <div>

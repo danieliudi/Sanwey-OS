@@ -41,6 +41,7 @@ import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { exportDeliverablesToCSV } from "../../utils/export-csv";
 
@@ -993,15 +994,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
           só aparecem numa 2ª linha quando showFilters está aberto, em vez de
           sempre reservar uma linha inteira mesmo fechado. */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Package size={22} style={{ color: "var(--text)" }} />
-            <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-              Entregas
-            </h1>
-          </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de entregas de campanha</p>
-        </div>
+        <PageTitle icon={Package} title="Entregas" description="Kanban de entregas de campanha" />
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           {/* Busca — sempre visível, nunca atrás do botão "Filtros": achar um
               card pelo nome é a primeira coisa que se tenta fazer num board
@@ -1248,6 +1241,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
                         name={stage.name}
                         count={stageItems.length}
                         bandHeight={4}
+                        secondaryInline
                         letterSpacing="normal"
                         nameFontSize={14}
                         nameFontWeight={700}
@@ -1281,12 +1275,11 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
                           )}
                         </>}
                       >
-                        {/* Sempre renderizada (mesmo sem stage.sla, só oculta via
-                            visibility) — senão a coluna sem SLA fica com header mais
-                            baixo que as vizinhas que têm essa linha extra. */}
-                        <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", visibility: stage.sla ? "visible" : "hidden" }}>
-                          SLA {stage.sla || 0}d
-                        </div>
+                        {/* Inline na linha do nome (secondaryInline) — some o
+                            truque de `visibility: hidden` que existia só pra
+                            igualar a altura das colunas sem SLA: fora da
+                            segunda linha, altura não é mais problema. */}
+                        {stage.sla ? `SLA ${stage.sla}d` : null}
                       </KanbanColumnHeader>
                     </div>
 

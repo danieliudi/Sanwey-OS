@@ -12,8 +12,7 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { usePersonalTaskChecklists } from "../../hooks/use-personal-task-checklists";
 import { usePersonalTaskAttachments } from "../../hooks/use-personal-task-attachments";
-import { formatDateBR } from "../../utils/date";
-import { PERSONAL_TASK_PRIORITIES, RECURRENCE_OPTIONS, buildTaskConditionValues } from "../../constants/personal-tasks";
+import { PERSONAL_TASK_PRIORITIES, buildTaskConditionValues } from "../../constants/personal-tasks";
 import { RecurrencePicker } from "./RecurrencePicker";
 import { PersonalTagsPicker } from "./PersonalTagsPicker";
 
@@ -559,23 +558,11 @@ export function PersonalTaskDetailDrawer({ task, userId, columns, tagsHook, stag
 
   const left = (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: (task.recurrence && task.recurrence !== "none") ? "1fr 1fr" : "1fr", gap: 10 }}>
-        <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Prazo</div>
-          <div className="text-xs font-bold mt-0.5" style={{ color: "var(--text)" }}>
-            {task.dueDate ? `${formatDateBR(task.dueDate)}${task.dueTime ? ` · ${task.dueTime}` : ""}` : "Sem prazo"}
-          </div>
-        </div>
-
-        {task.recurrence && task.recurrence !== "none" && (
-          <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Repete</div>
-            <div className="text-xs font-bold mt-0.5" style={{ color: "var(--text)" }}>
-              {RECURRENCE_OPTIONS.find(r => r.id === task.recurrence)?.label}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Caixas de resumo (Prazo/Repete) removidas em 01/09/2026 — mesma
+          redundância de Entregas e Tarefas de Marketing: prazo, hora e
+          recorrência são todos editáveis na aba Detalhes desta mesma tela
+          (RecurrencePicker na linha 113, prazo e hora na 101). A caixa era a
+          versão só-leitura do que o formulário já deixa mexer. */}
 
       {task.tags?.length > 0 && (
         <div>

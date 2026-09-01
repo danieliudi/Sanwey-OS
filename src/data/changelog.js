@@ -27,17 +27,21 @@ export const CHANGELOG = [
     version: "4.87.0",
     items: [
       {
-        kind: "correcao",
-        text: "Entregas: \"Devolver para a agência\" podia falhar em silêncio — o card continuava na etapa antiga, e um comentário escrito ali podia sumir. As duas coisas foram corrigidas: a devolução avisa na hora se não puder ser feita, e salvar um campo do card não apaga mais o que outra pessoa gravou enquanto isso.",
-      },
-      {
-        kind: "novo",
-        text: "Na calculadora de viagem, o resultado vira o valor previsto da visita em um clique — e o gerente passa a ver esse previsto ao lado da prestação de contas, com a diferença destacada quando o gasto passa dele.",
-        roles: ["vendedor", "gerente", "admin", "diretoria"],
+        kind: "ajuste",
+        text: "Os boards ficaram com mais espaço para os cards. O cabeçalho da coluna passou a caber numa linha só (nome, contagem e SLA juntos), o título da página encolheu e a descrição foi para o lado dele, e o menu lateral estreitou de 288 para 240 pixels. Nada de informação saiu — só parou de ocupar duas linhas o que cabia em uma.",
       },
       {
         kind: "ajuste",
-        text: "O atalho da agenda pra calculadora agora deixa você escolher quais saídas entram no cálculo, em vez de somar todas de uma vez. E o número de noites já vem sugerido pela distância da viagem — é só corrigir se for diferente.",
+        text: "Ao abrir um card em Entregas, Tarefas de Marketing ou Meu To-Do, as caixinhas de Prazo, Etapa e Departamento no topo saíram. Elas repetiam o que o formulário logo abaixo já mostrava — e, em dois casos, o formulário ainda deixava editar o mesmo valor. Agora a descrição do pedido aparece sem precisar rolar.",
+      },
+      {
+        kind: "novo",
+        text: "Criar lead a partir de um sinal agora sugere as empresas já cadastradas em vez de pedir o nome digitado. Escolhendo uma, o lead nasce com CNPJ, setor e cidade preenchidos e vinculado ao cliente — sem virar um segundo cadastro da mesma empresa. Empresa que ainda não está na base continua podendo ser criada pelo nome.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "correcao",
+        text: "Em Sinais, o botão \u201cCancelar\u201d ao criar um lead saía para fora da borda do card.",
         roles: ["vendedor", "gerente", "admin", "diretoria"],
       },
     ],
