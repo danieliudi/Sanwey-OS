@@ -193,6 +193,67 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
     return;
   }
 
+  // Peça de conteúdo vinda da esteira editorial (carousel-builder). Mesmo
+  // padrão rascunho→aprovação→publicação dos blocos acima; o destino aqui é
+  // a entrega de marketing, já na etapa em que a agência enxerga e pode mexer.
+  // Protocolo e histórico de etapa vêm do trigger do banco.
+  if (action.action_type === 'sugestao_peca_conteudo') {
+    const companyId = action.company_id || payload.company_id;
+    if (!companyId || !action.title) return;
+
+    // Guarda de idempotência: `resolve` reexecuta este bloco a cada PATCH com
+    // status 'approved', inclusive numa linha já aprovada. Sem isto, aprovar
+    // duas vezes cria duas entregas com dois protocolos pra mesma peça, e a
+    // agência recebe o trabalho duplicado. `.limit(1)` em vez de
+    // `.maybeSingle()` de propósito: maybeSingle lança quando acha mais de uma.
+    try {
+      const { data: existing } = await admin
+        .from('marketing_deliverables')
+        .select('id')
+        .contains('custom_fields', { agent_action_id: action.id })
+        .limit(1);
+      if (existing && existing.length > 0) return;
+    } catch (_e) { /* na dúvida segue: perder uma entrega é pior que duplicar */ }
+
+    // Só o texto aprovado. Rascunho, fonte por afirmação e parecer do auditor
+    // ficam em agent_actions.payload, que o papel `agencia` não lê — decisão de
+    // 01/09/2026, tomada pra não mexer na política de leitura que já tinha
+    // derrubado o acesso da agência uma vez (20/08/2026).
+    const pecas = Array.isArray(payload.pecas) ? payload.pecas : [];
+    const corpo = [
+      payload.artigo_markdown ?? '',
+      ...pecas.map((peca: any) => {
+        const slides = Array.isArray(peca.slides) ? peca.slides : [];
+        const linhas = slides.map(
+          (s: any) => `${s.slideNumber}. ${s.headline}${s.bodyText ? ` — ${s.bodyText}` : ''}`,
+        );
+        return `\n\n## ${peca.plataforma}: ${peca.titulo}\n\n${linhas.join('\n')}`;
+      }),
+    ].join('');
+
+    try {
+      await admin.from('marketing_deliverables').insert({
+        title: action.title,
+        description: corpo || action.summary || null,
+        // UMA frente, sempre. A coluna aceita lista, mas pacote que sai pra
+        // terceiro com duas frentes é exatamente o que a guarda anti-vazamento
+        // da esteira proíbe.
+        company_ids: [companyId],
+        department: 'Marketing',
+        // A etapa É a entrega: é aqui que a agência passa a ver e a poder
+        // editar (política md_update). Nenhum e-mail é disparado, de propósito.
+        stage: 'encaminhado_para_agencia',
+        priority: action.priority === 'alta' ? 'alta' : 'media',
+        custom_fields: {
+          origem: 'esteira',
+          agent_action_id: action.id,
+          sinal: payload.sinal ?? null,
+        },
+      });
+    } catch (_e) { /* ignorado de propósito, como os demais */ }
+    return;
+  }
+
   if (action.action_type === 'sugestao_prospect') {
     if (!payload.company || !payload.sector || !payload.state) return;
     const relevantFor = Array.isArray(payload.relevant_for) && payload.relevant_for.length
@@ -237,6 +298,9 @@ const AGENT_SECRETS: Record<string, string | undefined> = {
   cadencia:  Deno.env.get('AGENT_GATEWAY_KEY_CADENCIA'),
   sentinela: Deno.env.get('AGENT_GATEWAY_KEY_SENTINELA'),
   cross:     Deno.env.get('AGENT_GATEWAY_KEY_CROSS'),
+  // Esteira editorial (carousel-builder): propõe a peça pronta — artigo,
+  // LinkedIn e Instagram — pra aprovação, com a auditoria de fato junto.
+  esteira:   Deno.env.get('AGENT_GATEWAY_KEY_ESTEIRA'),
 };
 const LEGACY_AGENT_KEY = Deno.env.get('AGENT_GATEWAY_KEY');
 
