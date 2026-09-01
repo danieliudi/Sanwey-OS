@@ -40,6 +40,7 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { FilterBar } from "../shared/FilterBar";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { exportDeliverablesToCSV } from "../../utils/export-csv";
 
@@ -59,6 +60,16 @@ function getDeliverableAssigneeIds(d) {
 function isStuckInRevisao(d) {
   return d.stage === "revisao" && d.stageChangedAt &&
     (Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000 > 3;
+}
+
+// Busca por texto do board. Sem acento e sem caixa, pra "camisa" achar
+// "Camisão" e "acao" achar "Ação" — quem procura um card digita rápido, não
+// digita certo. Fica local de propósito: é a 1ª ocorrência desse uso na
+// plataforma (os outros dois `normalize("NFD")` do repo são slug de etapa e
+// normalização de nome de importação, coisa diferente). Vira util
+// compartilhada na 3ª, não antes — CLAUDE.md, regra 4.
+function semAcento(v) {
+  return (v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 // Mesmo critério de "atrasada" já usado no badge do card (DeliverableKanbanCard)
@@ -774,6 +785,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
   // Deep-link do card "Presas em revisão" no Painel de Marketing (achado
   // da auditoria de fricção de 18/07) — chega via navigate(..., {state}).
   const [stuckOnly,      setStuckOnly]      = useState(Boolean(location.state?.stuckOnly));
+  const [search,         setSearch]         = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
   const [deadlineFilter, setDeadlineFilter] = useState("");
 
@@ -790,6 +802,18 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
   /* Filtered deliverables */
   const filtered = useMemo(() => {
     let list = deliverables;
+    // Busca primeiro: é o filtro que mais corta, e vale pras 4 views —
+    // Kanban, Tabela, Calendário e Análise consomem este mesmo array
+    // (CLAUDE.md, regra 11: view nunca reimplementa o próprio escopo).
+    const termo = semAcento(search).trim();
+    if (termo) {
+      list = list.filter(d =>
+        semAcento(d.title).includes(termo) ||
+        semAcento(d.requestNumber).includes(termo) ||
+        semAcento(d.requesterName).includes(termo) ||
+        semAcento(campaignsById.get(d.campaignId)?.name).includes(termo)
+      );
+    }
     if (stuckOnly)               list = list.filter(isStuckInRevisao);
     if (ownerFilter)             list = list.filter(d => getDeliverableAssigneeIds(d).includes(ownerFilter));
     if (companyFilter.length > 0) list = list.filter(d => companyFilter.some(c => d.companyIds?.includes(c)));
@@ -799,7 +823,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
     if (deadlineFilter === "due_soon")    list = list.filter(isDueSoon);
     if (deadlineFilter === "no_deadline") list = list.filter(d => !d.deadline);
     return list;
-  }, [deliverables, ownerFilter, companyFilter, starredOnly, stuckOnly, campaignFilter, deadlineFilter]);
+  }, [deliverables, search, campaignsById, ownerFilter, companyFilter, starredOnly, stuckOnly, campaignFilter, deadlineFilter]);
 
   // Ordenar cards dentro de cada coluna — cada etapa guarda seu próprio
   // critério (ver KanbanColumnSortMenu).
@@ -979,6 +1003,20 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de entregas de campanha</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* Busca — sempre visível, nunca atrás do botão "Filtros": achar um
+              card pelo nome é a primeira coisa que se tenta fazer num board
+              cheio, e até aqui não existia em board nenhum da plataforma.
+              Fora do bloco condicional de `viewMode` (CLAUDE.md, regra 11),
+              então vale igual em Kanban, Tabela, Calendário e Análise. */}
+          <FilterBar
+            search={{
+              value: search,
+              onChange: e => setSearch(e.target.value),
+              placeholder: "Buscar entrega…",
+              dataTour: "entregas-busca-card",
+            }}
+          />
+
           {/* Filtros */}
           <button
             onClick={() => setShowFilters(v => !v)}
@@ -1040,30 +1078,46 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
       {showFilters && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <>
-            {/* Owner filter (managers only) */}
-            {isManager && (
-              <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}
-                style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: ownerFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-                <option value="">Todos responsáveis</option>
-                {Array.from(usersById.values()).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            )}
-
-            {/* Campaign filter */}
-            <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}
-              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: campaignFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-              <option value="">Todas as campanhas</option>
-              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-
-            {/* Deadline filter */}
-            <select value={deadlineFilter} onChange={e => setDeadlineFilter(e.target.value)}
-              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: deadlineFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-              <option value="">Todos os prazos</option>
-              <option value="overdue">Vencidas</option>
-              <option value="due_soon">Próximos 7 dias</option>
-              <option value="no_deadline">Sem prazo</option>
-            </select>
+            {/* Selects via FilterBar compartilhado — antes eram três <select>
+                crus com estilo inline, o mesmo padrão reescrito board a board
+                (dívida registrada no CLAUDE.md, regras 6 e 11). O FilterBar já
+                roda em 7 telas de tabela/admin; este é o 1º board de Kanban. */}
+            <FilterBar
+              filters={[
+                ...(isManager ? [{
+                  id: "owner",
+                  label: "Responsável",
+                  value: ownerFilter,
+                  onChange: e => setOwnerFilter(e.target.value),
+                  options: [
+                    { value: "", label: "Todos responsáveis" },
+                    ...Array.from(usersById.values()).map(u => ({ value: u.id, label: u.name })),
+                  ],
+                }] : []),
+                {
+                  id: "campaign",
+                  label: "Campanha",
+                  value: campaignFilter,
+                  onChange: e => setCampaignFilter(e.target.value),
+                  options: [
+                    { value: "", label: "Todas as campanhas" },
+                    ...campaigns.map(c => ({ value: c.id, label: c.name })),
+                  ],
+                },
+                {
+                  id: "deadline",
+                  label: "Prazo",
+                  value: deadlineFilter,
+                  onChange: e => setDeadlineFilter(e.target.value),
+                  options: [
+                    { value: "",            label: "Todos os prazos" },
+                    { value: "overdue",     label: "Vencidas" },
+                    { value: "due_soon",    label: "Próximos 7 dias" },
+                    { value: "no_deadline", label: "Sem prazo" },
+                  ],
+                },
+              ]}
+            />
 
             {/* Company filter */}
             {COMPANY_IDS.map(id => {

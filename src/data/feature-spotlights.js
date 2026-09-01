@@ -25,6 +25,16 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "entregas-busca-card",
+    route: "marketing-entregas",
+    // Alvo é o próprio campo de busca — aqui existe elemento estável pra
+    // apontar (ao contrário do spotlight dos chips, que só aparecem na
+    // exceção), então aponta direto pra coisa nova.
+    target: '[data-tour="entregas-busca-card"]',
+    text: "Novo: busque um card pelo título, número, quem pediu ou campanha. Vale nas quatro visões do board.",
+    version: "4.86.0",
+  },
+  {
     id: "entregas-cards-sinais",
     route: "marketing-entregas",
     // Alvo é o botão da view Kanban, não um card: os chips que mudaram só

@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.86.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Busca de card em Entregas e Tarefas de Marketing. Digite parte do título, do número do card, do nome de quem pediu ou da campanha, e o board mostra só o que bate — em qualquer uma das quatro visões (Kanban, Tabela, Calendário e Análise). Não precisa acertar acento nem maiúscula.",
+        roles: ["marketing", "gerente_marketing", "agencia"],
+      },
+      {
+        kind: "ajuste",
+        text: "Os filtros desses dois boards passaram a usar o mesmo componente das telas de tabela da plataforma — mesma altura, mesmo espaçamento e mesmo comportamento de foco que você já vê em Funcionários, Cargos e Fornecedores.",
+        roles: ["marketing", "gerente_marketing", "agencia"],
+      },
+    ],
+  },
+  {
     version: "4.85.1",
     items: [
       {

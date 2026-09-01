@@ -36,11 +36,19 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { FilterBar } from "../shared/FilterBar";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
 import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
+
+// Busca por texto do board — sem acento e sem caixa. Gêmeo do de
+// EntregasView (2ª ocorrência): na 3ª isto vira util compartilhada, não
+// antes (CLAUDE.md, regra 4).
+function semAcento(v) {
+  return (v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
 
 // Mesmo critério de "atrasada" do chip de prazo do card (DeliverableKanbanCard)
 // — o filtro "Vencidas" e o contador do resumo têm que achar exatamente os
@@ -663,6 +671,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const [companyFilter,  setCompanyFilter]  = useState([]);
   const [starredOnly,    setStarredOnly]    = useState(false);
   const [showFilters,    setShowFilters]    = useState(false);
+  const [search,         setSearch]         = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
   const [deadlineFilter, setDeadlineFilter] = useState("");
 
@@ -678,6 +687,17 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   /* Filtered tasks */
   const filtered = useMemo(() => {
     let list = tasks;
+    // Busca primeiro — vale pras 4 views, que consomem este mesmo array
+    // (CLAUDE.md, regra 11).
+    const termo = semAcento(search).trim();
+    if (termo) {
+      list = list.filter(t =>
+        semAcento(t.title).includes(termo) ||
+        semAcento(t.requestNumber).includes(termo) ||
+        semAcento(t.requesterName).includes(termo) ||
+        semAcento(campaignsById.get(t.campaignId)?.name).includes(termo)
+      );
+    }
     if (ownerFilter)              list = list.filter(t => (t.assigneeIds || []).includes(ownerFilter));
     if (priorityFilter)           list = list.filter(t => t.priority === priorityFilter);
     if (companyFilter.length > 0) list = list.filter(t => companyFilter.some(c => t.companyIds?.includes(c)));
@@ -687,7 +707,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
     if (deadlineFilter === "due_soon")    list = list.filter(isDueSoon);
     if (deadlineFilter === "no_deadline") list = list.filter(t => !t.deadline);
     return list;
-  }, [tasks, ownerFilter, priorityFilter, companyFilter, starredOnly, campaignFilter, deadlineFilter]);
+  }, [tasks, search, campaignsById, ownerFilter, priorityFilter, companyFilter, starredOnly, campaignFilter, deadlineFilter]);
 
   // Ordenar cards dentro de cada coluna — cada etapa guarda seu próprio
   // critério (ver KanbanColumnSortMenu).
@@ -872,6 +892,16 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
 
       {/* Filter toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        {/* Busca sempre visível, nunca atrás do botão "Filtros" — mesma
+            decisão de EntregasView. Fora do bloco de `viewMode`, então vale
+            nas 4 views (CLAUDE.md, regra 11). */}
+        <FilterBar
+          search={{
+            value: search,
+            onChange: e => setSearch(e.target.value),
+            placeholder: "Buscar tarefa…",
+          }}
+        />
         <button
           onClick={() => setShowFilters(v => !v)}
           style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "var(--surface-alt)" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
@@ -884,37 +914,55 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
 
         {showFilters && (
           <>
-            {/* Owner filter (managers only) */}
-            {isManager && (
-              <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}
-                style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: ownerFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-                <option value="">Todos responsáveis</option>
-                {Array.from(usersById.values()).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            )}
-
-            {/* Priority filter */}
-            <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: priorityFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-              <option value="">Todas prioridades</option>
-              {DELIVERABLE_PRIORITIES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
-
-            {/* Campaign filter */}
-            <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}
-              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: campaignFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-              <option value="">Todas as campanhas</option>
-              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-
-            {/* Deadline filter */}
-            <select value={deadlineFilter} onChange={e => setDeadlineFilter(e.target.value)}
-              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: deadlineFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-              <option value="">Todos os prazos</option>
-              <option value="overdue">Vencidas</option>
-              <option value="due_soon">Próximos 7 dias</option>
-              <option value="no_deadline">Sem prazo</option>
-            </select>
+            {/* Selects via FilterBar compartilhado — antes eram quatro
+                <select> crus com estilo inline (dívida do CLAUDE.md, regras
+                6 e 11). */}
+            <FilterBar
+              filters={[
+                ...(isManager ? [{
+                  id: "owner",
+                  label: "Responsável",
+                  value: ownerFilter,
+                  onChange: e => setOwnerFilter(e.target.value),
+                  options: [
+                    { value: "", label: "Todos responsáveis" },
+                    ...Array.from(usersById.values()).map(u => ({ value: u.id, label: u.name })),
+                  ],
+                }] : []),
+                {
+                  id: "priority",
+                  label: "Prioridade",
+                  value: priorityFilter,
+                  onChange: e => setPriorityFilter(e.target.value),
+                  options: [
+                    { value: "", label: "Todas prioridades" },
+                    ...DELIVERABLE_PRIORITIES.map(pr => ({ value: pr.id, label: pr.label })),
+                  ],
+                },
+                {
+                  id: "campaign",
+                  label: "Campanha",
+                  value: campaignFilter,
+                  onChange: e => setCampaignFilter(e.target.value),
+                  options: [
+                    { value: "", label: "Todas as campanhas" },
+                    ...campaigns.map(c => ({ value: c.id, label: c.name })),
+                  ],
+                },
+                {
+                  id: "deadline",
+                  label: "Prazo",
+                  value: deadlineFilter,
+                  onChange: e => setDeadlineFilter(e.target.value),
+                  options: [
+                    { value: "",            label: "Todos os prazos" },
+                    { value: "overdue",     label: "Vencidas" },
+                    { value: "due_soon",    label: "Próximos 7 dias" },
+                    { value: "no_deadline", label: "Sem prazo" },
+                  ],
+                },
+              ]}
+            />
 
             {/* Company filter */}
             {COMPANY_IDS.map(id => {

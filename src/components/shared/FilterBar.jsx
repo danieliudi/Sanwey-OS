@@ -11,6 +11,9 @@ const selectStyle = {
   color: "var(--text)",
 };
 
+// `search.dataTour` (opcional): id de ancoragem do tour guiado contextual
+// (ver src/data/feature-spotlights.js) — vai no wrapper do campo de busca,
+// que é o elemento visível. Mesmo padrão de ViewToggleButton/KanbanFab.
 export function FilterBar({ search, filters = [], children, trailing }) {
   const searchInputRef = useRef(null);
   return (
@@ -18,6 +21,7 @@ export function FilterBar({ search, filters = [], children, trailing }) {
       {search && (
         <div
           className="flex items-center gap-2"
+          data-tour={search.dataTour}
           style={{
             background: "var(--surface)",
             border: "1px solid var(--border)",
