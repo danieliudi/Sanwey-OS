@@ -318,8 +318,21 @@ export function pipelineChatPrompt(question, aggregate, stageNames = {}) {
   };
   const stageLines = [...aggregate.byStage]
     .sort((a, b) => posicao(a.stage) - posicao(b.stage))
-    .map(s => `- ${limparParaPrompt(stageNames[s.stage] || s.stage)}: ${s.count} leads, R$ ${(s.value / 1000).toFixed(0)}k`)
+    .map(s => {
+      const partes = [`${s.count} leads`, `R$ ${(s.value / 1000).toFixed(0)}k`];
+      if (s.avgDaysInStage != null) partes.push(`${s.avgDaysInStage}d em média na etapa`);
+      if (s.staleCount > 0) partes.push(`${s.staleCount} parado(s) além do SLA`);
+      return `- ${limparParaPrompt(stageNames[s.stage] || s.stage)}: ${partes.join(', ')}`;
+    })
     .join('\n') || '- Nenhum lead no pipeline';
+
+  const sectorLines = (aggregate.bySector || [])
+    .slice(0, 12)
+    .map(s => {
+      const conv = s.conversionRate == null ? 'sem negócio decidido ainda' : `${s.conversionRate}% de conversão (${s.won} ganho / ${s.lost} perdido)`;
+      return `- ${limparParaPrompt(s.sector)}: ${s.count} leads, R$ ${(s.valueOpen / 1000).toFixed(0)}k em aberto, ${conv}`;
+    })
+    .join('\n') || '- Nenhum lead com setor preenchido';
 
   const ownerLines = aggregate.byOwner
     .slice(0, 15)
@@ -343,9 +356,14 @@ Os números abaixo já foram calculados com precisão — use-os exatamente como
 **Ganhos:** ${aggregate.wonCount} (R$ ${(aggregate.wonValue / 1000).toFixed(0)}k) | **Perdidos:** ${aggregate.lostCount}
 **Taxa de conversão (ganho / (ganho + perdido)):** ${aggregate.conversionRate}%
 **Valor total em aberto (pipeline ativo):** R$ ${(aggregate.openValue / 1000).toFixed(0)}k
+**Ticket médio dos negócios já ganhos:** R$ ${((aggregate.avgTicket || 0) / 1000).toFixed(0)}k
+**Negócios parados (sem atividade além do SLA da etapa):** ${aggregate.staleCount ?? 0}
 
-**Por etapa:**
+**Por etapa (na ordem do funil):**
 ${stageLines}
+
+**Por setor (até 12, do maior volume pro menor):**
+${sectorLines}
 
 **Por responsável (top 15 por valor ganho):**
 ${ownerLines}`,

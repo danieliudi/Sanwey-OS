@@ -38,7 +38,11 @@ export function PipelineChatPanel({ leads, users, stages, currentUser, isOpen, o
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const aggregate = useMemo(() => aggregatePipeline(leads, users), [leads, users]);
+  // 3º argumento = etapas da empresa: sem ele, `staleCount` não tem SLA pra
+  // comparar e sai zerado (ver aggregatePipeline). Passa `stages` cru, não o
+  // `.filter(s => !s.terminal)` — ganho/perdido também precisam ser
+  // reconhecidos como etapa terminal pra NÃO contarem como parados.
+  const aggregate = useMemo(() => aggregatePipeline(leads, users, stages), [leads, users, stages]);
 
   // O agregado guarda a CHAVE da etapa ("prospeccao"), não o nome. Sem esse
   // mapa o prompt entregava ids internos pra IA, que os repetia na resposta.
