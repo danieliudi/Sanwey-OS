@@ -1355,6 +1355,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
         onStageMoved={reopenDeliverableAfterMove}
         onUpdate={handleUpdate}
         onMoveToStage={attemptStageChange}
+        stageError={stageError}
         onDelete={canManage ? handleDelete : undefined}
         onResendCompleteEmail={sendCompleteEmail}
         stages={kanbanStages}

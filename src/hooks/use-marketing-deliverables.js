@@ -42,6 +42,31 @@ function rowToDeliverable(r) {
   };
 }
 
+// Mapa campo (camelCase, como o app trata) -> coluna (como o banco guarda).
+// Usado pelo recorte por patch em updateDeliverable: sem ele não há como
+// saber quais colunas o patch tocou. Coluna nova em deliverableToRow PRECISA
+// entrar aqui também — se faltar, updateDeliverable falha alto de propósito.
+const COLUNA_POR_CAMPO = {
+  requestNumber:  "request_number",
+  companyIds:     "company_ids",
+  campaignId:     "campaign_id",
+  title:          "title",
+  requesterName:  "requester_name",
+  department:     "department",
+  description:    "description",
+  priority:       "priority",
+  deadline:       "deadline",
+  stage:          "stage",
+  stageChangedAt: "stage_changed_at",
+  assignee:       "assignee",
+  assigneeIds:    "assignee_ids",
+  stageData:      "stage_data",
+  customFields:   "custom_fields",
+  starred:        "starred",
+  activities:     "activities",
+  notes:          "notes",
+};
+
 function deliverableToRow(d, extras = {}) {
   return {
     request_number:   d.requestNumber ?? null,
@@ -152,15 +177,52 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     const current = deliverables.find(d => d.id === id);
     if (!current) return;
     const merged = { ...current, ...patch };
-    const row = deliverableToRow(merged);
-    // request_number só deve ir na escrita quando o patch pede explicitamente
-    // (EditableProtocolNumber) — do contrário, qualquer edição de campo não
-    // relacionado (prioridade, prazo, etapa...) reenviaria o valor lido do
-    // estado local do componente (pode estar desatualizado se outra pessoa
-    // mudou o número entretanto) e dispararia à toa o trigger de sincronia
-    // do razão de protocolo, podendo reverter silenciosamente um número já
-    // alterado por outra pessoa nesse meio tempo (achado da auditoria).
-    if (!("requestNumber" in patch)) delete row.request_number;
+    const rowCompleta = deliverableToRow(merged);
+
+    // Manda SÓ as colunas que o patch tocou.
+    //
+    // Até 01/09/2026 esta função escrevia a LINHA INTEIRA, remontada a partir
+    // de `current` — a cópia local desta aba. Consequência: qualquer coluna
+    // alterada no banco depois que a aba carregou voltava pro valor velho, em
+    // silêncio. Foi assim que um comentário do Daniel sumiu (bug reportado
+    // 01/09): ele comentou e em seguida devolveu a entrega pra agência; a
+    // escrita de `activities` levou `notes` junto, com o conteúdo de antes do
+    // comentário.
+    //
+    // O sintoma já tinha aparecido uma vez e foi tratado numa coluna só —
+    // havia aqui um `delete row.request_number` com o comentário "podendo
+    // reverter silenciosamente um número já alterado por outra pessoa nesse
+    // meio tempo (achado da auditoria)". Era o mesmo bug, visto por uma
+    // fresta. Este recorte por patch resolve pra TODAS as colunas e torna
+    // aquele caso especial desnecessário (`request_number` só é enviado
+    // quando `requestNumber` está no patch, que era exatamente a intenção).
+    const row = {};
+    for (const campo of Object.keys(patch)) {
+      const coluna = COLUNA_POR_CAMPO[campo];
+      if (!coluna) {
+        // Chave sem coluna correspondente é IGNORADA — e isso não é novidade
+        // deste recorte: o `deliverableToRow` sempre leu só as props que
+        // conhece, então uma chave estranha já não era escrita antes. Chegou
+        // a passar por aqui um `throw`, e ele estava errado: a automação de
+        // "definir campo" (use-automations.js:319) monta o patch com a chave
+        // escolhida na tela, que pode ser um campo customizado — falhar alto
+        // transformaria um no-op antigo em automação quebrada.
+        // O aviso fica no console pra quem estiver desenvolvendo; que campo
+        // customizado não seja gravável por automação é assunto separado
+        // deste bug, e não vou resolver de carona.
+        console.warn(`updateDeliverable: campo "${campo}" não tem coluna mapeada — ignorado (comportamento de sempre).`);
+        continue;
+      }
+      row[coluna] = rowCompleta[coluna];
+    }
+    // `assignee_ids` é derivado de `assignee` (ver deliverableToRow): mexer num
+    // sem mandar o outro deixaria os dois inconsistentes no banco.
+    if ("assignee" in patch || "assigneeIds" in patch) {
+      row.assignee = rowCompleta.assignee;
+      row.assignee_ids = rowCompleta.assignee_ids;
+    }
+    if (Object.keys(row).length === 0) return;
+
     const { data, error: err } = await supabase.from(TABLE).update(row).eq("id", id).select();
     if (err) throw err;
     if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta entrega.");
