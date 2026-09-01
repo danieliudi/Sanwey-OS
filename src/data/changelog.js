@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.90.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "Recrutamento voltou a abrir. A tela estava caindo em \"Erro ao carregar\" desde a vers\u00e3o anterior \u2014 efeito colateral da pr\u00f3pria corre\u00e7\u00e3o que impediu a reprova\u00e7\u00e3o em massa de atingir candidatos escondidos pela busca. A prote\u00e7\u00e3o continua valendo; s\u00f3 a ordem do c\u00f3digo estava errada.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "4.90.2",
     items: [
       {
