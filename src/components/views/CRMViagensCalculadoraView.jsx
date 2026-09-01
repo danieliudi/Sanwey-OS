@@ -461,8 +461,23 @@ export function CRMViagensCalculadoraView({ seed }) {
   useEffect(() => {
     if (!seed || seedAplicadaRef.current) return;
     seedAplicadaRef.current = true;
-    if (Array.isArray(seed.paradas) && seed.paradas.length >= 2) {
-      local.setStops(seed.paradas.map((p) => newStop(p.description || "", p.placeId || null)));
+    const paradas = Array.isArray(seed.paradas) ? seed.paradas : [];
+    // O destino da viagem (trecho de origem→destino) recebe o endereço da
+    // primeira saída marcada. Antes só `local` era semeado, e com UMA saída
+    // marcada (caso comum agora que o vendedor escolhe quais entram) a
+    // calculadora abria completamente vazia — o atalho existe justamente pra
+    // ele não redigitar endereço nenhum. A origem fica em branco de
+    // propósito: é de onde ELE sai, e isso a agenda não sabe.
+    if (paradas.length >= 1) {
+      const destino = paradas[0];
+      rota.setStops((prev) => prev.map((st, i) => (
+        i === 1 ? { ...st, description: destino.description || "", placeId: destino.placeId || null } : st
+      )));
+    }
+    // Locais visitados NO destino só fazem sentido com 2+ endereços: um ponto
+    // sozinho não tem distância pra percorrer.
+    if (paradas.length >= 2) {
+      local.setStops(paradas.map((p) => newStop(p.description || "", p.placeId || null)));
     }
     if (seed.noites != null) {
       // Veio da agenda: o intervalo de datas real é melhor que qualquer

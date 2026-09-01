@@ -24,6 +24,25 @@
 
 export const CHANGELOG = [
   {
+    version: "4.87.0",
+    items: [
+      {
+        kind: "correcao",
+        text: "Entregas: \"Devolver para a agência\" podia falhar em silêncio — o card continuava na etapa antiga, e um comentário escrito ali podia sumir. As duas coisas foram corrigidas: a devolução avisa na hora se não puder ser feita, e salvar um campo do card não apaga mais o que outra pessoa gravou enquanto isso.",
+      },
+      {
+        kind: "novo",
+        text: "Na calculadora de viagem, o resultado vira o valor previsto da visita em um clique — e o gerente passa a ver esse previsto ao lado da prestação de contas, com a diferença destacada quando o gasto passa dele.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "ajuste",
+        text: "O atalho da agenda pra calculadora agora deixa você escolher quais saídas entram no cálculo, em vez de somar todas de uma vez. E o número de noites já vem sugerido pela distância da viagem — é só corrigir se for diferente.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+    ],
+  },
+  {
     version: "4.86.0",
     items: [
       {

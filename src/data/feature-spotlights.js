@@ -401,6 +401,25 @@ export const FEATURE_SPOTLIGHTS = [
   // só abre quando já quer calcular algo, e o atalho acima já leva até lá
   // contando o que mudou. Dois spotlights pro mesmo assunto na mesma rota
   // viraria ruído. Coberto pelo changelog 4.84.0.
+  {
+    id: "viagens-prestacoes-previsto",
+    route: "crm-viagens",
+    target: '[data-tour="viagens-prestacoes-previsto"]',
+    text: "Agora a prestação de contas mostra o valor que o vendedor previu na calculadora, e o quanto o gasto ficou acima ou abaixo dele — não é limite, é só contexto pra decidir.",
+    version: "4.87.0",
+  },
+  // Alvo é o CABEÇALHO da seção "Prestações a decidir", não uma linha da
+  // fila: o cabeçalho existe sempre na tela do gestor (a fila vazia só troca
+  // o conteúdo por um EmptyState), enquanto uma linha só existe em mês com
+  // prestação pendente. Ancorar numa linha faria o gestor que abrisse a tela
+  // num mês calmo consumir o spotlight em silêncio (o runtime marca órfão
+  // como visto depois do timeout) e nunca mais vê-lo. Vendedor nesta mesma
+  // rota também consome em silêncio — inevitável com âncora por rota, e sem
+  // prejuízo: o aviso é sobre uma informação que só aparece pro gestor.
+  //
+  // 4.87.0 — o fix de "Devolver para a agência" (Entregas) NÃO ganhou
+  // spotlight: é correção de algo que já deveria funcionar, mesmo critério
+  // de bug fix da regra 12 do CLAUDE.md. Coberto pelo changelog 4.87.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;
