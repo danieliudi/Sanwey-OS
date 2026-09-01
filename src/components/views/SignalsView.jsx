@@ -1,3 +1,4 @@
+import { ClientSelector } from "../client/ClientSelector";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Bell, Plus, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
@@ -34,24 +35,36 @@ const URGENCY_STATUS_LABEL = {
   informativo: "Info",
 };
 
-export function SignalsView({ activeCompany, signals, onAddLead, accessibleCompanies }) {
+export function SignalsView({ activeCompany, signals, clients = [], onAddLead, accessibleCompanies }) {
   const isGroupView = activeCompany === "all";
   const [urgencyFilter, setUrgencyFilter] = useState("all");
   const [density, setDensity] = useState("grid");
   const [expandedCreate, setExpandedCreate] = useState(null);
   const [createCompany, setCreateCompany] = useState("");
+  const [createClientId, setCreateClientId] = useState(null);
+  // true = a empresa não está na base e a pessoa vai digitar o nome na mão
+  const [creatingNew,   setCreatingNew]   = useState(false);
   const [justAdded, setJustAdded] = useState(new Set());
   const createInputRef = useRef(null);
 
   const handleOpenCreate = useCallback((signalId, e) => {
     e.stopPropagation();
     setCreateCompany("");
+    setCreateClientId(null);
+    setCreatingNew(false);
     setExpandedCreate(signalId);
     setTimeout(() => createInputRef.current?.focus(), 50);
   }, []);
 
+  // Cliente já cadastrado escolhido no seletor (ver ClientSelector). O campo
+  // de texto livre continua existindo como saída — sinal regulatório costuma
+  // apontar pra empresa que AINDA não está na base, e obrigar cadastro antes
+  // seria trocar um problema por outro.
+  const selectedClient = clients.find(c => c.id === createClientId) || null;
+
   const handleCreateLead = useCallback((signal) => {
-    if (!createCompany.trim() || !onAddLead) return;
+    const nome = (selectedClient?.name || createCompany).trim();
+    if (!nome || !onAddLead) return;
     const validCompanies = (accessibleCompanies || []).filter(id => id !== "all");
     const targetCompany = validCompanies.find(id => id === signal.company)
       || validCompanies[0]
@@ -61,13 +74,17 @@ export function SignalsView({ activeCompany, signals, onAddLead, accessibleCompa
     onAddLead({
       id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       companyId: targetCompany,
-      company: createCompany.trim(),
-      razaoSocial: createCompany.trim(),
-      sector: "",
-      cnpj: "",
+      // Com cliente escolhido, o lead nasce com CNPJ/setor/cidade da base em
+      // vez de campos vazios — e vinculado, então não vira um 2º cadastro da
+      // mesma empresa (o mesmo dedup por CNPJ que o Funil já faz).
+      clientId: selectedClient?.id || null,
+      company: nome,
+      razaoSocial: selectedClient?.razaoSocial || nome,
+      sector: selectedClient?.sector || "",
+      cnpj: selectedClient?.cnpj || "",
       size: "Mid-Market",
-      city: "—",
-      state: "—",
+      city: selectedClient?.city || "—",
+      state: selectedClient?.state || "—",
       address: "",
       capitalSocial: 0,
       contactEmail: "",
@@ -97,7 +114,7 @@ export function SignalsView({ activeCompany, signals, onAddLead, accessibleCompa
     setJustAdded(prev => new Set([...prev, signal.id]));
     setExpandedCreate(null);
     setCreateCompany("");
-  }, [createCompany, onAddLead, accessibleCompanies]);
+  }, [createCompany, selectedClient, onAddLead, accessibleCompanies]);
 
   const scopedSignals = useMemo(() => {
     let s = isGroupView ? signals : signals.filter(x => x.company === activeCompany);
@@ -219,31 +236,47 @@ export function SignalsView({ activeCompany, signals, onAddLead, accessibleCompa
                     </div>
                   ) : expandedCreate === s.id ? (
                     <div className="flex gap-2 items-center" onClick={e => e.stopPropagation()}>
-                      <input
-                        ref={createInputRef}
-                        placeholder="Nome da empresa..."
-                        value={createCompany}
-                        onChange={e => setCreateCompany(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === "Enter") handleCreateLead(s);
-                          if (e.key === "Escape") setExpandedCreate(null);
-                        }}
-                        className="flex-1 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
-                        style={{ borderColor: "var(--border)", color: "var(--text)" }}
-                        onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
-                        onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
-                      />
+                      {creatingNew ? (
+                        <input
+                          ref={createInputRef}
+                          placeholder="Nome da empresa nova…"
+                          value={createCompany}
+                          onChange={e => setCreateCompany(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") handleCreateLead(s);
+                            if (e.key === "Escape") setExpandedCreate(null);
+                          }}
+                          // `min-w-0`: item flex tem `min-width: auto` por
+                          // padrão, e a largura intrínseca de um <input> é a do
+                          // atributo `size` (20 caracteres). Sem isto ele não
+                          // encolhe, e o botão "Cancelar" era empurrado pra fora
+                          // da borda do card (bug reportado pelo Daniel).
+                          className="flex-1 min-w-0 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
+                          style={{ borderColor: "var(--border)", color: "var(--text)" }}
+                          onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                          onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+                        />
+                      ) : (
+                        <div className="flex-1 min-w-0">
+                          <ClientSelector
+                            value={createClientId}
+                            clients={clients}
+                            onChange={setCreateClientId}
+                            onCreate={() => { setCreatingNew(true); setTimeout(() => createInputRef.current?.focus(), 50); }}
+                          />
+                        </div>
+                      )}
                       <button
                         onClick={() => handleCreateLead(s)}
-                        disabled={!createCompany.trim()}
-                        className="text-xs px-2.5 py-1.5 rounded-lg font-semibold text-white"
-                        style={{ background: "var(--accent)", border: "none", cursor: createCompany.trim() ? "pointer" : "not-allowed", opacity: createCompany.trim() ? 1 : 0.5 }}
+                        disabled={!(selectedClient || createCompany.trim())}
+                        className="text-xs px-2.5 py-1.5 rounded-lg font-semibold text-white shrink-0"
+                        style={{ background: "var(--accent)", border: "none", cursor: (selectedClient || createCompany.trim()) ? "pointer" : "not-allowed", opacity: (selectedClient || createCompany.trim()) ? 1 : 0.5 }}
                       >
                         Criar
                       </button>
                       <button
                         onClick={() => setExpandedCreate(null)}
-                        className="text-xs"
+                        className="text-xs shrink-0"
                         style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
                       >
                         Cancelar

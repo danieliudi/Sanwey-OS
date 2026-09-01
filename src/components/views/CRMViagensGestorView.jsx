@@ -418,7 +418,42 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
 // (fora de prestação) continua na lista de baixo, decidida direto, sem
 // depender disso (decisão 1 da spec).
 
-function PrestacaoQueueRow({ prestacao, vendedorNome, count, valor, onClick }) {
+// Previsto × prestado. O previsto vem da calculadora de viagem (o vendedor
+// clica "Usar como valor previsto" e o número fica em crm_viagem_registros.
+// valor_previsto). Aqui é só leitura: NÃO existe teto de viagem nem bloqueio
+// por estourar o previsto — decisão do Daniel 31/08/2026 ("Não tem teto e
+// coisa do tipo para viagens"). Por isso gastar acima do previsto usa
+// --amber (merece um olhar), nunca --danger (que nesta plataforma significa
+// erro/bloqueio). Abaixo ou igual fica em neutro, sem alarde.
+function PrevistoVsPrestado({ previsto, total, compact = false }) {
+  if (!(previsto > 0)) return null;
+  const diff = total - previsto;
+  const acima = diff > 0;
+  const cor = acima ? "var(--amber)" : "var(--text-dim)";
+  // Arredonda antes de comparar: dois floats de centavos que batem podem
+  // diferir por 1e-10 e virariam um "+R$ 0,00" sem sentido na tela.
+  const igual = Math.round(diff * 100) === 0;
+  const delta = igual
+    ? "no previsto"
+    : `${acima ? "+" : "\u2212"}${fmtMoney(Math.abs(diff))}`;
+  if (compact) {
+    return (
+      <span style={{ fontSize: 11, color: cor, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }} title={`Previsto na calculadora: ${fmtMoney(previsto)}`}>
+        prev. {fmtMoney(previsto)} · {delta}
+      </span>
+    );
+  }
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", gap: 8, fontSize: 12, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
+      <span style={{ color: "var(--text-dim)" }}>Previsto {fmtMoney(previsto)}</span>
+      <span style={{ color: cor, fontWeight: 700 }}>
+        {igual ? "no previsto" : `${acima ? "acima" : "abaixo"} ${delta}`}
+      </span>
+    </div>
+  );
+}
+
+function PrestacaoQueueRow({ prestacao, vendedorNome, count, valor, previsto, onClick }) {
   const info = STATUS_PRESTACAO[prestacao.status] || STATUS_PRESTACAO.rascunho;
   return (
     <div
@@ -432,7 +467,10 @@ function PrestacaoQueueRow({ prestacao, vendedorNome, count, valor, onClick }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)" }}>{vendedorNome} — {prestacao.titulo}</div>
-        <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{count} {count === 1 ? "despesa" : "despesas"}</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{count} {count === 1 ? "despesa" : "despesas"}</span>
+          <PrevistoVsPrestado previsto={previsto} total={valor} compact />
+        </div>
       </div>
       <Badge variant={info.variant}>{info.label}</Badge>
       <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{fmtMoney(valor)}</div>
@@ -441,7 +479,7 @@ function PrestacaoQueueRow({ prestacao, vendedorNome, count, valor, onClick }) {
   );
 }
 
-function PrestacaoDecisaoModal({ prestacao, despesas, vendedorNome, onVerComprovante, onDecidirItem, onDecidirLote, onMarcarPago, onClose }) {
+function PrestacaoDecisaoModal({ prestacao, despesas, vendedorNome, previsto, onVerComprovante, onDecidirItem, onDecidirLote, onMarcarPago, onClose }) {
   useEscToClose(onClose);
   const info = STATUS_PRESTACAO[prestacao.status] || STATUS_PRESTACAO.rascunho;
   const total = despesas.reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
@@ -512,6 +550,7 @@ function PrestacaoDecisaoModal({ prestacao, despesas, vendedorNome, onVerComprov
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{vendedorNome}</div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{prestacao.titulo} · <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmtMoney(total)}</span></div>
+            <PrevistoVsPrestado previsto={previsto} total={total} />
             <div style={{ marginTop: 8 }}><Badge variant={info.variant}>{info.label}</Badge></div>
           </div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", flexShrink: 0 }}>
@@ -705,6 +744,32 @@ export function CRMViagensGestorView({ currentUser, users }) {
     });
     return map;
   }, [despesas]);
+
+  // Previsto da prestação = soma do valor_previsto das visitas que ela cobre.
+  // A prestação só carrega `registro_id` quando TODAS as despesas são da
+  // mesma visita (ver registroSugerido em CRMViagensPlanejamentoView) — então
+  // as próprias despesas também entram na conta, senão uma prestação que
+  // junta duas viagens apareceria sem previsto nenhum. Set de ids pra não
+  // somar a mesma visita duas vezes.
+  const previstoPorPrestacaoId = useMemo(() => {
+    const previstoPorRegistro = new Map();
+    (registros || []).forEach((r) => {
+      const v = Number(r.valor_previsto) || 0;
+      if (v > 0) previstoPorRegistro.set(r.id, v);
+    });
+    const map = new Map();
+    (prestacoes || []).forEach((p) => {
+      const ids = new Set();
+      if (p.registro_id) ids.add(p.registro_id);
+      (despesasPorPrestacaoId.get(p.id) || []).forEach((d) => {
+        if (d.registro_id) ids.add(d.registro_id);
+      });
+      let soma = 0;
+      ids.forEach((id) => { soma += previstoPorRegistro.get(id) || 0; });
+      if (soma > 0) map.set(p.id, soma);
+    });
+    return map;
+  }, [registros, prestacoes, despesasPorPrestacaoId]);
 
   // Fila de ação do gestor: "enviada" (precisa decidir), "aprovada" e
   // "parcial" (as duas têm despesa aprovada esperando "Marcar como paga" —
@@ -965,7 +1030,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
           </section>
 
           <section style={cardSt}>
-            <div style={sectionHeaderSt}>
+            <div style={sectionHeaderSt} data-tour="viagens-prestacoes-previsto">
               <Send size={16} style={{ color: "var(--text-dim)" }} />
               Prestações a decidir — {monthLabel(selectedMonth)}
             </div>
@@ -988,6 +1053,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
                       vendedorNome={nomePorId.get(p.vendedor_id) || "—"}
                       count={itens.length}
                       valor={valor}
+                      previsto={previstoPorPrestacaoId.get(p.id) || 0}
                       onClick={() => setSelectedPrestacao(p)}
                     />
                   );
@@ -1037,6 +1103,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
           prestacao={prestacoes.find((p) => p.id === selectedPrestacao.id) || selectedPrestacao}
           despesas={despesasPorPrestacaoId.get(selectedPrestacao.id) || []}
           vendedorNome={nomePorId.get(selectedPrestacao.vendedor_id) || "—"}
+          previsto={previstoPorPrestacaoId.get(selectedPrestacao.id) || 0}
           onVerComprovante={handleVerComprovante}
           onDecidirItem={handleDecidirItemPrestacao}
           onDecidirLote={handleDecidirLotePrestacao}

@@ -19,7 +19,7 @@ function detectChartIntent(question) {
   return null;
 }
 
-export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }) {
+export function PipelineChatPanel({ leads, users, stages, currentUser, isOpen, onClose }) {
   const { complete, isConfigured } = useAI(currentUser);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -38,11 +38,23 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const aggregate = useMemo(() => aggregatePipeline(leads, users), [leads, users]);
+  // 3º argumento = etapas da empresa: sem ele, `staleCount` não tem SLA pra
+  // comparar e sai zerado (ver aggregatePipeline). Passa `stages` cru, não o
+  // `.filter(s => !s.terminal)` — ganho/perdido também precisam ser
+  // reconhecidos como etapa terminal pra NÃO contarem como parados.
+  const aggregate = useMemo(() => aggregatePipeline(leads, users, stages), [leads, users, stages]);
+
+  // O agregado guarda a CHAVE da etapa ("prospeccao"), não o nome. Sem esse
+  // mapa o prompt entregava ids internos pra IA, que os repetia na resposta.
+  const stageNames = useMemo(() => {
+    const map = {};
+    for (const st of (stages || [])) map[st.id] = st.name;
+    return map;
+  }, [stages]);
 
   const systemPrompt = useMemo(() => {
-    return pipelineChatPrompt("", aggregate)[0];
-  }, [aggregate]);
+    return pipelineChatPrompt("", aggregate, stageNames)[0];
+  }, [aggregate, stageNames]);
 
   const handleSend = async () => {
     const question = input.trim();
@@ -139,7 +151,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-8">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ background: "#FBE9EB" }}
+                style={{ background: "color-mix(in srgb, var(--accent) 12%, var(--surface))" }}
               >
                 <Bot size={22} style={{ color: RED }} />
               </div>
@@ -147,8 +159,14 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                 <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>
                   Pergunte sobre seu pipeline
                 </p>
+                {/* Os exemplos precisam ser respondíveis pelo que a IA
+                    REALMENTE recebe — só o agregado (total, por etapa, por
+                    responsável), nunca lead individual. O exemplo antigo
+                    ("quais leads estão parados há mais de 15 dias?") pedia
+                    dado que nunca entra no prompt: a resposta certa era
+                    sempre "não tenho essa informação". */}
                 <p className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
-                  Ex: "Quais leads estão parados há mais de 15 dias?" ou "Qual o valor total em negociação?"
+                  Ex: "Qual o valor total em negociação?" ou "Em que etapa está travando mais valor?"
                 </p>
               </div>
             </div>
@@ -184,7 +202,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                   {isError && <AlertCircle size={12} style={{ display: "inline", marginRight: 4 }} />}
                   {content}
                 </div>
-                {!isError && msg.chart && <PipelineMiniChart type={msg.chart} aggregate={aggregate} />}
+                {!isError && msg.chart && <PipelineMiniChart type={msg.chart} aggregate={aggregate} stageNames={stageNames} />}
               </div>
             );
           })}
@@ -252,8 +270,14 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
               {loading ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
             </button>
           </div>
-          <p className="text-[10px] mt-1.5 text-center" style={{ color: "#B0ABA5" }}>
-            Enter para enviar · Shift+Enter para nova linha
+          {/* Rodapé: escopo + natureza da resposta. Decidido com o Daniel
+              01/09/2026 junto com o guardrail de escopo no system prompt
+              (ai-prompts.js, pipelineChatPrompt) — o painel não deixava
+              claro nem SOBRE O QUE ele responde, nem que a resposta é
+              gerada. Hex solto trocado por token na mesma edição. */}
+          <p className="text-[10px] mt-1.5 text-center leading-relaxed" style={{ color: "var(--text-dim)" }}>
+            Enter para enviar · Shift+Enter para nova linha<br />
+            Responde só sobre os números deste funil. Resposta gerada por IA — confira antes de decidir.
           </p>
         </div>
       </div>
@@ -264,7 +288,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
 // Gráfico com os mesmos números já calculados em aggregatePipeline — nunca
 // com valores vindos da resposta da IA, pra não repetir o problema de
 // números "chutados".
-function PipelineMiniChart({ type, aggregate }) {
+function PipelineMiniChart({ type, aggregate, stageNames = {} }) {
   if (type === "byOwner") {
     const data = aggregate.byOwner.slice(0, 8).map(o => ({ name: o.name.split(" ")[0], valor: o.valueWon }));
     if (data.length === 0) return null;
@@ -284,7 +308,9 @@ function PipelineMiniChart({ type, aggregate }) {
   }
 
   if (type === "byStage") {
-    const data = aggregate.byStage.map(s => ({ name: s.stage, count: s.count }));
+    // Mesmo mapa id->nome do prompt: sem isso a IA escrevia "Prospecção" no
+    // texto e o gráfico logo abaixo rotulava "prospeccao".
+    const data = aggregate.byStage.map(s => ({ name: stageNames[s.stage] || s.stage, count: s.count }));
     if (data.length === 0) return null;
     return (
       <div className="w-full rounded-xl border p-2" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>

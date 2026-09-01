@@ -75,7 +75,12 @@ function useIsMobile() {
   return mobile;
 }
 
-const SIDEBAR_W = 288;
+// 240, não 288 (01/09/2026, rodada de densidade com o Daniel): a 288 o menu
+// ocupava 20% de uma tela de 1440px, acima da faixa usual de aplicativo com
+// menu fixo. A 240 cai pra 17% e todos os rótulos continuam cabendo — foi
+// conferido item a item, o mais longo é "Avaliação de Desempenho". Quem quiser
+// mais board tem o modo rail (72px) logo abaixo.
+const SIDEBAR_W = 240;
 const SIDEBAR_W_RAIL = 72;
 
 const T = {
@@ -387,7 +392,15 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
                     durante o tour guiado (OnboardingTour precisa de todo
                     item alcançável, sem depender do estado de collapse que
                     cada usuário já tinha salvo). */}
-                {(!isCollapsed || rail || forceExpanded) && orderedItems(group).map((item) => (
+                {/* `rail` NÃO reabre grupo colapsado (fix de 01/09/2026,
+                    reportado pelo Daniel): antes a condição tinha `|| rail`,
+                    então recolher o menu ignorava o que a pessoa tinha
+                    fechado e a lista voltava inteira — justamente no modo
+                    estreito, onde ficar comprida incomoda mais. O efeito
+                    colateral aceito é que, no rail, não dá pra reabrir o
+                    grupo (o cabeçalho clicável só existe no menu expandido)
+                    — quem quiser ver expande o menu de volta. */}
+                {(!isCollapsed || forceExpanded) && orderedItems(group).map((item) => (
                   <NavItem
                     key={item.id}
                     id={item.id}

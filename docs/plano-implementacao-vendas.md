@@ -271,10 +271,44 @@ gestão.
 - Usar os 86 campos por etapa que já estão configurados — ou podar os que não
   servem. Campo obrigatório que ninguém preenche ensina o time a burlar.
 
-**Decisão de gestão**
-- O que obriga a existência de um card: uma visita? uma cotação enviada? Definir
-  o gatilho, senão "registrar no funil" vira opinião pessoal de cada vendedor.
-- SLA por etapa já está configurado (7, 7, 14, 21 e 14 dias). Ou vale, ou sai.
+**Decisão de gestão — FECHADA com o Daniel em 01/09/2026**
+
+A regra do piloto tem três partes, e é o que a folha entregue ao vendedor diz
+(artifact "Piloto do Funil Resibag", 01/09/2026):
+
+1. **Gatilho** — toda empresa com quem houve uma *conversa comercial de
+   verdade* (visita, ligação atendida, e-mail respondido, contato em feira)
+   vira card no mesmo dia. Sem filtro de tamanho. A alternativa mais estreita
+   que foi oferecida — "visita ou cotação enviada" — foi descartada: menos
+   cards, mas o funil deixaria de mostrar o topo real.
+2. **Movimento** — todo card tem uma **próxima ação com data**, sempre, em
+   qualquer etapa. Card sem próxima ação avança de etapa ou vai pra Perdido.
+   A coluna existe (`leads.next_follow_up`), já dispara notificação no dia
+   (`use-notifications.js`) e já aparece no painel inicial e no calendário do
+   funil. **Vale como combinado, não como trava** (decidido com o Daniel
+   01/09/2026): o campo continua não barrando o salvamento; quem deixar em
+   branco aparece na reunião de segunda. Ligar a trava foi a alternativa
+   oferecida e recusada por ora — campo obrigatório em piloto de primeira
+   semana ensina a burlar, que é a mesma lição já registrada no CLAUDE.md
+   sobre os 28 campos obrigatórios do funil da Resibag. **Gatilho de
+   revisão:** se a reunião de segunda mostrar que não pegou, a trava volta à
+   mesa — e aí é mudança de comportamento visível, então passa por mockup
+   antes (regra 3).
+3. **Ritual** — segunda de manhã, 20 minutos, quadro aberto. Card sem próxima
+   ação ou parado além do SLA da etapa entra na pauta, pra decidir junto se
+   avança ou encerra.
+
+- SLA por etapa já está configurado (7, 7, 14, 21 e 14 dias) e passa a valer
+  como pauta da reunião de segunda — é o que a folha do vendedor publica.
+
+**Estado real do funil em 01/09/2026** (contagem direta, pra medir o piloto
+contra um ponto de partida honesto): 27 cards, todos Resibag, todos criados
+por uma pessoa só entre 26 e 28/08 · **nenhum mudou de etapa desde que foi
+criado** · **nenhum tem `next_follow_up` preenchido** · 7 têm alguma atividade
+registrada · `pipeline_stage_transitions` continua em 0 linhas.
+
+Primeiro passo combinado: na primeira semana, cada um dos 27 cards ganha uma
+próxima ação com data — ou vai pra Perdido.
 
 **Critério de saída**
 Cada vendedor com ≥5 negócios ativos e movimento semanal · nenhuma etapa com card
@@ -405,6 +439,14 @@ semana com 90% de cobertura · primeiro pedido que o cliente fez sozinho.
    portas" já decidida.
 6. **Onda 4 entra junto com a 3?** A recomendação é sim: o quadro de pedidos sem
    funil vivo devolve operação, não previsão.
+
+**Atualização de 01/09/2026** — as decisões 1, 2, 3 e 5 seguem abertas (o
+Daniel pediu pra pausá-las e começar pelo piloto com os vendedores). A
+sub-decisão da Onda 4 que travava tudo — *o que obriga a existência de um card
+e o que o faz andar* — **está fechada**; o texto acordado está na Onda 4 acima.
+A última pergunta técnica que sobrou dela — se a "próxima ação com data" vira
+trava de sistema ou fica como combinado — **foi respondida em 01/09/2026:
+combinado**. Nenhuma mudança de código pendente pro piloto arrancar.
 
 ---
 

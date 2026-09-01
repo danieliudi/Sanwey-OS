@@ -1373,16 +1373,53 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
       .sort((a, b) => a.data_planejada.localeCompare(b.data_planejada));
   }, [registrosProprios]);
 
-  // Noites sugeridas: dias entre a primeira e a última saída do bloco. Uma
-  // saída só = 1 noite (o vendedor ajusta na calculadora; é sugestão, não
-  // regra — o Daniel avisou que "depende muito").
+  // Quais saídas entram no cálculo. Até 01/09/2026 o atalho juntava TODAS as
+  // futuras num bloco só — Uberlândia e Betim no mesmo mês viravam a mesma
+  // rota, o que não faz sentido nenhum. Agora o vendedor escolhe.
+  //
+  // Pré-marcadas por proximidade de data: saídas com até 2 dias de intervalo
+  // entre uma e a seguinte entram juntas, e a primeira quebra dessa sequência
+  // encerra o bloco. Cobre o caso comum (viagem de 2-3 dias visitando alguns
+  // clientes na mesma região) sem pedir clique nenhum, e deixa o caso incomum
+  // a dois cliques. É heurística de data, não de lugar: agrupar por cidade
+  // exigiria comparar endereço, que é texto livre e erra feio.
+  const [visitasMarcadas, setVisitasMarcadas] = useState(null); // null = ainda não mexeram
+
+  const preMarcadas = useMemo(() => {
+    const ids = [];
+    for (let i = 0; i < visitasPlanejadasFuturas.length; i++) {
+      if (i === 0) { ids.push(visitasPlanejadasFuturas[i].id); continue; }
+      const anterior = new Date(visitasPlanejadasFuturas[i - 1].data_planejada);
+      const atual = new Date(visitasPlanejadasFuturas[i].data_planejada);
+      const dias = Math.round((atual - anterior) / 86400000);
+      if (dias > 2) break;
+      ids.push(visitasPlanejadasFuturas[i].id);
+    }
+    return ids;
+  }, [visitasPlanejadasFuturas]);
+
+  // A seleção do usuário manda; a pré-marcação só vale enquanto ele não mexeu.
+  const idsSelecionados = visitasMarcadas ?? preMarcadas;
+  const visitasSelecionadas = useMemo(
+    () => visitasPlanejadasFuturas.filter((r) => idsSelecionados.includes(r.id)),
+    [visitasPlanejadasFuturas, idsSelecionados],
+  );
+
+  const alternarVisita = (id) => {
+    const base = visitasMarcadas ?? preMarcadas;
+    setVisitasMarcadas(base.includes(id) ? base.filter((x) => x !== id) : [...base, id]);
+  };
+
+  // Noites sugeridas: dias entre a primeira e a última saída SELECIONADA.
+  // Uma saída só = 1 noite (é sugestão, não regra — o Daniel avisou que
+  // "depende muito", e a calculadora deixa ajustar).
   const noitesSugeridasDaAgenda = useMemo(() => {
-    if (visitasPlanejadasFuturas.length === 0) return 1;
-    const primeira = visitasPlanejadasFuturas[0].data_planejada;
-    const ultima = visitasPlanejadasFuturas[visitasPlanejadasFuturas.length - 1].data_planejada;
+    if (visitasSelecionadas.length === 0) return 1;
+    const primeira = visitasSelecionadas[0].data_planejada;
+    const ultima = visitasSelecionadas[visitasSelecionadas.length - 1].data_planejada;
     const dias = Math.round((new Date(ultima) - new Date(primeira)) / 86400000);
     return Math.max(1, Number.isFinite(dias) ? dias : 1);
-  }, [visitasPlanejadasFuturas]);
+  }, [visitasSelecionadas]);
   const despesasProprias = useMemo(() => despesas.filter((d) => d.vendedor_id === userId), [despesas, userId]);
 
   // Busca em `registros` (não `registrosProprios`) porque quem manda o id pode
@@ -1561,32 +1598,66 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
           descobrir o meio mais barato. Só aparece com saída planejada no mês,
           e some quando não há nada a calcular. */}
       {onCalcularViagem && visitasPlanejadasFuturas.length > 0 && (
-        <button
-          type="button"
-          onClick={() => onCalcularViagem({
-            paradas: visitasPlanejadasFuturas.map((r) => ({
-              description: r.destino_planejado || "",
-              placeId: r.destino_place_id || null,
-            })),
-            noites: noitesSugeridasDaAgenda,
-          })}
-          data-tour="viagens-calcular-atalho"
-          className="flex items-center gap-3 rounded-xl border p-3.5 text-left w-full"
-          style={{ background: "var(--accent-tint)", borderColor: "var(--accent)", cursor: "pointer" }}
-        >
-          <Calculator size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
-          <div style={{ minWidth: 0 }}>
+        <div data-tour="viagens-calcular-atalho" className="rounded-xl border p-3.5" style={{ background: "var(--accent-tint)", borderColor: "var(--accent)" }}>
+          <div className="flex items-center gap-2.5 mb-2.5">
+            <Calculator size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
             <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
               Quer saber o meio mais barato pra essa viagem?
             </div>
-            <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
-              {visitasPlanejadasFuturas.length} {visitasPlanejadasFuturas.length === 1 ? "saída planejada" : "saídas planejadas"} · abre a calculadora com os endereços já preenchidos
-            </div>
           </div>
-          <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "var(--accent)", whiteSpace: "nowrap", flexShrink: 0 }}>
-            Calcular →
-          </span>
-        </button>
+          <div className="flex flex-col gap-1 mb-2.5">
+            {visitasPlanejadasFuturas.map((r) => {
+              const marcada = idsSelecionados.includes(r.id);
+              return (
+                <label
+                  key={r.id}
+                  className="flex items-center gap-2.5 cursor-pointer"
+                  style={{ fontSize: 12, color: "var(--text)" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={marcada}
+                    onChange={() => alternarVisita(r.id)}
+                    style={{ accentColor: "var(--accent)", flexShrink: 0 }}
+                  />
+                  <span style={{ fontVariantNumeric: "tabular-nums", color: "var(--text-dim)", flexShrink: 0 }}>
+                    {formatDateBR(r.data_planejada)}
+                  </span>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {r.destino_planejado}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            disabled={visitasSelecionadas.length === 0}
+            onClick={() => onCalcularViagem({
+              paradas: visitasSelecionadas.map((r) => ({
+                description: r.destino_planejado || "",
+                placeId: r.destino_place_id || null,
+              })),
+              noites: noitesSugeridasDaAgenda,
+              visitas: visitasSelecionadas.map((r) => ({
+                id: r.id,
+                destino: r.destino_planejado,
+                valorPrevisto: r.valor_previsto,
+              })),
+            })}
+            className="flex items-center gap-2 rounded-lg w-full justify-center"
+            style={{
+              background: visitasSelecionadas.length === 0 ? "var(--surface-alt)" : "var(--accent)",
+              color: visitasSelecionadas.length === 0 ? "var(--text-dim)" : "var(--on-accent)",
+              border: "none", padding: "8px 14px", fontSize: 12, fontWeight: 700,
+              cursor: visitasSelecionadas.length === 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            {visitasSelecionadas.length === 0
+              ? "Marque ao menos uma saída"
+              : `Calcular ${visitasSelecionadas.length === 1 ? "1 saída" : `${visitasSelecionadas.length} saídas`} →`}
+          </button>
+        </div>
       )}
 
       {/* Visitas */}

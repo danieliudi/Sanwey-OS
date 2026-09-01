@@ -40,6 +40,9 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { FilterBar } from "../shared/FilterBar";
+import { semAcento } from "../../utils/text-search";
+import { PageTitle } from "../shared/PageTitle";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { exportDeliverablesToCSV } from "../../utils/export-csv";
 
@@ -714,13 +717,11 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
     const okNotifs = (notifications || []).filter(n => !failedRuleIds.has(n.ruleId));
     if (okNotifs.length > 0) setAutomationNotice(okNotifs[okNotifs.length - 1].message || "Automação disparada");
   }, [evaluateAutomations, changeStage, updateDeliverable]);
-  // trailingRef mede o painel de analytics + texto de dica que vêm depois do
-  // board, pra sobrar espaço suficiente pra eles também caberem (ver
-  // use-available-height.js). marginBottom = 16, o respiro do próprio
-  // KanbanBoardScrollArea (pb-4) — sem isso a barra de scroll horizontal do
-  // board voltaria a vazar da tela visível.
-  const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  // Nada vem depois do board hoje (a dica de rodapé saiu em 01/09/2026 — ver
+  // comentário no lugar dela, mais abaixo), então o hook dispensa o 3º
+  // argumento. marginBottom = 16, o respiro do próprio KanbanBoardScrollArea
+  // (pb-4) — sem isso a barra de scroll horizontal do board vazaria da tela.
+  const [boardRef, boardHeight] = useAvailableHeight(16);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables").
   // "Editar etapas" (lista separada) foi consolidado dentro de "Editar
@@ -774,6 +775,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
   // Deep-link do card "Presas em revisão" no Painel de Marketing (achado
   // da auditoria de fricção de 18/07) — chega via navigate(..., {state}).
   const [stuckOnly,      setStuckOnly]      = useState(Boolean(location.state?.stuckOnly));
+  const [search,         setSearch]         = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
   const [deadlineFilter, setDeadlineFilter] = useState("");
 
@@ -790,6 +792,18 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
   /* Filtered deliverables */
   const filtered = useMemo(() => {
     let list = deliverables;
+    // Busca primeiro: é o filtro que mais corta, e vale pras 4 views —
+    // Kanban, Tabela, Calendário e Análise consomem este mesmo array
+    // (CLAUDE.md, regra 11: view nunca reimplementa o próprio escopo).
+    const termo = semAcento(search).trim();
+    if (termo) {
+      list = list.filter(d =>
+        semAcento(d.title).includes(termo) ||
+        semAcento(d.requestNumber).includes(termo) ||
+        semAcento(d.requesterName).includes(termo) ||
+        semAcento(campaignsById.get(d.campaignId)?.name).includes(termo)
+      );
+    }
     if (stuckOnly)               list = list.filter(isStuckInRevisao);
     if (ownerFilter)             list = list.filter(d => getDeliverableAssigneeIds(d).includes(ownerFilter));
     if (companyFilter.length > 0) list = list.filter(d => companyFilter.some(c => d.companyIds?.includes(c)));
@@ -799,7 +813,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
     if (deadlineFilter === "due_soon")    list = list.filter(isDueSoon);
     if (deadlineFilter === "no_deadline") list = list.filter(d => !d.deadline);
     return list;
-  }, [deliverables, ownerFilter, companyFilter, starredOnly, stuckOnly, campaignFilter, deadlineFilter]);
+  }, [deliverables, search, campaignsById, ownerFilter, companyFilter, starredOnly, stuckOnly, campaignFilter, deadlineFilter]);
 
   // Ordenar cards dentro de cada coluna — cada etapa guarda seu próprio
   // critério (ver KanbanColumnSortMenu).
@@ -969,16 +983,22 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
           só aparecem numa 2ª linha quando showFilters está aberto, em vez de
           sempre reservar uma linha inteira mesmo fechado. */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Package size={22} style={{ color: "var(--text)" }} />
-            <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-              Entregas
-            </h1>
-          </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de entregas de campanha</p>
-        </div>
+        <PageTitle icon={Package} title="Entregas" description="Kanban de entregas de campanha" />
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* Busca — sempre visível, nunca atrás do botão "Filtros": achar um
+              card pelo nome é a primeira coisa que se tenta fazer num board
+              cheio, e até aqui não existia em board nenhum da plataforma.
+              Fora do bloco condicional de `viewMode` (CLAUDE.md, regra 11),
+              então vale igual em Kanban, Tabela, Calendário e Análise. */}
+          <FilterBar
+            search={{
+              value: search,
+              onChange: e => setSearch(e.target.value),
+              placeholder: "Buscar entrega…",
+              dataTour: "entregas-busca-card",
+            }}
+          />
+
           {/* Filtros */}
           <button
             onClick={() => setShowFilters(v => !v)}
@@ -1040,30 +1060,46 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
       {showFilters && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <>
-            {/* Owner filter (managers only) */}
-            {isManager && (
-              <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}
-                style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: ownerFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-                <option value="">Todos responsáveis</option>
-                {Array.from(usersById.values()).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            )}
-
-            {/* Campaign filter */}
-            <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}
-              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: campaignFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-              <option value="">Todas as campanhas</option>
-              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-
-            {/* Deadline filter */}
-            <select value={deadlineFilter} onChange={e => setDeadlineFilter(e.target.value)}
-              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: deadlineFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
-              <option value="">Todos os prazos</option>
-              <option value="overdue">Vencidas</option>
-              <option value="due_soon">Próximos 7 dias</option>
-              <option value="no_deadline">Sem prazo</option>
-            </select>
+            {/* Selects via FilterBar compartilhado — antes eram três <select>
+                crus com estilo inline, o mesmo padrão reescrito board a board
+                (dívida registrada no CLAUDE.md, regras 6 e 11). O FilterBar já
+                roda em 7 telas de tabela/admin; este é o 1º board de Kanban. */}
+            <FilterBar
+              filters={[
+                ...(isManager ? [{
+                  id: "owner",
+                  label: "Responsável",
+                  value: ownerFilter,
+                  onChange: e => setOwnerFilter(e.target.value),
+                  options: [
+                    { value: "", label: "Todos responsáveis" },
+                    ...Array.from(usersById.values()).map(u => ({ value: u.id, label: u.name })),
+                  ],
+                }] : []),
+                {
+                  id: "campaign",
+                  label: "Campanha",
+                  value: campaignFilter,
+                  onChange: e => setCampaignFilter(e.target.value),
+                  options: [
+                    { value: "", label: "Todas as campanhas" },
+                    ...campaigns.map(c => ({ value: c.id, label: c.name })),
+                  ],
+                },
+                {
+                  id: "deadline",
+                  label: "Prazo",
+                  value: deadlineFilter,
+                  onChange: e => setDeadlineFilter(e.target.value),
+                  options: [
+                    { value: "",            label: "Todos os prazos" },
+                    { value: "overdue",     label: "Vencidas" },
+                    { value: "due_soon",    label: "Próximos 7 dias" },
+                    { value: "no_deadline", label: "Sem prazo" },
+                  ],
+                },
+              ]}
+            />
 
             {/* Company filter */}
             {COMPANY_IDS.map(id => {
@@ -1194,6 +1230,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
                         name={stage.name}
                         count={stageItems.length}
                         bandHeight={4}
+                        secondaryInline
                         letterSpacing="normal"
                         nameFontSize={14}
                         nameFontWeight={700}
@@ -1227,12 +1264,11 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
                           )}
                         </>}
                       >
-                        {/* Sempre renderizada (mesmo sem stage.sla, só oculta via
-                            visibility) — senão a coluna sem SLA fica com header mais
-                            baixo que as vizinhas que têm essa linha extra. */}
-                        <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", visibility: stage.sla ? "visible" : "hidden" }}>
-                          SLA {stage.sla || 0}d
-                        </div>
+                        {/* Inline na linha do nome (secondaryInline) — some o
+                            truque de `visibility: hidden` que existia só pra
+                            igualar a altura das colunas sem SLA: fora da
+                            segunda linha, altura não é mais problema. */}
+                        {stage.sla ? `SLA ${stage.sla}d` : null}
                       </KanbanColumnHeader>
                     </div>
 
@@ -1316,13 +1352,15 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
         />
       )}
 
-      {!loading && !loadingStages && viewMode === "kanban" && (
-        <div ref={trailingRef}>
-          <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
-            Arraste para mover · "+" para criar · Clique para ver detalhes
-          </p>
-        </div>
-      )}
+      {/* A dica "Arraste para mover · '+' para criar · Clique para ver
+          detalhes" vivia aqui, no rodapé do board. Removida 01/09/2026 a
+          pedido do Daniel: as três ações são descobertas no primeiro uso e o
+          texto custava uma faixa de altura em TODA sessão, pra sempre. Com
+          ela foi junto o `trailingRef` — existia só pra medir essa faixa e
+          descontá-la do `useAvailableHeight`; sem conteúdo depois do board,
+          não há o que descontar. Se um dia voltar a existir conteúdo abaixo
+          do board, é o `trailingRef` que precisa voltar (3º argumento de
+          useAvailableHeight), não um valor fixo chutado. */}
 
       {!loading && !loadingStages && viewMode === "analytics" && (
         <KanbanAnalyticsPanel

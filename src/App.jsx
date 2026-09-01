@@ -36,6 +36,8 @@ import { useAutomations } from "./hooks/use-automations";
 import { useStageFields } from "./hooks/use-stage-fields";
 import { getMissingRequiredFields } from "./utils/field-conditions";
 import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
+import { useMarketingDeliverables } from "./hooks/use-marketing-deliverables";
+import { globalSearchScopeWords, joinPt } from "./components/ui/CommandPalette";
 import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
@@ -379,6 +381,27 @@ export default function App() {
   }, [automations]);
   const stageFieldsForNudge = useStageFields();
 
+  // Entregas na busca global (Ctrl+K). `enabled` evita cobrar uma assinatura
+  // Realtime de TODO usuário da plataforma por uma categoria que só o time de
+  // Marketing/Agência/diretoria pode buscar — mesmo padrão do
+  // useMarketingCampaigns logo abaixo. Quem não tem o cargo recebe [] e
+  // nenhum canal aberto.
+  //
+  // DÍVIDA ACEITA (revisão de Segurança, 01/09/2026): enquanto alguém de
+  // Marketing está NA tela Entregas, este hook fica montado duas vezes — aqui
+  // e dentro da própria EntregasView, que não usa `enabled` porque também
+  // precisa de createDeliverable/changeStage/etc. São 2 canais e 2 `select *`
+  // sobre a mesma tabela, só nessa tela. Resolver de verdade significa a view
+  // passar a receber o array já carregado por aqui (padrão que MarketingView
+  // usa), o que é uma reestruturação do fluxo de dado dela — desproporcional
+  // pro ganho agora. Registrado pra não parecer descuido.
+  const { deliverables: searchableDeliverables } = useMarketingDeliverables({
+    userId: currentUser?.id,
+    role: currentUser?.role,
+    roles: currentUser?.roles,
+    enabled: Boolean(currentUser) && (isMarketingUser || isAgencia || isDiretoria),
+  });
+
   const { campaigns } = useMarketingCampaigns({
     userId: currentUser?.id,
     role: currentUser?.role,
@@ -473,6 +496,9 @@ export default function App() {
   // específico de fora da própria tela (cada um só tinha um `selected`
   // local); subimos pra cá seguindo exatamente o padrão acima, não um novo.
   const [selectedDeliverableId, setSelectedDeliverableId] = useState(null);
+  // Deep-link da busca global (Ctrl+K) pro cadastro de Cliente — mesmo par
+  // (estado + consumo) já usado pra entrega/campanha/funcionário.
+  const [selectedClientId, setSelectedClientId] = useState(null);
   const [selectedPurchaseRequestId, setSelectedPurchaseRequestId] = useState(null);
   const [selectedVagaId, setSelectedVagaId] = useState(null);
   const [selectedPosvendaCaseId, setSelectedPosvendaCaseId] = useState(null);
@@ -914,6 +940,47 @@ export default function App() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [crmAutoCreate, setCrmAutoCreate] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+
+  // ÚNICO lugar que decide o que cada cargo busca. Convenção: `undefined` =
+  // categoria não liberada (some do rótulo do campo); `[]` = liberada, sem
+  // registro. Todo array vem de um hook com RLS — a busca filtra em memória,
+  // nunca consulta o banco (ver comentário de cabeçalho do CommandPalette).
+  //
+  // DUAS camadas, não uma (achado da revisão de Segurança, 01/09/2026 — a 1ª
+  // versão disto checava só a de cargo e o comentário prometia paridade com o
+  // guard da rota, o que era falso):
+  //   1. CARGO — predicado POSITIVO, alinhado à RLS da tabela. Positivo de
+  //      propósito: com lista negativa, um cargo novo (ou `comex`/`suporte`
+  //      puro hoje) lia "Buscar ... cliente" pra uma categoria que a RLS
+  //      nunca devolve — a mesma promessa falsa que esta rodada veio corrigir.
+  //   2. REGISTRO DE MÓDULOS (`allowedModules`) — a segunda metade do guard
+  //      de rota (App.jsx, `ALL_MODULE_IDS.includes(section) &&
+  //      !allowedModules.has(section)`). Sem ela, revogar "Clientes" de um
+  //      vendedor tirava o item do menu e redirecionava a rota, mas o Ctrl+K
+  //      continuava listando nome, CNPJ e cidade daqueles clientes — e clicar
+  //      no resultado levava a um redirect. Vale pras 5 categorias, não só
+  //      pras 2 novas.
+  const searchScopes = useMemo(() => {
+    const porModulo = (id, arr) => (allowedModules.has(id) ? arr : undefined);
+    const comercial = isManagerRole || isDiretoria || hasAnyRole(["vendedor"]);
+    const marketing = isMarketingUser || isAgencia || isDiretoria;
+    return {
+      leads:        porModulo("crm", leads),
+      clients:      comercial ? porModulo("clients", clients) : undefined,
+      campaigns:    marketing ? porModulo("marketing", campaigns) : undefined,
+      deliverables: marketing ? porModulo("marketing-entregas", searchableDeliverables) : undefined,
+      employees:    isRHUser
+        ? porModulo("rh-funcionarios", users.filter(u => u.role === "rh" || u.role === "gerente_rh" || u.department))
+        : undefined,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads, clients, campaigns, searchableDeliverables, users, allowedModules,
+      currentUserRoles, isManagerRole, isDiretoria, isMarketingUser, isAgencia, isRHUser]);
+
+  const searchPlaceholder = useMemo(() => {
+    const scope = joinPt(globalSearchScopeWords(searchScopes));
+    return scope ? `Buscar ${scope}...` : "Buscar...";
+  }, [searchScopes]);
   const [clientImportOpen, setClientImportOpen] = useState(false);
   // Import de CLIENTES (carteira, sem virar negócio no Funil) — separado do
   // clientImportOpen acima, que abre o importador de LEADS (usado também na
@@ -1886,6 +1953,7 @@ export default function App() {
           title={sectionTitle}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}
           onSearchOpen={() => setCmdOpen(true)}
+          searchPlaceholder={searchPlaceholder}
           notifications={mergedNotifications}
           unreadCount={mergedUnreadCount}
           onMarkAllRead={handleMarkAllNotificationsRead}
@@ -2030,6 +2098,7 @@ export default function App() {
               <SignalsView
                 activeCompany={activeCompany}
                 signals={signals}
+                clients={clients}
                 onAddLead={handleAddLead}
                 accessibleCompanies={accessibleCompanies}
               />
@@ -2168,6 +2237,8 @@ export default function App() {
                 <ClientsManager
                   clients={clients}
                   loading={clientsLoading}
+                  initialSelectedClientId={selectedClientId}
+                  onInitialClientConsumed={() => setSelectedClientId(null)}
                   leads={leads}
                   onCreate={createClient}
                   onUpdate={updateClient}
@@ -2601,13 +2672,15 @@ export default function App() {
       <CommandPalette
         open={cmdOpen}
         onClose={() => setCmdOpen(false)}
-        leads={leads}
-        campaigns={isMarketingUser || isAgencia ? campaigns : []}
-        employees={isRHUser ? users.filter(u => u.role === "rh" || u.role === "gerente_rh" || u.department) : []}
+        /* leads/clients/campaigns/deliverables/employees — ver `searchScopes`
+           lá em cima, que é onde o escopo por cargo é decidido. */
+        {...searchScopes}
         users={users}
         pipelines={pipelines}
         onSelectLead={(lead) => { setSelectedLead(lead); setCmdOpen(false); }}
+        onSelectClient={(client) => { setSection("clients"); setSelectedClientId(client.id); setCmdOpen(false); }}
         onSelectCampaign={(campaign) => { setSection("marketing"); setSelectedCampaignId(campaign.id); setCmdOpen(false); }}
+        onSelectDeliverable={(d) => { setSection("marketing-entregas"); setSelectedDeliverableId(d.id); setCmdOpen(false); }}
         onSelectEmployee={(employee) => { setSection("rh-funcionarios"); setSelectedEmployeeId(employee.id); setCmdOpen(false); }}
       />
 

@@ -39,6 +39,9 @@ import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MobileTableCards } from "../shared/MobileTableCards";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatBRL, formatK, formatCurrency, calculateLandedCost } from "../../utils/currency";
 import { stageTextColor } from "../../utils/stage-colors";
@@ -1086,6 +1089,7 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
   const [busyId, setBusyId]         = useState(null);
   const [boardError, setBoardError] = useState(null);
   const [drawerOpId, setDrawerOpId] = useState(null);
+  const [search, setSearch]         = useState("");
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
   const [addingStage, setAddingStage]     = useState(false);
   const [draggedColumnKey, setDraggedColumnKey] = useState(null);
@@ -1192,15 +1196,32 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
     [stageFieldsHook]
   );
 
-  const stats = useMemo(() => config.buildStats(operations, stages), [operations, stages, config]);
-  const specificStats = useMemo(() => config.buildSpecificStats(operations), [operations, config]);
+  // Busca nos campos que o card mostra: título sempre, mais o vínculo visível
+  // (fornecedor na Importação, comprador/país na Exportação). Os dois boards
+  // compartilham esta view, então a lista é a união — o campo que não existe
+  // naquele domínio simplesmente não casa. Uma única fonte filtrada alimenta
+  // Kanban, Tabela, Calendário, Análise, os StatCards e o CSV (CLAUDE.md,
+  // regra 11: view nunca reimplementa o próprio escopo).
+  const filteredOperations = useMemo(() => {
+    const termo = semAcento(search).trim();
+    if (!termo) return operations;
+    return operations.filter(o =>
+      semAcento(o.title).includes(termo) ||
+      semAcento(o.supplierName).includes(termo) ||
+      semAcento(o.buyerName).includes(termo) ||
+      semAcento(o.buyerCountry).includes(termo)
+    );
+  }, [operations, search]);
+
+  const stats = useMemo(() => config.buildStats(filteredOperations, stages), [filteredOperations, stages, config]);
+  const specificStats = useMemo(() => config.buildSpecificStats(filteredOperations), [filteredOperations, config]);
 
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort(`comex-${config.domain}`);
   const opsByStage = useMemo(() => {
     const map = {};
     const defaultStageKey = stages[0]?.stageKey;
     stages.forEach(s => {
-      const list = operations.filter(o => (o.stage || defaultStageKey) === s.stageKey);
+      const list = filteredOperations.filter(o => (o.stage || defaultStageKey) === s.stageKey);
       map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
         value: o => o.saleValue,
         name: o => o.title,
@@ -1208,8 +1229,10 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
       });
     });
     return map;
-  }, [operations, stages, getSortCriteria]);
+  }, [filteredOperations, stages, getSortCriteria]);
 
+  // De propósito no array cru: um drawer aberto não pode sumir porque o
+  // usuário digitou na busca depois de abri-lo.
   const drawerOp = drawerOpId ? operations.find(o => o.id === drawerOpId) : null;
 
   const analyticsStages = useMemo(
@@ -1230,27 +1253,38 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
       )}
 
       <KanbanBoardHeader className="mb-4">
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Icon size={22} style={{ color: "var(--text)" }} />
-                <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Comex</h1>
-              </div>
-              {headerExtra}
-            </div>
-            <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-              {config.label} Direta · {operations.length} operaç{operations.length !== 1 ? "ões" : "ão"}
-            </p>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            {/* "Importação/Exportação Direta" é texto fixo do board (vem do
+                config, não do dado) → `description`. A contagem muda a cada
+                busca → `summary`, na linha de baixo (ver PageTitle.jsx). */}
+            <PageTitle
+              icon={Icon}
+              title="Comex"
+              description={`${config.label} Direta`}
+              summary={`${filteredOperations.length} operaç${filteredOperations.length !== 1 ? "ões" : "ão"}`}
+            />
+            {headerExtra}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Busca sempre visível e fora do bloco condicional de `viewMode`
+                (CLAUDE.md, regra 11) — vale igual em Kanban, Tabela,
+                Calendário e Análise. */}
+            <FilterBar
+              search={{
+                value: search,
+                onChange: e => setSearch(e.target.value),
+                placeholder: "Buscar operação…",
+                dataTour: "comex-busca-card",
+              }}
+            />
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
               <ViewToggleButton active={viewMode === "kanban"}    onClick={() => setViewMode("kanban")}    icon={LayoutGrid}    label="Kanban" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "table"}     onClick={() => setViewMode("table")}     icon={List}          label="Tabela" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "calendar"}  onClick={() => setViewMode("calendar")}  icon={CalendarDays}  label="Calendário" iconOnlyMobile />
               <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}    label="Análise" iconOnlyMobile />
             </div>
-            <Button size="sm" variant="secondary" icon={Download} onClick={() => exportComexOperationsToCSV(operations, { stages })}>Exportar CSV</Button>
+            <Button size="sm" variant="secondary" icon={Download} onClick={() => exportComexOperationsToCSV(filteredOperations, { stages })}>Exportar CSV</Button>
             {canWrite && <Button size="sm" icon={Plus} onClick={() => setShowCreate(true)}>Nova operação</Button>}
           </div>
         </div>
@@ -1279,13 +1313,13 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
       ) : !isSupabaseConfigured ? (
         <EmptyState icon={Icon} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar este módulo." />
       ) : viewMode === "table" ? (
-        <ComexTableView operations={operations} stages={stages} columns={config.tableColumns} onRowClick={(o) => setDrawerOpId(o.id)} />
+        <ComexTableView operations={filteredOperations} stages={stages} columns={config.tableColumns} onRowClick={(o) => setDrawerOpId(o.id)} />
       ) : viewMode === "calendar" ? (
-        <ComexCalendarView operations={operations} stages={stages} onSelect={(o) => setDrawerOpId(o.id)} />
+        <ComexCalendarView operations={filteredOperations} stages={stages} onSelect={(o) => setDrawerOpId(o.id)} />
       ) : viewMode === "analytics" ? (
         <KanbanAnalyticsPanel
           stages={analyticsStages}
-          records={operations}
+          records={filteredOperations}
           getStageKey={(o) => o.stage}
           getStageEnteredAt={(o) => o.stageChangedAt}
           specificStats={specificStats}

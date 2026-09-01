@@ -77,7 +77,7 @@ export const VIDEO_TUTORIALS = {
     { id: "v-v16", title: "Proposta com itens: modelo, quantidade e preço", description: "Funil de Vendas", route: "crm", duration: null, url: null,
       quickStart: { icon: "🧮", steps: ["Dentro do negócio, na aba 'PDF', antes de clicar em 'Gerar proposta com IA' você pode montar a lista de itens: clique em 'Adicionar item' e preencha modelo (digite ou escolha um dos modelos Sanbag sugeridos), quantidade e preço unitário — o subtotal de cada linha e o total geral são calculados sozinhos.", "Ao clicar em 'Gerar' (ou 'Gerar novamente'), a IA usa esses itens e valores reais no texto da proposta, em vez do '[a definir]' genérico que aparece quando não há nenhum item cadastrado.", "A tabela de itens também entra no PDF ('Baixar PDF'), logo abaixo do texto da proposta, junto do selo ESG quando ele existir pra essa empresa.", "Os itens ficam salvos junto com o rascunho da proposta — se você fechar o negócio e voltar depois, encontra tudo do jeito que deixou."] } },
     { id: "v-v12", title: "Calendário, Tabela e Análise do funil", description: "Funil de Vendas", route: "crm", duration: null, url: null,
-      quickStart: { icon: "📅", steps: ["Na visão 'Tabela', clique no cabeçalho de qualquer coluna pra ordenar (Empresa, Etapa, Valor, Fit, Setor, Responsável, Última movimentação, Tempo na etapa, Tempo no pipe) — clique de novo pra inverter. Abaixo de uma certa largura de tela, ela vira uma lista de cartões empilhados (9 colunas não cabem no celular).", "Na visão 'Calendário', cada negócio aparece na data do follow-up agendado e/ou na data prevista de fechamento; dias com fechamento atrasado ficam marcados, e negócios já numa etapa terminal (Ganho/Perdido) nunca aparecem ali. Clique numa pílula pra abrir o negócio direto, ou num dia pra ver a lista completa dele.", "Na visão 'Análise', você vê a distribuição de negócios por etapa (quantos e qual %), um bloco 'Genérico' com dias médios na etapa e quantos negócios estão dentro/fora do prazo configurado, e — se houver algum atraso — uma tabela 'Atraso por responsável' com quantos negócios cada pessoa tem estourados e a média de dias de atraso. Serve tanto pra você se autoavaliar quanto pro gestor identificar gargalos.", "Em qualquer uma dessas visões (e no Kanban), o que você vê são sempre os mesmos dados já filtrados pra você — nunca a base toda sem filtro.", "No computador, um botão flutuante 'Perguntar à IA' (canto inferior direito) abre um chat que já enxerga os negócios visíveis na tela — pergunte em português normal, tipo 'quais negócios estão parados há mais de 15 dias' ou 'qual meu ticket médio'. Esse botão não existe no celular."] } },
+      quickStart: { icon: "📅", steps: ["Na visão 'Tabela', clique no cabeçalho de qualquer coluna pra ordenar (Empresa, Etapa, Valor, Fit, Setor, Responsável, Última movimentação, Tempo na etapa, Tempo no pipe) — clique de novo pra inverter. Abaixo de uma certa largura de tela, ela vira uma lista de cartões empilhados (9 colunas não cabem no celular).", "Na visão 'Calendário', cada negócio aparece na data do follow-up agendado e/ou na data prevista de fechamento; dias com fechamento atrasado ficam marcados, e negócios já numa etapa terminal (Ganho/Perdido) nunca aparecem ali. Clique numa pílula pra abrir o negócio direto, ou num dia pra ver a lista completa dele.", "Na visão 'Análise', você vê a distribuição de negócios por etapa (quantos e qual %), um bloco 'Genérico' com dias médios na etapa e quantos negócios estão dentro/fora do prazo configurado, e — se houver algum atraso — uma tabela 'Atraso por responsável' com quantos negócios cada pessoa tem estourados e a média de dias de atraso. Serve tanto pra você se autoavaliar quanto pro gestor identificar gargalos.", "Em qualquer uma dessas visões (e no Kanban), o que você vê são sempre os mesmos dados já filtrados pra você — nunca a base toda sem filtro.", "Dentro da visão 'Análise' tem o botão 'Perguntar à IA', que abre um chat sobre o recorte que você está vendo. Ele enxerga o RESUMO do funil — por etapa (quantos, quanto e dias médios), por setor, por responsável, mais ticket médio e quantos negócios estão parados além do prazo — nunca a lista de negócios um a um. Então 'quantos estão parados e em que etapas' ou 'qual setor converte melhor' ele responde; 'QUAIS negócios estão parados' (os nomes) ele não tem como saber — pra isso, ordene o board por tempo na etapa. Funciona no computador e no celular."] } },
     { id: "v-pv1", title: "Funil de Pós-venda", description: "Funil de Pós-venda", route: "posvenda", duration: null, url: null,
       quickStart: { icon: "🤝", steps: ["Acesse 'Funil de Pós-venda' no menu lateral — funciona com a mesma lógica visual do Funil de Vendas (colunas = etapas, alterne entre Kanban/Tabela/Calendário/Análise no topo), mas o que se acompanha aqui é o relacionamento com o cliente DEPOIS que o negócio foi fechado.", "Um caso nasce de dois jeitos: você cria manualmente com 'Novo caso' (nome do cliente, valor, responsável(is) e os campos próprios que a etapa de destino exigir), ou ele aparece sozinho quando alguém clica em 'Enviar para o Funil de Pós-venda' num negócio que acabou de chegar na etapa 'Ganho' do Funil de Vendas. Nos dois casos, o negócio original em Venda continua existindo — são registros ligados, não o mesmo registro.", "Quando um caso vem de um negócio de Venda, o card mostra o link 'Negócio de origem' — clique pra voltar direto pra ele.", "Como vendedor, você vê os casos em que é responsável e os da sua equipe (subordinados); como gerente/admin, vê todos — mas criar, mover e excluir um caso funciona igual pros dois papéis: não é uma ação restrita a gerente aqui.", "Arraste o card entre colunas pra avançar o caso, ou abra o detalhe e use 'Mover para' no painel direito.", "Dentro do detalhe, as abas são: Form (campos configurados pra etapa atual), Atividades, Histórico, IA e Anexos — não existe aba de Checklists aqui (ela só existe em Recrutamento, Vagas e Comex).", "Na visão 'Análise', além da distribuição por etapa e dos dias médios/prazo de sempre, aparece um bloco específico com o valor total em carteira e quantos casos existem por empresa do Grupo.", "'Exportar CSV' está disponível pra qualquer papel e baixa exatamente os casos visíveis no filtro atual; o seletor de empresa (quando você tem acesso a mais de uma) só aparece pra gerente/admin."] } },
     { id: "v-cl1", title: "Cadastro de Clientes", description: "Clientes", route: "clients", duration: null, url: null,
@@ -123,7 +123,7 @@ export const VIDEO_TUTORIALS = {
     { id: "v-g20", title: "Proposta com itens: modelo, quantidade e preço", description: "Funil de Vendas", route: "crm", duration: null, url: null,
       quickStart: { icon: "🧮", steps: ["Dentro do negócio, na aba 'PDF', antes de clicar em 'Gerar proposta com IA' dá pra montar a lista de itens: 'Adicionar item' e preencher modelo (digite ou escolha um dos modelos Sanbag sugeridos), quantidade e preço unitário — o subtotal de cada linha e o total geral são calculados sozinhos.", "Ao gerar (ou regerar), a IA usa esses itens e valores reais no texto da proposta, em vez do '[a definir]' genérico que aparece sem nenhum item cadastrado — e a mesma tabela entra no PDF, junto do selo ESG quando existir.", "Os itens ficam salvos junto com o rascunho da proposta — fechar o negócio e voltar depois mantém tudo do jeito que ficou, pra qualquer um da equipe que abrir o mesmo negócio."] } },
     { id: "v-g16", title: "Movendo etapas, Calendário, Tabela e Análise", description: "Funil de Vendas", route: "crm", duration: null, url: null,
-      quickStart: { icon: "📊", steps: ["Mover um card funciona do mesmo jeito pra você: arraste no computador (a coluna de destino fica destacada, ou vermelha se a transição não for permitida pela configuração que você mesmo define em 'Editar etapas') ou use o menu '⋮'/o painel 'Mover para' no celular — próximas etapas em destaque, anteriores atrás de um divisor.", "A mesma trava vale pra todo mundo, inclusive você: se a etapa atual tiver campo obrigatório vazio, ou preenchido com formato inválido, o card não se move e um aviso nomeia exatamente o que falta ou está errado.", "As visões 'Tabela', 'Calendário' e 'Análise' funcionam igual às do vendedor — Tabela com colunas ordenáveis (vira lista de cartões no celular), Calendário com follow-ups e datas de fechamento (nunca mostra negócios já em etapa terminal) — mas cobrem toda a equipe (ou toda a empresa/Grupo), conforme o filtro de vendedor e o seletor de empresa que você escolheu no quadro.", "Na aba 'Análise', a tabela 'Atraso por responsável' é a mais útil pro seu papel: mostra, por pessoa, quantos negócios estão com o prazo da etapa estourado e a média de dias de atraso — é o jeito mais rápido de ver quem da equipe precisa de atenção, sem abrir negócio por negócio.", "O botão flutuante 'Perguntar à IA' (só no computador) também enxerga o recorte que você está vendo — pergunte coisas como 'qual vendedor tem mais negócios parados' ou peça um resumo da equipe."] } },
+      quickStart: { icon: "📊", steps: ["Mover um card funciona do mesmo jeito pra você: arraste no computador (a coluna de destino fica destacada, ou vermelha se a transição não for permitida pela configuração que você mesmo define em 'Editar etapas') ou use o menu '⋮'/o painel 'Mover para' no celular — próximas etapas em destaque, anteriores atrás de um divisor.", "A mesma trava vale pra todo mundo, inclusive você: se a etapa atual tiver campo obrigatório vazio, ou preenchido com formato inválido, o card não se move e um aviso nomeia exatamente o que falta ou está errado.", "As visões 'Tabela', 'Calendário' e 'Análise' funcionam igual às do vendedor — Tabela com colunas ordenáveis (vira lista de cartões no celular), Calendário com follow-ups e datas de fechamento (nunca mostra negócios já em etapa terminal) — mas cobrem toda a equipe (ou toda a empresa/Grupo), conforme o filtro de vendedor e o seletor de empresa que você escolheu no quadro.", "Na aba 'Análise', a tabela 'Atraso por responsável' é a mais útil pro seu papel: mostra, por pessoa, quantos negócios estão com o prazo da etapa estourado e a média de dias de atraso — é o jeito mais rápido de ver quem da equipe precisa de atenção, sem abrir negócio por negócio.", "O botão 'Perguntar à IA', dentro da visão 'Análise', também enxerga o recorte que você está vendo — o RESUMO dele (por etapa, por setor e por responsável), não negócio a negócio. Perguntas de gestão que ele responde: quem tem mais valor ganho e mais em aberto, qual setor converte melhor, em que etapa o funil trava, quantos negócios estão parados além do prazo e qual o ticket médio. O que ele NÃO faz é nomear os negócios ou as pessoas por trás de um número — pra isso, a tabela 'Atraso por responsável' logo acima é mais direta."] } },
     { id: "v-g21", title: "Gate de etapa: exigir uma condição pra liberar o avanço", description: "Funil de Vendas", route: "crm", duration: null, url: null,
       quickStart: { icon: "🚦", steps: ["Dentro de 'Editar etapas do pipeline', ao lado de cada pílula de etapa de destino permitida, tem um ícone de filtro — clique pra adicionar uma condição que precisa ser satisfeita pra ESSA transição específica ser liberada (ex.: só deixa mover pra 'Proposta' se o campo Valor for maior que um número, ou se 'Certificação ANP' estiver preenchida).", "A condição usa os campos customizados da etapa de ORIGEM — escolha o campo, o operador (é igual a / é diferente de / maior que / menor que / contém / está vazio / não está vazio) e o valor de comparação. Dá pra combinar mais de uma: dentro do mesmo grupo, todas precisam valer (E); entre grupos diferentes, basta um grupo valer (OU).", "O ícone do filtro fica preenchido quando já existe condição configurada naquele destino, e vazio quando não tem nenhuma — dá pra ver de relance, no mapa de transições, onde tem gate configurado.", "Pra quem move o card: a etapa com condição não atendida simplesmente não aparece como opção no painel 'Mover para'; arrastando no Kanban, a transição é recusada com o aviso 'esta transição exige uma condição específica de campo, ainda não atendida' — sem precisar adivinhar o motivo tentando de novo."] } },
     { id: "v-ata2", title: "Ata de visita por voz: o que muda pra você", description: "Funil de Vendas", route: "crm", duration: null, url: null,
@@ -353,7 +353,7 @@ export const FAQ_ITEMS = [
   },
   {
     question: "Como a IA do CRM funciona?",
-    answer: "O CRM tem um assistente de IA integrado acessível pelo botão 'Perguntar à IA' na tela de Negócios. Ele lê o pipeline em tempo real e responde perguntas em linguagem natural sobre leads, etapas, desempenho e estratégias comerciais.",
+    answer: "O CRM tem um assistente de IA acessível pelo botão 'Perguntar à IA', dentro da visão 'Análise' do Funil de Vendas. Ele recebe o resumo do seu funil em tempo real — totais e conversão, ticket médio, quantos negócios estão parados, e o recorte por etapa, por setor e por responsável — e responde em linguagem natural sobre esses números e sobre a prática de vendas ligada a eles (priorizar carteira, lidar com objeção, redigir e-mail). Ele NÃO recebe a lista de negócios um a um, e não sabe explicar como a plataforma funciona: pra isso, é esta tela de Ajuda & Tutoriais.",
   },
   {
     question: "Posso importar minha planilha de leads?",
@@ -486,6 +486,30 @@ export const AUTOMATION_GUIDE = {
   ],
 };
 
+// Perguntas copiáveis pro chat "Perguntar à IA" (visão Análise do Funil de
+// Vendas).
+//
+// ATENÇÃO ao editar: o chat recebe SÓ o agregado montado por
+// aggregatePipeline() (src/utils/pipeline-metrics.js). Pergunta que dependa
+// de algo fora dele não é "difícil": é impossível, e a resposta certa é
+// sempre "não tenho essa informação". Foi assim que 8 prompts deste catálogo
+// ficaram muito tempo prometendo o que o painel não entrega (revisão de
+// 01/09/2026).
+//
+// O QUE O AGREGADO TEM hoje: totais e conversão; ticket médio dos ganhos;
+// quantos negócios estão parados além do SLA (no total e por etapa); por
+// etapa — contagem, valor e dias médios NA etapa, na ordem do funil; por
+// setor — contagem, valor em aberto e conversão; por responsável — contagem,
+// valor ganho e em aberto.
+//
+// O QUE ELE NÃO TEM, e portanto não pode ser perguntado: negócio INDIVIDUAL
+// (nome, "quais estão parados" — só o quanto), motivo de perda (não existe
+// campo), evolução no tempo / comparação entre períodos (o agregado é uma
+// foto de agora, não uma série), e probabilidade de fechamento.
+//
+// Ele também não conhece a PLATAFORMA: pergunta sobre como um recurso
+// funciona ele responderia inventando, então essas são pergunta de critério
+// comercial, que é o que ele sabe fazer.
 export const AI_PROMPTS = [
   {
     category: "Análise do pipeline",
@@ -493,11 +517,11 @@ export const AI_PROMPTS = [
     color: "#6366F1",
     bgColor: "#EEF2FF",
     prompts: [
-      "Quais leads estão parados há mais de 15 dias sem nenhuma atividade registrada?",
-      "Qual vendedor fechou mais negócios este mês? Qual o valor total?",
-      "Qual setor tem a maior taxa de conversão no pipeline atual?",
+      "Quantos negócios estão parados além do prazo da etapa? Em quais etapas?",
+      "Qual responsável tem o maior valor já ganho, e qual tem mais valor ainda em aberto?",
+      "Qual setor tem a melhor taxa de conversão no meu funil hoje?",
       "Quantos leads estão em cada etapa do funil agora? Mostre um resumo.",
-      "Quais leads têm maior probabilidade de fechar nos próximos 30 dias?",
+      "Considerando quanto tenho em cada etapa, onde eu deveria concentrar esforço primeiro?",
       "Qual é o valor total do pipeline em aberto neste momento?",
     ],
   },
@@ -550,25 +574,25 @@ export const AI_PROMPTS = [
     bgColor: "#F3E8FF",
     prompts: [
       "Resuma o pipeline atual: quantos leads, valor total e etapas mais críticas.",
-      "Compare a performance de cada vendedor: leads abertos, fechados e ticket médio.",
-      "Quais leads foram perdidos este mês? Qual o motivo mais comum?",
-      "Mostre a evolução do pipeline nos últimos 30 dias — quantos leads avançaram de etapa.",
-      "Qual é o tempo médio que um lead fica em cada etapa do funil?",
+      "Compare os responsáveis: quantos negócios, quanto ganho e quanto em aberto cada um tem. Qual é o ticket médio do funil?",
+      "Quantos negócios já foram perdidos contra quantos foram ganhos? O que essa proporção sugere?",
+      "O topo do funil está alimentando as etapas finais, ou está tudo concentrado no começo?",
+      "Qual é o tempo médio que um negócio fica em cada etapa do funil?",
       "Identifique gargalos no funil: onde os leads estão travando com mais frequência.",
     ],
   },
   {
-    category: "Automações e configurações",
+    category: "Organizar a operação",
     icon: "⚙️",
     color: "#B45309",
     bgColor: "#FEF3C7",
     prompts: [
-      "Que automações devo criar para uma equipe de 5 vendedores com 100 leads ativos?",
-      "Como configurar o pipeline para uma empresa do setor de transporte de cargas?",
-      "Qual a diferença entre um lead 'Proposta' e 'Proposta Enviada' no funil?",
-      "Como usar os Sinais de Mercado para gerar novos leads qualificados?",
-      "Explique como funciona o sistema de pontuação (fit score) dos leads.",
-      "Quais campos devo personalizar no formulário de leads para o setor de resíduos industriais?",
+      "Com 5 vendedores e 100 negócios ativos, que rotina de acompanhamento evita negócio esquecido?",
+      "Que etapas fazem sentido num funil de vendas para o setor de transporte de cargas?",
+      "Como eu deveria nomear as etapas do meu funil pra que cada uma signifique uma coisa só?",
+      "Que critérios usar pra decidir se um sinal de mercado vira uma oportunidade de verdade?",
+      "Que critérios fazem sentido pra pontuar o fit de um cliente no meu setor?",
+      "Que informações vale exigir de um cliente do setor de resíduos industriais antes de propor?",
     ],
   },
 ];

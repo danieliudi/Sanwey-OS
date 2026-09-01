@@ -9,6 +9,9 @@ import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanFab } from "../shared/KanbanFab";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { AppToast } from "../shared/AppToast";
@@ -89,15 +92,29 @@ export function BugsView({ currentUser, isAdmin }) {
   const [boardError, setBoardError] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
+  const [search, setSearch] = useState("");
 
   const [boardRef, boardHeight] = useAvailableHeight(16, [loading, loadingStages]);
 
   const orderedStages = useMemo(() => [...stages].sort((a, b) => a.order_idx - b.order_idx), [stages]);
+
+  // Busca nos campos que o card mostra (título e quem reportou) — a lista de
+  // quem não é admin consome o MESMO array (CLAUDE.md, regra 11: view nunca
+  // reimplementa o próprio escopo).
+  const filteredReports = useMemo(() => {
+    const termo = semAcento(search).trim();
+    if (!termo) return reports;
+    return reports.filter(r =>
+      semAcento(r.title).includes(termo) ||
+      semAcento(r.reporter?.name).includes(termo)
+    );
+  }, [reports, search]);
+
   const reportsByStage = useMemo(() => {
     const map = {};
-    for (const r of reports) (map[r.stage] ||= []).push(r);
+    for (const r of filteredReports) (map[r.stage] ||= []).push(r);
     return map;
-  }, [reports]);
+  }, [filteredReports]);
 
   const handleCreateReport = useCallback(async (data) => {
     await createReport(data);
@@ -129,23 +146,32 @@ export function BugsView({ currentUser, isAdmin }) {
       )}
 
       <KanbanBoardHeader className="mb-4">
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <BugIcon size={22} style={{ color: "var(--text)" }} />
-              <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Central de Bugs</h1>
-            </div>
-            <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-              {isAdmin ? "Reporta, a IA investiga, você aprova." : "Acompanhe o status dos bugs que você reportou."}
-            </p>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <PageTitle
+            icon={BugIcon}
+            title="Central de Bugs"
+            description={isAdmin ? "Reporta, a IA investiga, você aprova." : "Acompanhe o status dos bugs que você reportou."}
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {/* Busca sempre visível, fora de qualquer bloco condicional de
+                view — vale no board do admin e na lista de quem só acompanha
+                os próprios bugs. */}
+            <FilterBar
+              search={{
+                value: search,
+                onChange: e => setSearch(e.target.value),
+                placeholder: "Buscar bug…",
+                dataTour: "bugs-busca-card",
+              }}
+            />
+            <button
+              onClick={() => setShowReportModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold"
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer" }}
+            >
+              <Plus size={15} /> Reportar bug
+            </button>
           </div>
-          <button
-            onClick={() => setShowReportModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer" }}
-          >
-            <Plus size={15} /> Reportar bug
-          </button>
         </div>
       </KanbanBoardHeader>
 
@@ -156,11 +182,15 @@ export function BugsView({ currentUser, isAdmin }) {
       ) : !isAdmin ? (
         // Quem reportou só acompanha os próprios (RLS já restringe a isso) —
         // lista simples, board completo é só pra quem faz a triagem.
-        reports.length === 0 ? (
-          <EmptyState icon={BugIcon} title="Nenhum bug reportado ainda" description="Encontrou algo que não devia acontecer? Reporte pelo botão acima." />
+        filteredReports.length === 0 ? (
+          search ? (
+            <EmptyState icon={BugIcon} title="Nenhum bug encontrado" description="Nenhum bug reportado por você casa com essa busca." />
+          ) : (
+            <EmptyState icon={BugIcon} title="Nenhum bug reportado ainda" description="Encontrou algo que não devia acontecer? Reporte pelo botão acima." />
+          )
         ) : (
           <div className="flex flex-col gap-2">
-            {reports.map((r) => {
+            {filteredReports.map((r) => {
               const priority = bugPriorityMeta(r.priority);
               const stage = orderedStages.find(s => stageKeyOf(s) === r.stage);
               return (

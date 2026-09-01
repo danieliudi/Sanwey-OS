@@ -829,30 +829,15 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
 
   const left = (
     <>
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Prazo</div>
-          <div className="text-xs font-bold mt-0.5" style={{ color: item.deadline && new Date(item.deadline) < new Date() ? "var(--danger)" : "var(--text)" }}>
-            {item.deadline ? formatDateBR(item.deadline) : "—"}
-          </div>
-        </div>
-        <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Etapa</div>
-          <div className="text-xs font-bold mt-0.5 truncate" style={{ color: stageInfo?.color || "var(--text)" }}>
-            {stageInfo?.name || "—"}
-          </div>
-        </div>
-        {item.department && (
-          <div className="col-span-2 rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Departamento</div>
-            <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>{item.department}</div>
-          </div>
-        )}
-      </div>
+      {/* As caixas de resumo (Prazo/Etapa/Departamento) foram removidas em
+          01/09/2026 — o Daniel apontou a redundância e a varredura confirmou
+          que era literal: todos esses campos já aparecem no formulário logo
+          abaixo, e a Etapa já está no chip do topo. Em dois dos três drawers
+          onde esse bloco existia, o formulário ainda deixava EDITAR o mesmo
+          valor que a caixa só mostrava.
 
-      <div style={{ borderTop: "1px solid var(--border)", margin: "2px 0" }} />
-
+          O divisor que ficava entre as caixas e as abas saiu junto: sem nada
+          acima dele, era uma linha separando o topo do painel de si mesmo. */}
       <DetailDrawerTabs tabs={LEFT_TABS} activeId={sideTab} onChange={setSideTab} />
       {LeftTabContent()}
     </>

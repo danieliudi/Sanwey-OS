@@ -6,6 +6,9 @@ import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { MobileTableCards } from "../shared/MobileTableCards";
 import { AppToast } from "../shared/AppToast";
 import { StageNavigator } from "../shared/StageNavigator";
@@ -873,14 +876,30 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const leadsById = useMemo(() => new Map((leads || []).map(l => [l.id, l])), [leads]);
   const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
 
+  // Declarado aqui (e não junto do resto do estado, mais abaixo) porque
+  // `scopedCases` lê `search` logo em seguida.
+  const [search, setSearch] = useState("");
+
   const scopedCases = useMemo(() => {
     let s = cases;
     if (!isGroupView) s = s.filter(c => c.companyId === activeCompany);
     if (!isManager) {
       s = s.filter(c => c.ownerIds.some(id => id === user.id || subordinateIds.has(id)));
     }
+    // Busca por último, DENTRO do fluxo já escopado (empresa → responsável) —
+    // nunca sobre `cases` cru. `scopedCases` é o array que Kanban, Tabela,
+    // Calendário e Análise consomem, então a busca vale nas 4 (CLAUDE.md,
+    // regra 11). Campos = os que o card mostra: nome do cliente e o nome de
+    // quem é responsável (AvatarStack do rodapé).
+    const termo = semAcento(search).trim();
+    if (termo) {
+      s = s.filter(c =>
+        semAcento(c.clientName).includes(termo) ||
+        (c.ownerIds || []).some(id => semAcento(usersById.get(id)?.name).includes(termo))
+      );
+    }
     return s;
-  }, [cases, activeCompany, isGroupView, isManager, subordinateIds, user.id]);
+  }, [cases, activeCompany, isGroupView, isManager, subordinateIds, user.id, search, usersById]);
 
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("posvenda");
   const byStage = useMemo(() => {
@@ -926,8 +945,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   }, [initialSelectedCaseId, onInitialCaseConsumed]);
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
 
-  const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  const [boardRef, boardHeight] = useAvailableHeight(16);
 
   const handleDragStart = useCallback((id) => setDraggedCase(id), []);
   const handleDragEnd = useCallback(() => { setDraggedCase(null); setDragOverStage(null); }, []);
@@ -1077,16 +1095,29 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
       <div className="space-y-5">
         <KanbanBoardHeader>
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-                Funil de Pós-venda
-              </h1>
-              <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-                {summary.count} caso{summary.count !== 1 ? "s" : ""}
-                {summary.total > 0 && ` · ${formatK(summary.total)} em carteira`}
-              </p>
-            </div>
+            {/* Resumo AO VIVO (conta e valor mudam a cada filtro/busca) vai em
+                `summary`, não em `description` — ver o cabeçalho de
+                PageTitle.jsx. Esta tela não tem texto estático além dele,
+                então não passa `description`. */}
+            <PageTitle
+              title="Funil de Pós-venda"
+              summary={
+                `${summary.count} caso${summary.count !== 1 ? "s" : ""}`
+                + (summary.total > 0 ? ` · ${formatK(summary.total)} em carteira` : "")
+              }
+            />
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Busca sempre visível, fora do bloco condicional de `viewMode`
+                  (CLAUDE.md, regra 11) — vale igual nas 4 views, porque todas
+                  consomem `scopedCases`. */}
+              <FilterBar
+                search={{
+                  value: search,
+                  onChange: e => setSearch(e.target.value),
+                  placeholder: "Buscar caso…",
+                  dataTour: "posvenda-busca-card",
+                }}
+              />
               <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
                 <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
                 <ViewToggleButton active={viewMode === "table"} onClick={() => setViewMode("table")} icon={List} label="Tabela" iconOnlyMobile />
@@ -1346,11 +1377,15 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           </KanbanBoardScrollArea>
         </div>
 
-        <div ref={trailingRef}>
-          <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
-            Arraste para mover entre etapas · Clique no card para ver detalhes
-          </p>
-        </div>
+      {/* A dica "Arraste para mover · '+' para criar · Clique para ver
+          detalhes" vivia aqui, no rodapé do board. Removida 01/09/2026 a
+          pedido do Daniel: as três ações são descobertas no primeiro uso e o
+          texto custava uma faixa de altura em TODA sessão, pra sempre. Com
+          ela foi junto o `trailingRef` — existia só pra medir essa faixa e
+          descontá-la do `useAvailableHeight`; sem conteúdo depois do board,
+          não há o que descontar. Se um dia voltar a existir conteúdo abaixo
+          do board, é o `trailingRef` que precisa voltar (3º argumento de
+          useAvailableHeight), não um valor fixo chutado. */}
         </>)}
       </div>
 

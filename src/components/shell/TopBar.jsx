@@ -54,6 +54,12 @@ export function TopBar({
   title,
   onMenuToggle,
   onSearchOpen,
+  /* Texto do gatilho de busca. Vem pronto do App.jsx (mesma função que o
+     CommandPalette usa por dentro) porque a TopBar não conhece cargo — e o
+     texto tem que citar só o que ESTE usuário acha. Antes era fixo, "Buscar
+     lead, campanha, funcionário...", e mentia pra maioria: campanhas e
+     funcionários são travados por cargo. */
+  searchPlaceholder,
   notifications,
   unreadCount,
   onMarkAllRead,
@@ -99,6 +105,7 @@ export function TopBar({
       {isDesktop && (
         <button
           onClick={onSearchOpen}
+          data-tour="busca-global"
           className="flex items-center gap-2 border rounded-sm transition-all duration-150"
           style={{
             padding: "8px 14px",
@@ -121,7 +128,7 @@ export function TopBar({
         >
           <Search size={15} style={{ color: "var(--text-faint)", flexShrink: 0 }} />
           <span style={{ color: "var(--text-faint)", flex: 1, textAlign: "left" }}>
-            Buscar lead, campanha, funcionário...
+            {searchPlaceholder || "Buscar..."}
           </span>
           <span
             className="select-none rounded-sm flex items-center justify-center"

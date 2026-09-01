@@ -20,7 +20,7 @@ import React from "react";
 export function KanbanBoardHeader({ children, className = "" }) {
   return (
     <div
-      className={`flex flex-col gap-3 py-4 lg:-mx-6 lg:-mt-6 lg:px-6 ${className}`}
+      className={`flex flex-col gap-2.5 py-3 lg:-mx-6 lg:-mt-6 lg:px-6 ${className}`}
       style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
     >
       {children}

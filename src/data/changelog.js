@@ -24,6 +24,134 @@
 
 export const CHANGELOG = [
   {
+    version: "4.90.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Em Recrutamento, sele\u00e7\u00e3o em massa de candidatos agora acompanha a busca. Se voc\u00ea selecionava v\u00e1rios, digitava algo no campo de busca e clicava em \"Reprovar e enviar retorno\", a a\u00e7\u00e3o valia tamb\u00e9m para os candidatos que a busca tinha escondido \u2014 e o e-mail de recusa ia para todos eles. Agora a sele\u00e7\u00e3o \u00e9 podada para o que est\u00e1 vis\u00edvel.",
+        roles: ["rh", "gerente_rh"],
+      },
+      {
+        kind: "correcao",
+        text: "Em Campanhas, o filtro \"Respons\u00e1vel\" listava apenas quem sobrou do pr\u00f3prio filtro \u2014 escolhido algu\u00e9m, n\u00e3o dava para trocar direto para outra pessoa sem voltar em \"Todos\". Agora ele lista todo mundo que tem campanha.",
+        roles: ["marketing", "gerente_marketing"],
+      },
+      {
+        kind: "novo",
+        text: "Todos os boards ganharam BUSCA. Digite no campo ao lado do t\u00edtulo e o quadro filtra na hora \u2014 e vale nas quatro vis\u00f5es (Kanban, Tabela, Calend\u00e1rio e An\u00e1lise), n\u00e3o s\u00f3 no Kanban. Cada board busca pelo que o card mostra: neg\u00f3cio por empresa, setor ou respons\u00e1vel; caso de p\u00f3s-venda por cliente; solicita\u00e7\u00e3o de compra por item, n\u00famero ou fornecedor; colaborador por nome, cargo ou departamento; e assim por diante.",
+      },
+      {
+        kind: "ajuste",
+        text: "O cabe\u00e7alho de todas as p\u00e1ginas de board encolheu: o t\u00edtulo passou de 26 para 19 pixels e a descri\u00e7\u00e3o foi para o lado dele, em vez de ocupar uma linha pr\u00f3pria. O espa\u00e7o foi todo para os cards. Onde o subt\u00edtulo era um resumo que muda com o filtro (Funil de Vendas, P\u00f3s-venda, Onboarding), ele continua embaixo \u2014 \u00e9 informa\u00e7\u00e3o viva, n\u00e3o r\u00f3tulo.",
+      },
+      {
+        kind: "ajuste",
+        text: "Os filtros de sele\u00e7\u00e3o dos boards (respons\u00e1vel, empresa, canal, prazo, departamento, frente) passaram todos a usar o mesmo componente. Antes cada tela desenhava o seu, com pequenas diferen\u00e7as de altura e espa\u00e7amento que apareciam ao trocar de p\u00e1gina.",
+      },
+      {
+        kind: "ajuste",
+        text: "Em Treinamentos, a busca do cat\u00e1logo passou a ignorar acento: procurar por \"seguranca\" agora acha \"Seguran\u00e7a\". Antes n\u00e3o achava, e parecia que o treinamento n\u00e3o existia.",
+      },
+    ],
+  },
+  {
+    version: "4.89.1",
+    items: [
+      {
+        kind: "novo",
+        text: "A busca do topo (Ctrl+K) agora encontra tamb\u00e9m CLIENTES e ENTREGAS, al\u00e9m de neg\u00f3cios, campanhas e funcion\u00e1rios. Cliente d\u00e1 pra achar por nome, raz\u00e3o social, categoria, cidade ou CNPJ; entrega, por t\u00edtulo, n\u00famero de protocolo, quem pediu ou departamento. O resultado abre a mesma tela de sempre.",
+      },
+      {
+        kind: "ajuste",
+        text: "O texto da busca deixou de prometer o que voc\u00ea n\u00e3o pode achar. Antes dizia sempre \u201cBuscar lead, campanha, funcion\u00e1rio\u2026\u201d, mas campanhas e funcion\u00e1rios s\u00f3 abrem para quem \u00e9 de Marketing e de RH \u2014 agora ele cita s\u00f3 as categorias do seu perfil. E um rodap\u00e9 fixo lembra que a busca cobre apenas o que voc\u00ea j\u00e1 tem acesso, pra n\u00e3o confundir permiss\u00e3o com falha.",
+      },
+      {
+        kind: "ajuste",
+        text: "Sumiu a faixa \u201cArraste para mover \u00b7 \u2018+\u2019 para criar \u00b7 Clique para ver detalhes\u201d do rodap\u00e9 dos boards. As tr\u00eas a\u00e7\u00f5es se aprendem no primeiro uso, e o texto custava altura em toda sess\u00e3o \u2014 o espa\u00e7o foi para os cards.",
+      },
+      {
+        kind: "correcao",
+        text: "A busca do topo tamb\u00e9m respeita agora o acesso por m\u00f3dulo: se \"Clientes\" (ou qualquer outra p\u00e1gina) estiver desligada para voc\u00ea, ela deixa de aparecer nos resultados \u2014 antes s\u00f3 sumia do menu.",
+      },
+      {
+        kind: "correcao",
+        text: "Em Ajuda & Tutoriais, o assistente de IA do funil estava descrito pelo bot\u00e3o antigo e oferecia perguntas prontas que ele nunca teve como responder (neg\u00f3cio a neg\u00f3cio, motivo de perda, tempo m\u00e9dio por etapa). O texto e as perguntas passaram a refletir o que ele realmente recebe: o resumo do funil.",
+        roles: ["gerente", "vendedor", "consultor"],
+      },
+    ],
+  },
+  {
+    version: "4.88.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "\"Perguntar \u00e0 IA\" saiu do bot\u00e3o flutuante do Funil de Vendas e passou a viver dentro da vis\u00e3o An\u00e1lise. Ela responde sobre os n\u00fameros do funil \u2014 total, por etapa, por respons\u00e1vel \u2014 que \u00e9 exatamente o que a An\u00e1lise j\u00e1 mostra em gr\u00e1fico; flutuando sobre o Kanban, competia com o bot\u00e3o de criar neg\u00f3cio e n\u00e3o dizia sobre o que respondia.",
+        roles: ["gerente", "vendedor", "consultor"],
+      },
+      {
+        kind: "ajuste",
+        text: "O chat do funil agora avisa, no rodap\u00e9, que responde s\u00f3 sobre os n\u00fameros daquele funil e que a resposta \u00e9 gerada por IA. Perguntas fora desse assunto passam a ser recusadas com uma frase, em vez de respondidas.",
+        roles: ["gerente", "vendedor", "consultor"],
+      },
+      {
+        kind: "correcao",
+        text: "No chat do funil, as etapas aparecem pelo nome que voc\u00ea deu a elas, n\u00e3o mais pelo c\u00f3digo interno. E os exemplos de pergunta deixaram de sugerir algo que a IA n\u00e3o consegue responder: ela recebe o resumo do funil, nunca a lista de neg\u00f3cios um a um.",
+        roles: ["gerente", "vendedor", "consultor"],
+      },
+    ],
+  },
+  {
+    version: "4.87.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "No menu lateral, um departamento que voc\u00ea fecha continua fechado ao recolher o menu. Antes ele reabria sozinho no modo estreito, deixando a lista comprida justamente onde ela mais incomoda. Para ver de novo, basta expandir o menu.",
+      },
+      {
+        kind: "ajuste",
+        text: "O bot\u00e3o flutuante de criar card ficou menor e deixou de encostar na borda do menu lateral.",
+      },
+    ],
+  },
+  {
+    version: "4.87.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Os boards ficaram com mais espaço para os cards. O cabeçalho da coluna passou a caber numa linha só (nome, contagem e SLA juntos), o título da página encolheu e a descrição foi para o lado dele, e o menu lateral estreitou de 288 para 240 pixels. Nada de informação saiu — só parou de ocupar duas linhas o que cabia em uma.",
+      },
+      {
+        kind: "ajuste",
+        text: "Ao abrir um card em Entregas, Tarefas de Marketing ou Meu To-Do, as caixinhas de Prazo, Etapa e Departamento no topo saíram. Elas repetiam o que o formulário logo abaixo já mostrava — e, em dois casos, o formulário ainda deixava editar o mesmo valor. Agora a descrição do pedido aparece sem precisar rolar.",
+      },
+      {
+        kind: "novo",
+        text: "Criar lead a partir de um sinal agora sugere as empresas já cadastradas em vez de pedir o nome digitado. Escolhendo uma, o lead nasce com CNPJ, setor e cidade preenchidos e vinculado ao cliente — sem virar um segundo cadastro da mesma empresa. Empresa que ainda não está na base continua podendo ser criada pelo nome.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "correcao",
+        text: "Em Sinais, o botão \u201cCancelar\u201d ao criar um lead saía para fora da borda do card.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+    ],
+  },
+  {
+    version: "4.86.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Busca de card em Entregas e Tarefas de Marketing. Digite parte do título, do número do card, do nome de quem pediu ou da campanha, e o board mostra só o que bate — em qualquer uma das quatro visões (Kanban, Tabela, Calendário e Análise). Não precisa acertar acento nem maiúscula.",
+        roles: ["marketing", "gerente_marketing", "agencia"],
+      },
+      {
+        kind: "ajuste",
+        text: "Os filtros desses dois boards passaram a usar o mesmo componente das telas de tabela da plataforma — mesma altura, mesmo espaçamento e mesmo comportamento de foco que você já vê em Funcionários, Cargos e Fornecedores.",
+        roles: ["marketing", "gerente_marketing", "agencia"],
+      },
+    ],
+  },
+  {
     version: "4.85.1",
     items: [
       {

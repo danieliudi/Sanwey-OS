@@ -45,6 +45,9 @@ import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { daysSince } from "../../utils/date";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
@@ -344,14 +347,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // Altura disponível até o rodapé da janela, medida ao vivo a partir do
   // topo do board — pra barra de scroll horizontal do Kanban nunca ficar
   // abaixo da dobra, em qualquer tamanho de janela (ver use-available-height.js).
-  // trailingRef mede o texto de dica que vem depois do board (a Análise do
-  // funil saiu daqui — agora é a própria view "analise", ver ViewToggleButton
-  // abaixo), pra sobrar espaço suficiente pra ele caber sem empurrar a
-  // página além da viewport. marginBottom = 16, o respiro do próprio
-  // KanbanBoardScrollArea (pb-4) — sem isso a barra de scroll horizontal do
-  // board voltaria a vazar da tela visível.
-  const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  // Não há mais nada depois do board (a Análise do funil virou a própria view
+  // "analise", e a dica de rodapé saiu em 01/09/2026 — ver comentário no lugar
+  // dela, mais abaixo), então o hook não precisa mais do 3º argumento.
+  // marginBottom = 16, o respiro do próprio KanbanBoardScrollArea (pb-4) —
+  // sem isso a barra de scroll horizontal do board voltaria a vazar da tela.
+  const [boardRef, boardHeight] = useAvailableHeight(16);
 
   // Mesma regra de permissão do botão de excluir dentro do LeadDetailDrawer
   // (canDelete) — reaproveitada aqui pro atalho de excluir direto no "..."
@@ -368,6 +369,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   }, [users, user.id, user.role]);
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [starredOnly, setStarredOnly] = useState(false);
+  const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "calendar"
   const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("crm-pipeline");
   const [draggedLead, setDraggedLead] = useState(null);
@@ -428,7 +430,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     return s;
   }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, subordinateIds]);
 
-  const scopedLeads = useMemo(() => {
+  // Escopo DELIBERADO: empresa → vendedor/setor → responsável → favoritos.
+  // Tudo aqui é escolha que a pessoa fez e que permanece na tela. A busca por
+  // teclado NÃO entra — ver `scopedLeads` logo abaixo e o porquê no comentário
+  // de lá.
+  const filteredLeads = useMemo(() => {
     let s = companyScopedLeads;
     if (isManager && ownerFilter !== "all") {
       // FASE 5: filtro "mostrar leads do fulano" bate se fulano estiver em
@@ -441,6 +447,26 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     if (starredOnly) s = s.filter(l => l.starred);
     return s;
   }, [companyScopedLeads, ownerFilter, isManager, starredOnly]);
+
+  const scopedLeads = useMemo(() => {
+    // Busca por último, DENTRO do fluxo já escopado: nunca sobre `leads` cru,
+    // senão devolveria negócio de outra empresa/vendedor. `scopedLeads` é o
+    // array que as 4 views consomem (Kanban, Tabela, Calendário, Análise),
+    // então a busca vale nas 4 de graça — CLAUDE.md, regra 11.
+    //
+    // Campos = os que o card REALMENTE mostra: nome da empresa e o nome de
+    // quem é responsável (AvatarStack do rodapé). O setor saiu (QA de
+    // fidelidade, 01/09/2026): ele só aparece no card quando a etapa tem
+    // "sector" em `card_preview_fields` — configurado em ZERO das 79 etapas
+    // em produção. Ou seja, buscar por setor casaria em silêncio, sem nada na
+    // tela explicando o motivo, que é justamente o que a spec proíbe.
+    const termo = semAcento(search).trim();
+    if (!termo) return filteredLeads;
+    return filteredLeads.filter(l =>
+      semAcento(l.company).includes(termo) ||
+      getLeadOwnerIds(l).some(id => semAcento(usersById.get(id)?.name).includes(termo))
+    );
+  }, [filteredLeads, search, usersById]);
 
   const byStage = useMemo(() => {
     const bucket = Object.create(null);
@@ -632,18 +658,31 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           até a borda da janela a partir de `lg`). */}
       <KanbanBoardHeader>
         <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-            Funil de Vendas
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {scopedLeads.length} oportunidades
-            {summary.pipelineValue > 0 && ` · ${formatK(summary.pipelineValue)} em aberto`}
-            {summary.won > 0 && ` · ${summary.won} ganho${summary.won !== 1 ? "s" : ""}`}
-            {summary.lost > 0 && ` · ${summary.lost} perdido${summary.lost !== 1 ? "s" : ""}`}
-          </p>
-        </div>
+        {/* Resumo AO VIVO (conta e valor mudam a cada filtro/busca) vai em
+            `summary`, não em `description` — ver o cabeçalho de PageTitle.jsx.
+            Esta tela não tem texto estático além dele, então não passa
+            `description`. */}
+        <PageTitle
+          title="Funil de Vendas"
+          summary={
+            `${scopedLeads.length} oportunidades`
+            + (summary.pipelineValue > 0 ? ` · ${formatK(summary.pipelineValue)} em aberto` : "")
+            + (summary.won  > 0 ? ` · ${summary.won} ganho${summary.won !== 1 ? "s" : ""}` : "")
+            + (summary.lost > 0 ? ` · ${summary.lost} perdido${summary.lost !== 1 ? "s" : ""}` : "")
+          }
+        />
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Busca sempre visível, fora do bloco condicional de `viewMode`
+              (CLAUDE.md, regra 11) — vale igual em Kanban, Tabela, Calendário
+              e Análise, porque as 4 consomem `scopedLeads`. */}
+          <FilterBar
+            search={{
+              value: search,
+              onChange: e => setSearch(e.target.value),
+              placeholder: "Buscar negócio…",
+              dataTour: "crm-busca-card",
+            }}
+          />
           {/* Importar CSV */}
           {isManager && onOpenImport && (
             <button
@@ -713,6 +752,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               icon={TrendingUp}
               label="Análise"
               iconOnlyMobile
+              dataTour="crm-view-analise"
             />
           </div>
           <button
@@ -847,17 +887,42 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           isGroupView={isGroupView}
         />
       ) : viewMode === "analise" ? (
-        <KanbanAnalyticsPanel
-          stages={stages.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.slaDays }))}
-          records={scopedLeads}
-          getStageKey={l => l.stage}
-          getStageEnteredAt={l => l.stageChangedAt}
-          getOwnerIds={getLeadOwnerIds}
-          usersById={usersById}
-          specificStats={[
-            { label: "CAC médio", value: cac != null ? formatBRL(cac) : "—", title: cacFormulaHint(CAC_PERIOD) },
-          ]}
-        />
+        <div className="flex flex-col gap-3">
+          {/* "Perguntar à IA" mora AQUI, dentro da Análise — não flutuando
+              sobre o Kanban. Decidido com o Daniel 01/09/2026: o botão
+              flutuante aparecia em toda view, competia com o FAB de criar
+              negócio e não dizia sobre o que ele responde. A IA deste painel
+              interpreta o AGREGADO do funil (total, por etapa, por
+              responsável) — é a mesma pergunta que a Análise já responde em
+              gráfico, então é aqui que ela pertence. Controle específico de
+              uma view fica dentro do conteúdo daquela view, nunca no header
+              compartilhado (regra 11 do CLAUDE.md). */}
+          <div className="flex justify-end">
+            <button
+              data-tour="pipeline-ai-chat"
+              onClick={() => setShowAIChat(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+              title="Perguntar à IA sobre os números do funil"
+            >
+              <Bot size={13} />
+              Perguntar à IA
+            </button>
+          </div>
+          <KanbanAnalyticsPanel
+            stages={stages.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.slaDays }))}
+            records={scopedLeads}
+            getStageKey={l => l.stage}
+            getStageEnteredAt={l => l.stageChangedAt}
+            getOwnerIds={getLeadOwnerIds}
+            usersById={usersById}
+            specificStats={[
+              { label: "CAC médio", value: cac != null ? formatBRL(cac) : "—", title: cacFormulaHint(CAC_PERIOD) },
+            ]}
+          />
+        </div>
       ) : (<>
       {/* Mobile kanban: vertical collapsible stages — via RHMobileKanbanAccordion
           (shared/rh-pipeline), consolidação de 08/08/2026. Este arquivo é a
@@ -1044,14 +1109,15 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       </div>
       </>)}
 
-      {/* ── Dica de uso (apenas no kanban) ── */}
-      {viewMode === "kanban" && (
-        <div ref={trailingRef}>
-          <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
-            Arraste para mover entre etapas · Clique no card para ver detalhes
-          </p>
-        </div>
-      )}
+      {/* A dica "Arraste para mover · '+' para criar · Clique para ver
+          detalhes" vivia aqui, no rodapé do board. Removida 01/09/2026 a
+          pedido do Daniel: as três ações são descobertas no primeiro uso e o
+          texto custava uma faixa de altura em TODA sessão, pra sempre. Com
+          ela foi junto o `trailingRef` — existia só pra medir essa faixa e
+          descontá-la do `useAvailableHeight`; sem conteúdo depois do board,
+          não há o que descontar. Se um dia voltar a existir conteúdo abaixo
+          do board, é o `trailingRef` que precisa voltar (3º argumento de
+          useAvailableHeight), não um valor fixo chutado. */}
 
       {viewMode === "table" && (
         <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
@@ -1115,21 +1181,18 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       />
     </div>
 
-    {/* Floating AI button */}
-    <button
-      onClick={() => setShowAIChat(v => !v)}
-      className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 hidden lg:flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
-      style={{ background: "var(--accent)", color: "var(--on-accent)", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
-      onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
-      onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-    >
-      <Bot size={16} />
-      Perguntar à IA
-    </button>
-
+    {/* `filteredLeads`, NÃO `scopedLeads`: a IA responde sobre o escopo
+        DELIBERADO (empresa, vendedor, favoritos), nunca sobre o recorte
+        transitório da busca. Achado do QA adversarial (01/09/2026): o painel é
+        `fixed` e ocupa a tela inteira no mobile, então com "acme" ainda
+        digitado a pergunta "quantos negócios tenho em negociação?" devolveria
+        a conta do subconjunto, apresentada como fato, com o campo que causou o
+        recorte escondido atrás do próprio painel. Um número não pode mudar em
+        silêncio atrás de um overlay que esconde a causa. */}
     <PipelineChatPanel
-      leads={scopedLeads}
+      leads={filteredLeads}
       users={users}
+      stages={stages}
       currentUser={user}
       isOpen={showAIChat}
       onClose={() => setShowAIChat(false)}

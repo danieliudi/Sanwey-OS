@@ -50,6 +50,9 @@ import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { FilterBar } from "../shared/FilterBar";
+import { PageTitle } from "../shared/PageTitle";
+import { semAcento } from "../../utils/text-search";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
@@ -1178,6 +1181,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador, createColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
+  const vagasById = useMemo(() => new Map(vagas.map((v) => [v.id, v])), [vagas]);
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
   const { feedbacks, createPendingCycle } = useRHFeedback({ userId: currentUser?.id });
   const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("onboarding");
@@ -1192,12 +1196,28 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   // nunca hardcoded — se não houver etapa terminal+lost configurada, a
   // opção "Excluir" fica indisponível (ver onDeleteCard abaixo).
   const onboardingRemovedStageKey = useMemo(() => stages.find((s) => s.terminal && s.lost)?.stageKey || null, [stages]);
+  const [search, setSearch] = useState("");
+  // Único array que Kanban, Tabela, Calendário e Análise consomem (CLAUDE.md,
+  // regra 11 — nenhuma view reimplementa o próprio escopo). Campos: os que o
+  // card mostra — nome, cargo/departamento e a vaga de origem.
+  const filtered = useMemo(() => {
+    const termo = semAcento(search).trim();
+    if (!termo) return colaboradores;
+    return colaboradores.filter((c) =>
+      semAcento(c.fullName).includes(termo) ||
+      semAcento(c.jobTitle).includes(termo) ||
+      semAcento(c.department).includes(termo) ||
+      semAcento(vagasById.get(c.vagaId)?.title).includes(termo)
+    );
+  }, [colaboradores, search, vagasById]);
   // Contador do cabeçalho não deve incluir quem já foi "Removido" (etapa só
   // visível na Tabela) — achado #13 do roteiro de treinamento de RH
-  // (31/07/2026), mesmo critério terminal&&lost já usado acima.
+  // (31/07/2026), mesmo critério terminal&&lost já usado acima. Roda sobre o
+  // array já buscado pra não mostrar um número diferente do que está na tela;
+  // o critério terminal&&lost em si não mudou.
   const colaboradoresEmOnboarding = useMemo(
-    () => onboardingRemovedStageKey ? colaboradores.filter((c) => c.onboardingStage !== onboardingRemovedStageKey) : colaboradores,
-    [colaboradores, onboardingRemovedStageKey]
+    () => onboardingRemovedStageKey ? filtered.filter((c) => c.onboardingStage !== onboardingRemovedStageKey) : filtered,
+    [filtered, onboardingRemovedStageKey]
   );
   const onboardingStageFields = useRHStageFields("onboarding");
   const { users } = useProfiles();
@@ -1383,8 +1403,6 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
 
   const loading = loadingTarefas || loadingColaboradores || loadingStages || loadingMeuColaborador;
 
-  const vagasById = useMemo(() => new Map(vagas.map((v) => [v.id, v])), [vagas]);
-
   const tarefasByColaborador = useMemo(() => {
     const map = {};
     tarefas.forEach((t) => {
@@ -1399,19 +1417,19 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
     const map = {};
     const defaultStageKey = stages[0]?.stageKey || "documentacao";
     stages.forEach((s) => {
-      const list = colaboradores.filter((c) => (c.onboardingStage || defaultStageKey) === s.stageKey);
+      const list = filtered.filter((c) => (c.onboardingStage || defaultStageKey) === s.stageKey);
       map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
         name: c => c.fullName,
         createdAt: c => c.createdAt,
       });
     });
     return map;
-  }, [colaboradores, stages, getSortCriteria]);
+  }, [filtered, stages, getSortCriteria]);
 
   // R22: visão consolidada de % de conclusão — antes só existia por card
   // individual, sem nenhum rollup entre colaboradores nem por frente.
   const dashboardStats = useMemo(() => {
-    const comTarefas = colaboradores.filter((c) => (tarefasByColaborador[c.id] || []).length > 0);
+    const comTarefas = filtered.filter((c) => (tarefasByColaborador[c.id] || []).length > 0);
     const pct = (c) => {
       const t = tarefasByColaborador[c.id] || [];
       return t.length > 0 ? (t.filter((x) => x.status === "concluida").length / t.length) * 100 : null;
@@ -1420,15 +1438,15 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
       ? Math.round(comTarefas.reduce((sum, c) => sum + pct(c), 0) / comTarefas.length)
       : null;
     const porFrente = RH_FRENTES.map((id) => {
-      const grupo = colaboradores.filter((c) => c.frente === id);
+      const grupo = filtered.filter((c) => c.frente === id);
       const grupoComTarefas = grupo.filter((c) => (tarefasByColaborador[c.id] || []).length > 0);
       const media = grupoComTarefas.length > 0
         ? Math.round(grupoComTarefas.reduce((sum, c) => sum + pct(c), 0) / grupoComTarefas.length)
         : null;
       return { id, total: grupo.length, media };
     }).filter((f) => f.total > 0);
-    return { total: colaboradores.length, overall, semTarefas: colaboradores.length - comTarefas.length, porFrente };
-  }, [colaboradores, tarefasByColaborador]);
+    return { total: filtered.length, overall, semTarefas: filtered.length - comTarefas.length, porFrente };
+  }, [filtered, tarefasByColaborador]);
 
   const drawerColaborador = useMemo(
     () => colaboradores.find((c) => c.id === drawerColaboradorId) || null,
@@ -1454,7 +1472,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
       })),
     ];
     if (onboardingRemovedStageKey) {
-      const removidos = colaboradores.filter(
+      const removidos = filtered.filter(
         (c) => c.onboardingStage === onboardingRemovedStageKey && c.createdAt && c.onboardingStageChangedAt
       );
       const avgDays = removidos.length > 0
@@ -1463,7 +1481,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
       stats.push({ label: "Tempo médio até Removido", value: avgDays !== null ? `${avgDays}d` : "—" });
     }
     return stats;
-  }, [dashboardStats.overall, dashboardStats.porFrente, colaboradores, onboardingRemovedStageKey]);
+  }, [dashboardStats.overall, dashboardStats.porFrente, filtered, onboardingRemovedStageKey]);
 
   if (!isSupabaseConfigured) {
     return (
@@ -1475,9 +1493,8 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   if (!isRHUser) {
     return (
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <ClipboardCheck size={22} style={{ color: "var(--text)" }} />
-          <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Onboarding</h1>
+        <div className="mb-4">
+          <PageTitle icon={ClipboardCheck} title="Onboarding" />
         </div>
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
@@ -1499,17 +1516,27 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <KanbanBoardHeader className="mb-4">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <ClipboardCheck size={22} style={{ color: "var(--text)" }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Onboarding</h1>
-          </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {colaboradoresEmOnboarding.length} colaborador{colaboradoresEmOnboarding.length !== 1 ? "es" : ""} no onboarding
-          </p>
-        </div>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        {/* Contagem é resumo AO VIVO (muda com busca/etapas), não descrição
+            estática — por isso vai em `summary`, não em `description`
+            (ver cabeçalho de PageTitle.jsx). */}
+        <PageTitle
+          icon={ClipboardCheck}
+          title="Onboarding"
+          summary={`${colaboradoresEmOnboarding.length} colaborador${colaboradoresEmOnboarding.length !== 1 ? "es" : ""} no onboarding`}
+        />
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Busca sempre visível, fora do bloco condicional de `viewMode`
+              (CLAUDE.md, regra 11) — vale igual em Kanban, Tabela,
+              Calendário e Análise. */}
+          <FilterBar
+            search={{
+              value: search,
+              onChange: e => setSearch(e.target.value),
+              placeholder: "Buscar colaborador…",
+              dataTour: "rh-onboarding-busca-card",
+            }}
+          />
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" iconOnlyMobile />
             <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" iconOnlyMobile />
@@ -1539,21 +1566,21 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : viewMode === "table" ? (
         <OnboardingTableView
-          colaboradores={colaboradores}
+          colaboradores={filtered}
           stages={stages}
           tarefasByColaborador={tarefasByColaborador}
           onRowClick={(c) => setDrawerColaboradorId(c.id)}
         />
       ) : viewMode === "calendar" ? (
         <OnboardingCalendarView
-          colaboradores={colaboradores}
+          colaboradores={filtered}
           stages={stages}
           onPillClick={(c) => setDrawerColaboradorId(c.id)}
         />
       ) : viewMode === "analytics" ? (
         <KanbanAnalyticsPanel
           stages={analyticsStages}
-          records={colaboradores}
+          records={filtered}
           getStageKey={(c) => c.onboardingStage}
           getStageEnteredAt={(c) => c.onboardingStageChangedAt}
           specificStats={onboardingSpecificStats}

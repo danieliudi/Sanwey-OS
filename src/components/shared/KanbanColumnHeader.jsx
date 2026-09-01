@@ -38,6 +38,18 @@ export function KanbanColumnHeader({
   nameFontWeight = 600,
   uppercase = true,
   countFontSize = null,
+  // Rodada de densidade (01/09/2026, aprovada com o Daniel): `children` na
+  // MESMA linha do nome, empurrado pra direita, em vez de numa segunda linha
+  // própria. Corta ~19px por coluna — e a coluna se repete 5 ou 6 vezes na
+  // largura da tela, então é a faixa que mais rende. Só serve pra conteúdo
+  // curto (um "SLA 3d"): quem mostra dinheiro + SLA junto (Funil, Campanhas,
+  // Pós-venda) continua com a segunda linha. CONFIRMADO no rollout do padrão
+  // pros outros 11 boards (01/09/2026, mesma sessão): além de "R$ 340k · SLA
+  // 5d" não caber sem truncar, o `children` da coluna do Funil vira "Transição
+  // bloqueada" em `var(--danger)` quando a transição está travada — e o
+  // `<span>` de 10.5px/400/`--text-dim` daqui achataria justamente o aviso que
+  // precisa saltar aos olhos. Não é "ainda não fizemos": é para ficar assim.
+  secondaryInline = false,
 }) {
   return (
     <>
@@ -45,7 +57,7 @@ export function KanbanColumnHeader({
           de cor da etapa. */}
       <div style={{ height: bandHeight, background: color, flexShrink: 0 }} />
       <div
-        className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
+        className="px-3 py-2 flex items-center justify-between gap-2"
         style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
       >
         <div className="min-w-0 flex-1">
@@ -66,9 +78,22 @@ export function KanbanColumnHeader({
             ) : (
               name
             )}
-            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0, ...(countFontSize ? { fontSize: countFontSize } : {}) }}>({count})</span>
+            {/* Sem parênteses: o número já é o número, e o par de parênteses
+                é ruído que se repete uma vez por coluna. */}
+            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0, ...(countFontSize ? { fontSize: countFontSize } : {}) }}>{count}</span>
+            {secondaryInline && children ? (
+              <span
+                style={{
+                  marginLeft: "auto", flexShrink: 0, whiteSpace: "nowrap",
+                  fontSize: 10.5, fontWeight: 400, letterSpacing: "normal",
+                  textTransform: "none", color: "var(--text-dim)",
+                }}
+              >
+                {children}
+              </span>
+            ) : null}
           </div>
-          {children}
+          {secondaryInline ? null : children}
         </div>
         {actions}
       </div>

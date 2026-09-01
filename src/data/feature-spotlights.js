@@ -25,6 +25,16 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "entregas-busca-card",
+    route: "marketing-entregas",
+    // Alvo é o próprio campo de busca — aqui existe elemento estável pra
+    // apontar (ao contrário do spotlight dos chips, que só aparecem na
+    // exceção), então aponta direto pra coisa nova.
+    target: '[data-tour="entregas-busca-card"]',
+    text: "Novo: busque um card pelo título, número, quem pediu ou campanha. Vale nas quatro visões do board.",
+    version: "4.86.0",
+  },
+  {
     id: "entregas-cards-sinais",
     route: "marketing-entregas",
     // Alvo é o botão da view Kanban, não um card: os chips que mudaram só
@@ -391,6 +401,83 @@ export const FEATURE_SPOTLIGHTS = [
   // só abre quando já quer calcular algo, e o atalho acima já leva até lá
   // contando o que mudou. Dois spotlights pro mesmo assunto na mesma rota
   // viraria ruído. Coberto pelo changelog 4.84.0.
+  {
+    id: "viagens-prestacoes-previsto",
+    route: "crm-viagens",
+    target: '[data-tour="viagens-prestacoes-previsto"]',
+    text: "Agora a prestação de contas mostra o valor que o vendedor previu na calculadora, e o quanto o gasto ficou acima ou abaixo dele — não é limite, é só contexto pra decidir.",
+    version: "4.87.0",
+  },
+  // Alvo é o CABEÇALHO da seção "Prestações a decidir", não uma linha da
+  // fila: o cabeçalho existe sempre na tela do gestor (a fila vazia só troca
+  // o conteúdo por um EmptyState), enquanto uma linha só existe em mês com
+  // prestação pendente. Ancorar numa linha faria o gestor que abrisse a tela
+  // num mês calmo consumir o spotlight em silêncio (o runtime marca órfão
+  // como visto depois do timeout) e nunca mais vê-lo. Vendedor nesta mesma
+  // rota também consome em silêncio — inevitável com âncora por rota, e sem
+  // prejuízo: o aviso é sobre uma informação que só aparece pro gestor.
+  //
+  {
+    id: "crm-busca-card",
+    route: "crm",
+    target: '[data-tour="crm-busca-card"]',
+    text: "Novo: ache um negócio digitando o nome da empresa, o setor ou o responsável. Vale nas quatro visões — Kanban, Tabela, Calendário e Análise.",
+    version: "4.90.1",
+  },
+  {
+    id: "rh-busca-card",
+    route: "rh-onboarding",
+    target: '[data-tour="rh-onboarding-busca-card"]',
+    text: "Novo: os boards de RH ganharam busca. Digite o nome do colaborador (ou cargo, departamento, vaga) e o quadro filtra na hora, em qualquer visão.",
+    version: "4.90.1",
+  },
+  // As duas entradas acima cobrem a busca de card DENTRO do board — rollout
+  // do padrão de Entregas (4.86.0) pros outros 11 boards, 01/09/2026.
+  // DELIBERADAMENTE 2, não 11: o mecanismo dispara por ROTA, então 11
+  // entradas seriam 11 avisos pra quem circula pela plataforma inteira, todos
+  // dizendo a mesma coisa. Uma por família de departamento resolve — quem
+  // entende a busca no board que usa todo dia entende nos outros. Marketing
+  // não precisa de entrada nova: já recebeu `entregas-busca-card` na 4.86.0.
+  // Os outros 9 boards receberam a mesma busca sem spotlight próprio. Pós-venda, Comex e Central de Bugs já têm o `data-tour`
+  // posto (`posvenda-busca-card`, `comex-busca-card`, `bugs-busca-card`) —
+  // atributo sem entrada aqui é inerte, não quebra nada, e deixa o alvo
+  // pronto se um dia alguém quiser destacar um deles.
+  {
+    id: "busca-global-escopo",
+    route: "dashboard",
+    target: '[data-tour="busca-global"]',
+    text: "A busca do topo agora acha cliente e entrega, além de negócio — e o texto dela passou a citar só o que VOCÊ encontra, em vez de prometer categorias travadas pro seu cargo.",
+    version: "4.89.1",
+  },
+  // Rota "dashboard" porque o gatilho vive na TopBar, presente em toda tela —
+  // qualquer rota serviria, e o dashboard é onde a maioria entra. Só desktop
+  // (o botão é `isDesktop`); no celular o spotlight não acha alvo e o runtime
+  // pula em silêncio, que é o correto: no celular a busca não tem gatilho
+  // visível pra apontar.
+  {
+    id: "crm-ia-na-analise",
+    route: "crm",
+    target: '[data-tour="crm-view-analise"]',
+    text: "\"Perguntar à IA\" saiu do botão flutuante e agora fica dentro da Análise — clique aqui. Ela responde sobre os números do funil (total, por etapa, por responsável), não sobre um negócio específico.",
+    version: "4.88.0",
+  },
+  // Alvo é o botão "Análise" do toggle de views, não o próprio "Perguntar à
+  // IA": o botão novo só existe DENTRO da view Análise, que não é a view
+  // padrão (Kanban é) — ancorar nele significaria não disparar pra quase
+  // ninguém. O toggle existe sempre na rota. Este é um caso em que o
+  // spotlight é mais necessário que o normal: o botão não é novo, ele SUMIU
+  // de onde estava, e quem já usava não tem como adivinhar sozinho pra onde
+  // foi (a regra 12 do CLAUDE.md cobre "novidade não-óbvia"; sumiço de algo
+  // familiar é o mesmo problema, do avesso).
+  //
+  // O guardrail de escopo do prompt e o rodapé do painel NÃO ganharam
+  // spotlight próprio: o texto do spotlight acima já diz sobre o que a IA
+  // responde, e o rodapé é ambiente (se lê ao usar, não se descobre
+  // clicando) — mesmo critério das colunas mais largas em 4.59.0.
+  //
+  // 4.87.0 — o fix de "Devolver para a agência" (Entregas) NÃO ganhou
+  // spotlight: é correção de algo que já deveria funcionar, mesmo critério
+  // de bug fix da regra 12 do CLAUDE.md. Coberto pelo changelog 4.87.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;

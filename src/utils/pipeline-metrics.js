@@ -115,17 +115,67 @@ export function weightedValue(lead, companyStages) {
 // Agregados determinísticos do pipeline — usado tanto pelo Chat de IA (pra
 // não deixar a LLM "chutar" conta) quanto por qualquer outra tela que
 // precise dos mesmos números. Cálculo em JS puro, sem IA envolvida.
-export function aggregatePipeline(leads, users) {
+//
+// AMPLIADO em 01/09/2026, decidido com o Daniel. Motivo: o catálogo de
+// perguntas prontas de Ajuda & Tutoriais oferecia há muito tempo 8 perguntas
+// que este agregado não tinha como responder — "quantos estão parados?",
+// "tempo médio por etapa?", "qual setor converte mais?", "ticket médio?" —
+// e a resposta certa era sempre "não tenho essa informação". Em vez de podar
+// as perguntas, o agregado passou a carregar o dado.
+//
+// Regra que não muda: a LLM NUNCA faz conta. Tudo aqui é JS determinístico, e
+// o prompt manda usar os números exatamente como estão. E continua sendo só
+// AGREGADO — nenhum negócio individual entra, então nada aqui amplia o que a
+// IA enxerga além do que a pessoa já vê na tela.
+//
+// `companyStages` é opcional: sem ele, os campos que dependem de SLA
+// (`staleCount`) saem zerados em vez de errados, e chamadas antigas de 2
+// argumentos continuam funcionando (o resumo semanal em App.jsx é uma).
+export function aggregatePipeline(leads, users, companyStages) {
   const byStageMap = new Map();
   const byOwnerMap = new Map();
-  let wonCount = 0, lostCount = 0, openValue = 0, wonValue = 0;
+  const bySectorMap = new Map();
+  let wonCount = 0, lostCount = 0, openValue = 0, wonValue = 0, staleCount = 0;
 
   for (const l of (leads || [])) {
     const stage = l.stage || "—";
-    if (!byStageMap.has(stage)) byStageMap.set(stage, { stage, count: 0, value: 0 });
+    if (!byStageMap.has(stage)) byStageMap.set(stage, { stage, count: 0, value: 0, diasSoma: 0, diasCount: 0, staleCount: 0 });
     const stageRow = byStageMap.get(stage);
     stageRow.count++;
     stageRow.value += l.value || 0;
+
+    // Tempo NA ETAPA — referência é `stageChangedAt`, não `lastActivity`:
+    // são coisas diferentes, e `daysIdle` acima mede a segunda. Um negócio
+    // pode ter atividade ontem e estar há 40 dias na mesma etapa.
+    const refEtapa = l.stageChangedAt || l.negotiationStartedAt || l.createdAt;
+    if (refEtapa) {
+      const ts = new Date(refEtapa).getTime();
+      if (!Number.isNaN(ts)) {
+        stageRow.diasSoma += Math.max(0, Math.floor((Date.now() - ts) / MS_PER_DAY));
+        stageRow.diasCount++;
+      }
+    }
+
+    // "Parado" usa exatamente o mesmo `isStale` do badge vermelho do card e
+    // do "Leads parados" da Visão Geral. Se a IA contasse por um critério
+    // próprio, ela e a tela dariam números diferentes pro mesmo board — que
+    // é pior que não ter o dado.
+    if (isStale(l, companyStages)) {
+      staleCount++;
+      stageRow.staleCount++;
+    }
+
+    // Por setor: só faz sentido com setor preenchido. Lead sem setor fica de
+    // fora da tabela em vez de virar uma linha "—" que a IA leria como um
+    // segmento real.
+    if (l.sector) {
+      if (!bySectorMap.has(l.sector)) bySectorMap.set(l.sector, { sector: l.sector, count: 0, valueOpen: 0, won: 0, lost: 0 });
+      const secRow = bySectorMap.get(l.sector);
+      secRow.count++;
+      if (l.stage === "ganho") secRow.won++;
+      else if (l.stage === "perdido") secRow.lost++;
+      else secRow.valueOpen += l.value || 0;
+    }
 
     if (l.stage === "ganho") { wonCount++; wonValue += l.value || 0; }
     else if (l.stage === "perdido") { lostCount++; }
@@ -152,7 +202,24 @@ export function aggregatePipeline(leads, users) {
     openValue,
     wonValue,
     conversionRate, // % — ganho / (ganho + perdido)
-    byStage: Array.from(byStageMap.values()),
+    // Ticket médio do que JÁ FOI GANHO (não do pipeline em aberto): é o número
+    // que responde "quanto vale um negócio fechado por aqui", e é o que o
+    // catálogo de perguntas pede. Sem nenhum ganho ainda, 0 — não NaN.
+    avgTicket: wonCount > 0 ? Math.round(wonValue / wonCount) : 0,
+    staleCount,
+    byStage: Array.from(byStageMap.values()).map(r => ({
+      stage: r.stage,
+      count: r.count,
+      value: r.value,
+      staleCount: r.staleCount,
+      avgDaysInStage: r.diasCount > 0 ? Math.round(r.diasSoma / r.diasCount) : null,
+    })),
     byOwner: Array.from(byOwnerMap.values()).sort((a, b) => b.valueWon - a.valueWon),
+    bySector: Array.from(bySectorMap.values())
+      .map(r => ({
+        ...r,
+        conversionRate: (r.won + r.lost) > 0 ? Math.round((r.won / (r.won + r.lost)) * 1000) / 10 : null,
+      }))
+      .sort((a, b) => b.count - a.count),
   };
 }
