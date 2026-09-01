@@ -24,6 +24,26 @@
 
 export const CHANGELOG = [
   {
+    version: "4.84.0",
+    items: [
+      {
+        kind: "novo",
+        text: "A calculadora de viagem agora compara o custo da viagem inteira, não só do transporte: entra a hospedagem (mesma diária, mudando só o número de noites) e, pra quem vai de avião, o carro alugado no destino. Quando você informa os locais que vai visitar, ela calcula sozinha se compensa mais alugar ou usar Uber por lá, e usa o mais barato na conta.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "novo",
+        text: "Em Viagens & Despesas, depois de montar sua agenda do mês aparece um atalho \"Quer saber o meio mais barato pra essa viagem?\" — ele abre a calculadora já com os endereços das suas saídas planejadas preenchidos, sem precisar digitar nada de novo.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "ajuste",
+        text: "Os valores de referência da calculadora (diária de hotel, categoria de carro, R$/km) saíram da frente: ficam recolhidos em \"Ajustar valores\", com faixas prontas pra escolher em vez de número pra digitar. A tela pede cinco coisas, o resto já vem sugerido.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+    ],
+  },
+  {
     version: "4.83.0",
     items: [
       {
