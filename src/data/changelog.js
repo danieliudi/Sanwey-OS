@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.87.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "No menu lateral, um departamento que voc\u00ea fecha continua fechado ao recolher o menu. Antes ele reabria sozinho no modo estreito, deixando a lista comprida justamente onde ela mais incomoda. Para ver de novo, basta expandir o menu.",
+      },
+      {
+        kind: "ajuste",
+        text: "O bot\u00e3o flutuante de criar card ficou menor e deixou de encostar na borda do menu lateral.",
+      },
+    ],
+  },
+  {
     version: "4.87.0",
     items: [
       {

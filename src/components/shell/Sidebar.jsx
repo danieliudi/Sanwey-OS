@@ -392,7 +392,15 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
                     durante o tour guiado (OnboardingTour precisa de todo
                     item alcançável, sem depender do estado de collapse que
                     cada usuário já tinha salvo). */}
-                {(!isCollapsed || rail || forceExpanded) && orderedItems(group).map((item) => (
+                {/* `rail` NÃO reabre grupo colapsado (fix de 01/09/2026,
+                    reportado pelo Daniel): antes a condição tinha `|| rail`,
+                    então recolher o menu ignorava o que a pessoa tinha
+                    fechado e a lista voltava inteira — justamente no modo
+                    estreito, onde ficar comprida incomoda mais. O efeito
+                    colateral aceito é que, no rail, não dá pra reabrir o
+                    grupo (o cabeçalho clicável só existe no menu expandido)
+                    — quem quiser ver expande o menu de volta. */}
+                {(!isCollapsed || forceExpanded) && orderedItems(group).map((item) => (
                   <NavItem
                     key={item.id}
                     id={item.id}
