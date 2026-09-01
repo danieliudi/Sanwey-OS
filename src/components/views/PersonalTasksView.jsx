@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown, Download, AlertCircle, Lock, Zap } from "lucide-react";
 import { AppToast } from "../shared/AppToast";
 import { usePersonalTasks } from "../../hooks/use-personal-tasks";
@@ -289,7 +289,7 @@ function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen
   return (
     <div className="mb-5">
       <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
-        {title} <span style={{ fontWeight: 500, textTransform: "none", letterSpacing: "normal" }}>({tasks.length})</span>
+        {title} <span style={{ fontWeight: 500, textTransform: "none", letterSpacing: "normal" }}>{tasks.length}</span>
       </div>
       {tasks.length === 0 ? (
         <div
@@ -350,8 +350,11 @@ function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, 
 }
 
 function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, onEditStageFields, blockedIds }) {
-  const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  // Sem `trailingRef`: ele existia pra descontar a altura do rodapé "Arraste
+  // para mover…", removido a pedido do Daniel (01/09/2026). O ref ficou
+  // declarado sem nunca ser preso a nenhum elemento — medida que não media
+  // nada. Achado no checkup do mesmo dia.
+  const [boardRef, boardHeight] = useAvailableHeight(16, []);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState(null);
   const { getCriteria, setCriteria } = useKanbanColumnSort("personal-tasks");
@@ -450,7 +453,7 @@ function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, o
             <div key={col.id}>
               <div className="text-xs font-bold uppercase tracking-wide mb-2 flex items-center gap-2" style={{ color: "var(--text-dim)" }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: col.color }} />
-                {col.name} ({items.length})
+                {col.name} <span style={{ fontWeight: 500 }}>{items.length}</span>
               </div>
               <div className="flex flex-col gap-2">
                 {items.map(t => (

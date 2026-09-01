@@ -28,7 +28,6 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
-import { Badge } from "../ui/Badge";
 import { EmptyState } from "../ui/EmptyState";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";

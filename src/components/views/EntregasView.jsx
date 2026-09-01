@@ -21,6 +21,7 @@ import {
 } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatDateBR, localDateInputToISOString, parseDateInput, daysSince } from "../../utils/date";
+import { isOverdueDeliverable, isDueSoon } from "../../utils/deliverable-status";
 import { useUsersById }  from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -73,15 +74,7 @@ function isStuckInRevisao(d) {
 // entrega que vence HOJE já contava como vencida às 21h de ontem, no card e
 // no filtro. `daysSince` usa `parseDateInput`, que monta a data em horário
 // local — vencer hoje deixa de ser atraso.
-function isOverdueDeliverable(d) {
-  return Boolean(d.deadline) && daysSince(d.deadline) > 0;
-}
-
-function isDueSoon(d) {
-  if (!d.deadline) return false;
-  const days = daysSince(d.deadline);
-  return days <= 0 && days >= -7;
-}
+// (movidos para src/utils/deliverable-status.js — ver comentário longo lá)
 
 /* ── Create modal ────────────────────────────────────────────── */
 function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd, onClose }) {
@@ -346,7 +339,7 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
       }}
       metaRight={(item) => {
         const resolvedOwners = getDeliverableAssigneeIds(item).map(id => usersById.get(id)).filter(Boolean);
-        const isOverdue = item.deadline && new Date(item.deadline) < new Date();
+        const isOverdue = isOverdueDeliverable(item);
         return (
           <>
             {resolvedOwners.length > 0 && <AvatarStack users={resolvedOwners} size={18} max={2} />}
@@ -378,7 +371,7 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
             const priColor = PRIORITY_COLORS[item.priority] || null;
             const resolvedOwners = getDeliverableAssigneeIds(item).map(id => usersById.get(id)).filter(Boolean);
             const campaign = item.campaignId ? campaignsById.get(item.campaignId) : null;
-            const isOverdue = item.deadline && new Date(item.deadline) < new Date();
+            const isOverdue = isOverdueDeliverable(item);
             return (
               <tr key={item.id} onClick={() => onRowClick(item)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
@@ -1373,8 +1366,8 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
           specificStats={[
             {
               label: "Atrasadas",
-              value: String(filtered.filter(d => d.deadline && new Date(d.deadline) < new Date()).length),
-              color: filtered.some(d => d.deadline && new Date(d.deadline) < new Date()) ? "var(--danger)" : undefined,
+              value: String(filtered.filter(isOverdueDeliverable).length),
+              color: filtered.some(isOverdueDeliverable) ? "var(--danger)" : undefined,
             },
           ]}
         />

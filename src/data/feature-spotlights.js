@@ -421,7 +421,7 @@ export const FEATURE_SPOTLIGHTS = [
     id: "crm-busca-card",
     route: "crm",
     target: '[data-tour="crm-busca-card"]',
-    text: "Novo: ache um negócio digitando o nome da empresa, o setor ou o responsável. Vale nas quatro visões — Kanban, Tabela, Calendário e Análise.",
+    text: "Novo: ache um negócio digitando o nome da empresa ou o responsável. Vale nas quatro visões — Kanban, Tabela, Calendário e Análise.",
     version: "4.90.1",
   },
   {
@@ -438,7 +438,10 @@ export const FEATURE_SPOTLIGHTS = [
   // dizendo a mesma coisa. Uma por família de departamento resolve — quem
   // entende a busca no board que usa todo dia entende nos outros. Marketing
   // não precisa de entrada nova: já recebeu `entregas-busca-card` na 4.86.0.
-  // Os outros 9 boards receberam a mesma busca sem spotlight próprio. Pós-venda, Comex e Central de Bugs já têm o `data-tour`
+  // Os demais boards receberam a mesma busca sem spotlight próprio (esta
+  // linha citava "9", e a spec do rollout citava 11 no título e listava 12 —
+  // três contagens diferentes pro mesmo conjunto. O número exato não muda
+  // nada aqui e envelhece a cada board novo, então some). Pós-venda, Comex e Central de Bugs já têm o `data-tour`
   // posto (`posvenda-busca-card`, `comex-busca-card`, `bugs-busca-card`) —
   // atributo sem entrada aqui é inerte, não quebra nada, e deixa o alvo
   // pronto se um dia alguém quiser destacar um deles.

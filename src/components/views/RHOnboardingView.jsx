@@ -21,7 +21,7 @@ import { useProfiles } from "../../hooks/use-profiles";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { nextPendingCycle } from "../../utils/rh-feedback-cycles";
-import { parseDateInput, formatDateBR, daysSince } from "../../utils/date";
+import { parseDateInput, formatDateBR, daysSince, toLocalISODate } from "../../utils/date";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
@@ -490,7 +490,7 @@ function OnboardingDrawer({
 
   const handleAddTask = () => {
     if (!novaTarefa.trim()) return;
-    onAddTask(colaborador.id, [{ titulo: novaTarefa.trim(), dataLimite: addDays(new Date().toISOString().slice(0, 10), novoPrazo), responsavelIds: novoResponsavelIds }]);
+    onAddTask(colaborador.id, [{ titulo: novaTarefa.trim(), dataLimite: addDays(toLocalISODate(new Date()), novoPrazo), responsavelIds: novoResponsavelIds }]);
     setNovaTarefa("");
     setNovoPrazo(7);
     setNovoResponsavelIds([]);
@@ -502,7 +502,7 @@ function OnboardingDrawer({
     // Marcos ancorados na data de admissão (trilha ISO 10/45/60): "D+N" passa a
     // significar N dias APÓS a admissão, não após a data de aplicação. Sem
     // admissão cadastrada, cai no fallback de hoje.
-    const anchor = colaborador.admissionDate ? String(colaborador.admissionDate).slice(0, 10) : new Date().toISOString().slice(0, 10);
+    const anchor = colaborador.admissionDate ? String(colaborador.admissionDate).slice(0, 10) : toLocalISODate(new Date());
     onApplyTemplate(colaborador.id, tpl.checklist_padrao.map((i) => ({ titulo: i.titulo, dataLimite: addDaysLocalISO(anchor, i.dias_prazo) })), tpl.id);
     setTemplateId("");
   };
@@ -589,7 +589,12 @@ function OnboardingDrawer({
           <>
             {templates.length > 0 && tarefas.length === 0 && (
               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: 1 }}>
+                <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: "1 1 0", minWidth: 0 }}>
+                  {/* `flex: 1 1 0` + `minWidth: 0`, não `flex: 1` seco: um <select>
+                      tem largura mínima intrínseca igual à da opção mais longa e não
+                      encolhe abaixo dela como item flex. O rótulo do template é
+                      cargo + trilha, digitado pelo RH — num drawer estreito, o botão
+                      "Aplicar" saía do card. Achado no checkup de 01/09/2026. */}
                   <option value="">Aplicar template…</option>
                   {templates.map((t) => {
                     const base = t.cargo || RH_FRENTE_LABELS[t.frente] || t.frente || "Template";
@@ -858,13 +863,21 @@ function BulkTarefaModal({ colaboradores, onApply, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const ids = [...selected];
+    // Só quem está VISÍVEL no filtro de frente. `selected` nasce com todo
+    // mundo marcado e o filtro nunca o podava, então a tela mostrava
+    // "Destinatários (5/5)" e o botão dizia "Enviar a 40" — e enviava aos 40.
+    // Achado da varredura de 01/09/2026, mesma classe do bug de Recrutamento
+    // (ação em massa alcançando quem o filtro escondeu).
+    const ids = visiveis.filter((c) => selected.has(c.id)).map((c) => c.id);
     if (!titulo.trim()) { setError("Descreva a tarefa."); return; }
     if (ids.length === 0) { setError("Selecione ao menos um colaborador."); return; }
     setSaving(true);
     setError(null);
     try {
-      const dataLimite = addDays(new Date().toISOString().slice(0, 10), prazoDias);
+      // `toLocalISODate`, não `toISOString().slice(0,10)`: o segundo grava o
+      // dia UTC, então depois das 21h em BRT o prazo do checklist nascia um
+      // dia à frente do que a pessoa escolheu.
+      const dataLimite = addDays(toLocalISODate(new Date()), prazoDias);
       await onApply(ids, [{ titulo: titulo.trim(), dataLimite }]);
       setDone(ids.length);
     } catch (err) {
@@ -941,7 +954,9 @@ function BulkTarefaModal({ colaboradores, onApply, onClose }) {
 
             <div style={{ padding: "12px 24px 20px", display: "flex", gap: 8, borderTop: "1px solid var(--border)" }}>
               <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
-                {saving ? "Enviando…" : `Enviar a ${selected.size}`}
+                {/* `selVisiveis`, não `selected.size` — o botão tem que dizer
+                    o mesmo número que o rótulo "Destinatários" logo acima. */}
+                {saving ? "Enviando…" : `Enviar a ${selVisiveis}`}
               </button>
               <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
             </div>

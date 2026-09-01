@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
+import { toLocalISODate } from "../../utils/date";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 
 const PRIORITIES = ["Alta", "Média", "Baixa"];
@@ -40,7 +41,7 @@ function formatPhone(digits) {
 }
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return toLocalISODate(new Date());
 }
 
 // Achado N-03 da auditoria funcional (19/08/2026): o slug público usa o id

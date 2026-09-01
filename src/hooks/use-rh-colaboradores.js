@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
+import { toLocalISODate } from "../utils/date";
 
 // Mapeia snake_case do banco para camelCase — mesmo padrão de use-leads.js.
 function rowToColaborador(r) {
@@ -148,7 +149,7 @@ export function useRHColaboradores({ userId, enabled = true } = {}) {
     // sobrescreve se já tiver sido definida (ex: ajuste manual do RH).
     const merged = { ...current, ...patch };
     if (merged.employeeStatus === "desligado" && !merged.desligamentoDate) {
-      merged.desligamentoDate = new Date().toISOString().slice(0, 10);
+      merged.desligamentoDate = toLocalISODate(new Date());
     }
     const dbPatch = colaboradorToRow(merged, { updated_at: new Date().toISOString() });
     const { data, error } = await supabase.from("rh_colaboradores").update(dbPatch).eq("id", id).select();

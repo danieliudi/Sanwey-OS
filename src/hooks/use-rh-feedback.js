@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
+import { toLocalISODate } from "../utils/date";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -42,7 +43,7 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
 
   // Fluxo manual "Novo feedback": cria e já fecha num passo só (ad-hoc).
   const createFeedback = useCallback(async (data) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toLocalISODate(new Date());
     const row = {
       user_id: data.colaboradorId,
       evaluator_id: userId,

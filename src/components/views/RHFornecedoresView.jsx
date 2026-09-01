@@ -7,7 +7,7 @@ import { AgentBuilderWizard } from "../agents/AgentBuilderWizard";
 import { useRHSuppliers } from "../../hooks/use-rh-suppliers";
 import { useProfiles } from "../../hooks/use-profiles";
 import { formatK } from "../../utils/currency";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, toLocalISODate } from "../../utils/date";
 import { contratoFornecedorDiasParaVencer } from "../../utils/rh-compliance-dates";
 import { ROUTES } from "../../constants/routes";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -229,7 +229,7 @@ function NovoContratoModal({ fornecedorId, users, onSave, onClose }) {
 }
 
 function NovoEventoForm({ contratoId, onSave, onDone }) {
-  const [form, setForm] = useState({ tipo: "fatura", valorAnterior: "", valorNovo: "", descricao: "", dataEvento: new Date().toISOString().slice(0, 10) });
+  const [form, setForm] = useState({ tipo: "fatura", valorAnterior: "", valorNovo: "", descricao: "", dataEvento: toLocalISODate(new Date()) });
   const [saving, setSaving] = useState(false);
 
   const submit = async (e) => {

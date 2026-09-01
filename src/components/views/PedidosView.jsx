@@ -180,7 +180,7 @@ export function PedidosView({
                 <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
                   <div>
                     <span className="text-[12px] font-bold" style={{ color: "var(--text)" }}>{col.name}</span>
-                    <span className="text-[11px] font-semibold ml-1.5" style={{ color: "var(--text-dim)" }}>({daColuna.length})</span>
+                    <span className="text-[11px] font-semibold ml-1.5" style={{ color: "var(--text-dim)" }}>{daColuna.length}</span>
                   </div>
                   {soma > 0 && (
                     <span className="text-[10.5px] font-semibold" style={{ color: "var(--text-dim)" }}>{formatBRL(soma)}</span>

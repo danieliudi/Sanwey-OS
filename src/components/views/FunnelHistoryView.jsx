@@ -375,16 +375,21 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                   : "—";
                 const companyMeta = COMPANIES[lead.companyId];
                 return (
+                  // A 1ª coluna é `sticky` e herda o fundo da linha. O estado
+                  // de repouso precisa ser um fundo OPACO de verdade: com
+                  // `background: ""` a linha ficava transparente e as colunas
+                  // de data passavam por baixo da coluna fixa ao rolar na
+                  // horizontal. Achado no checkup de 01/09/2026.
                   <tr
                     key={lead.id}
                     className="border-b"
-                    style={{ borderColor: "var(--border)", transition: "background 100ms" }}
+                    style={{ borderColor: "var(--border)", transition: "background 100ms", background: "var(--surface)" }}
                     onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = ""; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
                   >
                     <td
                       className="px-3 py-2 sticky left-0"
-                      style={{ background: "inherit", minWidth: 240 }}
+                      style={{ background: "inherit", minWidth: 240, zIndex: 1 }}
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-semibold" style={{ color: "var(--text)" }}>

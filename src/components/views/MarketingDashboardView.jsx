@@ -35,6 +35,7 @@ import { StatCardGrid } from "../shared/StatCardGrid";
 import { greetingFor } from "../../utils/greeting";
 import { exportCampaignsToCSV } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
+import { isOverdueDeliverable, wasDeliveredOnTime } from "../../utils/deliverable-status";
 
 // ── Date helpers ────────────────────────────────────────────────────────────────
 
@@ -303,8 +304,7 @@ function CategoryDonut({ expenses }) {
 // só a renderização sai daqui.
 function computeAgencyMetrics(deliverables) {
   const done = deliverables.filter(d => d.stage === "entregue");
-  const onTime = done.filter(d => d.deadline && d.stageChangedAt &&
-    new Date(d.stageChangedAt) <= new Date(d.deadline));
+  const onTime = done.filter(wasDeliveredOnTime);
   const sla = done.length > 0 ? Math.round((onTime.length / done.length) * 100) : null;
   const times = done.map(d => d.createdAt && d.stageChangedAt
     ? (new Date(d.stageChangedAt) - new Date(d.createdAt)) / 86400000 : null)
@@ -313,11 +313,9 @@ function computeAgencyMetrics(deliverables) {
   return { sla, avgLead, total: done.length };
 }
 
-// Mesmo critério de "atrasada" já usado no badge do card
-// (`DeliverableKanbanCard`) e na coluna Prazo da Tabela de `EntregasView.jsx`.
-function isDeliverableLate(d) {
-  return Boolean(d.deadline) && new Date(d.deadline) < new Date();
-}
+// `isDeliverableLate` era uma 3ª variante do mesmo critério — e a única
+// errada das três (UTC). Agora aponta pro util compartilhado.
+const isDeliverableLate = isOverdueDeliverable;
 
 // Mesmo critério do card "Presas em revisão" de antes (idêntico ao que já
 // alimentava `AgencyMetrics.stuck`) — usado pra manter em sincronia com o

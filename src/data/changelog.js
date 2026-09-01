@@ -24,6 +24,47 @@
 
 export const CHANGELOG = [
   {
+    version: "4.90.4",
+    items: [
+      {
+        kind: "correcao",
+        text: "Aviso de erro deixou de nascer atrás do painel de detalhe. Em Comex, Pós-venda, Férias, Campanhas e Tarefas, quando uma gravação era recusada, o aviso vermelho aparecia por baixo da tela escurecida — você clicava, nada acontecia e não havia como saber por quê. Agora ele aparece por cima de qualquer painel ou janela aberta.",
+      },
+      {
+        kind: "correcao",
+        text: "Envio em massa no Onboarding passou a respeitar a busca. Se você selecionava vários colaboradores e depois digitava algo no campo de busca, o envio de convite valia também para quem a busca tinha escondido. Mesma correção já feita em Recrutamento; agora vale também para a seleção em massa de Funcionários.",
+        roles: ["rh", "gerente_rh"],
+      },
+      {
+        kind: "correcao",
+        text: "Datas gravadas depois das 21h deixaram de cair no dia seguinte. Data de desligamento, prazo de checklist de onboarding, data de evento de contrato de fornecedor, ata de visita e mais uma dezena de campos gravavam a data no fuso de Londres — quem lançava à noite via o dia errado no cadastro. O lembrete de \"vence hoje\" pelo sino, pelo mesmo motivo, tocava um dia antes.",
+      },
+      {
+        kind: "correcao",
+        text: "Em Entregas, \"atrasada\" quer dizer a mesma coisa em toda a tela. O filtro \"Atrasadas\" contava certo, mas a coluna Prazo, o chip da Lista, o número da aba Análise e o Painel de Marketing usavam outra conta e pintavam de vermelho, a partir das 21h, entregas que vencem hoje. O \"SLA cumprido\" do Painel de Marketing também subestimava: entrega concluída no próprio dia do prazo contava como fora do prazo.",
+        roles: ["marketing", "gerente_marketing", "agencia"],
+      },
+      {
+        kind: "correcao",
+        text: "Filtros de board pararam de empurrar os botões para fora da linha. Um nome de responsável ou de campanha muito longo esticava o campo de filtro sem limite — visível em Entregas, Tarefas de Marketing, Treinamentos e Pedidos.",
+      },
+      {
+        kind: "correcao",
+        text: "Esc fecha uma janela por vez. No cadastro de colaborador e na captura de documento, apertar Esc fechava a janela e o painel por trás dela de uma vez só.",
+        roles: ["rh", "gerente_rh"],
+      },
+      {
+        kind: "correcao",
+        text: "No Histórico do funil, a primeira coluna (cliente) deixou de ficar transparente ao rolar para o lado — as colunas de data passavam por baixo dela.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "ajuste",
+        text: "Textos que prometiam mais do que a tela faz foram corrigidos: a busca do Funil acha por empresa e responsável (não por setor), a busca do catálogo de Treinamentos é por título do treinamento, e o chat de IA do funil também responde sobre prática de vendas, não só sobre os números. A contagem de cards do Meu To-do ficou igual no computador e no celular.",
+      },
+    ],
+  },
+  {
     version: "4.90.3",
     items: [
       {
@@ -65,7 +106,7 @@ export const CHANGELOG = [
       },
       {
         kind: "novo",
-        text: "Todos os boards ganharam BUSCA. Digite no campo ao lado do t\u00edtulo e o quadro filtra na hora \u2014 e vale nas quatro vis\u00f5es (Kanban, Tabela, Calend\u00e1rio e An\u00e1lise), n\u00e3o s\u00f3 no Kanban. Cada board busca pelo que o card mostra: neg\u00f3cio por empresa, setor ou respons\u00e1vel; caso de p\u00f3s-venda por cliente; solicita\u00e7\u00e3o de compra por item, n\u00famero ou fornecedor; colaborador por nome, cargo ou departamento; e assim por diante.",
+        text: "Todos os boards ganharam BUSCA. Digite no campo ao lado do t\u00edtulo e o quadro filtra na hora \u2014 e vale nas quatro vis\u00f5es (Kanban, Tabela, Calend\u00e1rio e An\u00e1lise), n\u00e3o s\u00f3 no Kanban. Cada board busca pelo que o card mostra: neg\u00f3cio por empresa ou respons\u00e1vel; caso de p\u00f3s-venda por cliente; solicita\u00e7\u00e3o de compra por item, n\u00famero ou fornecedor; colaborador por nome, cargo ou departamento; e assim por diante.",
       },
       {
         kind: "ajuste",

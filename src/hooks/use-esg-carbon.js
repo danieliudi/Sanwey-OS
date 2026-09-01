@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { toLocalISODate } from "../utils/date";
 
 // Fase 1 do módulo ESG & Carbono (docs/PRD, mockup aprovado 07/08/2026):
 // fatores de emissão versionados por vigência, registros de emissão
@@ -138,7 +139,7 @@ export function useEsgEmissionFactors() {
   }, [factors, fetchAll]);
 
   const activeFactorFor = useCallback((category, scope, atDate) => {
-    const ref = atDate || new Date().toISOString().slice(0, 10);
+    const ref = atDate || toLocalISODate(new Date());
     return factors.find(f =>
       f.category === category && f.scope === scope &&
       f.validFrom <= ref && (!f.validTo || f.validTo > ref)

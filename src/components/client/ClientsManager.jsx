@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Users, X, Database, History, List, MessageCircle, Receipt, Loader2, AlertTriangle, CheckCircle2, Mic } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, Database, History, List, MessageCircle, Receipt, Loader2, AlertTriangle, CheckCircle2, Mic } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { AppToast } from "../shared/AppToast";
 import { EntityProfileModal } from "../shared/EntityProfileModal";

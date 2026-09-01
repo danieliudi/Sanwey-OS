@@ -30,7 +30,7 @@ import { useCRMViagemPrestacoes } from "../../hooks/use-crm-viagem-prestacoes";
 import { useCRMViagemCategorias } from "../../hooks/use-crm-viagem-categorias";
 import { useAI } from "../../hooks/use-ai";
 import { receiptExtractionPrompt } from "../../constants/ai-prompts";
-import { formatDateBR, parseDateInput } from "../../utils/date";
+import { formatDateBR, parseDateInput, toLocalISODate } from "../../utils/date";
 import { STATUS_VISITA, STATUS_REEMBOLSO, STATUS_PRESTACAO, TIPO_SAIDA, fmtMoney } from "../../utils/viagens";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { Badge } from "../ui/Badge";
@@ -1367,7 +1367,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   // calculadora manda como paradas. Só as próprias e só as planejadas: já
   // realizada não se calcula, e de outro vendedor não é da conta desta tela.
   const visitasPlanejadasFuturas = useMemo(() => {
-    const hoje = new Date().toISOString().slice(0, 10);
+    const hoje = toLocalISODate(new Date());
     return registrosProprios
       .filter((r) => r.status === "planejado" && r.data_planejada && r.data_planejada >= hoje && (r.destino_planejado || "").trim())
       .sort((a, b) => a.data_planejada.localeCompare(b.data_planejada));

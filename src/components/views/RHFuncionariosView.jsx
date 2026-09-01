@@ -49,7 +49,7 @@ import { TableDensityToggle } from "../shared/TableDensityToggle";
 import { useTableDensity } from "../../hooks/use-table-density";
 import { csvRow, triggerDownload, formatDate as formatCSVDate } from "../../utils/export-csv";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, toLocalISODate } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
 import { matchDocumentToColaborador } from "../../utils/rh-document-matching";
 import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
@@ -1064,7 +1064,7 @@ function EmployeeDetailModal({
       if (colaboradorRow && onUpdateColaborador) {
         const desligPatch = form.employee_status === "desligado" ? {
           desligamentoTipo: form.desligamento_tipo || null,
-          desligamentoDate: form.desligamento_date || new Date().toISOString().slice(0, 10),
+          desligamentoDate: form.desligamento_date || toLocalISODate(new Date()),
           desligamentoMotivo: form.desligamento_motivo || null,
           desligamentoMeta: form.desligamento_meta || {},
         } : {};
@@ -1746,10 +1746,34 @@ export function RHFuncionariosView({
     return next;
   });
 
+  // A seleção em massa acompanha o FILTRO, não a lista crua.
+  //
+  // Varredura de plataforma de 01/09/2026: era a mesma classe do bug de
+  // Recrutamento (selecionar 40, buscar, sobram 2 na tela, e a ação valia
+  // pros 40). Aqui a ação é "Alterar status", e um dos status possíveis é
+  // `desligado` — gravado no cadastro de uma PESSOA. O modal de confirmação
+  // mostra só a contagem, nunca os nomes, então não havia como perceber.
+  //
+  // Duas metades, as duas necessárias:
+  //   1. `bulkRows` deriva de `filtered` (o que a pessoa vê), não de
+  //      `unifiedRows` — assim a ação nunca alcança quem sumiu da tela.
+  //   2. O efeito abaixo poda `bulkSelected` quando o filtro muda, pra
+  //      contagem do rótulo ("N selecionado(s)") não mentir enquanto a ação
+  //      já estaria agindo sobre menos gente.
   const bulkRows = useMemo(
-    () => unifiedRows.filter((u) => bulkSelected.has(u.id)),
-    [unifiedRows, bulkSelected]
+    () => filtered.filter((u) => bulkSelected.has(u.id)),
+    [filtered, bulkSelected]
   );
+
+  useEffect(() => {
+    const visiveis = new Set(filtered.map((u) => u.id));
+    setBulkSelected((prev) => {
+      const next = new Set([...prev].filter((id) => visiveis.has(id)));
+      // Mesma referência quando nada mudou: `new Set` a cada render entraria
+      // em loop de re-render.
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filtered]);
 
   const exportRowsCSV = (rows, filename) => {
     const header = ["Funcionário", "E-mail", "Cargo", "Frente", "Departamento", "Contrato", "Status", "Admissão", "Acesso ao sistema"];

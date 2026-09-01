@@ -4,6 +4,7 @@ import { STORAGE_KEYS } from "../constants/storage-keys";
 import { NOTIFICATION_TYPE_TO_PREF } from "../constants/user-settings";
 import { getLeadOwnerIds } from "../utils/pipeline-metrics";
 import { isTaskDone } from "../constants/personal-tasks";
+import { parseDateInput } from "../utils/date";
 
 const MAX_NOTIFICATIONS = 50;
 
@@ -99,7 +100,11 @@ export function useNotifications({ currentUser, leads = [], personalTasks = [], 
     const myLeads = leads.filter(l => getLeadOwnerIds(l).includes(currentUser.id) && l.nextFollowUp);
     for (const lead of myLeads) {
       const today = new Date().toDateString();
-      const followUpDate = new Date(lead.nextFollowUp).toDateString();
+      // parseDateInput, não `new Date(...)`: coluna `date` chega como
+      // "AAAA-MM-DD" puro e `new Date` interpreta isso como meia-noite UTC —
+      // em BRT (UTC-3) isso é 21h do dia ANTERIOR, então o alerta de
+      // "follow-up hoje" disparava um dia antes.
+      const followUpDate = parseDateInput(lead.nextFollowUp).toDateString();
       if (followUpDate === today) {
         const key = `followup-${lead.id}-${today}`;
         if (!seenLeadIds.current.has(key)) {
@@ -138,7 +143,7 @@ export function useNotifications({ currentUser, leads = [], personalTasks = [], 
     const today = new Date().toDateString();
     for (const task of personalTasks) {
       if (isTaskDone(task.status) || !task.dueDate) continue;
-      if (new Date(task.dueDate).toDateString() !== today) continue;
+      if (parseDateInput(task.dueDate).toDateString() !== today) continue;  // idem follow-up acima: coluna `date` em UTC voltaria um dia
       const key = `task_due-${task.id}-${today}`;
       if (seenTaskIds.current.has(key)) continue;
       seenTaskIds.current.add(key);

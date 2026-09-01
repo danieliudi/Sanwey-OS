@@ -1,3 +1,5 @@
+import { daysSince } from "../utils/date";
+
 // System prompt base para todos os recursos de IA do CRM
 const SYSTEM_BASE = `Você é um assistente de vendas B2B especializado.
 Responda sempre em português brasileiro. Seja conciso, direto e prático.
@@ -491,7 +493,7 @@ export function deliverableStageSuggestionPrompt(item) {
     : 0;
 
   const deadlineDays = item.deadline
-    ? Math.floor((new Date(item.deadline) - Date.now()) / 86400000)
+    ? -daysSince(item.deadline)  // daysSince usa parseDateInput (local); new Date("AAAA-MM-DD") seria UTC
     : null;
 
   const stageData = item.stageData?.[item.stage] || {};

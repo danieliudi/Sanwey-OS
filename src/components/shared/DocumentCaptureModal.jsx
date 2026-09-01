@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { Camera, X, RotateCcw, Loader2, AlertTriangle, Upload } from "lucide-react";
 import { assessImageQuality } from "../../utils/image-quality";
 
@@ -49,11 +50,9 @@ export function DocumentCaptureModal({ onCapture, onClose, title = "Capturar doc
     };
   }, []);
 
-  useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
+  // Ver comentário em use-esc-to-close.js: este modal abre por cima de
+  // drawers/modais e um listener próprio fechava a pilha inteira num ESC só.
+  useEscToClose(onClose);
 
   const processFile = useCallback(async (file) => {
     setPhase("checking");

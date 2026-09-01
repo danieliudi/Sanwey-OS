@@ -138,6 +138,17 @@ export function defaultModulesForRoles(roles) {
   // Suporte comercial "puro" opera pedido e mantém o catálogo — não vende.
   // Sem funil, sinais nem prospecção: o RLS já limitava o dado, isto enxuga
   // o menu pra função que a pessoa realmente exerce.
+  //
+  // DIVERGÊNCIA CONHECIDA (checkup de 01/09/2026), pendente de decisão do
+  // Daniel — NÃO "corrigir" por conta própria: "clients" está liberado aqui,
+  // mas a policy `clients_read` (baseline) só admite admin/gerente/vendedor.
+  // Ou seja, suporte puro vê o item "Clientes" no menu e abre uma tela que a
+  // RLS devolve VAZIA. As duas saídas são decisões, não bugs de código:
+  // (a) incluir 'suporte' em `clients_read` (mudança de RLS, regra 5), ou
+  // (b) tirar "clients" desta lista (some um item do menu, regra 3).
+  // O escopo da busca global (App.jsx `searchScopes.clients`) segue a RLS,
+  // não esta lista — de propósito: prometer menos é melhor que prometer
+  // um resultado que nunca vem.
   if (f.isPureSuporte) {
     ["pedidos", "clients", "catalogo"].forEach(m => set.add(m));
   } else if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {

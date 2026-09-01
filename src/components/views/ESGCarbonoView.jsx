@@ -9,7 +9,7 @@ import { StatCard } from "../ui/StatCard";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, toLocalISODate } from "../../utils/date";
 import { csvRow, triggerDownload } from "../../utils/export-csv";
 
 // Fase 1 do módulo ESG & Carbono — mockup aprovado 07/08/2026 (rigor de
@@ -594,7 +594,7 @@ function NovoFatorModal({ open, onClose, onSave, currentUser }) {
   const [factorValue, setFactorValue] = useState("");
   const [gwp, setGwp] = useState("1");
   const [source, setSource] = useState("");
-  const [validFrom, setValidFrom] = useState(new Date().toISOString().slice(0, 10));
+  const [validFrom, setValidFrom] = useState(toLocalISODate(new Date()));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 

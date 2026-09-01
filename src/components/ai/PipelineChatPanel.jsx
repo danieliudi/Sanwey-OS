@@ -277,7 +277,7 @@ export function PipelineChatPanel({ leads, users, stages, currentUser, isOpen, o
               gerada. Hex solto trocado por token na mesma edição. */}
           <p className="text-[10px] mt-1.5 text-center leading-relaxed" style={{ color: "var(--text-dim)" }}>
             Enter para enviar · Shift+Enter para nova linha<br />
-            Responde só sobre os números deste funil. Resposta gerada por IA — confira antes de decidir.
+            Responde sobre os números deste funil e sobre como vender neles. Resposta gerada por IA — confira antes de decidir.
           </p>
         </div>
       </div>

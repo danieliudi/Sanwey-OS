@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, X, ArrowRight } from "lucide-react";
 import { Badge } from "../ui/Badge";
 
@@ -15,10 +16,15 @@ export function ChangelogToast({ items, onDismiss, onViewAll }) {
   if (!items || items.length === 0) return null;
   const shown = [...items].sort((a, b) => (KIND_PRIORITY[a.kind] ?? 1) - (KIND_PRIORITY[b.kind] ?? 1)).slice(0, 3);
 
-  return (
+  // 2100, portalado — mesma razão do AppToast (ver comentário longo lá):
+  // `z-50` perdia por aritmética pra escala inline de ~40 modais feitos à mão
+  // (999 a 2101), então "Novidades" sumia com qualquer um deles aberto.
+  // Fica 100 ABAIXO do AppToast (2200) de propósito: se um erro e um aviso de
+  // novidade coincidirem, o erro é o que precisa ser lido.
+  const node = (
     <div
-      className="fixed z-50 rounded-2xl overflow-hidden"
-      style={{ bottom: 20, right: 20, width: 440, maxWidth: "92vw", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-pop)" }}
+      className="fixed rounded-2xl overflow-hidden"
+      style={{ zIndex: 2100, bottom: 20, right: 20, width: 440, maxWidth: "92vw", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-pop)" }}
     >
       <div className="flex items-center gap-3" style={{ padding: "18px 20px 14px" }}>
         <span className="shrink-0 flex items-center justify-center" style={{ width: 38, height: 38, borderRadius: 10, background: "var(--accent-tint)", color: "var(--accent)" }}>
@@ -64,6 +70,8 @@ export function ChangelogToast({ items, onDismiss, onViewAll }) {
       </div>
     </div>
   );
+
+  return typeof document === "undefined" ? node : createPortal(node, document.body);
 }
 
 export default ChangelogToast;

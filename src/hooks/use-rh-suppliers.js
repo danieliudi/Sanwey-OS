@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
+import { toLocalISODate } from "../utils/date";
 
 // Fornecedores de RH (convênio médico, seguradora, terceirizada) com
 // contrato real (vigência/valor/status) + histórico de eventos (reajuste,
@@ -160,7 +161,7 @@ export function useRHSuppliers({ userId, enabled = true } = {}) {
       valor_anterior: evento.valorAnterior ?? null,
       valor_novo: evento.valorNovo ?? null,
       descricao: evento.descricao ?? null,
-      data_evento: evento.dataEvento || new Date().toISOString().slice(0, 10),
+      data_evento: evento.dataEvento || toLocalISODate(new Date()),
       created_by: userId ?? null,
     }).select().single();
     if (error) throw new Error(error.message);

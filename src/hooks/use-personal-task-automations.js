@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { isTaskDone } from "../constants/personal-tasks";
+import { toLocalISODate } from "../utils/date";
 
 const TABLE = "personal_task_automations";
 
@@ -162,7 +163,7 @@ export function usePersonalTaskAutomations(userId) {
             title: (action.title || "Nova tarefa").replace("{título}", task.title || ""),
             priority: action.priority || "media",
             dueDate: Number.isInteger(action.dueInDays)
-              ? new Date(Date.now() + action.dueInDays * 86400000).toISOString().slice(0, 10)
+              ? toLocalISODate(new Date(Date.now() + action.dueInDays * 86400000))
               : null,
             ruleName: rule.name,
           });

@@ -35,7 +35,7 @@ import {
   RH_ESCALA_TYPES,
 } from "../../constants/rh-config";
 import { exportVagasToCSV, exportCandidatosToCSV } from "../../utils/export-csv";
-import { formatDateBR, daysSince } from "../../utils/date";
+import { formatDateBR, daysSince, toLocalISODate } from "../../utils/date";
 import { RHJornadaEditor, formatScheduleBlocks } from "../rh-pipeline/RHJornadaEditor";
 import { RHBenefitsPicker } from "../rh-pipeline/RHBenefitsPicker";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -2907,7 +2907,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
         (t) => t.cargo && t.cargo.toLowerCase() === vaga.job_title.toLowerCase()
       );
       if (template && Array.isArray(template.checklist_padrao) && template.checklist_padrao.length > 0) {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = toLocalISODate(new Date());
         await applyChecklist(
           novo.id,
           template.checklist_padrao.map((i) => ({ titulo: i.titulo, dataLimite: addDays(today, i.dias_prazo) })),

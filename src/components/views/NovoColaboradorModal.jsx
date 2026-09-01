@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check, Camera, Trash2 } from "lucide-react";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
@@ -101,11 +102,11 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
     onClose();
   }, [onClose]);
 
-  useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") guardedClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [guardedClose]);
+  // useEscToClose (pilha LIFO) em vez de listener próprio: com listener
+  // solto no document, ESC dentro deste modal aberto POR CIMA de um drawer
+  // fechava os dois de uma vez. O hook compartilhado só dispara o overlay do
+  // topo e chama stopPropagation na captura.
+  useEscToClose(guardedClose);
 
   const set = (key, val) => {
     setForm((f) => ({ ...f, [key]: val }));

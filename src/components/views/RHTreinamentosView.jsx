@@ -1679,7 +1679,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
                   search={{
                     value: catalogQuery,
                     onChange: (e) => setCatalogQuery(e.target.value),
-                    placeholder: "Buscar treinamento ou colaborador…",
+                    placeholder: "Buscar treinamento…",  // o catálogo filtra por título; a busca por colaborador é a do Kanban (linha ~1344)
                   }}
                 />
               </div>

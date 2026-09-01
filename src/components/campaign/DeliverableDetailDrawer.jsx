@@ -9,6 +9,7 @@ import {
 import { NEUTRAL, marketingUnitLabel } from "../../constants/companies";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
+import { isOverdueDeliverable } from "../../utils/deliverable-status";
 import { stageTextColor } from "../../utils/stage-colors";
 import { useDeliverableAttachments }  from "../../hooks/use-deliverable-attachments";
 import { useDeliverableChecklists }   from "../../hooks/use-deliverable-checklists";
@@ -773,7 +774,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prazo</div>
             {item.deadline
-              ? <span style={{ fontSize: 13, fontWeight: 600, color: new Date(item.deadline) < new Date() ? "var(--danger)" : "var(--text)" }}>{formatDateBR(item.deadline)}</span>
+              ? <span style={{ fontSize: 13, fontWeight: 600, color: isOverdueDeliverable(item) ? "var(--danger)" : "var(--text)" }}>{formatDateBR(item.deadline)}</span>
               : <ReadValue value={null} />}
           </div>
         </div>

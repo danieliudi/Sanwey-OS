@@ -3,7 +3,7 @@ import { Mic, Square, Sparkles, Check, X, PencilLine, Loader2, AlertTriangle, Ci
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAudioRecorder, formatRecordingTime, blobToBase64, AUDIO_MAX_SECONDS } from "../../hooks/use-audio-recorder";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
-import { formatDateBR, parseDateInput } from "../../utils/date";
+import { formatDateBR, parseDateInput, toLocalISODate } from "../../utils/date";
 
 // Ata de visita por voz — o vendedor fala um minuto, confere o que a IA
 // entendeu e salva. Aprovado com o Daniel em 13/08/2026 (mockup das 4 telas,
@@ -466,7 +466,7 @@ export function AtaVozPanel({
               status: "realizado",
               destino_realizado: geoAddress || (geo ? `${geo.lat}, ${geo.lng}` : null),
               resumo_realizado: resumo,
-              data_realizada: new Date().toISOString().slice(0, 10),
+              data_realizada: toLocalISODate(new Date()),
               updated_at: new Date().toISOString(),
             })
             .eq("id", tripId)

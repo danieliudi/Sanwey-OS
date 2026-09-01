@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { exportFeedbackToCSV } from "../../utils/export-csv";
-import { formatDateBR, daysSince } from "../../utils/date";
+import { formatDateBR, daysSince, toLocalISODate } from "../../utils/date";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
@@ -1417,7 +1417,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     }
     if (desfecho === "reavaliar" && desfechoMeta.reavaliar_meses && colaborador) {
       try {
-        const hoje = new Date().toISOString().slice(0, 10);
+        const hoje = toLocalISODate(new Date());
         const fim = addDaysISO(hoje, desfechoMeta.reavaliar_meses * 30);
         await createPendingCycle(colaborador.id, "reavaliacao", hoje, fim);
       } catch (e) {

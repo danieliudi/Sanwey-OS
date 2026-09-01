@@ -9,7 +9,7 @@ import {
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
   FlaskConical, PackageSearch, ClipboardList, Bug, BookOpen,
 } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "./lib/supabase";
+import { supabase } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { usePipelines } from "./hooks/use-pipelines";
 import { DEFAULT_PIPELINE_STAGES } from "./constants/pipelines";

@@ -14,18 +14,11 @@ export function semAcento(v) {
   return (v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// Açúcar pro caso mais comum: "este registro casa com o termo digitado?".
-// Recebe o termo JÁ normalizado (normalizar uma vez por busca, não uma vez por
-// registro por campo) e os campos crus do registro.
-//
-//   const termo = semAcento(search).trim();
-//   if (termo) lista = lista.filter(r => casaComTermo(termo, r.title, r.code));
-//
-// Termo vazio devolve `true` de propósito: quem chama decide se pula o filtro,
-// e assim uma busca em branco nunca some com a lista inteira.
-export function casaComTermo(termoNormalizado, ...campos) {
-  if (!termoNormalizado) return true;
-  return campos.some(c => semAcento(c).includes(termoNormalizado));
-}
+// `casaComTermo(termo, ...campos)` viveu aqui entre 01/09/2026 e o checkup
+// do mesmo dia, sem um único chamador: nasceu junto com `semAcento` na
+// extração, mas os ~15 boards que fazem a busca continuaram escrevendo o
+// `.filter` na mão. Removido em vez de mantido "pra quando alguém usar" —
+// utilitário sem chamador é dívida, não preparo. Se o padrão voltar a se
+// repetir, é 4 linhas.
 
 export default semAcento;

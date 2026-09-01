@@ -9,6 +9,17 @@ const selectStyle = {
   borderColor: "var(--border)",
   background: "var(--surface)",
   color: "var(--text)",
+  // Teto de largura: um <select> tem largura mínima intrínseca IGUAL à
+  // máxima (o conteúdo é a opção mais longa), então, ao contrário do
+  // <input>, ele NUNCA encolhe como item flex — nem com min-width: 0. E o
+  // conteúdo vem de dado digitado pelo usuário (nome de responsável, título
+  // de campanha, razão social), ou seja, sem teto ele é ilimitado: um nome
+  // longo empurra os botões vizinhos pra fora da linha. Medido em Chromium
+  // no checkup de 01/09/2026 — mesma família de bug do min-width: auto que
+  // já mordeu Entregas, Tarefas de Marketing, Treinamentos e Pedidos.
+  // 200px cabe os rótulos reais; o que passar disso o próprio <select>
+  // corta, e a opção inteira continua legível na lista aberta.
+  maxWidth: 200,
 };
 
 // `search.dataTour` (opcional): id de ancoragem do tour guiado contextual

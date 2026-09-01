@@ -686,10 +686,14 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
     // (CLAUDE.md, regra 11).
     const termo = semAcento(search).trim();
     if (termo) {
+      // `requestNumber`/`requesterName` estavam aqui e NÃO existem em
+      // marketing_tasks (só em marketing_deliverables — foi cópia de
+      // EntregasView): duas das quatro linhas nunca casavam com nada.
+      // Trocadas por `description`, que existe e é onde o detalhe da tarefa
+      // realmente mora. Achado no checkup de 01/09/2026.
       list = list.filter(t =>
         semAcento(t.title).includes(termo) ||
-        semAcento(t.requestNumber).includes(termo) ||
-        semAcento(t.requesterName).includes(termo) ||
+        semAcento(t.description).includes(termo) ||
         semAcento(campaignsById.get(t.campaignId)?.name).includes(termo)
       );
     }

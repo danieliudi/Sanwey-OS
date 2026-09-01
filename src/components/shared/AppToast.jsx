@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 // Shell de toast compartilhado — nasceu pra "nova versão disponível" +
@@ -27,6 +28,32 @@ const POSITION_CLASSES = {
   "top-right": "",
 };
 
+// PORTAL + faixa acima de tudo (2200), 01/09/2026 — varredura de
+// empilhamento pedida pelo Daniel.
+//
+// Antes: `fixed z-50`, renderizado no lugar onde a view o declara. Duas
+// consequências, as duas achadas na mesma varredura:
+//
+//   1. Em 5 telas (Comex, Pós-venda, Férias, Campanhas, Tarefas) o toast é
+//      declarado ANTES do drawer de detalhe, que é `fixed inset-0 z-50` com
+//      scrim de tela cheia. Empatados em 50, quem vem depois no DOM ganha:
+//      o erro nascia ATRÁS do scrim, escurecido e inalcançável. E é
+//      justamente o canal que reporta gravação recusada pela RLS — a pessoa
+//      clicava, nada acontecia, e não havia como saber por quê.
+//   2. Existe uma segunda escala de z-index nesta plataforma, escrita à mão,
+//      que vai de 999 a 2101 (~40 modais). Contra ela, `z-50` perde por
+//      aritmética: os toasts de nível de App (nova versão, sincronização,
+//      Novidades, mensagem de chat) sumiam por completo com qualquer um
+//      desses modais aberto.
+//
+// 2200 fica acima das duas escalas, inclusive do tour guiado (2100/2101).
+// É deliberado: aviso de ERRO tem que ser visível mesmo por cima de um tour
+// — um erro que ninguém vê é pior que um tour interrompido. O portal tira o
+// toast de qualquer contexto de empilhamento criado por ancestral com
+// transform/filter/opacity, que é o jeito de o z-index alto virar inútil sem
+// deixar rastro.
+const TOAST_Z = 2200;
+
 export function AppToast({
   icon: Icon,
   iconBadge = false,
@@ -41,10 +68,11 @@ export function AppToast({
   const v = VARIANTS[variant] || VARIANTS.default;
   const pos = POSITIONS[position] || POSITIONS["bottom-right"];
 
-  return (
+  const node = (
     <div
-      className={`fixed z-50 flex items-start gap-2.5 rounded-xl shadow-lg ${POSITION_CLASSES[position] ?? POSITION_CLASSES["bottom-right"]}`}
+      className={`fixed flex items-start gap-2.5 rounded-xl shadow-lg ${POSITION_CLASSES[position] ?? POSITION_CLASSES["bottom-right"]}`}
       style={{
+        zIndex: TOAST_Z,
         ...pos,
         maxWidth: 380,
         padding: "12px 14px",
@@ -95,6 +123,9 @@ export function AppToast({
       )}
     </div>
   );
+
+  // SSR/teste sem DOM: cai pro render inline em vez de quebrar.
+  return typeof document === "undefined" ? node : createPortal(node, document.body);
 }
 
 export default AppToast;
