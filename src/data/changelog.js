@@ -28,6 +28,10 @@ export const CHANGELOG = [
     items: [
       {
         kind: "correcao",
+        text: "A busca do topo quebrava em duas linhas e esticava a barra inteira pra baixo. Foi efeito do pr\u00f3prio ajuste que fez o texto citar as categorias do seu cargo: quem enxerga todas as cinco ficava com uma frase longa demais pro espa\u00e7o. O texto encurtou (cita as duas primeiras e reticências) e o campo passou a cortar em vez de quebrar.",
+      },
+      {
+        kind: "correcao",
         text: "O bot\u00e3o flutuante de criar card (\"+ Nova oportunidade\" e equivalentes) aparecia POR CIMA da tela escurecida quando um formul\u00e1rio ou card estava aberto \u2014 vis\u00edvel e clic\u00e1vel, dando pra come\u00e7ar um card novo por baixo do que voc\u00ea j\u00e1 estava preenchendo. Agora ele fica atr\u00e1s de qualquer janela aberta, em todos os boards.",
       },
       {

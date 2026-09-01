@@ -127,7 +127,23 @@ export function TopBar({
           aria-label="Abrir busca global"
         >
           <Search size={15} style={{ color: "var(--text-faint)", flexShrink: 0 }} />
-          <span style={{ color: "var(--text-faint)", flex: 1, textAlign: "left" }}>
+          {/* nowrap + minWidth 0: o botão tem largura FIXA (360px), então um
+              texto mais longo que ela quebrava em duas linhas e esticava a
+              barra do topo inteira pra baixo (regressão real da 4.89.0, quando
+              o texto passou a listar as categorias do cargo). Truncar é a
+              defesa estrutural; o texto também foi encurtado, mas só isso
+              deixaria o próximo rótulo comprido reabrir o mesmo buraco. */}
+          <span
+            style={{
+              color: "var(--text-faint)",
+              flex: 1,
+              minWidth: 0,
+              textAlign: "left",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {searchPlaceholder || "Buscar..."}
           </span>
           <span

@@ -37,7 +37,7 @@ import { useStageFields } from "./hooks/use-stage-fields";
 import { getMissingRequiredFields } from "./utils/field-conditions";
 import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
 import { useMarketingDeliverables } from "./hooks/use-marketing-deliverables";
-import { globalSearchScopeWords, joinPt } from "./components/ui/CommandPalette";
+import { globalSearchScopeWords, joinPtCurto } from "./components/ui/CommandPalette";
 import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
@@ -977,9 +977,11 @@ export default function App() {
   }, [leads, clients, campaigns, searchableDeliverables, users, allowedModules,
       currentUserRoles, isManagerRole, isDiretoria, isMarketingUser, isAgencia, isRHUser]);
 
+  // Curto de propósito — ver joinPtCurto. O botão da TopBar tem largura fixa;
+  // o rótulo inteiro (5 categorias, caso do admin) não cabe.
   const searchPlaceholder = useMemo(() => {
-    const scope = joinPt(globalSearchScopeWords(searchScopes));
-    return scope ? `Buscar ${scope}...` : "Buscar...";
+    const scope = joinPtCurto(globalSearchScopeWords(searchScopes));
+    return scope ? `Buscar ${scope}\u2026` : "Buscar\u2026";
   }, [searchScopes]);
   const [clientImportOpen, setClientImportOpen] = useState(false);
   // Import de CLIENTES (carteira, sem virar negócio no Funil) — separado do

@@ -230,6 +230,22 @@ export function joinPt(words) {
   return `${words.slice(0, -1).join(", ")} ou ${words[words.length - 1]}`;
 }
 
+// Versão CURTA, pro gatilho da TopBar. Um admin busca 5 categorias, e
+// "Buscar lead, cliente, campanha, entrega ou funcionário..." não cabe nos
+// 360px do botão — quebrava em duas linhas e esticava a barra do topo
+// (reportado pelo Daniel, regressão da 4.89.0). Duas categorias e
+// reticências mantém a honestidade que motivou a mudança (não promete
+// categoria que o cargo não tem) sem prometer que a lista está completa.
+// A paleta em si continua com o rótulo inteiro: lá é um <input>, que trunca
+// sozinho e nunca quebra linha.
+// Não acrescenta reticências — quem chama fecha a frase, pra "cabe inteiro"
+// e "foi cortado" não terminarem com pontuação diferente.
+export function joinPtCurto(words, max = 2) {
+  if (words.length === 0) return "";
+  if (words.length <= max) return joinPt(words);
+  return words.slice(0, max).join(", ");
+}
+
 // ---------------------------------------------------------------------------
 // CommandPalette
 // ---------------------------------------------------------------------------
