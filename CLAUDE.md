@@ -536,3 +536,40 @@ sozinho, no lugar certo, no momento certo, e é o que realmente resolve "eu
 nem sabia que isso existia". Registrar a decisão de pular (e por quê) não
 precisa de mockup separado — só não pular a pergunta, mesmo espírito da
 regra 10 pro tutorial.
+
+## 13. Testar contra o banco: branch sob demanda, nunca produção
+
+Achado de 01/09/2026, quando o Daniel perguntou "tem um ambiente de
+testes?": **não tinha**. Local, deploy preview do Netlify e produção apontavam
+os três para o MESMO projeto Supabase — `netlify.toml` não tem nenhum
+`[context.*]` sobrescrevendo variável de ambiente, então o preview de um PR lê
+e escreve no banco real. Não existia lugar onde errar sem consequência.
+
+Decidido com o Daniel no mesmo dia, depois de levantar o custo real na
+organização Sanwey (`bqhwdtxslqvdejvfylpi`):
+
+| Opção | Custo | Decisão |
+|---|---|---|
+| Projeto Supabase novo | **US$ 10/mês**, fixo | descartado — a org já tem 4 projetos, não há cota grátis, e um banco parado 90% do tempo não vale mensalidade |
+| **Branch de banco** | **US$ 0,01344/hora** | **escolhida** |
+
+**Correção registrada**: esta sessão chegou a afirmar ao Daniel que um segundo
+projeto seria *gratuito*. Não é — a informação estava errada e mudava a
+decisão. Não repetir: sempre rodar `get_cost` antes de afirmar preço, e
+`get_cost` exige a organização (o custo varia por org, nunca assumir).
+
+**Como usar.** A branch é criada sob demanda (`create_branch` no MCP do
+Supabase), já nasce com todas as migrations aplicadas — é cópia do schema, não
+projeto vazio a reconstruir pelo baseline — e é **apagada logo depois**
+(`delete_branch`). O custo é por hora de existência: uma sessão de 3h custa uns
+4 centavos; esquecer uma branch ligada um mês custa quase o mesmo que o projeto
+fixo, então **apagar faz parte do trabalho**, não é limpeza opcional.
+
+**Quando vale criar uma**: migration que altera dado existente (não só
+`ADD COLUMN`), policy RLS nova cuja negação você precisa ver acontecendo,
+qualquer coisa que você queira ver falhando antes de ver funcionando. Para
+mudança só de UI, não precisa — o `npm run dev` local já resolve.
+
+**O que NÃO muda**: aplicar migration em PRODUÇÃO continua exigindo
+confirmação explícita do Daniel, sempre (regra 5). Ter onde testar antes não é
+autorização para aplicar depois.
