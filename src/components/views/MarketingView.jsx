@@ -1250,6 +1250,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       <KanbanColumnHeader
                         color={stage.color}
                         name={stage.name}
+                        description={stage.description}
                         count={count}
                         bandHeight={4}
                         letterSpacing="normal"

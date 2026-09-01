@@ -405,7 +405,7 @@ function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, o
                   }}
                 >
                   <KanbanColumnHeader
-                    color={col.color} name={col.name} count={items.length}
+                    color={col.color} name={col.name} description={col.description} count={items.length}
                     bandHeight={4} letterSpacing="normal"
                     nameFontSize={14} nameFontWeight={700} uppercase={false} countFontSize={12}
                     actions={

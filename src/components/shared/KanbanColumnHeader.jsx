@@ -23,6 +23,15 @@ import { stageTextColor } from "../../utils/stage-colors";
 export function KanbanColumnHeader({
   color,
   name,
+  // Descrição da etapa (rh_pipeline_stages.description, migration
+  // 20260901180000): "o que precisa acontecer nesta fase", escrita pelo
+  // gerente/admin no editor de etapas. Aparece como `title` nativo no nome —
+  // ZERO pixel de layout, que é a única forma de caber depois da rodada de
+  // densidade (a 2ª linha do cabeçalho foi cortada justamente pra economizar
+  // ~19px por coluna, e a coluna se repete 5-6 vezes na largura da tela).
+  // `title` em elemento que já existe é o padrão de facto da plataforma pra
+  // esse tipo de hint — CLAUDE.md, regra 1, ~90 ocorrências.
+  description = null,
   count,
   bandHeight = 8,
   letterSpacing = "0.08em",
@@ -70,13 +79,15 @@ export function KanbanColumnHeader({
           >
             {truncateName ? (
               <span
-                title={name}
+                title={description ? `${name} — ${description}` : name}
                 style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}
               >
                 {name}
               </span>
             ) : (
-              name
+              // Sem truncagem o `title` precisa de um elemento próprio pra
+              // segurar a descrição — antes o nome era texto solto.
+              description ? <span title={`${name} — ${description}`}>{name}</span> : name
             )}
             {/* Sem parênteses: o número já é o número, e o par de parênteses
                 é ruído que se repete uma vez por coluna. */}

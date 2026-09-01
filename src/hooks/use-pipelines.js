@@ -21,6 +21,11 @@ function rowToStage(r) {
     color: r.color,
     probability: r.probability,
     slaDays: r.sla_days,
+    // Descrição da etapa (migration 20260901180000). Precisa estar nos DOIS
+    // sentidos: `updateStage` monta a linha com {...current, ...patch}, então
+    // se o read não trouxesse a descrição, salvar qualquer outro campo da
+    // etapa apagaria o texto sem ninguém pedir.
+    description: r.description ?? null,
     terminal: r.terminal,
     won: r.won,
     lost: r.lost,
@@ -39,6 +44,7 @@ function stageToRow(companyId, s, orderIdx) {
     order_idx: orderIdx,
     probability: s.probability ?? null,
     sla_days: s.slaDays ?? null,
+    description: s.description ?? null,
     terminal: !!s.terminal,
     won: !!s.won,
     lost: !!s.lost,

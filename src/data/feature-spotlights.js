@@ -445,6 +445,19 @@ export const FEATURE_SPOTLIGHTS = [
   // posto (`posvenda-busca-card`, `comex-busca-card`, `bugs-busca-card`) —
   // atributo sem entrada aqui é inerte, não quebra nada, e deixa o alvo
   // pronto se um dia alguém quiser destacar um deles.
+  // Descrição editável de página (4.91.0). Rota "crm" e não "dashboard": o
+  // alvo é o slot de descrição do PageTitle, que o Funil de Vendas renderiza
+  // sempre — pro admin ele aparece como o botão "+ descrição" mesmo numa
+  // página que ainda não tem texto nenhum, que é justamente o que precisa
+  // ser descoberto. Quem não é admin não vê o alvo e o runtime pula em
+  // silêncio, correto: a edição é admin-only pela RLS.
+  {
+    id: "descricao-pagina-editavel",
+    route: "crm",
+    target: '[data-tour="page-description"]',
+    text: "Novo: a descrição ao lado do título da página virou texto seu. Clique no lápis (ou em \"+ descrição\") e escreva o que esta tela significa pro time — vale pra todo mundo, sem depender de atualização do sistema.",
+    version: "4.91.0",
+  },
   {
     id: "busca-global-escopo",
     route: "dashboard",

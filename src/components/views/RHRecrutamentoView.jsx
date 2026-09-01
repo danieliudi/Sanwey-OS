@@ -915,6 +915,7 @@ function VagaKanbanColumn({
       <KanbanColumnHeader
         color={stage.color}
         name={stage.name}
+        description={stage.description}
         count={vagasList.length}
         bandHeight={4}
         letterSpacing="normal"
@@ -2472,6 +2473,7 @@ function KanbanColumn({
       <KanbanColumnHeader
         color={stage.color}
         name={stage.name}
+        description={stage.description}
         count={candidatos.length}
         bandHeight={4}
         letterSpacing="normal"

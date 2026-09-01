@@ -10,7 +10,7 @@ import { StageColorPicker } from "./StageColorPicker";
 //
 // onSave(patch) decide a persistência: draft local (StageListManager) ou
 // gravação direta (painel de campos). patch = { name, color, probability?,
-// slaDays, terminal }.
+// slaDays, description, terminal }.
 
 const SECTION_TITLE = { fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 2 };
 const SECTION_HELP  = { fontSize: 12, color: "var(--text-dim)", marginBottom: 10 };
@@ -38,6 +38,7 @@ export function StageAdvancedModal({
   const [color, setColor]             = useState("#64748B");
   const [probability, setProbability] = useState(null);
   const [slaDays, setSlaDays]         = useState(null);
+  const [description, setDescription] = useState("");
   const [terminal, setTerminal]       = useState(false);
   const [saving, setSaving]           = useState(false);
   const [deleting, setDeleting]       = useState(false);
@@ -50,6 +51,7 @@ export function StageAdvancedModal({
       setColor(stage.color || "#64748B");
       setProbability(stage.probability ?? null);
       setSlaDays(stage.slaDays ?? null);
+      setDescription(stage.description || "");
       setTerminal(!!stage.terminal);
       setError(null);
     }
@@ -78,6 +80,9 @@ export function StageAdvancedModal({
         color,
         ...(showProbability ? { probability } : {}),
         slaDays: terminal ? null : slaDays,
+        // Vazio grava NULL, não "": a UI trata NULL como "sem descrição" e
+        // uma string vazia passaria no CHECK mas viraria um tooltip em branco.
+        description: description.trim() || null,
         terminal: terminalLocked ? true : terminal,
       });
       onClose();
@@ -145,6 +150,33 @@ export function StageAdvancedModal({
                 style={INPUT_BASE}
                 onFocus={focusStyle} onBlur={blurStyle}
               />
+            </div>
+          </div>
+
+          {/* Descrição da fase (migration 20260901180000, aprovada com o
+              Daniel 01/09/2026 junto com a descrição de página). Não ganha
+              linha própria no cabeçalho da coluna de propósito: a rodada de
+              densidade acabou de cortar a 2ª linha pra economizar ~19px por
+              coluna, e a coluna se repete 5-6 vezes na largura da tela.
+              Aparece como `title` nativo no nome da etapa (o padrão de facto
+              da plataforma pra hint em elemento que já existe — CLAUDE.md,
+              regra 1) e no StageNavigator do "Mover para". */}
+          <div>
+            <div style={SECTION_TITLE}>Descrição</div>
+            <div style={SECTION_HELP}>
+              O que precisa acontecer nesta fase. Aparece ao passar o mouse sobre
+              o nome dela, no quadro e no menu "Mover para". Opcional.
+            </div>
+            <input
+              value={description}
+              maxLength={140}
+              placeholder="Ex.: proposta enviada, aguardando retorno do cliente"
+              onChange={e => setDescription(e.target.value)}
+              style={INPUT_BASE}
+              onFocus={focusStyle} onBlur={blurStyle}
+            />
+            <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4, textAlign: "right" }}>
+              {description.length}/140
             </div>
           </div>
 

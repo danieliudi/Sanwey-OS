@@ -1105,6 +1105,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                       <KanbanColumnHeader
                         color={stage.color}
                         name={stage.name}
+                        description={stage.description}
                         count={stageItems.length}
                         bandHeight={4}
                         secondaryInline

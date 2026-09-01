@@ -16,6 +16,7 @@ import { DEFAULT_PIPELINE_STAGES } from "./constants/pipelines";
 import { ROUTES, sectionFromPath } from "./constants/routes";
 import { useModuleOverrides } from "./hooks/use-module-overrides";
 import { useModuleStates } from "./hooks/use-module-states";
+import { PageDescriptionProvider } from "./components/shared/PageTitle";
 import { effectiveModules, gateByModuleStates, isModuleInTest, ALL_MODULE_IDS, MODULE_LABELS } from "./utils/module-access";
 import { useMarketSignals } from "./hooks/use-market-signals";
 import { usePersistentState } from "./hooks/use-persistent-state";
@@ -223,7 +224,7 @@ export default function App() {
   // Chave global de liga/desliga por página (Configurações → Módulos). Entra
   // como filtro POR CIMA do que o cargo/exceção concedeu — restringe, nunca
   // amplia. Espelhado no banco, dentro de current_user_has_module().
-  const { states: moduleStates } = useModuleStates({ enabled: Boolean(currentUser) });
+  const { states: moduleStates, descriptions: moduleDescriptions, setModuleDescription } = useModuleStates({ enabled: Boolean(currentUser) });
   const allowedModules = useMemo(
     () => gateByModuleStates(
       effectiveModules(currentUserRoles, myModuleOverrides),
@@ -261,6 +262,21 @@ export default function App() {
   // Comex incluído desde que a aba própria existe (regra 8 do CLAUDE.md).
   const canSeeExecutive    = isManagerRole || isMarketingManager || isRHManager || isComex || isDiretoria;
   const isAdmin            = hasAnyRole(["admin"]);
+
+  // Descrição editável da página, entregue por contexto pro PageTitle (ver
+  // comentário longo lá). Fica aqui porque só o App sabe qual seção está
+  // aberta — as views que renderizam o título não conhecem o próprio
+  // module_id. `canEdit` só admin: a policy module_states_write é admin-only
+  // e essa policy também liga/desliga página, então afrouxar pra gerente
+  // daria junto o poder de derrubar telas do Grupo (ver cabeçalho da
+  // migration 20260901180000). O botão nem aparece pra quem não pode — e se
+  // aparecesse, a RLS ainda recusaria e o erro subiria na UI.
+  const pageDescriptionCtx = useMemo(() => ({
+    moduleId: section,
+    description: moduleDescriptions[section] ?? null,
+    canEdit: isAdmin,
+    onSave: setModuleDescription,
+  }), [section, moduleDescriptions, isAdmin, setModuleDescription]);
   // isInsightsUser: quem o Painel de Insights (src/hooks/use-insights-metrics.js)
   // de fato consegue ler quase todos os dados — o hook cruza
   // rh_stage_history/rh_fornecedor_contratos/rh_colaborador_beneficios (RLS
@@ -1992,6 +2008,7 @@ export default function App() {
             </div>
           </div>
         )}
+        <PageDescriptionProvider value={pageDescriptionCtx}>
         <ErrorBoundary
           fallback={({ error, reset }) => (
             <div className="rounded-xl border p-6 max-w-2xl mx-auto mt-8" style={{ background: "var(--danger-bg)", borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}>
@@ -2579,6 +2596,7 @@ export default function App() {
           <Route path="*" element={<NotFoundView onBack={() => setSection("dashboard")} />} />
         </Routes>
         </ErrorBoundary>
+        </PageDescriptionProvider>
         </div>
 
         <div className="lg:hidden">

@@ -511,6 +511,7 @@ function ComexKanbanColumn({
         <KanbanColumnHeader
           color={stage.color}
           name={stage.name}
+          description={stage.description}
           count={opList.length}
           bandHeight={4}
           letterSpacing="normal"

@@ -714,6 +714,7 @@ function FeedbackKanbanColumn({
         <KanbanColumnHeader
           color={stage.color}
           name={stage.name}
+          description={stage.description}
           count={feedbackList.length}
           bandHeight={4}
           letterSpacing="normal"

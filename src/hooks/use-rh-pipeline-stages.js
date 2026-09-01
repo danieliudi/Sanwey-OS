@@ -13,6 +13,9 @@ function rowToStage(r) {
     orderIdx: r.order_idx ?? 0,
     probability: r.probability,
     slaDays: r.sla_days,
+    // Descrição curta da etapa (migration 20260901180000) — o que precisa
+    // acontecer nela. NULL = sem descrição, a UI não mostra nada.
+    description: r.description ?? null,
     terminal: Boolean(r.terminal),
     won: Boolean(r.won),
     lost: Boolean(r.lost),
@@ -30,6 +33,7 @@ function stageToRow(s) {
     order_idx: s.orderIdx ?? 0,
     probability: s.probability,
     sla_days: s.slaDays,
+    description: s.description ?? null,
     terminal: !!s.terminal,
     won: !!s.won,
     lost: !!s.lost,
@@ -39,7 +43,8 @@ function stageToRow(s) {
 // camelCase -> coluna, usado só por updateStage (patch parcial — ver abaixo).
 const ROW_COLUMN_BY_KEY = {
   stageKey: "stage_key", name: "name", color: "color", orderIdx: "order_idx",
-  probability: "probability", slaDays: "sla_days", terminal: "terminal", won: "won", lost: "lost",
+  probability: "probability", slaDays: "sla_days", description: "description",
+  terminal: "terminal", won: "won", lost: "lost",
 };
 
 export function useRHPipelineStages(domain) {

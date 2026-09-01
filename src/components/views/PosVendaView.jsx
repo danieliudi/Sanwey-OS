@@ -1274,6 +1274,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                       <KanbanColumnHeader
                         color={stage.color}
                         name={stage.name}
+                        description={stage.description}
                         count={bucket.cases.length}
                         bandHeight={4}
                         letterSpacing="normal"

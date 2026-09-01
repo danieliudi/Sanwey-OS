@@ -15,6 +15,12 @@ function StagePill({ s, getKey, onMove, disabled, direction }) {
     <button
       onClick={() => onMove(getKey(s))}
       disabled={disabled}
+      // Descrição da etapa como `title` (rh_pipeline_stages.description,
+      // migration 20260901180000). É aqui que ela mais rende: quem está
+      // decidindo PRA ONDE mover é exatamente quem precisa saber o que cada
+      // etapa significa. Sem descrição, o title fica só com o nome — mesmo
+      // comportamento de antes.
+      title={s.description ? `${s.name} — ${s.description}` : s.name}
       className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
       style={isBackward ? {
         background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border-strong)",

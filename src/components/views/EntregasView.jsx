@@ -1221,6 +1221,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
                       <KanbanColumnHeader
                         color={stage.color}
                         name={stage.name}
+                        description={stage.description}
                         count={stageItems.length}
                         bandHeight={4}
                         secondaryInline

@@ -344,6 +344,7 @@ function OnboardingKanbanColumn({
         <KanbanColumnHeader
           color={stage.color}
           name={stage.name}
+          description={stage.description}
           count={colaboradoresList.length}
           bandHeight={4}
           letterSpacing="normal"

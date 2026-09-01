@@ -139,16 +139,20 @@ export function defaultModulesForRoles(roles) {
   // Sem funil, sinais nem prospecção: o RLS já limitava o dado, isto enxuga
   // o menu pra função que a pessoa realmente exerce.
   //
-  // DIVERGÊNCIA CONHECIDA (checkup de 01/09/2026), pendente de decisão do
-  // Daniel — NÃO "corrigir" por conta própria: "clients" está liberado aqui,
-  // mas a policy `clients_read` (baseline) só admite admin/gerente/vendedor.
-  // Ou seja, suporte puro vê o item "Clientes" no menu e abre uma tela que a
-  // RLS devolve VAZIA. As duas saídas são decisões, não bugs de código:
-  // (a) incluir 'suporte' em `clients_read` (mudança de RLS, regra 5), ou
-  // (b) tirar "clients" desta lista (some um item do menu, regra 3).
-  // O escopo da busca global (App.jsx `searchScopes.clients`) segue a RLS,
-  // não esta lista — de propósito: prometer menos é melhor que prometer
-  // um resultado que nunca vem.
+  // "clients" aqui liberava a TELA pro suporte puro, mas a policy
+  // `clients_read` (baseline) só admitia admin/gerente/vendedor — a pessoa
+  // abria Clientes e via lista vazia, sem erro nenhum (achado do checkup de
+  // 01/09/2026). O Daniel decidiu liberar a leitura na RLS, não tirar o item
+  // do menu: a migration 20260901190000_clients_read_suporte.sql acrescenta
+  // 'suporte' ao SELECT, com o MESMO filtro por empresa dos outros cargos e
+  // sem tocar em clients_update (suporte lê, não edita).
+  //
+  // ENQUANTO ESSA MIGRATION NÃO FOR APLICADA, a tela continua vazia pro
+  // suporte puro. O escopo da busca global (App.jsx `searchScopes.clients`)
+  // segue a RLS e não esta lista — de propósito: prometer menos é melhor que
+  // prometer um resultado que nunca vem. Quando a migration entrar, o
+  // predicado `comercial` do App.jsx passa a precisar de 'suporte' também,
+  // senão a busca fica atrás da tela.
   if (f.isPureSuporte) {
     ["pedidos", "clients", "catalogo"].forEach(m => set.add(m));
   } else if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {

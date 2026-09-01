@@ -309,6 +309,7 @@ function KanbanBoard({ purchasesByStage, suppliersById, usersById, users, onCard
                 <KanbanColumnHeader
                   color={color}
                   name={stage.name}
+                  description={stage.description}
                   count={items.length}
                   bandHeight={4}
                   letterSpacing="normal"

@@ -55,7 +55,7 @@ function BugsKanbanColumn({ stage, stages, reports, onCardClick, onDragStart, on
       className="flex flex-col rounded-lg transition-all duration-150"
       style={{ width: 272, minWidth: 272, height: "100%", overflow: "hidden", borderRight: stage.stageKey !== stages[stages.length - 1]?.stageKey ? "1px solid var(--border)" : "none", background: isDragOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none" }}
     >
-      <KanbanColumnHeader color={stage.color} name={stage.name} count={reports.length} bandHeight={4} letterSpacing="normal" nameFontSize={14} nameFontWeight={700} uppercase={false} countFontSize={12} />
+      <KanbanColumnHeader color={stage.color} name={stage.name} description={stage.description} count={reports.length} bandHeight={4} letterSpacing="normal" nameFontSize={14} nameFontWeight={700} uppercase={false} countFontSize={12} />
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
         {reports.length === 0 ? (
           <div className="text-[11px] text-center py-6" style={{ color: "var(--text-faint)" }}>Nada aqui</div>

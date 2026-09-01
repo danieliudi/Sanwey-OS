@@ -23,18 +23,28 @@ let moduleStatesChannelSeq = 0;
 // migration nada muda pra ninguém.
 export function useModuleStates({ enabled = true } = {}) {
   const [states, setStates]   = useState({});
+  // Descrição editável da página (migration 20260901180000), mostrada ao lado
+  // do título pelo PageTitle. Mora na MESMA tabela porque é a mesma chave
+  // (module_id) e a mesma pergunta — "o que esta página é" — só que a resposta
+  // é texto em vez de on/off. Mapa separado no estado pra não fazer todo
+  // consumidor de `states` (que só quer off/test/live) passar a lidar com
+  // objeto.
+  const [descriptions, setDescriptions] = useState({});
   const [loading, setLoading] = useState(true);
   // Id só desta instância do hook — ver moduleStatesChannelSeq acima.
   const instanceIdRef = useRef(null);
   if (instanceIdRef.current === null) instanceIdRef.current = ++moduleStatesChannelSeq;
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured || !enabled) { setStates({}); setLoading(false); return; }
+    if (!isSupabaseConfigured || !enabled) { setStates({}); setDescriptions({}); setLoading(false); return; }
     const { data, error } = await supabase
       .from("module_states")
-      .select("module_id, state");
+      .select("module_id, state, description");
     if (!error) {
       setStates(Object.fromEntries((data || []).map(r => [r.module_id, r.state])));
+      setDescriptions(Object.fromEntries(
+        (data || []).filter(r => r.description).map(r => [r.module_id, r.description])
+      ));
     }
     setLoading(false);
   }, [enabled]);
@@ -56,6 +66,13 @@ export function useModuleStates({ enabled = true } = {}) {
   // Só admin consegue gravar (RLS). "live" apaga a linha em vez de gravar o
   // valor: linha ausente já significa live, e assim a tabela guarda só o que
   // foge do normal — fica óbvio, olhando ela, o que está fora do ar.
+  //
+  // EXCEÇÃO desde 01/09/2026 (descrição de página): se a linha tem descrição,
+  // voltar pra "live" GRAVA `state = 'live'` em vez de apagar — apagar levaria
+  // o texto junto. É seguro porque os dois lados que leem isto tratam ausente
+  // e 'live' igual: `gateByModuleStates` faz `states[id] || "live"` e a função
+  // `current_user_has_module` no banco faz `coalesce(v_state,'live')`. Ou
+  // seja, 'live' explícito nunca mudou comportamento — só não existia antes.
   const setModuleState = useCallback(async (moduleId, state) => {
     const previous = states[moduleId];
     setStates(prev => {                                    // otimista
@@ -64,7 +81,7 @@ export function useModuleStates({ enabled = true } = {}) {
       return next;
     });
     try {
-      if (state === "live") {
+      if (state === "live" && !descriptions[moduleId]) {
         const { error } = await supabase.from("module_states").delete().eq("module_id", moduleId);
         if (error) throw new Error(error.message);
       } else {
@@ -82,9 +99,51 @@ export function useModuleStates({ enabled = true } = {}) {
       });
       throw err;
     }
-  }, [states]);
+  }, [states, descriptions]);
 
-  return { states, loading, setModuleState, refetch: fetchAll };
+  // Descrição da página. Mesma RLS (module_states_write = só admin) — quem não
+  // é admin nem vê o lápis, e se tentasse mesmo assim a gravação volta 0 linha
+  // e o erro sobe pro chamador em vez de sumir em silêncio.
+  //
+  // Texto vazio LIMPA a descrição (grava NULL). Se depois disso a linha não
+  // guardar mais nada de anormal (state 'live'), ela é apagada — mesma
+  // higiene do setModuleState: a tabela só guarda o que foge do padrão.
+  const setModuleDescription = useCallback(async (moduleId, description) => {
+    const texto = (description || "").trim();
+    const valor = texto || null;
+    const previous = descriptions[moduleId];
+    setDescriptions(prev => {                              // otimista
+      const next = { ...prev };
+      if (valor) next[moduleId] = valor; else delete next[moduleId];
+      return next;
+    });
+    try {
+      const estadoAtual = states[moduleId] || "live";
+      if (!valor && estadoAtual === "live") {
+        const { error } = await supabase.from("module_states").delete().eq("module_id", moduleId);
+        if (error) throw new Error(error.message);
+        return;
+      }
+      const userId = (await supabase.auth.getUser()).data?.user?.id ?? null;
+      const { data, error } = await supabase
+        .from("module_states")
+        .upsert({ module_id: moduleId, state: estadoAtual, description: valor, updated_by: userId }, { onConflict: "module_id" })
+        .select();
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error("Não foi possível salvar — só administrador edita a descrição da página.");
+      }
+    } catch (err) {
+      setDescriptions(prev => {                            // desfaz e propaga
+        const next = { ...prev };
+        if (previous) next[moduleId] = previous; else delete next[moduleId];
+        return next;
+      });
+      throw err;
+    }
+  }, [states, descriptions]);
+
+  return { states, descriptions, loading, setModuleState, setModuleDescription, refetch: fetchAll };
 }
 
 export default useModuleStates;

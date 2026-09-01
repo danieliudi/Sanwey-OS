@@ -687,6 +687,7 @@ function TreinamentoBoardColumn({
         <KanbanColumnHeader
           color={stage.color}
           name={stage.name}
+          description={stage.description}
           count={atribList.length}
           bandHeight={4}
           letterSpacing="normal"

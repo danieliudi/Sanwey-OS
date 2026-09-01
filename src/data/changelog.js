@@ -24,6 +24,20 @@
 
 export const CHANGELOG = [
   {
+    version: "4.91.0",
+    items: [
+      {
+        kind: "novo",
+        text: "A descrição ao lado do título de cada página agora é editável. Onde antes havia um texto fixo (\"Kanban de entregas de campanha\"), o administrador clica no lápis — ou em \"+ descrição\", numa página que ainda não tem uma — e escreve o que aquela tela significa pro time. Vale pra todo mundo na hora, sem depender de atualização do sistema.",
+        roles: ["admin"],
+      },
+      {
+        kind: "novo",
+        text: "Cada etapa de quadro pode ganhar uma descrição própria — \"o que precisa acontecer nesta fase\". Escreva em Editar fase → Descrição; ela aparece ao passar o mouse sobre o nome da etapa, tanto no cabeçalho da coluna quanto no menu \"Mover para\", que é onde ela mais ajuda: na hora de decidir pra onde mandar o card.",
+      },
+    ],
+  },
+  {
     version: "4.90.4",
     items: [
       {
