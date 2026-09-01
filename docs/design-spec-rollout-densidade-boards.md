@@ -42,6 +42,26 @@ do nome, em vez de ocupar uma segunda linha. É uma prop booleana; ver o uso em
 
 Board cuja coluna não tem informação secundária nenhuma: nada a fazer aqui.
 
+**CORREÇÃO DA SPEC (01/09/2026, durante o próprio rollout).** Este item estava
+escrito de forma genérica demais e contradizia o componente: o cabeçalho do
+`KanbanColumnHeader.jsx` já dizia que `secondaryInline` "só serve pra conteúdo
+curto (um 'SLA 3d')" e que **Funil de Vendas, Campanhas e Pós-venda continuam
+com a segunda linha**, porque mostram dinheiro + SLA juntos. O agente que pegou
+a família CRM parou e reportou em vez de forçar — foi o certo. Decisão
+confirmada, esses três **ficam com a segunda linha**:
+
+- "R$ 340k · SLA 5d" não cabe no slot inline sem truncar, e truncar dinheiro é
+  pior que gastar uma linha.
+- No Funil, o `children` da coluna nem sempre é dinheiro: quando a transição
+  está bloqueada ele vira "Transição bloqueada" em `var(--danger)`. O
+  `secondaryInline` embrulha o conteúdo num `<span>` de 10.5px/400/`--text-dim`,
+  que achataria justamente o aviso que precisa saltar aos olhos.
+- Fazer caber exigiria uma variante nova do componente — proibido pela regra 2
+  do CLAUDE.md sem decisão explícita.
+
+Ou seja: item 2 vale para board cuja coluna mostra SÓ SLA. Onde mostra dinheiro,
+não se aplica.
+
 ### 3. Busca de card, sempre visível
 
 - Estado local `const [search, setSearch] = useState("")`.

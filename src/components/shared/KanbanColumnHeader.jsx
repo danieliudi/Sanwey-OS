@@ -43,7 +43,12 @@ export function KanbanColumnHeader({
   // própria. Corta ~19px por coluna — e a coluna se repete 5 ou 6 vezes na
   // largura da tela, então é a faixa que mais rende. Só serve pra conteúdo
   // curto (um "SLA 3d"): quem mostra dinheiro + SLA junto (Funil, Campanhas,
-  // Pós-venda) continua com a segunda linha até alguém decidir o contrário.
+  // Pós-venda) continua com a segunda linha. CONFIRMADO no rollout do padrão
+  // pros outros 11 boards (01/09/2026, mesma sessão): além de "R$ 340k · SLA
+  // 5d" não caber sem truncar, o `children` da coluna do Funil vira "Transição
+  // bloqueada" em `var(--danger)` quando a transição está travada — e o
+  // `<span>` de 10.5px/400/`--text-dim` daqui achataria justamente o aviso que
+  // precisa saltar aos olhos. Não é "ainda não fizemos": é para ficar assim.
   secondaryInline = false,
 }) {
   return (
