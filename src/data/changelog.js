@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.90.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "O bot\u00e3o flutuante de criar card (\"+ Nova oportunidade\" e equivalentes) aparecia POR CIMA da tela escurecida quando um formul\u00e1rio ou card estava aberto \u2014 vis\u00edvel e clic\u00e1vel, dando pra come\u00e7ar um card novo por baixo do que voc\u00ea j\u00e1 estava preenchendo. Agora ele fica atr\u00e1s de qualquer janela aberta, em todos os boards.",
+      },
+      {
+        kind: "correcao",
+        text: "Ao carregar a p\u00e1gina, o conte\u00fado e o bot\u00e3o flutuante nasciam 48 pixels mais \u00e0 direita e saltavam para o lugar um instante depois. Sobra do menu lateral que encolheu de 288 para 240 pixels.",
+      },
+    ],
+  },
+  {
     version: "4.90.1",
     items: [
       {

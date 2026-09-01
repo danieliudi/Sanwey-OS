@@ -83,12 +83,17 @@
   --accent-tint:   color-mix(in srgb, var(--accent) 8%, transparent);
 
   /* Layout */
-  --sidebar-width: 288px;
+  /* Tem que bater com SIDEBAR_W em Sidebar.jsx (240) — este valor é o que
+     vale no PRIMEIRO paint, antes do useEffect de lá rodar. Ficou em 288
+     quando o menu encolheu pra 240 (01/09/2026): o conteúdo e o botão
+     flutuante nasciam 48px à direita e saltavam pro lugar ao montar. Mudou a
+     largura do menu? Mude aqui junto. */
+  --sidebar-width: 240px;
   --topbar-height: 64px;
 }
 
 /* Recuo do conteúdo pra sidebar fixa — Sidebar.jsx muda --sidebar-width em
-   runtime (288px/72px) ao recolher/expandir o menu; só existe abaixo de
+   runtime (240px/72px) ao recolher/expandir o menu; só existe abaixo de
    1024px o menu vira overlay off-canvas (Sidebar.jsx), então não reserva
    espaço de layout e o recuo não se aplica. */
 .app-content-shell {
