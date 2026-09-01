@@ -383,13 +383,23 @@ export default function App() {
 
   // Entregas na busca global (Ctrl+K). `enabled` evita cobrar uma assinatura
   // Realtime de TODO usuário da plataforma por uma categoria que só o time de
-  // Marketing/Agência pode buscar — mesmo padrão do useMarketingCampaigns
-  // logo abaixo. Quem não tem o cargo recebe [] e nenhum canal aberto.
+  // Marketing/Agência/diretoria pode buscar — mesmo padrão do
+  // useMarketingCampaigns logo abaixo. Quem não tem o cargo recebe [] e
+  // nenhum canal aberto.
+  //
+  // DÍVIDA ACEITA (revisão de Segurança, 01/09/2026): enquanto alguém de
+  // Marketing está NA tela Entregas, este hook fica montado duas vezes — aqui
+  // e dentro da própria EntregasView, que não usa `enabled` porque também
+  // precisa de createDeliverable/changeStage/etc. São 2 canais e 2 `select *`
+  // sobre a mesma tabela, só nessa tela. Resolver de verdade significa a view
+  // passar a receber o array já carregado por aqui (padrão que MarketingView
+  // usa), o que é uma reestruturação do fluxo de dado dela — desproporcional
+  // pro ganho agora. Registrado pra não parecer descuido.
   const { deliverables: searchableDeliverables } = useMarketingDeliverables({
     userId: currentUser?.id,
     role: currentUser?.role,
     roles: currentUser?.roles,
-    enabled: Boolean(currentUser) && (isMarketingUser || isAgencia),
+    enabled: Boolean(currentUser) && (isMarketingUser || isAgencia || isDiretoria),
   });
 
   const { campaigns } = useMarketingCampaigns({
@@ -935,15 +945,37 @@ export default function App() {
   // categoria não liberada (some do rótulo do campo); `[]` = liberada, sem
   // registro. Todo array vem de um hook com RLS — a busca filtra em memória,
   // nunca consulta o banco (ver comentário de cabeçalho do CommandPalette).
-  // `clients` repete o MESMO predicado do guard da rota `clients`: quem seria
-  // redirecionado ao abrir a tela não acha cliente pela busca.
-  const searchScopes = useMemo(() => ({
-    leads,
-    clients: (isAgencia || isPureMarketing || isPureRH) ? undefined : clients,
-    campaigns: (isMarketingUser || isAgencia) ? campaigns : undefined,
-    deliverables: (isMarketingUser || isAgencia) ? searchableDeliverables : undefined,
-    employees: isRHUser ? users.filter(u => u.role === "rh" || u.role === "gerente_rh" || u.department) : undefined,
-  }), [leads, clients, campaigns, searchableDeliverables, users, isAgencia, isPureMarketing, isPureRH, isMarketingUser, isRHUser]);
+  //
+  // DUAS camadas, não uma (achado da revisão de Segurança, 01/09/2026 — a 1ª
+  // versão disto checava só a de cargo e o comentário prometia paridade com o
+  // guard da rota, o que era falso):
+  //   1. CARGO — predicado POSITIVO, alinhado à RLS da tabela. Positivo de
+  //      propósito: com lista negativa, um cargo novo (ou `comex`/`suporte`
+  //      puro hoje) lia "Buscar ... cliente" pra uma categoria que a RLS
+  //      nunca devolve — a mesma promessa falsa que esta rodada veio corrigir.
+  //   2. REGISTRO DE MÓDULOS (`allowedModules`) — a segunda metade do guard
+  //      de rota (App.jsx, `ALL_MODULE_IDS.includes(section) &&
+  //      !allowedModules.has(section)`). Sem ela, revogar "Clientes" de um
+  //      vendedor tirava o item do menu e redirecionava a rota, mas o Ctrl+K
+  //      continuava listando nome, CNPJ e cidade daqueles clientes — e clicar
+  //      no resultado levava a um redirect. Vale pras 5 categorias, não só
+  //      pras 2 novas.
+  const searchScopes = useMemo(() => {
+    const porModulo = (id, arr) => (allowedModules.has(id) ? arr : undefined);
+    const comercial = isManagerRole || isDiretoria || hasAnyRole(["vendedor"]);
+    const marketing = isMarketingUser || isAgencia || isDiretoria;
+    return {
+      leads:        porModulo("crm", leads),
+      clients:      comercial ? porModulo("clients", clients) : undefined,
+      campaigns:    marketing ? porModulo("marketing", campaigns) : undefined,
+      deliverables: marketing ? porModulo("marketing-entregas", searchableDeliverables) : undefined,
+      employees:    isRHUser
+        ? porModulo("rh-funcionarios", users.filter(u => u.role === "rh" || u.role === "gerente_rh" || u.department))
+        : undefined,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads, clients, campaigns, searchableDeliverables, users, allowedModules,
+      currentUserRoles, isManagerRole, isDiretoria, isMarketingUser, isAgencia, isRHUser]);
 
   const searchPlaceholder = useMemo(() => {
     const scope = joinPt(globalSearchScopeWords(searchScopes));

@@ -422,7 +422,7 @@ export const FEATURE_SPOTLIGHTS = [
     route: "dashboard",
     target: '[data-tour="busca-global"]',
     text: "A busca do topo agora acha cliente e entrega, além de negócio — e o texto dela passou a citar só o que VOCÊ encontra, em vez de prometer categorias travadas pro seu cargo.",
-    version: "4.89.0",
+    version: "4.89.1",
   },
   // Rota "dashboard" porque o gatilho vive na TopBar, presente em toda tela —
   // qualquer rota serviria, e o dashboard é onde a maioria entra. Só desktop

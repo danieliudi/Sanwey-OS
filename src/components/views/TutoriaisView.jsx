@@ -491,9 +491,10 @@ export function TutoriaisView({ currentUser, onNavigate, initialTab }) {
                   Como usar o assistente de IA
                 </p>
                 <p className="text-sm leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                  Na tela de Funil de Vendas, clique em <strong style={{ color: "var(--text)" }}>"Perguntar à IA"</strong> para abrir o chat.
-                  O assistente lê seu pipeline em tempo real e responde em linguagem natural.
-                  Copie qualquer pergunta abaixo e cole no chat para começar.
+                  No Funil de Vendas, entre na visão <strong style={{ color: "var(--text)" }}>Análise</strong> e clique em{" "}
+                  <strong style={{ color: "var(--text)" }}>"Perguntar à IA"</strong>. O assistente recebe o{" "}
+                  <strong style={{ color: "var(--text)" }}>resumo</strong> do seu funil em tempo real — totais, valor por etapa e
+                  por responsável — não a lista de negócios um a um. Copie qualquer pergunta abaixo e cole no chat.
                 </p>
               </div>
             </div>

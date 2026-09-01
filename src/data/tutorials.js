@@ -569,17 +569,17 @@ export const AI_PROMPTS = [
     ],
   },
   {
-    category: "Automações e configurações",
+    category: "Organizar a operação",
     icon: "⚙️",
     color: "#B45309",
     bgColor: "#FEF3C7",
     prompts: [
-      "Que automações devo criar para uma equipe de 5 vendedores com 100 leads ativos?",
-      "Como configurar o pipeline para uma empresa do setor de transporte de cargas?",
+      "Com 5 vendedores e 100 negócios ativos, que rotina de acompanhamento evita negócio esquecido?",
+      "Que etapas fazem sentido num funil de vendas para o setor de transporte de cargas?",
       "Como eu deveria nomear as etapas do meu funil pra que cada uma signifique uma coisa só?",
       "Que critérios usar pra decidir se um sinal de mercado vira uma oportunidade de verdade?",
       "Que critérios fazem sentido pra pontuar o fit de um cliente no meu setor?",
-      "Quais campos devo personalizar no formulário de leads para o setor de resíduos industriais?",
+      "Que informações vale exigir de um cliente do setor de resíduos industriais antes de propor?",
     ],
   },
 ];

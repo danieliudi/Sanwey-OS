@@ -24,7 +24,7 @@
 
 export const CHANGELOG = [
   {
-    version: "4.89.0",
+    version: "4.89.1",
     items: [
       {
         kind: "novo",
@@ -40,7 +40,12 @@ export const CHANGELOG = [
       },
       {
         kind: "correcao",
+        text: "A busca do topo tamb\u00e9m respeita agora o acesso por m\u00f3dulo: se \"Clientes\" (ou qualquer outra p\u00e1gina) estiver desligada para voc\u00ea, ela deixa de aparecer nos resultados \u2014 antes s\u00f3 sumia do menu.",
+      },
+      {
+        kind: "correcao",
         text: "Em Ajuda & Tutoriais, o assistente de IA do funil estava descrito pelo bot\u00e3o antigo e oferecia perguntas prontas que ele nunca teve como responder (neg\u00f3cio a neg\u00f3cio, motivo de perda, tempo m\u00e9dio por etapa). O texto e as perguntas passaram a refletir o que ele realmente recebe: o resumo do funil.",
+        roles: ["gerente", "vendedor", "consultor"],
       },
     ],
   },

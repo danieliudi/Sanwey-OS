@@ -290,16 +290,40 @@ ${hasHistory ? '4. **Oportunidade de upsell/cross-sell** — 1 parágrafo curto 
   ];
 }
 
+// Nome de pessoa e nome de etapa entram CRUS no bloco de dados do prompt, que
+// usa quebra de linha e `**rótulo:**` como estrutura. Como `profiles.name` é
+// auto-editável (a policy `profiles_update` tem o braço `id = auth.uid()`),
+// alguém podia pôr uma quebra de linha no próprio nome e forjar uma linha do
+// agregado no prompt do gerente. Achado BAIXO da revisão de Segurança de
+// 01/09/2026 — impacto pequeno (o gráfico ao lado desenha o agregado real, e
+// o painel não tem ferramenta nenhuma), mas a correção é uma linha.
+function limparParaPrompt(texto) {
+  return String(texto ?? '').replace(/[\r\n*`]/g, ' ').trim();
+}
+
 // Recebe o objeto já calculado por aggregatePipeline() (src/utils/pipeline-metrics.js)
 // — a LLM só interpreta/explica números já certos, nunca faz a conta sozinha.
 export function pipelineChatPrompt(question, aggregate, stageNames = {}) {
-  const stageLines = aggregate.byStage
-    .map(s => `- ${stageNames[s.stage] || s.stage}: ${s.count} leads, R$ ${(s.value / 1000).toFixed(0)}k`)
+  // `aggregate.byStage` sai na ordem de INSERÇÃO do Map (a ordem em que cada
+  // etapa apareceu na lista de leads), não na ordem do funil. Perguntas do
+  // tipo "o topo está alimentando o fim?" ou "alguma etapa acumula demais em
+  // relação às vizinhas?" só são respondíveis com a ordem certa — sem isso a
+  // IA adivinha pelo nome da etapa e apresenta o palpite como fato (a etapa é
+  // renomeável em rh_pipeline_stages). `stageNames` já é construído iterando
+  // `stages` na ordem do pipeline, então suas chaves SÃO essa ordem.
+  const ordemFunil = Object.keys(stageNames);
+  const posicao = (stageKey) => {
+    const i = ordemFunil.indexOf(stageKey);
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i; // etapa desconhecida vai pro fim
+  };
+  const stageLines = [...aggregate.byStage]
+    .sort((a, b) => posicao(a.stage) - posicao(b.stage))
+    .map(s => `- ${limparParaPrompt(stageNames[s.stage] || s.stage)}: ${s.count} leads, R$ ${(s.value / 1000).toFixed(0)}k`)
     .join('\n') || '- Nenhum lead no pipeline';
 
   const ownerLines = aggregate.byOwner
     .slice(0, 15)
-    .map(o => `- ${o.name}: ${o.count} leads | ganho R$ ${(o.valueWon / 1000).toFixed(0)}k | em aberto R$ ${(o.valueOpen / 1000).toFixed(0)}k`)
+    .map(o => `- ${limparParaPrompt(o.name)}: ${o.count} leads | ganho R$ ${(o.valueWon / 1000).toFixed(0)}k | em aberto R$ ${(o.valueOpen / 1000).toFixed(0)}k`)
     .join('\n') || '- Nenhum responsável com leads atribuídos';
 
   return [

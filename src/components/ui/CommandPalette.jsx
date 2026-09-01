@@ -192,7 +192,7 @@ function DeliverableResultRow({ item, highlighted, onSelect }) {
           <div className="font-semibold truncate" style={{ fontSize: 14, color: "var(--text)" }}>{d.title || "Entrega sem título"}</div>
         </div>
         <div className="text-xs truncate mt-0.5" style={{ color: "var(--text-dim)" }}>
-          {[d.protocolNumber, d.requesterName, d.department].filter(Boolean).join(" · ") || "Entrega de campanha"}
+          {[d.requestNumber, d.requesterName, d.department].filter(Boolean).join(" · ") || "Entrega de campanha"}
         </div>
       </div>
     </div>
@@ -305,22 +305,24 @@ export function CommandPalette({
     campaignHits.forEach(c => out.push({ type: "campaign", id: "campaign:" + c.id, data: c }));
 
     // Clientes
+    const qDigitos = q.replace(/\D/g, "");
     const clientHits = (clients || []).filter(c =>
       c.name?.toLowerCase().includes(q) ||
       c.razaoSocial?.toLowerCase().includes(q) ||
       c.category?.toLowerCase().includes(q) ||
       c.city?.toLowerCase().includes(q) ||
-      // CNPJ compara só dígito, pros dois lados (o cadastro guarda formatado).
-      // O /\d/ evita que uma busca sem número case com TODO cliente que tenha
-      // CNPJ — `"123".includes("")` é sempre true.
-      (/\d/.test(q) && (c.cnpj || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")))
+      // CNPJ compara só dígito, pros dois lados (o cadastro guarda formatado),
+      // e só a partir de 3 dígitos: com 1 ou 2, o trecho casa com quase todo
+      // CNPJ do cadastro e — como o corte é `.slice(0, 5)` na ordem do array —
+      // expulsa dos resultados justamente o cliente cujo NOME batia.
+      (qDigitos.length >= 3 && (c.cnpj || "").replace(/\D/g, "").includes(qDigitos))
     ).slice(0, 5);
     clientHits.forEach(c => out.push({ type: "client", id: "client:" + c.id, data: c }));
 
     // Entregas
     const deliverableHits = (deliverables || []).filter(d =>
       d.title?.toLowerCase().includes(q) ||
-      d.protocolNumber?.toLowerCase().includes(q) ||
+      d.requestNumber?.toLowerCase().includes(q) ||
       d.requesterName?.toLowerCase().includes(q) ||
       d.department?.toLowerCase().includes(q)
     ).slice(0, 4);
