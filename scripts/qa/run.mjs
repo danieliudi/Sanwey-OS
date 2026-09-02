@@ -14,7 +14,14 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const aqui = dirname(fileURLToPath(import.meta.url));
-const alvo = process.argv[2] === "interacao" ? "smoke-interacao.mjs" : "smoke-rotas.mjs";
+const MODOS = {
+  rotas:     { script: "smoke-rotas.mjs",     config: "vite.smoke.config.js" },
+  interacao: { script: "smoke-interacao.mjs", config: "vite.smoke.config.js" },
+  // "dados" sobe com VITE_SUPABASE_* de fachada, pra o App ir pelo caminho
+  // autenticado — quem responde é o interceptador dentro da varredura.
+  dados:     { script: "smoke-dados.mjs",     config: "vite.dados.config.js" },
+};
+const modo = MODOS[process.argv[2]] || MODOS.rotas;
 const PORTA = process.env.QA_PORT || "5199";
 const BASE = `http://localhost:${PORTA}`;
 
@@ -35,7 +42,7 @@ try {
 // processo à mão). `detached` + kill no GRUPO fecha a árvore inteira.
 const servidor = spawn(
   resolve(aqui, "../../node_modules/.bin/vite"),
-  ["--config", resolve(aqui, "vite.smoke.config.js"), "--port", PORTA, "--strictPort"],
+  ["--config", resolve(aqui, modo.config), "--port", PORTA, "--strictPort"],
   { stdio: ["ignore", "ignore", "inherit"], detached: true },
 );
 let derrubado = false;
@@ -63,7 +70,7 @@ if (!noAr) {
   process.exit(1);
 }
 
-const varredura = spawn("node", [resolve(aqui, alvo)], {
+const varredura = spawn("node", [resolve(aqui, modo.script)], {
   stdio: "inherit",
   env: { ...process.env, SMOKE_BASE: BASE },
 });

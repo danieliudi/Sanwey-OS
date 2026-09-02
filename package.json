@@ -1,7 +1,7 @@
 {
   "name": "grupo-sanwey",
   "private": true,
-  "version": "4.91.2",
+  "version": "4.91.3",
   "type": "module",
   "description": "Grupo Sanwey · Commercial Intelligence platform (multi-tenant)",
   "scripts": {
@@ -13,7 +13,8 @@
     "lint": "eslint --ext .js,.jsx,.mjs src scripts",
     "lint:full": "eslint --ext .js,.jsx,.mjs --rule \"{\\\"no-unused-vars\\\":[\\\"warn\\\",{\\\"args\\\":\\\"none\\\"}],\\\"react-hooks/exhaustive-deps\\\":\\\"warn\\\"}\" src scripts",
     "qa:smoke": "node scripts/qa/run.mjs rotas",
-    "qa:interacao": "node scripts/qa/run.mjs interacao"
+    "qa:interacao": "node scripts/qa/run.mjs interacao",
+    "qa:dados": "node scripts/qa/run.mjs dados"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

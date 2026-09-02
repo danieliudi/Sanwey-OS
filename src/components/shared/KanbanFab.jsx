@@ -41,6 +41,11 @@ export function KanbanFab({ label, onClick, flush = false, dataTour }) {
     <button
       onClick={onClick}
       data-tour={dataTour}
+      // Marcador pro useAvailableHeight achar este botão e descontar a altura
+      // dele do board — sem isso o FAB, que é `fixed`, fica POR CIMA da
+      // primeira coluna: cobria o último card e a barra de rolagem horizontal
+      // do board (reportado pelo Daniel com print, 02/09/2026).
+      data-kanban-fab=""
       className="hidden lg:flex fixed bottom-6 z-40 items-center gap-1.5 px-3.5 py-2 rounded-full font-semibold text-xs transition-all active:scale-95"
       style={{ left: `calc(var(--sidebar-width) + ${flush ? 16 : 24}px)`, background: "var(--accent)", color: "var(--on-accent)", boxShadow: "var(--shadow-card)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}

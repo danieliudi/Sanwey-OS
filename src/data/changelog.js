@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.91.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "O botão vermelho \"Novo card\" que flutua no canto inferior esquerdo deixou de ficar em cima do quadro. Ele cobria o último card da primeira coluna e a barra de rolagem horizontal do board — agora o quadro termina acima dele. Vale para os 13 quadros da plataforma de uma vez.",
+      },
+    ],
+  },
+  {
     version: "4.91.2",
     items: [
       {
