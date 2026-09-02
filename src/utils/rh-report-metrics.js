@@ -95,7 +95,12 @@ export const RH_REPORT_METRICS = [
     compute({ colaboradores }) {
       const desligados = colaboradores.filter((c) => c.employeeStatus === "desligado" || c.employeeStatus === "inativo" || c.desligamentoDate);
       const ativos = colaboradores.filter((c) => c.employeeStatus === "ativo").length;
-      const taxa = ativos > 0 ? ((desligados.length / (ativos + desligados.length)) * 100).toFixed(1) : "0";
+      // A guarda tem que ser sobre o DENOMINADOR, não sobre `ativos`. Numa
+      // unidade fechada (todos desligados) `ativos` é 0, o denominador é 5,
+      // e o antigo `ativos > 0 ? ... : "0"` reportava turnover ZERO onde a
+      // verdade é 100%. Achado da rodada 2 da auditoria, 01/09/2026.
+      const base = ativos + desligados.length;
+      const taxa = base > 0 ? ((desligados.length / base) * 100).toFixed(1) : "—";
       return {
         title: "Turnover geral",
         rows: [
@@ -261,7 +266,10 @@ export const RH_REPORT_METRICS = [
     compute({ movimentacoes }) {
       const aprovadas = movimentacoes.filter((m) => m.status === "aprovado");
       const porTipo = contagemPorChave(aprovadas, (m) => m.tipo);
-      const comSalario = aprovadas.filter((m) => m.salario_anterior != null && m.salario_novo != null);
+      // `> 0`, não `!= null`: uma efetivação/primeiro registro tem
+      // salario_anterior = 0, e a divisão por ele mandava `Infinity` como
+      // célula literal do CSV entregue ao RH.
+      const comSalario = aprovadas.filter((m) => m.salario_anterior > 0 && m.salario_novo != null);
       const variacoes = comSalario.map((m) => (m.salario_novo - m.salario_anterior) / m.salario_anterior * 100);
       const mediaVariacao = variacoes.length ? (variacoes.reduce((s, v) => s + v, 0) / variacoes.length).toFixed(1) : "—";
       return {

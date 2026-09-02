@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useConnectivity } from "./use-connectivity";
 import { listPending, updateStatus, removeFromQueue } from "./use-offline-cache";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 // Sincroniza a fila de notas/atividades enfileiradas offline (ver
 // use-leads.js addLeadActivity) assim que a conexão volta — sem retorno de
@@ -34,10 +35,33 @@ export function useOfflineSync({ leads, updateLead, userId }) {
   // Reaproveita a mesma chamada Supabase que updateLead já faz online — não
   // duplica a query, só monta o patch de activities com o item sincronizado.
   const syncItem = useCallback(async (item) => {
-    const lead = leadsRef.current.find(l => l.id === item.leadId);
+    let lead = leadsRef.current.find(l => l.id === item.leadId);
     if (!lead) {
-      await removeFromQueue(item.id);
-      return { ok: false };
+      // "Não está em `leads`" NÃO quer dizer "o lead não existe" — quer dizer
+      // que ele ainda não chegou. E a corrida é decidida sempre contra:
+      // no boot, o efeito abaixo dispara assim que `userId` resolve, lendo o
+      // IndexedDB em ~1ms, enquanto o useLeads ainda está no fetch do funil
+      // inteiro pela rede. `leadsRef.current` é [] nesse instante.
+      //
+      // Antes desta guarda, o ramo caía direto no removeFromQueue: a nota que
+      // o vendedor escreveu sem sinal era APAGADA sem nunca ter sido enviada,
+      // sem erro e sem toast (syncedCount ficava 0, então nem "1 nota
+      // sincronizada" aparecia) — e a fila esvaziava, então a UI mostrava que
+      // não havia nada pendente. Achado da rodada 2 da auditoria, 01/09/2026.
+      //
+      // Mesmo tratamento que use-leads.js:386-398 já dá pro caso idêntico:
+      // confirmar no banco antes de decidir. Só remove da fila quando o banco
+      // AFIRMA que a linha não existe; erro de rede/RLS deixa na fila pra
+      // próxima tentativa, que é o comportamento seguro.
+      if (!isSupabaseConfigured) return { ok: false };
+      const { data, error: buscaErr } = await supabase
+        .from("leads").select("id, activities").eq("id", item.leadId).maybeSingle();
+      if (buscaErr) return { ok: false };            // não deu pra saber — mantém enfileirado
+      if (!data) {                                   // o lead foi mesmo excluído
+        await removeFromQueue(item.id);
+        return { ok: false };
+      }
+      lead = { id: data.id, activities: Array.isArray(data.activities) ? data.activities : [] };
     }
     await updateStatus(item.id, "syncing");
     await refreshPending();

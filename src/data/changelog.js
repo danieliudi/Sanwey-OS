@@ -24,6 +24,26 @@
 
 export const CHANGELOG = [
   {
+    version: "4.91.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "Anotação feita sem internet deixou de sumir. Se você registrava uma atividade num lead offline e, ao voltar a conexão, a tela ainda não tinha terminado de carregar a lista de leads, a anotação era descartada em silêncio — parecia salva e não estava. Agora ela espera o lead chegar e só é descartada se o lead tiver sido mesmo excluído.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Taxa de turnover passou a ser calculada sobre a base certa. A conta dividia os desligamentos só pelo número de quem está ativo hoje, o que inflava o percentual — quem saiu não entrava no total. Agora o total inclui ativos + desligados do período, e uma base vazia mostra \"—\" em vez de um número inventado.",
+        roles: ["rh", "gerente_rh", "diretoria", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "A planilha de movimentações do RH deixou de exportar variação de salário como \"infinito\". Promoção lançada sem salário anterior preenchido gerava uma célula quebrada no CSV; agora essas linhas ficam de fora do cálculo da variação média.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "4.91.1",
     items: [
       {

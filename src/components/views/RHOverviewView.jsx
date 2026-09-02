@@ -157,7 +157,11 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
     if (Number.isNaN(d.getTime())) return false;
     return (Date.now() - d.getTime()) <= 365 * 86400000;
   });
-  const turnoverRate = totalAtivos > 0 ? Math.round((desligados12m.length / (totalAtivos + desligados12m.length)) * 100) : 0;
+  // Guarda sobre o denominador, não sobre `totalAtivos` — ver o mesmo
+  // conserto em utils/rh-report-metrics.js. `null` (e não 0) pra tela poder
+  // mostrar "—": sem ninguém na base, não existe taxa, e 0% mentiria.
+  const baseTurnover = totalAtivos + desligados12m.length;
+  const turnoverRate = baseTurnover > 0 ? Math.round((desligados12m.length / baseTurnover) * 100) : null;
   const desligadosVoluntarios = desligados12m.filter((c) => c.desligamentoTipo === "voluntario").length;
   const voluntariosPct = desligados12m.length ? Math.round((desligadosVoluntarios / desligados12m.length) * 100) : 0;
   const exitPorTipo = RH_DESLIGAMENTO_TIPOS
@@ -357,8 +361,8 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
                   trend={mom.exits.d} compact />
               )}
               {widgetVisible("stat_turnover_rate") && (
-                <StatCard icon={TrendingUp} value={`${turnoverRate}%`} label="Taxa de turnover aproximada"
-                  accent={turnoverRate >= 20 ? "var(--danger)" : undefined}
+                <StatCard icon={TrendingUp} value={turnoverRate === null ? "—" : `${turnoverRate}%`} label="Taxa de turnover aproximada"
+                  accent={turnoverRate !== null && turnoverRate >= 20 ? "var(--danger)" : undefined}
                   sublabel={desligados12m.length > 0 ? `${voluntariosPct}% voluntário` : undefined} compact />
               )}
             </StatCardGrid>
