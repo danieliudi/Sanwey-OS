@@ -301,14 +301,32 @@ A regra do piloto tem três partes, e é o que a folha entregue ao vendedor diz
 - SLA por etapa já está configurado (7, 7, 14, 21 e 14 dias) e passa a valer
   como pauta da reunião de segunda — é o que a folha do vendedor publica.
 
-**Estado real do funil em 01/09/2026** (contagem direta, pra medir o piloto
-contra um ponto de partida honesto): 27 cards, todos Resibag, todos criados
-por uma pessoa só entre 26 e 28/08 · **nenhum mudou de etapa desde que foi
-criado** · **nenhum tem `next_follow_up` preenchido** · 7 têm alguma atividade
-registrada · `pipeline_stage_transitions` continua em 0 linhas.
+**Estado real do funil em 01/09/2026** (contagem direta): 27 cards, todos
+Resibag, todos criados por uma pessoa só entre 26 e 28/08 · **nenhum mudou de
+etapa desde que foi criado** · **nenhum tem `next_follow_up` preenchido** ·
+`pipeline_stage_transitions` continua em 0 linhas.
 
-Primeiro passo combinado: na primeira semana, cada um dos 27 cards ganha uma
-próxima ação com data — ou vai pra Perdido.
+**Correção de 02/09/2026 — o piloto NÃO começa por esses 27 cards.** O Daniel
+esclareceu que eles são o cadastro pessoal de um vendedor (Cléber), não um
+acervo do time: para todo mundo o funil está zerado, e ninguém está atrasado.
+Isso mudou a forma do arranque, não a regra: em vez de "limpar o que já
+está lá", o primeiro passo é cada vendedor criar card para os negócios que
+hoje vivem na cabeça, no e-mail e na planilha dele.
+
+Os 27 continuam valendo como medida de contexto (a ferramenta ligada sem a
+rotina mudar junto), mas **não entram em material entregue ao time** — número
+de quem cadastrou o quê expõe uma pessoa e não ensina nada a ninguém.
+
+Primeiro passo combinado: na primeira semana, cada vendedor cria card para
+cada negócio vivo, com etapa e próxima ação com data.
+
+**Material entregue ao time** (02/09/2026): uma folha A4 única, do Grupo, para
+os vendedores das duas frentes — passo a passo de arranque, a regra, os SLAs
+por etapa e "o que não fazer". Sem números de funil e sem divisão por frente.
+A divisão por frente chegou a existir num rascunho porque `pipeline_stage_fields`
+tem contagens diferentes (Resibag 22 obrigatórios no percurso, Indústria 28) —
+a folha final resolve isso não citando total nenhum, já que cada etapa mostra
+só os campos dela.
 
 **Critério de saída**
 Cada vendedor com ≥5 negócios ativos e movimento semanal · nenhuma etapa com card
