@@ -6,10 +6,12 @@
   "description": "Grupo Sanwey · Commercial Intelligence platform (multi-tenant)",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/check-consistencia.mjs",
+    "prebuild": "node scripts/check-consistencia.mjs && eslint --ext .js,.jsx,.mjs src scripts",
     "build": "vite build",
     "check": "node scripts/check-consistencia.mjs --lista",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint --ext .js,.jsx,.mjs src scripts",
+    "lint:full": "eslint --ext .js,.jsx,.mjs --rule \"{\\\"no-unused-vars\\\":[\\\"warn\\\",{\\\"args\\\":\\\"none\\\"}],\\\"react-hooks/exhaustive-deps\\\":\\\"warn\\\"}\" src scripts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
@@ -26,6 +28,9 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
     "vite": "^5.4.10",

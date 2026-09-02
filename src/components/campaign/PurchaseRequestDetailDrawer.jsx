@@ -224,7 +224,7 @@ export function PurchaseRequestDetailDrawer({
     setDeliveredAt(purchase.deliveredAt ? purchase.deliveredAt.slice(0, 10) : "");
     setReceivedBy(purchase.receivedBy || "");
     setQuoteRows(normalizeQuoteRows(purchase.quoteOptions));
-    setWinnerSupplierId("");
+    setWinnerIndex("");
     setApproveResponsible(purchase.responsibleId || "");
     totalOverriddenRef.current = false;
     setSaveStatus(null);

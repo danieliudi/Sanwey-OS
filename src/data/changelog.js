@@ -28,6 +28,11 @@ export const CHANGELOG = [
     items: [
       {
         kind: "correcao",
+        text: "Abrir uma solicitação em Compras voltou a funcionar. Desde 18/08 o painel de detalhe quebrava assim que o card era aberto — sobrava a tela de erro e não havia como chegar em cotações, aprovação ou nota fiscal. Efeito colateral do ajuste que corrigiu o erro ao aprovar; a tela de aprovação em si continuou certa.",
+        roles: ["marketing", "gerente_marketing", "admin", "diretoria"],
+      },
+      {
+        kind: "correcao",
         text: "Anotação feita sem internet deixou de sumir. Se você registrava uma atividade num lead offline e, ao voltar a conexão, a tela ainda não tinha terminado de carregar a lista de leads, a anotação era descartada em silêncio — parecia salva e não estava. Agora ela espera o lead chegar e só é descartada se o lead tiver sido mesmo excluído.",
         roles: ["vendedor", "gerente", "admin"],
       },
