@@ -85,7 +85,7 @@ lado a lado — uma pra CRM/Pipeline, outra pra RH. Não é mentira dizer que
 |---|---|---|
 | Input de campo customizado | `src/components/lead/StageFieldInput.jsx` | `src/components/rh-pipeline/RHStageFieldInput.jsx` (switch de tipos idêntico, copiado) |
 | Card do Kanban | `src/components/lead/LeadKanbanCard.jsx` (só Pipeline) | `src/components/rh-pipeline/RHKanbanCard.jsx` (5 boards de RH) — Marketing/Entregas/Compras têm card próprio, inline, nenhum dos dois |
-| Acordeão mobile do board | não existe pro Pipeline | `RHMobileKanbanAccordion.jsx` (só RH) |
+| Acordeão mobile do board | **não é mais duplicação** — `RHMobileKanbanAccordion.jsx` foi consolidado e hoje serve 14 views, o Funil de Vendas incluído (`CRMView.jsx:932`). Esta linha dizia "não existe pro Pipeline / só RH" e induzia à conclusão errada de que o Funil não tem Kanban no celular. Corrigido 01/09/2026, conferido no código. | idem — mesmo componente |
 | Abas internas do drawer de detalhe (Form/Atividades/Histórico/IA/Anexos...) | `LeadDetailDrawer.jsx` compõe as próprias abas inline, dentro do slot `left` do `SplitPanelDrawer` (ver regra 1) | `RHDetailDrawerShell.jsx` (6 telas de RH) — também montado dentro do slot `left` do mesmo `SplitPanelDrawer` |
 
 **Correção de 07/08/2026**: esta tabela chegou a listar "Shell do drawer de detalhe (3 painéis)" como duplicação CRM-vs-RH — não é mais verdade. O *shell* externo (header/left/center/right, incluindo o "Mover para" e o bottom-sheet mobile) foi unificado em `SplitPanelDrawer.jsx` (regra 1) e hoje é usado por CRM, RH e Marketing igualmente. A duplicação real que sobrou é uma camada mais interna — o conteúdo de abas dentro do slot `left` — listada na linha acima.
