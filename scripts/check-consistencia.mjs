@@ -89,21 +89,33 @@ function corposDeUseEffect(texto) {
   return faixas;
 }
 
-// ── REGRA A: .update() sem .select() ──────────────────────────────────────
+// ── REGRA A: .update()/.delete() sem .select() ────────────────────────────
 // Bug real, várias vezes: um UPDATE barrado pela RLS volta `error: null` e
 // `data: []` — não é erro, é zero linha afetada. Como a tela já aplicou o
 // estado otimista, a pessoa vê "salvo" e o banco não mudou. Sem `.select()`
 // na cadeia não dá nem pra saber quantas linhas foram.
 // Gabarito no repo: src/hooks/use-clients.js (`.select()` + `data.length === 0`).
+//
+// DELETE entrou em 01/09/2026, na auditoria de quatro lentes. É a mesma
+// mecânica e o efeito é pior: em `use-leads.js` a policy `leads_delete` só
+// admite admin, mas a tela oferece "Excluir" pro gerente e pro dono do card —
+// o card sumia da tela e o negócio continuava no banco, somando no funil, até
+// virar duplicata no recadastro. Em `use-posvenda.js` o estado otimista roda
+// DEPOIS do delete, então o card some mesmo quando nada foi apagado. A
+// varredura achou 55 `delete()` sem checagem de linha: os dois acima são onde
+// a regra do banco é mais estreita que a da tela; o resto é a mesma armadilha
+// esperando uma policy mudar. Por isso entra como catraca, não como muro.
 function regraUpdateSemSelect(arquivo, texto) {
-  const re = /\.update\s*\(/g;
-  let m;
-  while ((m = re.exec(texto))) {
-    const stmt = statementEmVolta(texto, m.index);
-    if (!stmt.includes(".from(")) continue;   // não é chamada do supabase
-    if (stmt.includes(".select(")) continue;
-    achado("update-sem-select", arquivo, linhaDe(texto, m.index),
-      "UPDATE do supabase sem .select() — falha de RLS volta como sucesso silencioso");
+  for (const [metodo, regra] of [["update", "update-sem-select"], ["delete", "delete-sem-select"]]) {
+    const re = new RegExp(`\\.${metodo}\\s*\\(`, "g");
+    let m;
+    while ((m = re.exec(texto))) {
+      const stmt = statementEmVolta(texto, m.index);
+      if (!stmt.includes(".from(")) continue;   // não é chamada do supabase
+      if (stmt.includes(".select(")) continue;
+      achado(regra, arquivo, linhaDe(texto, m.index),
+        `${metodo.toUpperCase()} do supabase sem .select() — falha de RLS volta como sucesso silencioso`);
+    }
   }
 }
 
@@ -153,6 +165,81 @@ function regraObrigatorioAccent(arquivo, texto) {
     achado("obrigatorio-accent", arquivo, i + 1,
       "asterisco de campo obrigatório usando var(--accent) — deve ser var(--danger)");
   });
+}
+
+// Devolve o conteúdo do ÚLTIMO [...] no nível de topo de uma chamada, dado o
+// índice do "(" que a abre. Null se a chamada não fecha ou não tem array.
+function depsDaChamada(texto, abre) {
+  if (abre < 0) return null;
+  let d = 0, ultimoIni = -1, ultimoFim = -1;
+  for (let i = abre; i < texto.length; i++) {
+    const c = texto[i];
+    if (c === "(" || c === "{") d++;
+    else if (c === ")" || c === "}") { d--; if (d === 0) break; }
+    else if (c === "[") { d++; if (d === 2) ultimoIni = i + 1; }
+    else if (c === "]") { d--; if (d === 1 && ultimoIni >= 0) ultimoFim = i; }
+  }
+  return ultimoIni >= 0 && ultimoFim > ultimoIni ? texto.slice(ultimoIni, ultimoFim) : null;
+}
+
+// ── REGRA F: identificador citado em array de dependência antes de nascer ──
+// A classe de bug mais cara desta plataforma, e a única que o `vite build` NÃO
+// pega: array de dependência de useMemo/useCallback/useEffect é avaliado NA
+// CHAMADA do hook, não de forma diferida como o corpo. Um `const` declarado
+// ABAIXO do hook que o cita nas deps lança "Cannot access 'X' before
+// initialization" em TODO render — e o esbuild não faz análise de TDZ, então
+// o build passa com a tela morta.
+//
+// Mordeu TRÊS vezes na semana de 01/09/2026: Recrutamento (32108f7), o App
+// inteiro (tela branca pra todo mundo, o ErrorBoundary fica dentro do JSX de
+// App e nem chega a renderizar) e a aba Gestão de Viagens & Despesas — essa
+// tinha ficado morta ~3 SEMANAS sem ninguém notar, porque quem abre a aba vê
+// uma tela de erro genérica e assume que é "o sistema".
+//
+// O escopo importa: o mesmo arquivo tem várias funções, e "declarado abaixo"
+// só é bug DENTRO da mesma função. Uma varredura ingênua devolve ~30 falsos
+// positivos por causa disso. Aqui o arquivo é fatiado nas funções de nível
+// superior antes de comparar posições.
+function regraTdzDependencia(arquivo, texto) {
+  // Fronteiras das funções de nível superior (coluna 0).
+  const inicios = [];
+  const reTopo = /^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s+[\w$]+|const\s+[\w$]+\s*=)/gm;
+  let t;
+  while ((t = reTopo.exec(texto))) inicios.push(t.index);
+  if (!inicios.length) return;
+  inicios.push(texto.length);
+
+  for (let r = 0; r < inicios.length - 1; r++) {
+    const ini = inicios[r], fim = inicios[r + 1];
+    const regiao = texto.slice(ini, fim);
+
+    // Onde cada const/let da região nasce.
+    const nasceEm = new Map();
+    for (const d of regiao.matchAll(/^[ \t]*(?:const|let)\s+([\w$]+)\s*=/gm)) {
+      if (!nasceEm.has(d[1])) nasceEm.set(d[1], d.index);
+    }
+    if (!nasceEm.size) continue;
+
+    const hooks = [...regiao.matchAll(/use(?:Memo|Callback|Effect|LayoutEffect)\s*\(/g)];
+    for (let h = 0; h < hooks.length; h++) {
+      const de = hooks[h].index;
+      // Array de dependência = o último [...] no nível de topo da chamada.
+      // Casamento real de parênteses, não regex: a 1ª versão desta regra
+      // exigia `}` antes do `, [` e por isso NÃO pegava o próprio bug que
+      // motivou a regra — `useMemo(() => f(x), [x])`, arrow de expressão,
+      // não tem chave nenhuma. Testado contra o arquivo com o bug (05d381a).
+      const deps = depsDaChamada(regiao, regiao.indexOf("(", de));
+      if (!deps) continue;
+      for (const cru of deps.split(",")) {
+        const id = cru.trim().split(/[.?[(]/)[0].trim();
+        if (!/^[A-Za-z_$][\w$]*$/.test(id)) continue;
+        const decl = nasceEm.get(id);
+        if (decl === undefined || decl < de) continue;   // vem de prop/import/param, ou nasce antes: ok
+        achado("tdz-dependencia", arquivo, linhaDe(texto, ini + de),
+          `"${id}" está no array de dependência mas só é declarado na linha ${linhaDe(texto, ini + decl)} — quebra em todo render, e o build NÃO pega`);
+      }
+    }
+  }
 }
 
 // ── REGRA E: referência morta em tutoriais/spotlights ─────────────────────
@@ -223,6 +310,7 @@ for (const arquivo of arquivosFonte(join(RAIZ, "src"))) {
   regraGuardaObsoleta(arquivo, texto);
   regraMoedaDuplicada(arquivo, texto);
   regraObrigatorioAccent(arquivo, texto);
+  regraTdzDependencia(arquivo, texto);
 }
 regraReferenciaMorta();
 regraVersaoChangelog();
