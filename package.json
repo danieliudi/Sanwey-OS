@@ -11,7 +11,9 @@
     "check": "node scripts/check-consistencia.mjs --lista",
     "preview": "vite preview",
     "lint": "eslint --ext .js,.jsx,.mjs src scripts",
-    "lint:full": "eslint --ext .js,.jsx,.mjs --rule \"{\\\"no-unused-vars\\\":[\\\"warn\\\",{\\\"args\\\":\\\"none\\\"}],\\\"react-hooks/exhaustive-deps\\\":\\\"warn\\\"}\" src scripts"
+    "lint:full": "eslint --ext .js,.jsx,.mjs --rule \"{\\\"no-unused-vars\\\":[\\\"warn\\\",{\\\"args\\\":\\\"none\\\"}],\\\"react-hooks/exhaustive-deps\\\":\\\"warn\\\"}\" src scripts",
+    "qa:smoke": "node scripts/qa/run.mjs rotas",
+    "qa:interacao": "node scripts/qa/run.mjs interacao"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

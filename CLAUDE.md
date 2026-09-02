@@ -249,11 +249,12 @@ porque passaram pelo QA.
 2. **Frontend** — implementa a menor mudança que resolve a causa raiz, seguindo
    a spec ao pé da letra (não decide token/cor por conta própria). Roda
    `npm run build` antes de reportar pronto. **`npm run build`, não
-   `npx vite build`**: o gate de consistência (`scripts/check-consistencia.mjs`)
-   está pendurado no `prebuild` do `package.json`, que é hook de ciclo de vida
-   do npm — `npx vite build` chama o Vite direto e passa por cima do gate em
-   silêncio. (Corrigido em 28/08/2026: esta linha dizia `npx vite build`, de
-   antes de o gate existir.)
+   `npx vite build`**: os dois gates (`scripts/check-consistencia.mjs` e o
+   ESLint) estão pendurados no `prebuild` do `package.json`, que é hook de
+   ciclo de vida do npm — `npx vite build` chama o Vite direto e passa por
+   cima dos dois em silêncio. (Corrigido em 28/08/2026: esta linha dizia
+   `npx vite build`, de antes de o gate existir. Ampliada em 02/09/2026, com
+   a entrada do ESLint — ver 3.2.)
 3. **QA** — não corrige código diretamente, só aprova ou devolve com
    `arquivo:linha — o que está errado — o que deveria ser`. Roda o build de
    novo, confere contra a spec, e verifica que nenhuma classe de bug já
@@ -322,6 +323,57 @@ confirmação explícita do Daniel (regra 5). Checklist mínimo:
   permite abuso sem limite de taxa.
 - Roda `get_advisors` (Supabase MCP, tipo `security`) depois de qualquer
   migration aplicada — nenhum achado novo introduzido pela mudança.
+
+### 3.2 Os dois gates automáticos e a varredura em navegador
+
+Escrito em 02/09/2026, depois da 4ª tela morta em três semanas por erro de
+escopo puro. O ponto que amarra tudo: **`npm run build` sozinho não prova
+nada**. O Vite usa esbuild, que não faz análise de escopo — um `const` usado
+no array de dependência de um `useMemo` declarado acima dele (TDZ), ou um
+`setXPtoQueNinguemDeclarou("")` sobrando de um refactor, compilam sem um
+ruído sequer e a tela morre em produção. O placar real:
+
+| Tela | Causa | Tempo morta | Quem pegou |
+|---|---|---|---|
+| Recrutamento | TDZ em array de dependência | — | QA manual |
+| App.jsx inteiro (tela branca) | TDZ | — | qa-agent, antes de subir |
+| Gestão de Viagens & Despesas | TDZ | ~3 semanas | auditoria de 02/09 |
+| Compras (painel de detalhe) | `setWinnerSupplierId` órfão | 15 dias | **ESLint**, não o build |
+
+Daí as três camadas que existem hoje, da mais barata pra mais cara:
+
+1. **`scripts/check-consistencia.mjs`** — regras específicas DESTA plataforma
+   (cada uma nasceu de um bug real daqui), com linha de base travada.
+2. **`.eslintrc.cjs`** — só regra que pega bug de runtime: escopo
+   (`no-undef`), `rules-of-hooks`, duplicação silenciosa, condição que nunca
+   faz o que parece. **Zero regra de estilo, de propósito** — gate que apita
+   por formatação vira gate ignorado. O racional de cada bloco, e das que
+   ficaram DE FORA, está no cabeçalho do arquivo. Ruído conhecido
+   (`no-unused-vars`, 250; `exhaustive-deps`, 49) fica em `npm run lint:full`,
+   que NÃO quebra o build.
+3. **`scripts/qa/`** — abre a plataforma num Chromium de verdade, desktop e
+   celular, e reporta exceção não tratada, erro de console, tela em branco e
+   rolagem horizontal. `npm run qa:smoke` (52 rotas × 2 viewports) e
+   `npm run qa:interacao` (com dados: abre card, navega abas do drawer, testa
+   o acordeão no toque E no teclado). Playwright NÃO é dependência do
+   projeto de propósito (baixa navegador em todo `npm ci` do deploy) —
+   instala sob demanda, ver `scripts/qa/README.md`.
+
+**Armadilha que já custou uma rodada inteira, não repetir**: a varredura roda
+sem banco porque, sem `VITE_SUPABASE_*`, o App cai no caminho de usuário mock
+que já existe. Mas o Vite carrega `.env.local` em QUALQUER modo — o "ignora
+quando `mode === test`" é regra do Vitest, não do Vite. A primeira execução
+deu "104 rotas limpas" que eram 104 telas de LOGIN, e só apareceu porque a
+sessão foi conferir o texto renderizado. É por isso que existe
+`scripts/qa/vite.smoke.config.js` (envDir apontado pra pasta vazia) e por
+isso que a rodada de interação confere que os cards realmente apareceram
+antes de declarar sucesso. **Varredura que passa sem provar que renderizou a
+tela certa não vale nada** — vale menos que nada, porque dá sensação de
+cobertura.
+
+Quando rodar cada uma: os dois primeiros gates rodam sozinhos em todo build.
+A varredura em navegador é pra fim de entrega que mexeu em mais de uma tela,
+e pra qualquer rodada de auditoria — não precisa a cada commit.
 
 ## 4. Extração sob demanda — quando (e quando não) criar algo em `shared/`
 
