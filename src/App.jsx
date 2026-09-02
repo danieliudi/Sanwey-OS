@@ -964,7 +964,12 @@ export default function App() {
   //      pras 2 novas.
   const searchScopes = useMemo(() => {
     const porModulo = (id, arr) => (allowedModules.has(id) ? arr : undefined);
-    const comercial = isManagerRole || isDiretoria || hasAnyRole(["vendedor"]);
+    // "suporte" entrou aqui em 01/09/2026, junto com a migration que o
+    // acrescentou ao `clients_read`. Este predicado tem que acompanhar a
+    // RLS: antes da migration, incluir suporte prometeria uma categoria que
+    // o banco não devolvia; agora, deixar de fora esconderia da busca um
+    // dado que a pessoa já abre pelo menu.
+    const comercial = isManagerRole || isDiretoria || hasAnyRole(["vendedor", "suporte"]);
     const marketing = isMarketingUser || isAgencia || isDiretoria;
     return {
       leads:        porModulo("crm", leads),

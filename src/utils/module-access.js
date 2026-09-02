@@ -147,12 +147,13 @@ export function defaultModulesForRoles(roles) {
   // 'suporte' ao SELECT, com o MESMO filtro por empresa dos outros cargos e
   // sem tocar em clients_update (suporte lê, não edita).
   //
-  // ENQUANTO ESSA MIGRATION NÃO FOR APLICADA, a tela continua vazia pro
-  // suporte puro. O escopo da busca global (App.jsx `searchScopes.clients`)
-  // segue a RLS e não esta lista — de propósito: prometer menos é melhor que
-  // prometer um resultado que nunca vem. Quando a migration entrar, o
-  // predicado `comercial` do App.jsx passa a precisar de 'suporte' também,
-  // senão a busca fica atrás da tela.
+  // APLICADA em 01/09/2026, com confirmação do Daniel — a tela não vem mais
+  // vazia, e o predicado `comercial` do App.jsx (`searchScopes.clients`)
+  // ganhou 'suporte' na mesma rodada, pra busca global não ficar atrás da
+  // tela. Na mesma leva foi aplicada a 20260901200000, que escopou por frente
+  // as três policies *_suporte_read de client_addresses/contacts/products —
+  // sem ela, liberar Clientes pro suporte teria ampliado um vazamento em vez
+  // de fechar um.
   if (f.isPureSuporte) {
     ["pedidos", "clients", "catalogo"].forEach(m => set.add(m));
   } else if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {

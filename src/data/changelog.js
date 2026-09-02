@@ -24,12 +24,17 @@
 
 export const CHANGELOG = [
   {
-    version: "4.91.0",
+    version: "4.91.1",
     items: [
       {
         kind: "novo",
         text: "A descrição ao lado do título de cada página agora é editável. Onde antes havia um texto fixo (\"Kanban de entregas de campanha\"), o administrador clica no lápis — ou em \"+ descrição\", numa página que ainda não tem uma — e escreve o que aquela tela significa pro time. Vale pra todo mundo na hora, sem depender de atualização do sistema.",
         roles: ["admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Suporte comercial passou a enxergar de verdade a página Clientes. O item já aparecia no menu para esse cargo, mas a lista vinha vazia — agora traz os clientes das frentes da pessoa. Continua sendo só consulta: editar cadastro segue com vendedor e gerência.",
+        roles: ["admin", "suporte"],
       },
       {
         kind: "novo",
