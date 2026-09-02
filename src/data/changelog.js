@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.92.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Reportar um problema ficou de 1 clique. Quando uma tela dá erro, agora aparece o botão \"Reportar isso\" ali mesmo — sem sair de onde você está e sem digitar nada. E existe um ícone fixo de inseto na barra do topo para quando algo sai errado sem dar erro na tela (o comentário que sumiu, o filtro que veio vazio).",
+      },
+      {
+        kind: "ajuste",
+        text: "O formulário de reportar bug pede uma frase, não mais quatro campos. A tela em que você está já vem preenchida, e a plataforma anexa sozinha o navegador e o erro técnico — você não precisa mais tirar print para provar o que viu.",
+      },
+    ],
+  },
+  {
     version: "4.91.3",
     items: [
       {

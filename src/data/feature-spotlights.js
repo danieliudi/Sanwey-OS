@@ -494,6 +494,19 @@ export const FEATURE_SPOTLIGHTS = [
   // 4.87.0 — o fix de "Devolver para a agência" (Entregas) NÃO ganhou
   // spotlight: é correção de algo que já deveria funcionar, mesmo critério
   // de bug fix da regra 12 do CLAUDE.md. Coberto pelo changelog 4.87.0.
+  {
+    id: "reportar-problema-topbar",
+    route: "dashboard",
+    target: '[data-tour="reportar-problema"]',
+    text: "Achou algo errado? Este botão reporta na hora, de qualquer tela — a plataforma anexa sozinha o navegador e o erro técnico, você não precisa tirar print.",
+    version: "4.92.0",
+  },
+  // Ancorado no Início, não na tela onde o bug aparece: o ícone vive na
+  // TopBar e existe em TODAS as rotas, mas o mecanismo mostra um spotlight
+  // por rota — apontar na primeira tela que a pessoa abre é o que garante
+  // que ela veja. O botão "Reportar isso" da tela de erro NÃO ganhou
+  // spotlight próprio: ele só existe quando algo já quebrou, e um tooltip
+  // por cima de uma tela de erro seria ruído — o texto do botão se explica.
 ];
 
 export default FEATURE_SPOTLIGHTS;

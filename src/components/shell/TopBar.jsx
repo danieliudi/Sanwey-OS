@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Search, Moon, Sun, LifeBuoy } from "lucide-react";
+import { Search, Moon, Sun, LifeBuoy, Bug } from "lucide-react";
 import { NotificationCenter } from "./NotificationCenter";
 
 // Achado da 2ª auditoria: o badge do atalho de busca mostrava só um ícone
@@ -70,6 +70,7 @@ export function TopBar({
   onSelectLead,
   onNavigate,
   onHelpClick,
+  onReportBug,
 }) {
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const { dark, toggle: toggleTheme } = useTheme();
@@ -185,6 +186,25 @@ export function TopBar({
             aria-label="Ajuda"
           >
             <LifeBuoy size={20} strokeWidth={2} />
+          </button>
+        )}
+
+        {/* Reportar um problema — atalho fixo, decidido com o Daniel 02/09/2026.
+            Fica AQUI e não num botão flutuante: o flutuante do canto inferior
+            já é o "Novo card" dos 13 quadros (KanbanFab) e os dois brigariam.
+            Fica fora do menu de perfil pelo motivo oposto: escondido, ninguém
+            usa — e o problema que estamos resolvendo é justamente adesão. */}
+        {onReportBug && (
+          <button
+            onClick={onReportBug}
+            title="Reportar um problema nesta tela"
+            data-tour="reportar-problema"
+            style={{ width: 36, height: 36, background: "transparent", border: "none", color: "var(--text-faint)", cursor: "pointer", borderRadius: "var(--radius-sm)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.12s, color 0.12s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--danger)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
+            aria-label="Reportar um problema"
+          >
+            <Bug size={16} strokeWidth={2} />
           </button>
         )}
 

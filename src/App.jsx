@@ -67,6 +67,9 @@ import { reopenAfterMove } from "./utils/reopen-after-move";
 import { ImportModal } from "./components/lead/ImportModal";
 import { ClientImportModal } from "./components/client/ClientImportModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
+import { ReportBugModal } from "./components/bugs/ReportBugModal";
+import { useBugReports } from "./hooks/use-bug-reports";
+import { instalarCapturaDeErros } from "./utils/error-log";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
 import { ExplorerView } from "./components/views/ExplorerView";
@@ -1022,6 +1025,25 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const section = sectionFromPath(location.pathname);
+
+  // Reporte de bug sem atrito (mockup aprovado 02/09/2026). Três entradas
+  // para o mesmo formulário: a tela de erro (`erro` preenchido), o ícone da
+  // TopBar, e a Central de Bugs — `origem` grava qual foi, pra dar pra medir
+  // se as camadas novas pegaram.
+  const [bugReport, setBugReport] = useState(null); // null = fechado
+  // `enabled: false` é obrigatório aqui, não otimização: no padrão o hook
+  // faz um SELECT da tabela inteira E abre um canal Realtime permanente em
+  // postgres_changes — para TODO usuário, em TODA tela. Daqui só se usa o
+  // `createReport`, que não depende de nenhum dos dois (ver use-bug-reports.js:
+  // ele insere direto, sem olhar `enabled`). A lista de bugs continua sendo
+  // carregada pela Central de Bugs, que é quem realmente precisa dela.
+  const { createReport: criarBugReport } = useBugReports({ userId: currentUser?.id, isAdmin: false, enabled: false });
+
+  // Anel de erros do navegador: instalado uma vez, no arranque. Sem ele o bug
+  // que NÃO quebra a tela (promise rejeitada, escrita barrada pela RLS) não
+  // deixava rastro nenhum — ver src/utils/error-log.js.
+  useEffect(() => { instalarCapturaDeErros(); }, []);
+
 
   // Descrição editável da página, entregue por contexto pro PageTitle (ver
   // comentário longo lá). Fica aqui porque só o App sabe qual seção está
@@ -1988,6 +2010,7 @@ export default function App() {
       <div className="flex flex-col min-w-0 app-content-shell" style={{ minHeight: "100vh", overflowX: "clip" }}>
         <TopBar
           title={sectionTitle}
+          onReportBug={() => setBugReport({ origem: "atalho", erro: null })}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}
           onSearchOpen={() => setCmdOpen(true)}
           searchPlaceholder={searchPlaceholder}
@@ -2040,7 +2063,12 @@ export default function App() {
               <div className="text-[11px] font-mono p-2 rounded mb-3" style={{ background: "var(--surface)", color: "var(--danger)", whiteSpace: "pre-wrap", maxHeight: 160, overflow: "auto" }}>
                 {error?.message || String(error)}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => setBugReport({ origem: "tela-de-erro", erro: error })}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg"
+                        style={{ background: "var(--danger)", color: "#fff", border: "none" }}>
+                  Reportar isso
+                </button>
                 <button onClick={() => { setSection("dashboard"); reset(); }}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg"
                         style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
@@ -2630,7 +2658,7 @@ export default function App() {
         </div>
       </div>
 
-      <ErrorBoundary>
+      <ErrorBoundary onReport={(erro) => setBugReport({ origem: "tela-de-erro", erro })}>
         <LeadDetailDrawer
           lead={selectedLead}
           campaigns={campaigns}
@@ -2739,6 +2767,19 @@ export default function App() {
         onCreateClient={createClient}
         onUpdateClient={updateClient}
         onUpsertBillingHistory={upsertClientBillingHistory}
+      />
+
+      {/* Montado aqui, no fim e FORA de qualquer ErrorBoundary de propósito:
+          se ficasse dentro do boundary da tela, o modal morreria junto com a
+          tela que quebrou — que é exatamente quando ele mais precisa existir. */}
+      <ReportBugModal
+        open={!!bugReport}
+        onClose={() => setBugReport(null)}
+        onSubmit={criarBugReport}
+        rota={section}
+        empresa={activeCompany}
+        erro={bugReport?.erro || null}
+        origem={bugReport?.origem || "atalho"}
       />
 
     </div>
