@@ -785,6 +785,16 @@ export function CRMViagensGestorView({ currentUser, users }) {
       .sort((a, b) => (a.status === b.status ? 0 : a.status === "enviada" ? -1 : 1));
   }, [prestacoes, selectedMonth, selectedVendedorId]);
 
+  // TEM QUE FICAR ANTES do useMemo de `divergencias` — array de dependência é
+  // avaliado NA CHAMADA do useMemo, não de forma diferida como o factory.
+  // Com esta linha lá embaixo (era o caso até 01/09/2026), toda renderização
+  // desta view lançava "Cannot access 'today' before initialization" e a aba
+  // Gestão caía no ErrorBoundary — desde 10/08/2026, sem ninguém notar,
+  // porque `npm run build` passa (nem o Vite nem o gate fazem análise de TDZ).
+  // 3ª ocorrência desta mesma classe na plataforma (Recrutamento e App.jsx
+  // foram as outras duas, na mesma semana).
+  const today = todayISO();
+
   // Ver computeViagemDivergencias em utils/viagens.js — mesma regra usada
   // em Relatórios, pra não divergir os dois lugares que cruzam planejado ×
   // realizado × despesa.
@@ -796,8 +806,6 @@ export function CRMViagensGestorView({ currentUser, users }) {
   const vendedorSelecionado = selectedVendedorId === "todos"
     ? null
     : vendedoresComerciais.find((v) => v.id === selectedVendedorId);
-
-  const today = todayISO();
 
   async function handleAnalisar() {
     if (!vendedorSelecionado) return;
