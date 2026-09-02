@@ -28,6 +28,15 @@ export const CHANGELOG = [
     items: [
       {
         kind: "correcao",
+        text: "A Central de Bugs deixou de ser alcançável por quem tem acesso de Agência. O item nunca apareceu no menu desse perfil, mas digitar o endereço direto no navegador abria a tela — agora a rota redireciona para Campanhas, igual às outras que já eram bloqueadas.",
+        roles: ["admin", "diretoria"],
+      },
+      {
+        kind: "correcao",
+        text: "Duas bordas usavam a cor errada. No formulário de novo card do Funil, o campo Setor nascia com a borda na cor da marca — que muda por frente, então na Resibag \"falta preencher\" aparecia em verde, e um campo vazio ficava igual a um campo em foco. E o seletor de empresa do Funil e do Chat tinha uma borda cinza-clara fixa, que não escurecia no modo escuro.",
+      },
+      {
+        kind: "correcao",
         text: "O filtro de Empresa em Pedidos e no Catálogo mostrava duas opções que faziam a mesma coisa — \"Todas as empresas\" e \"Visão Grupo\" eram o mesmo filtro, listado duas vezes. Aparecia para quem tem acesso a mais de uma frente.",
         roles: ["vendedor", "gerente", "admin", "diretoria"],
       },

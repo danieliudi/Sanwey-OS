@@ -288,10 +288,18 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
 // qualquer um dos 5, sem vínculo criptográfico nenhum entre credencial e
 // identidade. Corrigido com 1 secret por agente (AGENT_GATEWAY_KEY_<AGENTE>)
 // — agent_id passa a vir de QUAL credencial bateu, nunca do corpo.
-// AGENT_GATEWAY_KEY (secret antigo) continua aceito em paralelo durante o
-// rollout (agentes do n8n ainda não migrados pra chave própria), mas
-// autentica como "legacy_unverified" — nunca como o agent_id que o corpo
-// declarar, pra não reabrir o mesmo furo por baixo do rollout.
+// APOSENTADO em 02/09/2026: AGENT_GATEWAY_KEY (o secret compartilhado
+// antigo) era aceito em paralelo durante o rollout, autenticando como
+// "legacy_unverified". Conferido antes de remover: das 49 linhas de
+// `agent_actions`, 49 têm agent_id = 'automation' (motor de automações da
+// própria plataforma, que escreve direto na tabela) — ZERO foram criadas por
+// qualquer chave de agente, legada ou própria; e o log
+// `agent_gateway_legacy_key_used`, que dispara a cada uso, não tem uma única
+// ocorrência. Ou seja: ninguém depende da chave legada. Se algum fluxo do
+// n8n ainda a usar, ele passa a receber 401 e a correção é configurar a
+// chave própria do agente (AGENT_GATEWAY_KEY_<AGENTE>) — nunca reabrir esta.
+// Falta remover o secret AGENT_GATEWAY_KEY do painel do Supabase; o código
+// já não o lê.
 const AGENT_SECRETS: Record<string, string | undefined> = {
   sdr_q:     Deno.env.get('AGENT_GATEWAY_KEY_SDR_Q'),
   scout:     Deno.env.get('AGENT_GATEWAY_KEY_SCOUT'),
@@ -302,7 +310,6 @@ const AGENT_SECRETS: Record<string, string | undefined> = {
   // LinkedIn e Instagram — pra aprovação, com a auditoria de fato junto.
   esteira:   Deno.env.get('AGENT_GATEWAY_KEY_ESTEIRA'),
 };
-const LEGACY_AGENT_KEY = Deno.env.get('AGENT_GATEWAY_KEY');
 
 function timingSafeEqualStr(a: string, b: string): boolean {
   const enc = new TextEncoder();
@@ -318,10 +325,6 @@ function resolveAgentIdFromKey(agentKey: string | null): string | null {
   if (!agentKey) return null;
   for (const [agentId, secret] of Object.entries(AGENT_SECRETS)) {
     if (secret && timingSafeEqualStr(agentKey, secret)) return agentId;
-  }
-  if (LEGACY_AGENT_KEY && timingSafeEqualStr(agentKey, LEGACY_AGENT_KEY)) {
-    console.log(JSON.stringify({ event: 'agent_gateway_legacy_key_used', at: new Date().toISOString() }));
-    return 'legacy_unverified';
   }
   return null;
 }
@@ -355,6 +358,7 @@ Deno.serve(async (req: Request) => {
   // de verdade. Agora resolve o usuário via auth.getUser() antes de confiar
   // no JWT; se inválido, cai pro mesmo 401 de "sem credencial nenhuma".
   let isJwt = false;
+  let jwtUserId: string | null = null;
   let userClient = adminClient;
   if (authorization?.startsWith('Bearer ')) {
     const candidate = createClient(
@@ -365,6 +369,7 @@ Deno.serve(async (req: Request) => {
     const { data: userData, error: userErr } = await candidate.auth.getUser();
     if (!userErr && userData?.user) {
       isJwt = true;
+      jwtUserId = userData.user.id;
       userClient = candidate;
     }
   }
@@ -463,6 +468,14 @@ Deno.serve(async (req: Request) => {
           q = q.or('expires_at.is.null,expires_at.gt.' + new Date().toISOString());
         }
 
+        // Mesma classe do MD-05 (que foi fechado só na rota `leads`): a
+        // `list` roda com adminClient quando vem de chave de agente, então
+        // qualquer uma das 6 chaves lia a fila INTEIRA — de todos os agentes
+        // e todas as frentes —, incluindo `payload` (rascunho de e-mail,
+        // notas) e o join com `leads`. Agente só enxerga o que ele mesmo
+        // propôs; o frontend continua indo por JWT, onde a RLS decide.
+        if (isAgentKey) q = q.eq('agent_id', verifiedAgentId);
+
         const { data, error } = await q;
         if (error) throw error;
         return json({ data, count: data?.length ?? 0 });
@@ -480,23 +493,89 @@ Deno.serve(async (req: Request) => {
           return json({ error: `status inválido. Valores aceitos: ${validStatuses.join(', ')}` }, 400);
         }
 
+        // Agente propõe; quem aprova é gente. Até 02/09/2026 esta rota
+        // aceitava QUALQUER status vindo de uma chave de agente, rodando com
+        // adminClient (service_role, bypassa RLS) — ou seja, o agente podia
+        // aprovar a própria proposta, e `approved` dispara efeito real
+        // (notifica gestor da vaga, notifica responsável, publica pesquisa de
+        // mercado). A fila de aprovação existe justamente pra isso não
+        // acontecer sozinho.
+        //
+        // O que sobra pro agente: mandar pra 'in_review' (pedir olho humano)
+        // e marcar 'executed' DEPOIS que uma pessoa aprovou — que é o fecho
+        // legítimo do laço (humano aprova → n8n executa → agente registra).
+        // 'approved'/'rejected' são julgamento humano; 'ignored' fecha o item
+        // sem ninguém ver, então também fica de fora.
+        if (isAgentKey) {
+          const permitidoAoAgente = ['in_review', 'executed'];
+          if (body.status && !permitidoAoAgente.includes(body.status)) {
+            return json({
+              error: `Agente não pode definir status "${body.status}". Permitidos: ${permitidoAoAgente.join(', ')}. Aprovar ou recusar é decisão de uma pessoa, pela fila de aprovação.`,
+            }, 403);
+          }
+          // A leitura é SEMPRE escopada pelo agent_id de quem autenticou. A
+          // primeira versão desta guarda lia sem esse filtro e respondia
+          // diferente conforme a linha existisse ou não, e com o status em
+          // texto — ou seja, virava um oráculo: de posse de uma chave dava
+          // pra varrer UUIDs e descobrir existência e estado de item de
+          // OUTRO agente, mesmo sem conseguir escrever nele. Achado da
+          // revisão de segurança de 02/09/2026. Com o filtro, "não é seu" e
+          // "não existe" viram a mesma resposta 404.
+          const { data: atual, error: leituraErr } = await adminClient
+            .from('agent_actions')
+            .select('status')
+            .eq('id', body.id)
+            .eq('agent_id', verifiedAgentId)
+            .maybeSingle();
+          if (leituraErr) throw leituraErr;
+          if (!atual) return json({ error: 'Ação não encontrada' }, 404);
+          if (body.status === 'executed' && atual.status !== 'approved') {
+            return json({
+              error: `Só dá pra marcar como "executed" o que já foi aprovado por uma pessoa (status atual: "${atual.status}").`,
+            }, 409);
+          }
+          // Sem `status` no corpo, o PATCH só troca `resolution_note`. Isso
+          // deixava o agente reescrever a justificativa de uma linha JÁ
+          // resolvida por uma pessoa, sem passar por guarda nenhuma —
+          // reescrever o registro de uma decisão humana depois do fato.
+          const terminais = ['approved', 'rejected', 'executed', 'ignored'];
+          if (!body.status && terminais.includes(atual.status)) {
+            return json({
+              error: `Esta ação já foi resolvida (status "${atual.status}") — o agente não reescreve a nota de uma decisão já tomada.`,
+            }, 409);
+          }
+        }
+
         const patch: Record<string, unknown> = {};
         if (body.status)          patch.status          = body.status;
         if (body.resolution_note) patch.resolution_note = body.resolution_note;
         if (body.status && body.status !== 'in_review') {
           patch.resolved_at = new Date().toISOString();
+          // `resolved_at` era gravado sem `resolved_by`: dava pra saber
+          // QUANDO a fila foi resolvida, nunca por QUEM. A premissa desta
+          // rota é "aprovar é decisão de gente" — sem isso, a decisão fica
+          // anônima. A coluna já existia na tabela, só ninguém preenchia.
+          // Só no caminho humano: chave de agente não é pessoa.
+          if (jwtUserId && !isAgentKey) patch.resolved_by = jwtUserId;
         }
 
         // Frontend usa o cliente com JWT (RLS garante permissão)
         const client = isAgentKey ? adminClient : userClient;
-        const { data, error } = await client
-          .from('agent_actions')
-          .update(patch)
-          .eq('id', body.id)
-          .select()
-          .single();
+        let q = client.from('agent_actions').update(patch).eq('id', body.id);
+        // Chave de agente roda com service_role (sem RLS), então o escopo tem
+        // que ser explícito aqui: cada agente só mexe no que ELE criou —
+        // senão a chave do `scout` altera item do `sentinela`. O frontend não
+        // precisa disso: vai por JWT e a RLS da tabela já decide.
+        if (isAgentKey) q = q.eq('agent_id', verifiedAgentId);
+        // `.maybeSingle()` e não `.single()`: com `.single()`, zero linhas
+        // (id inexistente, ou linha de outro agente, ou RLS barrando o
+        // usuário) virava exceção do PostgREST e caía no catch geral como
+        // 500 com a mensagem crua — mascarando uma negação legítima de
+        // permissão como erro de servidor.
+        const { data, error } = await q.select().maybeSingle();
 
         if (error) throw error;
+        if (!data) return json({ error: 'Ação não encontrada ou sem permissão pra alterá-la' }, 404);
         if (body.status === 'approved') {
           await notifyVagaManagerIfApproved(adminClient, data);
           await notifyVagaResponsibleIfApproved(adminClient, data);

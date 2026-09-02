@@ -9,23 +9,37 @@ https://adizvduyfzfftyswkijj.supabase.co/functions/v1/agent-gateway
 
 ## 1. Setup obrigatório (uma vez)
 
-Antes de qualquer chamada do n8n funcionar, você precisa definir o segredo
-`AGENT_GATEWAY_KEY` no Supabase:
+**Uma chave POR AGENTE — a chave única compartilhada foi aposentada.**
 
-1. Acesse: https://supabase.com/dashboard/project/adizvduyfzfftyswkijj/settings/edge-functions
-2. Clique em **"Edit secrets"**
-3. Adicione: `AGENT_GATEWAY_KEY` = (gere uma string longa e aleatória, ex: `openssl rand -hex 32`)
-4. Salve — o segredo é injetado automaticamente na Edge Function.
+Até 18/08/2026 existia um secret só (`AGENT_GATEWAY_KEY`) e o `agent_id` vinha
+declarado no corpo da requisição: quem tivesse a chave podia se passar por
+qualquer agente. Hoje o `agent_id` é derivado de QUAL chave autenticou, nunca
+do corpo. O secret antigo ainda foi aceito em paralelo durante o rollout, mas
+**deixou de ser aceito em 02/09/2026** — quem ainda usar recebe 401.
 
-No n8n, armazene o mesmo valor como credential: `AGENT_GATEWAY_KEY`.
+Em https://supabase.com/dashboard/project/adizvduyfzfftyswkijj/settings/edge-functions
+→ **"Edit secrets"**, defina uma chave distinta por agente (cada uma gerada
+com `openssl rand -hex 32`):
+
+| Secret | Agente |
+|--------|--------|
+| `AGENT_GATEWAY_KEY_SDR_Q` | SDR-Q — Qualificador |
+| `AGENT_GATEWAY_KEY_SCOUT` | SCOUT — Inteligência de Conta |
+| `AGENT_GATEWAY_KEY_CADENCIA` | CADÊNCIA — Follow-up Engine |
+| `AGENT_GATEWAY_KEY_SENTINELA` | SENTINELA — Monitor de Funil |
+| `AGENT_GATEWAY_KEY_CROSS` | CROSS — Oportunidades Cross-sell |
+| `AGENT_GATEWAY_KEY_ESTEIRA` | ESTEIRA — Esteira editorial |
+
+No n8n, cada workflow guarda só a credential do seu próprio agente. Chave não
+configurada = aquele agente toma 401.
 
 ---
 
 ## 2. Autenticação
 
-Toda requisição do n8n usa o header:
+Toda requisição do n8n usa o header, com a chave DAQUELE agente:
 ```
-X-Agent-Key: <valor do AGENT_GATEWAY_KEY>
+X-Agent-Key: <valor do AGENT_GATEWAY_KEY_<AGENTE>>
 ```
 
 Toda requisição do frontend usa:
@@ -50,7 +64,6 @@ Content-Type: application/json
 **Body:**
 ```json
 {
-  "agent_id":     "cadencia",
   "action_type":  "followup_reminder",
   "lead_id":      "lead_abc123",
   "company_id":   "resibag",
@@ -69,9 +82,13 @@ Content-Type: application/json
 }
 ```
 
-**Campos obrigatórios:** `agent_id`, `action_type`, `title`
+**Campos obrigatórios:** `action_type`, `title`
 
-**`agent_id` aceitos:**
+> **`agent_id` NÃO vai no corpo.** Ele é derivado da chave que autenticou a
+> chamada. Mandar `agent_id` no body não dá erro, mas é ignorado — o valor
+> gravado é sempre o do dono da credencial.
+
+**`agent_id` gravados (um por chave):**
 | Valor | Agente |
 |-------|--------|
 | `sdr_q` | SDR-Q — Qualificador |
@@ -148,6 +165,19 @@ Usado pelo frontend quando gerente/vendedor age sobre a sugestão.
 
 **`status` aceitos para resolução:** `in_review`, `approved`, `rejected`, `executed`, `ignored`
 
+**Quem pode definir o quê (desde 02/09/2026):**
+
+| Credencial | Pode definir | Observação |
+|---|---|---|
+| JWT (pessoa, pelo frontend) | todos os cinco | grava `resolved_by` com o id de quem resolveu |
+| `X-Agent-Key` (agente) | `in_review`, `executed` | `executed` só se a linha já estiver `approved` |
+
+Agente propõe, pessoa decide: `approved` dispara efeito real (notifica gestor
+da vaga, notifica responsável, publica pesquisa de mercado), então aprovar e
+recusar são exclusivos do caminho humano. `ignored` também fica de fora — fecha
+o item sem ninguém ver. Um agente também só alcança as ações que **ele mesmo**
+criou, e não reescreve a nota de uma linha já resolvida.
+
 ---
 
 ### GET `?action=leads` — Ler leads para processamento
@@ -196,9 +226,10 @@ Usado pelo n8n para registrar no log de atividades do lead (visível no drawer).
 |--------|-------------|
 | 400 | Body inválido / campo obrigatório ausente |
 | 401 | Sem autenticação (sem X-Agent-Key nem JWT) |
-| 403 | Rota restrita a agentes (sem X-Agent-Key) |
-| 404 | Recurso não encontrado |
+| 403 | Rota restrita a agentes (sem X-Agent-Key), ou status não permitido pra credencial de agente |
+| 404 | Recurso não encontrado — ou existe, mas foi criado por outro agente |
 | 405 | Método HTTP incorreto para esta rota |
+| 409 | Transição inválida: `executed` em ação não aprovada, ou nota em ação já resolvida |
 | 500 | Erro interno (detalhe no campo `error`) |
 
 ---

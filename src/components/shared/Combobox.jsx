@@ -45,7 +45,12 @@ export function Combobox({ value, onChange, options, placeholder, className = ""
         onClick={() => setOpen(o => !o)}
         className={`w-full flex items-center text-left ${sizeClass} border transition-colors duration-150 cursor-pointer`}
         style={{
-          borderColor: open ? "var(--accent)" : "#E5E7EB",
+          // `#E5E7EB` fixo aqui era o único hex solto do arquivo: cinza claro
+          // que não escurece no dark mode, então a borda deste seletor ficava
+          // acesa no meio de uma tela escura. `--border` é o token que o
+          // irmão mais próximo (AssigneeMultiSelect, mesmo botão-gatilho de
+          // dropdown) já usa, e tem variante dark automática.
+          borderColor: open ? "var(--accent)" : "var(--border)",
           background: "var(--surface)",
           color: selected ? "var(--text)" : "var(--text-dim)",
           boxShadow: open ? "0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent)" : "none",

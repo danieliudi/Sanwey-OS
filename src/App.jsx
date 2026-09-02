@@ -1862,7 +1862,11 @@ export default function App() {
       setSection("comex");
     }
     // Agência can access marketing routes + their own profile (settings).
-    const agenciaBlocked = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials"];
+    // "central-bugs" entrou em 02/09/2026: o menu da agência nunca teve o
+    // item, mas a rota não era barrada — digitando /central-bugs na URL, um
+    // parceiro externo abria a Central de Bugs inteira. Achado da revisão de
+    // segurança; o menu esconder não é o mesmo que a rota negar.
+    const agenciaBlocked = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials", "central-bugs"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }

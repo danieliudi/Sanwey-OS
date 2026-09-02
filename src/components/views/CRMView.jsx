@@ -182,10 +182,27 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         onChange={e => setSector(e.target.value)}
         className="w-full text-xs rounded-lg border outline-none"
         style={{
+          // `--accent` aqui marcava "campo obrigatório vazio" — dois problemas
+          // no mesmo lugar. (1) A cor de ação muda por frente comercial em
+          // runtime (COMPANIES[companyId].primary), então na Resibag isso
+          // pintava de verde o que queria dizer "falta preencher" — a mesma
+          // classe de bug que a regra 1 do CLAUDE.md proíbe. (2) Neste
+          // formulário `--accent` já significa OUTRA coisa: é a borda de FOCO
+          // do campo "Nome da empresa *" logo acima. Um select vazio e sem
+          // foco ficava idêntico a um campo focado.
+          //
+          // Aviso de obrigatório aqui não some — só deixa de ser cor: o
+          // rótulo já é "Setor *" e o botão "Criar card" fica desabilitado
+          // enquanto `!sector`. Pintar antes de a pessoa tocar no campo é
+          // validação prematura, classe de bug que o QA desta plataforma já
+          // pega. Agora segue exatamente o mesmo padrão do input acima:
+          // neutro em repouso, `--accent` no foco.
           ...SELECT_STYLE,
-          borderColor: !sector ? "var(--accent)" : "var(--border-strong)",
+          borderColor: "var(--border-strong)",
           color: sector ? "var(--text)" : "var(--text-dim)",
         }}
+        onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+        onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
         required
       >
         <option value="">Setor *</option>
