@@ -396,7 +396,16 @@ function MobileKanban({ purchasesByStage, suppliersById, usersById, users, onCar
         const isOpen = expanded.has(stage.id);
         return (
           <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: color + "28" }}>
-            <button className="w-full flex items-center justify-between px-4 py-3 cursor-pointer" style={{ background: color + "12", border: "none" }}
+            {/* div role="button", não <button>: o cabeçalho carrega o
+                KanbanColumnSortMenu dentro dele, e botão dentro de botão é
+                HTML inválido — mesma correção de RHMobileKanbanAccordion.jsx,
+                onde está o comentário completo. */}
+            <div role="button" tabIndex={0} aria-expanded={isOpen}
+              className="w-full flex items-center justify-between px-4 py-3 cursor-pointer" style={{ background: color + "12", border: "none" }}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(stage.id); }
+              }}
               onClick={() => toggle(stage.id)}>
               <span className="font-bold text-sm" style={{ color }}>{stage.name}</span>
               <div className="flex items-center gap-2">
@@ -413,7 +422,7 @@ function MobileKanban({ purchasesByStage, suppliersById, usersById, users, onCar
                   <ChevronDown size={13} />
                 </div>
               </div>
-            </button>
+            </div>
             {isOpen && (
               <div className="p-2.5 space-y-2" style={{ background: "var(--surface-alt)" }}>
                 {items.length === 0

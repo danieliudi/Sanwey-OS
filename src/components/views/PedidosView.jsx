@@ -156,7 +156,7 @@ export function PedidosView({
         filters={[
           { id: "empresa", value: empresa, onChange: e => setEmpresa(e.target.value), label: "Empresa",
             options: [{ value: "all", label: "Todas as empresas" },
-                      ...accessibleCompanies.map(c => ({ value: c, label: COMPANIES[c]?.name || c }))] },
+                      ...accessibleCompanies.filter(c => c !== "all").map(c => ({ value: c, label: COMPANIES[c]?.name || c }))] },
           { id: "vendedor", value: vendedor, onChange: e => setVendedor(e.target.value), label: "Vendedor",
             options: [{ value: "all", label: "Todos os vendedores" },
                       ...vendedores.map(u => ({ value: u.id, label: u.name }))] },

@@ -83,10 +83,28 @@ export function RHMobileKanbanAccordion({
         const isExpanded = expanded.has(key);
         return (
           <div key={key} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
-            <button
+            {/* `div role="button"` e não `<button>`: o cabeçalho da etapa
+                carrega DENTRO dele o menu de ordenação (KanbanColumnSortMenu)
+                e o `renderStageExtra`, que são botões — e botão dentro de
+                botão é HTML inválido. O React monta a árvore exatamente como
+                escrita (não é o parser do navegador que "conserta"), então na
+                prática o controle de dentro deixava de ser alcançável por
+                teclado e o leitor de tela anunciava um controle só. O
+                stopPropagation nos wrappers já cuidava do clique; o que
+                faltava era a semântica. Comportamento de teclado replicado à
+                mão abaixo (Enter/Espaço), que é o que o `<button>` dava de
+                graça. */}
+            <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={isExpanded}
               className="w-full flex items-center justify-between gap-2 px-4 py-3.5 cursor-pointer"
               style={{ background: stage.color + "12", border: "none" }}
               onClick={() => toggle(key)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(key); }
+              }}
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
@@ -114,7 +132,7 @@ export function RHMobileKanbanAccordion({
                   <ChevronDown size={13} />
                 </div>
               </div>
-            </button>
+            </div>
             {isExpanded && (
               <div className="p-2.5 space-y-2" style={{ background: contentBackground || "var(--surface-alt)" }}>
                 {items.length === 0 ? (

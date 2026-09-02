@@ -386,6 +386,14 @@ export function useChannelMessages(channelId) {
     // a thread abria mostrando a conversa errada até a resposta chegar.
     setMessages([]);
     fetchMessages(() => active);
+    // `enabled` = isSupabaseConfigured && channelId (linha 350). Sem esta
+    // guarda o efeito seguia direto pro supabase.channel(...) — que é `null`
+    // quando não há VITE_SUPABASE_* — e o Chat inteiro caía no ErrorBoundary
+    // ("Cannot read properties of null (reading 'channel')"). Todo hook da
+    // plataforma já tinha essa guarda; este era o único sem. De quebra,
+    // deixa de abrir uma assinatura Realtime com `channel_id=eq.null`
+    // enquanto nenhuma conversa está selecionada.
+    if (!enabled) return undefined;
     const channelName = `chat-messages-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)

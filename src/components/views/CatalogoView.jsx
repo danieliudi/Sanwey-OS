@@ -371,7 +371,7 @@ export function CatalogoView({ activeCompany, accessibleCompanies = COMPANY_IDS,
               {
                 id: "empresa", value: empresa, onChange: (e) => setEmpresa(e.target.value), label: "Empresa",
                 options: [{ value: "all", label: "Todas as empresas" },
-                          ...accessibleCompanies.map(c => ({ value: c, label: COMPANIES[c]?.name || c }))],
+                          ...accessibleCompanies.filter(c => c !== "all").map(c => ({ value: c, label: COMPANIES[c]?.name || c }))],
               },
               {
                 id: "status", value: status, onChange: (e) => setStatus(e.target.value), label: "Status",

@@ -28,6 +28,15 @@ export const CHANGELOG = [
     items: [
       {
         kind: "correcao",
+        text: "O filtro de Empresa em Pedidos e no Catálogo mostrava duas opções que faziam a mesma coisa — \"Todas as empresas\" e \"Visão Grupo\" eram o mesmo filtro, listado duas vezes. Aparecia para quem tem acesso a mais de uma frente.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "correcao",
+        text: "No celular, o cabeçalho de cada etapa do quadro voltou a ser navegável pelo teclado. O botão de ordenar ficava dentro do botão que abre e fecha a etapa — quem usa teclado ou leitor de tela não alcançava o de dentro. Para quem usa o dedo ou o mouse nada muda.",
+      },
+      {
+        kind: "correcao",
         text: "Abrir uma solicitação em Compras voltou a funcionar. Desde 18/08 o painel de detalhe quebrava assim que o card era aberto — sobrava a tela de erro e não havia como chegar em cotações, aprovação ou nota fiscal. Efeito colateral do ajuste que corrigiu o erro ao aprovar; a tela de aprovação em si continuou certa.",
         roles: ["marketing", "gerente_marketing", "admin", "diretoria"],
       },
