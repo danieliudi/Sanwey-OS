@@ -117,19 +117,31 @@ perguntar antes — mudaria o fluxo real de quem hoje precisa alternar entre
 frentes no mesmo cadastro.
 
 **Policy nova nunca lê `profiles.role` (escalar) — sempre `roles[]`**: achado
-MD-11 da auditoria de segurança (19/08/2026) — 22 policies em produção ainda
-comparam contra `profiles.role` (`role = ANY(['admin','gerente_rh','rh'])`,
-sempre em condição POSITIVA, nunca negação — o padrão perigoso de negação era
-só o AL-06, já corrigido em sessão anterior). Não é vulnerabilidade ativa hoje
-— o pior efeito de uma condição positiva desatualizada é NEGAR acesso
-legítimo pra quem tem um cargo secundário em `roles[]` que não é o `role`
-primário, nunca vazar dado a mais. É dívida estrutural que ficou de pé
-(migrar as 22 é trabalho não-trivial, decisão de quando fazer é do Daniel) —
-mas dívida nova é fácil de evitar: daqui pra frente, toda policy/função RLS
-nova usa `roles[]` (via `current_user_has_role(...)`/`roles &&`), nunca
-`profiles.role` direto. Se for mexer em uma das 22 policies antigas por outro
-motivo, é uma boa oportunidade de migrar ela junto — mas não é obrigatório
-nem deve ser feito "de brinde" sem avisar.
+MD-11 da auditoria de segurança (19/08/2026).
+
+**Contagem corrigida em 01/09/2026 — a dívida em POLICY já foi paga.** Este
+parágrafo dizia "22 policies em produção ainda comparam contra
+`profiles.role`". Conferido no banco: das **345** policies do schema
+`public`, **ZERO** leem o escalar ou `current_user_role()`. As 3 que citam a
+palavra "role" se referem a `invitations.role` — a coluna do próprio convite,
+no guard que impede gerente convidar admin, uso correto. Não saia caçando as
+22: elas não existem mais.
+
+**O que sobrou: 1 função**, não 2 como uma varredura chegou a sugerir.
+`rh_onboarding_tarefas_guard_self_update` faz
+`profiles.role = any(array['admin','gerente_rh','rh'])`. (A outra candidata,
+`handle_user_confirmed`, ESCREVE `role = inv.role` a partir do convite — isso
+é correto, o convite carrega mesmo um cargo principal, não é leitura pra
+decidir permissão.)
+
+O efeito dessa que sobrou é NEGAR, nunca vazar: quem tem `rh` como cargo
+secundário (`roles = {vendedor, rh}`, `role = 'vendedor'`) não passa no guard
+apesar de ser RH. O gatilho `profiles_sync_roles` garante que o escalar esteja
+DENTRO do array, não que o array caiba no escalar — por isso a divergência é
+possível.
+
+A regra pra frente continua a mesma: toda policy/função RLS nova usa `roles[]`
+(via `current_user_has_role(...)`/`roles &&`), nunca `profiles.role` direto.
 
 **Mexeu em cargo por SQL? Grave `role` E `roles` juntos, sempre** — corolário
 prático do MD-11, descoberto na marra em 01/09/2026. O gatilho
