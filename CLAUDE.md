@@ -131,6 +131,28 @@ nova usa `roles[]` (via `current_user_has_role(...)`/`roles &&`), nunca
 motivo, é uma boa oportunidade de migrar ela junto — mas não é obrigatório
 nem deve ser feito "de brinde" sem avisar.
 
+**Mexeu em cargo por SQL? Grave `role` E `roles` juntos, sempre** — corolário
+prático do MD-11, descoberto na marra em 01/09/2026. O gatilho
+`profiles_sync_roles` (BEFORE INSERT OR UPDATE em `profiles`) reinjeta o
+`role` escalar dentro de `roles[]` toda vez que ele não estiver lá. Ou seja:
+um `UPDATE profiles SET roles = ARRAY['suporte']` **não remove** o cargo
+antigo — o escalar volta sozinho, sem erro e sem aviso. Aconteceu num teste
+desta sessão: pedi "só suporte" e recebi `{suporte, vendedor}` de volta, o
+que quase produziu um diagnóstico de segurança errado.
+
+Pela interface isso NÃO é alcançável e não há nada a corrigir hoje:
+`UserManagementView.jsx` monta a lista como
+`[form.role, ...additionalRoles.filter(r => r !== form.role)]`, ou seja, o
+cargo principal é o primeiro item por construção e o gatilho nunca tem o que
+fazer. Conferido no banco em 01/09/2026: dos 15 perfis, ZERO têm o escalar
+fora do array. O gatilho é rede de segurança, não bug.
+
+O risco é só pra escrita que NÃO passa pela tela — SQL manual, migration, ou
+uma tela futura que edite apenas o array: ali uma remoção de cargo
+silenciosamente não acontece, e a operação parece ter dado certo. Não
+"consertar" o gatilho por conta própria (mexer em cargo quebra login); a
+regra é gravar os dois campos na mesma instrução.
+
 **Chave pessoal de IA em texto plano — risco residual aceito, não é pra
 "corrigir" sozinho**: achado MD-12 da auditoria de segurança (19/08/2026) —
 a chave pessoal (OpenAI/Anthropic) que o usuário configura em Configurações →
