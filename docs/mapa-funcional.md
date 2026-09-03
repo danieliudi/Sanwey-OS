@@ -232,7 +232,7 @@ o `security-agent` (CLAUDE.md 3.1).
 
 | Rota | Formulário | O que grava |
 |---|---|---|
-| `/captura/:slug` | `LeadCaptureForm` | lead a partir de campanha |
+| `/captura/:slug` | `LeadCaptureForm` | lead (origem UTM oculta → `campaign_id` quando migration Fase 3 aplicada) |
 | `/vagas/:slug` | `JobApplicationForm` | candidatura + currículo no bucket `rh-curriculos` |
 | `/trabalhe-conosco` | `TalentPoolForm` | banco de talentos + currículo |
 | `/solicitar-marketing` | `MarketingRequestForm` | solicitação de material |

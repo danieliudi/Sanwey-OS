@@ -5,6 +5,12 @@ import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
 import { toLocalISODate } from "../../utils/date";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
+import {
+  parseAttributionSearchParams,
+  formatAttributionNotesBlock,
+  buildLeadCaptureUtmArgs,
+  isMissingUtmRpcError,
+} from "../../utils/attribution";
 
 const PRIORITIES = ["Alta", "Média", "Baixa"];
 
@@ -57,7 +63,9 @@ export default function LeadCaptureForm() {
   const { slug: rawSlug } = useParams();
   const slug = SLUG_ALIASES[rawSlug] || rawSlug;
   const [params] = useSearchParams();
-  const source = params.get("src") || "site";
+  // Origem oculta: UTM da URL (Fase 3). ?src= legado continua como fallback.
+  const attribution = useMemo(() => parseAttributionSearchParams(params), [params]);
+  const source = attribution.source;
 
   const companyId = COMPANY_IDS.includes(slug) ? slug : null;
   const company = companyId ? COMPANIES[companyId] : null;
@@ -128,7 +136,8 @@ export default function LeadCaptureForm() {
       }
       if (form.notes.trim()) notesParts.push(form.notes.trim());
 
-      const { error: err } = await supabase.rpc("submit_lead_capture", {
+      const baseNotes = notesParts.length > 0 ? notesParts.join("\n\n") : null;
+      const baseArgs = {
         p_company_id: companyId,
         p_customer_name: form.customerName.trim(),
         p_contact_phone: form.phone.replace(/\D/g, ""),
@@ -136,9 +145,32 @@ export default function LeadCaptureForm() {
         p_product_interest: form.industry || null,
         p_priority: form.priority || null,
         p_prospect_date: form.callbackDate || todayISO(),
-        p_notes: notesParts.length > 0 ? notesParts.join("\n\n") : null,
+        p_notes: baseNotes,
         p_source: source,
-      });
+      };
+
+      // Tenta RPC com UTM (campaign_id). Se a migration ainda não foi
+      // aplicada, cai no fallback: origem vai em notes, sem quebrar o form.
+      let err = null;
+      if (attribution.hasUtm) {
+        const first = await supabase.rpc("submit_lead_capture", {
+          ...baseArgs,
+          ...buildLeadCaptureUtmArgs(attribution),
+        });
+        err = first.error;
+        if (err && isMissingUtmRpcError(err)) {
+          const attrBlock = formatAttributionNotesBlock(attribution);
+          const fallbackNotes = [baseNotes, attrBlock].filter(Boolean).join("\n\n") || null;
+          const second = await supabase.rpc("submit_lead_capture", {
+            ...baseArgs,
+            p_notes: fallbackNotes,
+          });
+          err = second.error;
+        }
+      } else {
+        const res = await supabase.rpc("submit_lead_capture", baseArgs);
+        err = res.error;
+      }
       if (err) throw err;
       setDone(true);
     } catch (err) {
