@@ -289,7 +289,7 @@ export function FairReportView({
   const hasFullLeadScope = roleList.some(r => ["admin", "gerente", "diretoria"].includes(r));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-tour={variant === "content" ? "marketing-conteudo-report" : undefined}>
       <PageHeader
         icon={HeaderIcon}
         title={title}
