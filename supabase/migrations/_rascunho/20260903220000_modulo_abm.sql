@@ -1,0 +1,17 @@
+-- RASCUNHO — NÃO APLICAR sem confirmação explícita do Daniel.
+--
+-- Espelho SQL de MODULE_GROUPS (src/utils/module-access.js) pra o id novo
+-- `abm` (Contas · ABM). A tela já funciona pelo menu em JS; current_user_has_module
+-- não é lida por policy RLS hoje. Isto só alinha o CASE da função e registra
+-- o módulo na chave global (module_states), no mesmo espírito de
+-- _historico/20260925_modulo_catalogo.sql.
+--
+-- Quando for aplicar:
+-- 1) Em current_user_has_module(), incluir 'abm' no array do ramo comercial
+--    que já tem 'clients' (não é suporte puro / marketing puro / RH puro / comex puro).
+-- 2) Rodar o INSERT abaixo (nasce em live: a tela reaproveita fit/comitê
+--    já existentes, não é piloto).
+-- 3) get_advisors depois.
+
+-- insert into public.module_states (module_id, state) values ('abm','live')
+--   on conflict (module_id) do nothing;

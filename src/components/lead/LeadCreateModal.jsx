@@ -15,6 +15,7 @@ import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { localDateInputToISOString, toLocalISODate } from "../../utils/date";
 import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
 import { formatPhone } from "../../utils/masks";
+import { computeFitScore } from "../../utils/pipeline-metrics";
 
 // ── Customer search helpers ───────────────────────────────────────────────────
 
@@ -503,6 +504,7 @@ export function LeadCreateModal({
         decisionMaker: { name: "—", role: "—" },
         customFields: customValues,
       };
+      lead.fitScore = computeFitScore(lead);
       // Auto-link or create client record
       const cnpjNorm = cnpjDigits(values.cnpj || "");
       const nameLower = normalizeName(values.company || "");

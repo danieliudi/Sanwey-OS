@@ -30,13 +30,13 @@ Todos conferidos no código em 03/09/2026:
 
 | | |
 |---|---|
-| Rotas autenticadas (`src/constants/routes.js`) | **52** |
+| Rotas autenticadas (`src/constants/routes.js`) | **53** |
 | …das quais só redirecionam | **7** |
-| …telas de verdade | **45** |
+| …telas de verdade | **46** |
 | Rotas **públicas**, sem login (`src/main.jsx`) | **8** |
-| Componentes de view (`src/components/views/`) | **58** |
-| Hooks (`src/hooks/`) | **123** |
-| …que falam com o banco | **98** |
+| Componentes de view (`src/components/views/`) | **59** |
+| Hooks (`src/hooks/`) | **124** |
+| …que falam com o banco | **99** |
 | Tabelas referenciadas pelo front | **109** |
 | Funções RPC chamadas pelo front | **48** |
 | Edge functions **ativas em produção** | **30** |
@@ -153,6 +153,7 @@ abre · dado principal · integração externa (quando tem).
 | `/pos-venda` | `PosVendaView.jsx` | **Funil de Pós-venda.** Ligado ao anterior: o botão "Enviar para Pós-venda" num negócio Ganho cria o caso aqui, e o negócio original continua existindo no funil. Onboarding do cliente → acompanhamento → renovação/upsell. Dado: `posvenda_cases`. |
 | `/pedidos` | `PedidosView.jsx` | Pedidos: registro e acompanhamento por etapa. É a tela que o `suporte` opera. Dado: `orders`, `order_items`, `order_stage_history`, `client_products`. |
 | `/clientes` | `client/ClientsManager.jsx` | Base de clientes, com deduplicação por CNPJ. Endereço, contatos (comitê de compra), produtos liberados com preço negociado, e linha do tempo consolidada (`get_client_timeline`: ata, visita, mudança de etapa, faturamento). Integra: CNPJ, voz, reverse-geocode. |
+| `/abm` | `AbmAccountsView.jsx` | **Contas · ABM** — agrega leads de campanha Conteúdo/Digital por conta (`client_id` → CNPJ → o próprio lead). Mostra toques, fit score determinístico (mesma fórmula do Funil) e tamanho do comitê (`client_contacts`). Não é um segundo motor de métricas. |
 | `/catalogo` | `CatalogoView.jsx` | Catálogo de produtos: código, preço de tabela, pedido mínimo, certificações, regras de margem (`margin_rules`). Marketing também alcança, porque mantém a metade "vitrine" (chamada, destaques, especificações) que o Portal B2B mostra. |
 | `/biblioteca-de-documentos` | `DocumentLibraryView.jsx` | "Datasheet, certificado e ficha técnica reutilizáveis — anexe a qualquer negócio sem reenviar". Dado: `lead_document_refs` + bucket `document-library`. |
 | `/explorador` | `ExplorerView.jsx` | Prospecção: busca direta por CNPJ e lista de sugestões com filtro (`prospect_seeds`). Absorveu a importação de feira. Integra: CNPJ. |

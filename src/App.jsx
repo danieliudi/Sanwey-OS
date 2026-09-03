@@ -84,6 +84,7 @@ import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { ComexView } from "./components/views/ComexView";
 import { UserManagementView } from "./components/views/UserManagementView";
 import { ClientsManager } from "./components/client/ClientsManager";
+import { AbmAccountsView } from "./components/views/AbmAccountsView";
 import { CatalogoView } from "./components/views/CatalogoView";
 import { PedidosView } from "./components/views/PedidosView";
 import { SettingsView } from "./components/views/SettingsView";
@@ -1675,6 +1676,7 @@ export default function App() {
           { id: "posvenda",     label: "Funil de Pós-venda", icon: Handshake },
           { id: "pedidos",      label: "Pedidos",    icon: ClipboardList },
           { id: "clients",      label: "Clientes",   icon: Users },
+          { id: "abm",          label: "Contas · ABM", icon: Building2 },
           { id: "catalogo",     label: "Catálogo",   icon: PackageSearch },
           { id: "document-library", label: "Biblioteca de Documentos", icon: BookOpen },
           ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
@@ -1905,7 +1907,7 @@ export default function App() {
       setSection("marketing");
     }
     // Pure marketing users shouldn't access CRM sections
-    const crmSections = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview"];
+    const crmSections = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "abm"];
     if (isPureMarketing && crmSections.includes(section)) {
       setSection("dashboard");
     }
@@ -1936,7 +1938,7 @@ export default function App() {
     // item, mas a rota não era barrada — digitando /central-bugs na URL, um
     // parceiro externo abria a Central de Bugs inteira. Achado da revisão de
     // segurança; o menu esconder não é o mesmo que a rota negar.
-    const agenciaBlocked = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials", "central-bugs"];
+    const agenciaBlocked = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "abm", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials", "central-bugs"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
@@ -2376,6 +2378,22 @@ export default function App() {
                   onCreateLead={handleAddLead}
                   onAddLeadActivity={addLeadActivity}
                   onUpdateLead={updateLead}
+                />
+              )
+          } />
+          <Route path={ROUTES.abm} element={
+            isAgencia || isPureMarketing || isPureRH
+              ? <Navigate to={ROUTES.dashboard} replace />
+              : (
+                <AbmAccountsView
+                  user={currentUser}
+                  leads={leads}
+                  campaigns={campaigns}
+                  clients={clients}
+                  users={users}
+                  activeCompany={activeCompany}
+                  onLeadClick={setSelectedLead}
+                  onOpenClient={(id) => { setSection("clients"); setSelectedClientId(id); }}
                 />
               )
           } />

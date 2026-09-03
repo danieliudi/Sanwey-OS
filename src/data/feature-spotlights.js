@@ -25,6 +25,13 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "abm-tabela",
+    route: "abm",
+    target: '[data-tour="abm-tabela"]',
+    text: "Novo: contas de conteúdo, uma por empresa. Fit e comitê vêm do Funil e de Clientes — clique na conta pra abrir o negócio.",
+    version: "4.94.0",
+  },
+  {
     id: "entregas-busca-card",
     route: "marketing-entregas",
     // Alvo é o próprio campo de busca — aqui existe elemento estável pra

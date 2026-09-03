@@ -8,6 +8,7 @@ import { COMPANIES } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
 import { findClientByCnpj } from "../../utils/client-dedup";
+import { computeFitScore } from "../../utils/pipeline-metrics";
 const uuidv4 = () => crypto.randomUUID();
 
 // ── Column detection helpers ─────────────────────────────────────────────────
@@ -152,7 +153,7 @@ function parseXLSX(buffer, users) {
 
       const cnpj = (get("cnpj") || "").toString().replace(/\D/g, "");
 
-      return {
+      const row = {
         _importId: `import-${i}-${Date.now()}`,
         // CRM fields
         id: uuidv4(),
@@ -181,6 +182,8 @@ function parseXLSX(buffer, users) {
         daysAgo: 0,
         starred: false,
         notes: [],
+        createdAt: new Date().toISOString(),
+        lastActivity: new Date().toISOString(),
         // UI state (not persisted)
         _exhibitor: exhibitor || "—",
         _cargoType: (get("cargoType") || "").toString().trim(),
@@ -194,6 +197,8 @@ function parseXLSX(buffer, users) {
         _selected: true,
         _matchedUserName: matchedUser?.name || null,
       };
+      row.fitScore = computeFitScore(row);
+      return row;
     })
     .filter(Boolean);
 }

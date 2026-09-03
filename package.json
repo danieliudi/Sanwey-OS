@@ -1,7 +1,7 @@
 {
   "name": "grupo-sanwey",
   "private": true,
-  "version": "4.93.0",
+    "version": "4.94.0",
   "type": "module",
   "description": "Grupo Sanwey · Commercial Intelligence platform (multi-tenant)",
   "scripts": {
@@ -15,7 +15,8 @@
     "qa:smoke": "node scripts/qa/run.mjs rotas",
     "qa:interacao": "node scripts/qa/run.mjs interacao",
     "qa:dados": "node scripts/qa/run.mjs dados",
-    "doc:check": "node scripts/mapa-funcional-check.mjs"
+    "doc:check": "node scripts/mapa-funcional-check.mjs",
+    "test:abm": "node --import ./scripts/register-esm.mjs scripts/abm-smoke.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
