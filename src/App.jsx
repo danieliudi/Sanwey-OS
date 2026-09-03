@@ -7,7 +7,7 @@ import {
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
-  FlaskConical, PackageSearch, ClipboardList, Bug, BookOpen,
+  FlaskConical, PackageSearch, ClipboardList, Bug, BookOpen, Newspaper,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -95,7 +95,7 @@ import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
 import { MarketingTarefasView } from "./components/views/MarketingTarefasView";
 import { DespesasView } from "./components/views/DespesasView";
-import { FairReportView } from "./components/views/FairReportView";
+import { FairReportView, ContentReportView } from "./components/views/FairReportView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
 import { MinhasTarefasView } from "./components/views/MinhasTarefasView";
 import { ChatView } from "./components/views/ChatView";
@@ -155,6 +155,7 @@ const SECTION_SCREEN_TIP_KEYS = {
   "marketing-entregas": "Entregas",
   "marketing-despesas": "Despesas",
   "marketing-feiras": "Relatório de Feiras",
+  "marketing-conteudo": "Relatório de Conteúdo",
   "marketing-home": "Visão Geral",
   "rh-overview": "Visão Geral",
   "rh-funcionarios": "Funcionários",
@@ -1711,7 +1712,8 @@ export default function App() {
         { id: "marketing-fornecedores",   label: "Fornecedores", icon: Truck },
         { id: "marketing-compras",        label: "Compras",      icon: ShoppingCart },
         { id: "marketing-despesas",       label: "Despesas",     icon: DollarSign },
-        { id: "marketing-feiras",         label: "Feiras",       icon: Tent }
+        { id: "marketing-feiras",         label: "Feiras",       icon: Tent },
+        { id: "marketing-conteudo",       label: "Conteúdo",     icon: Newspaper }
       );
       // Catálogo aparece aqui só pra quem NÃO tem o menu Comercial — o
       // Marketing mantém a metade "vitrine" do produto (chamada, destaques,
@@ -1896,7 +1898,7 @@ export default function App() {
     if (!canSeeMarketIntel && section === "market-intel") {
       setSection("dashboard");
     }
-    const marketingOnly = ["marketing", "marketing-entregas", "marketing-tarefas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras", "marketing-feiras"];
+    const marketingOnly = ["marketing", "marketing-entregas", "marketing-tarefas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras", "marketing-feiras", "marketing-conteudo"];
     if (!isMarketingUser && !isAgencia && !isDiretoria && marketingOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -2535,6 +2537,16 @@ export default function App() {
           <Route path={ROUTES["marketing-feiras"]} element={
             ((isMarketingUser && !isAgencia) || isDiretoria)
               ? <FairReportView
+                  user={currentUser}
+                  campaigns={campaigns}
+                  leads={leads}
+                  activeCompany={activeCompany}
+                />
+              : <Navigate to={ROUTES.marketing} replace />
+          } />
+          <Route path={ROUTES["marketing-conteudo"]} element={
+            ((isMarketingUser && !isAgencia) || isDiretoria)
+              ? <ContentReportView
                   user={currentUser}
                   campaigns={campaigns}
                   leads={leads}

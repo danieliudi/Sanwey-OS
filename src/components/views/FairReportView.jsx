@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Tent, TrendingUp, TrendingDown, Info } from "lucide-react";
+import { Tent, TrendingUp, TrendingDown, Info, Newspaper } from "lucide-react";
 import { PageHeader } from "../shared/PageHeader";
 import { StatCard } from "../ui/StatCard";
 import { StatCardGrid } from "../shared/StatCardGrid";
@@ -14,11 +14,11 @@ import {
   deltaPct,
   fairStartTime,
 } from "../../utils/fair-report";
+import { contentCampaignPairKey } from "../../utils/campaign-name";
 
-// Relatório de feiras — fase 2 do mockup de Feiras e Budget (10/08/2026).
-// A pergunta que esta tela existe pra responder é "vale a pena continuar indo
-// nessa feira?", e a resposta só é confiável comparando edições na MESMA
-// IDADE — ver o comentário de topo de utils/fair-report.js.
+// Relatório de origem por campanha — motor = computeFairMetrics (fair-report.js).
+// Feiras (canal Evento) e Conteúdo/Digital compartilham esta tela; o filtro de
+// canal e a chave de pareamento mudam, o cálculo não. Ver PRD rastreio Fase 2.
 
 const LOST_STAGES = ["perdido"];
 
@@ -57,7 +57,7 @@ function MetricCell({ label, value, delta, invertDelta }) {
   );
 }
 
-function FairCard({ metrics, comparison, onSelect, selected }) {
+function FairCard({ metrics, comparison, onSelect, selected, showChannelBadge }) {
   const { campaign: c } = metrics;
   const start = fairStartTime(c);
   const cmp = comparison;
@@ -75,8 +75,18 @@ function FairCard({ metrics, comparison, onSelect, selected }) {
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
-          <div className="truncate" style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
-            {c.name}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="truncate" style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+              {c.name}
+            </div>
+            {showChannelBadge && c.channel && (
+              <span
+                className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+              >
+                {c.channel}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 11, color: "var(--text-faint)" }}>
             {start ? formatDateBR(new Date(start).toISOString()) : "sem data"}
@@ -113,61 +123,126 @@ function FairCard({ metrics, comparison, onSelect, selected }) {
   );
 }
 
-export function FairReportView({ campaigns = [], leads = [], user, activeCompany }) {
+/** Pareamento de feiras: tira ano, acento e palavras genéricas (legado Evento). */
+function fairPairKey(name) {
+  const GENERIC = new Set(["feira", "expo", "exposicao", "congresso", "salao", "evento", "encontro", "summit", "forum"]);
+  const key = (name || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(19|20)\d{2}\b/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(w => w && !GENERIC.has(w))
+    .join(" ")
+    .trim();
+  return key || null;
+}
+
+const FAIR_COPY = {
+  channels: ["Evento"],
+  title: "Relatório de Feiras",
+  subtitle: "Custo, leads e retorno de cada feira — comparados na mesma idade",
+  icon: Tent,
+  emptyTitle: "Nenhuma feira cadastrada",
+  emptyDescription: "Feira é uma campanha de canal “Evento”. Cadastre a feira em Campanhas e importe a lista de contatos pra ela aparecer aqui.",
+  entityPlural: "Feiras",
+  costScopeLabel: "feira",
+  unlinkedNoun: { one: "negócio veio", many: "negócios vieram" },
+  unlinkedOf: "feira",
+  unlinkedField: "feira/campanha",
+  pairKey: fairPairKey,
+  showChannelBadge: false,
+  unlinkedTrigger: "feira",
+};
+
+const CONTENT_COPY = {
+  channels: ["Conteúdo", "Digital"],
+  title: "Relatório de Conteúdo",
+  subtitle: "Custo, leads e retorno de campanhas Conteúdo e Digital — comparados na mesma idade",
+  icon: Newspaper,
+  emptyTitle: "Nenhuma campanha de conteúdo",
+  emptyDescription: "Campanha de canal “Conteúdo” ou “Digital”, no formato frente-aaaamm-tema. Cadastre em Campanhas e vincule o lead na criação pra aparecer aqui.",
+  entityPlural: "Campanhas",
+  costScopeLabel: "campanha",
+  unlinkedNoun: { one: "negócio ficou", many: "negócios ficaram" },
+  unlinkedOf: "conteúdo",
+  unlinkedField: "campanha",
+  pairKey: contentCampaignPairKey,
+  showChannelBadge: true,
+  // Sem trigger dedicado pra conteúdo (diferente de feira). Sem sinal
+  // confiável, não inventamos o balde “origem não registrada” nesta tela —
+  // leads sem campaign_id ficam de fora dos números e ponto (PRD §10).
+  unlinkedTrigger: null,
+};
+
+/**
+ * Relatório de origem por canal(is). Motor inalterado: computeFairMetrics /
+ * compareAtSameAge. `variant` escolhe cópia e filtro; props soltas sobrescrevem.
+ */
+export function FairReportView({
+  campaigns = [],
+  leads = [],
+  user,
+  activeCompany,
+  variant = "fair",
+  ...overrides
+}) {
+  const copy = { ...(variant === "content" ? CONTENT_COPY : FAIR_COPY), ...overrides };
+  const {
+    channels,
+    title,
+    subtitle,
+    icon: HeaderIcon,
+    emptyTitle,
+    emptyDescription,
+    entityPlural,
+    costScopeLabel,
+    unlinkedNoun,
+    unlinkedOf,
+    unlinkedField,
+    pairKey,
+    showChannelBadge,
+    unlinkedTrigger,
+  } = copy;
+
   const [selectedId, setSelectedId] = useState(null);
-  // Custo da feira vem das despesas ligadas à campanha — vínculo que já
-  // existia antes desta entrega (marketing_expenses.campaign_id).
   const { expenses } = useMarketingExpenses({ userId: user?.id, role: user?.role });
 
-  // Feira = campanha de canal "Evento".
-  const fairs = useMemo(() => {
-    let list = (campaigns || []).filter(c => c.channel === "Evento");
+  // PRD §9: registro de teste (is_demo) não entra no relatório.
+  const reportLeads = useMemo(
+    () => (leads || []).filter(l => !l.isDemo && !l.is_demo),
+    [leads]
+  );
+
+  const scoped = useMemo(() => {
+    const channelSet = new Set(channels);
+    let list = (campaigns || []).filter(c => channelSet.has(c.channel));
     if (activeCompany && activeCompany !== "all") {
       list = list.filter(c => !c.companyIds?.length || c.companyIds.includes(activeCompany));
     }
     return list;
-  }, [campaigns, activeCompany]);
+  }, [campaigns, activeCompany, channels]);
 
   const metrics = useMemo(
     () => computeAllFairMetrics({
-      campaigns: fairs,
-      leads,
+      campaigns: scoped,
+      leads: reportLeads,
       expenses,
       wonStages: WON_STAGES,
       lostStages: LOST_STAGES,
     }),
-    [fairs, leads, expenses]
+    [scoped, reportLeads, expenses]
   );
 
-  // Comparação com a edição anterior da MESMA feira.
-  //
-  // A primeira versão casava pela primeira palavra do nome — e "Feira
-  // Intermodal 2026" casaria com "Feira Logística 2025", porque as duas
-  // começam com "Feira". Comparar feiras diferentes entre si é pior que não
-  // comparar. Agora: tira o ano, tira acento, ignora palavras genéricas de
-  // prefixo, e exige que o resto bata inteiro. Sem par claro, não compara.
   const comparisons = useMemo(() => {
-    const GENERIC = new Set(["feira", "expo", "exposicao", "congresso", "salao", "evento", "encontro", "summit", "forum"]);
-    const norm = (n) => (n || "")
-      .toLowerCase()
-      .normalize("NFD").replace(/[̀-ͯ]/g, "")   // tira acento: "Logística" = "Logistica"
-      .replace(/\b(19|20)\d{2}\b/g, " ")                   // tira o ano da edição
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
-      .filter(w => w && !GENERIC.has(w))
-      .join(" ")
-      .trim();
-
     const byId = {};
     for (const m of metrics) {
-      const key = norm(m.campaign.name);
-      if (!key) continue; // nome só com palavra genérica — não dá pra parear com segurança
+      const key = pairKey(m.campaign.name);
+      if (!key) continue;
       const start = fairStartTime(m.campaign);
-      // Candidatas: mesma feira, mais antigas, e com data (sem data não dá pra
-      // cortar na mesma idade). Pega a mais recente entre elas.
       const candidates = metrics
         .filter(o => o.campaign.id !== m.campaign.id
-          && norm(o.campaign.name) === key
+          && pairKey(o.campaign.name) === key
           && fairStartTime(o.campaign) != null
           && (fairStartTime(o.campaign) ?? 0) < (start ?? 0))
         .sort((a, b) => (fairStartTime(b.campaign) ?? 0) - (fairStartTime(a.campaign) ?? 0));
@@ -176,16 +251,16 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
         const cmp = compareAtSameAge({
           current: m.campaign,
           previous: prev.campaign,
-          leads,
+          leads: reportLeads,
           expenses,
           wonStages: WON_STAGES,
           lostStages: LOST_STAGES,
         });
-        if (cmp) { byId[m.campaign.id] = cmp; break; } // tenta a próxima se esta não deu
+        if (cmp) { byId[m.campaign.id] = cmp; break; }
       }
     }
     return byId;
-  }, [metrics, leads, expenses]);
+  }, [metrics, reportLeads, expenses, pairKey]);
 
   const totals = useMemo(() => {
     const cost = metrics.reduce((s, m) => s + m.cost, 0);
@@ -201,45 +276,36 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
 
   const selected = metrics.find(m => m.campaign.id === selectedId) || null;
 
-  // Leads de feira sem campanha indicada — ficam fora de todo número acima.
-  // Filtrado pela mesma empresa das feiras exibidas, senão com "Resibag" ativa
-  // o aviso somaria leads da Sanwey.
-  const unlinked = useMemo(
-    () => (leads || []).filter(l =>
-      l.trigger === "feira"
+  const unlinked = useMemo(() => {
+    if (!unlinkedTrigger) return 0;
+    return reportLeads.filter(l =>
+      l.trigger === unlinkedTrigger
       && !l.campaignId
       && (!activeCompany || activeCompany === "all" || l.companyId === activeCompany)
-    ).length,
-    [leads, activeCompany]
-  );
+    ).length;
+  }, [reportLeads, activeCompany, unlinkedTrigger]);
 
-  // Escopo de leitura. A RLS de `leads` dá visão completa a admin, gerente e
-  // diretoria; vendedor só enxerga os próprios (ou de
-  // subordinados). Quem cai no segundo caso vê números REAIS mas PARCIAIS —
-  // e sem aviso isso é pior que ver zero, porque parece o total da empresa.
-  // Hoje todo perfil de marketing também carrega vendedor, então
-  // esse caso não é hipotético.
   const roleList = user?.roles?.length ? user.roles : [user?.role].filter(Boolean);
   const hasFullLeadScope = roleList.some(r => ["admin", "gerente", "diretoria"].includes(r));
 
   return (
     <div className="space-y-5">
       <PageHeader
-        icon={Tent}
-        title="Relatório de Feiras"
-        subtitle="Custo, leads e retorno de cada feira — comparados na mesma idade"
+        icon={HeaderIcon}
+        title={title}
+        subtitle={subtitle}
       />
 
-      {fairs.length === 0 ? (
+      {scoped.length === 0 ? (
         <EmptyState
-          icon={Tent}
-          title="Nenhuma feira cadastrada"
-          description="Feira é uma campanha de canal “Evento”. Cadastre a feira em Campanhas e importe a lista de contatos pra ela aparecer aqui."
+          icon={HeaderIcon}
+          title={emptyTitle}
+          description={emptyDescription}
         />
       ) : (
         <>
           <StatCardGrid desktopClassName="md:grid-cols-4">
-            <StatCard icon={Tent} value={metrics.length} label="Feiras" />
+            <StatCard icon={HeaderIcon} value={metrics.length} label={entityPlural} />
             <StatCard icon={TrendingUp} value={totals.leadCount} label="Leads captados" sublabel={`${totals.wonCount} viraram negócio`} />
             <StatCard icon={TrendingDown} value={totals.cac == null ? "—" : formatK(totals.cac)} label="CAC médio" sublabel="custo ÷ clientes conquistados" />
             <StatCard icon={TrendingUp} value={totals.roi == null ? "—" : `${totals.roi.toFixed(1)}x`} label="Retorno" sublabel={`${formatK(totals.revenue)} sobre ${formatK(totals.cost)}`} />
@@ -253,7 +319,7 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
                 <b>Você está vendo só os negócios sob sua responsabilidade.</b>{" "}
                 <span style={{ color: "var(--text-dim)" }}>
                   Os números de leads, conversão, CAC e retorno desta tela são
-                  parciais — o custo da feira é o total, mas o resultado é só a
+                  parciais — o custo da {costScopeLabel} é o total, mas o resultado é só a
                   sua parte. Peça a visão completa a um gerente ou à diretoria.
                 </span>
               </div>
@@ -265,10 +331,12 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
               style={{ background: "var(--warning-bg)", border: "1px solid var(--warning)" }}>
               <Info size={15} style={{ color: "var(--warning)", flexShrink: 0, marginTop: 1 }} />
               <div style={{ fontSize: 12.5, color: "var(--text)" }}>
-                <b>{unlinked} {unlinked === 1 ? "negócio veio" : "negócios vieram"} de feira sem indicar qual.</b>{" "}
+                <b>{unlinked} {unlinked === 1 ? unlinkedNoun.one : unlinkedNoun.many} de {unlinkedOf} sem indicar qual.</b>{" "}
                 <span style={{ color: "var(--text-dim)" }}>
-                  Eles não entram em nenhum número desta tela. Dá pra indicar a
-                  feira no próprio negócio, no campo “Veio de qual feira/campanha?”.
+                  {unlinkedTrigger
+                    ? <>Eles não entram em nenhum número desta tela. Dá pra indicar a {unlinkedField} no próprio negócio, no campo “Veio de qual {unlinkedField}?”.</>
+                    : <>Sem campanha, caem no balde “origem não registrada” — nunca distribuímos entre campanhas. Indique a origem no negócio.</>
+                  }
                 </span>
               </div>
             </div>
@@ -282,6 +350,7 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
                 comparison={comparisons[m.campaign.id]}
                 selected={selectedId === m.campaign.id}
                 onSelect={id => setSelectedId(prev => (prev === id ? null : id))}
+                showChannelBadge={showChannelBadge}
               />
             ))}
           </div>
@@ -312,6 +381,11 @@ export function FairReportView({ campaigns = [], leads = [], user, activeCompany
       )}
     </div>
   );
+}
+
+/** Atalho Fase 2 — mesmo motor, filtro Conteúdo + Digital. */
+export function ContentReportView(props) {
+  return <FairReportView {...props} variant="content" />;
 }
 
 export default FairReportView;

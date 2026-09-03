@@ -34,6 +34,7 @@ import { PageTitle } from "../shared/PageTitle";
 import { semAcento } from "../../utils/text-search";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness, isStageRegression } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
+import { campaignNameError, CAMPAIGN_NAME_HINT, requiresCampaignTaxonomy } from "../../utils/campaign-name";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
@@ -99,6 +100,8 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose, stag
     e.preventDefault();
     if (!name.trim()) { setError("Nome da campanha é obrigatório."); return; }
     if (companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
+    const nameErr = campaignNameError(name, channel);
+    if (nameErr) { setError(nameErr); return; }
     const missing = getMissingRequiredFields(visibleFields, customValues);
     if (missing.length > 0) {
       setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`);
@@ -187,7 +190,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose, stag
             <input
               autoFocus
               type="text"
-              placeholder="Ex: Campanha de Verão 2026"
+              placeholder={requiresCampaignTaxonomy(channel) ? "Ex: resibag-202609-rapp" : "Ex: Campanha de Verão 2026"}
               value={name}
               onChange={e => setName(e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
@@ -195,6 +198,11 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose, stag
               onFocus={focusBlue}
               onBlur={blurGray}
             />
+            {requiresCampaignTaxonomy(channel) && (
+              <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
+                {CAMPAIGN_NAME_HINT}
+              </div>
+            )}
           </div>
 
           {/* Empresa */}
