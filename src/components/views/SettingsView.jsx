@@ -2334,7 +2334,9 @@ export function SettingsView({
                     <div className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style={{ background: "var(--channel-email-bg)", color: "var(--channel-email-text)", border: "1px solid var(--channel-email-border)" }}>
                       <Link2 size={13} className="shrink-0 mt-0.5" />
                       <div>
-                        <strong>Dica:</strong> adicione <code>?src=instagram</code>, <code>?src=whatsapp</code> ou outro identificador ao final da URL para rastrear a origem da captura no card do lead.
+                        <strong>Rastreio de conteúdo:</strong> use UTM na URL — a origem fica oculta no formulário e liga o lead à campanha.
+                        Ex.: <code>?utm_source=linkedin&amp;utm_medium=carrossel&amp;utm_campaign=resibag-202609-rapp&amp;utm_content=rb-7k2f</code>.
+                        {" "}Ainda vale <code>?src=instagram</code> como atalho legado.
                       </div>
                     </div>
                   </div>

@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.96.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Link de captura pública aceita UTM (source, medium, campaign, content). A origem fica escondida no formulário e, com a migration liberada, o lead já nasce ligado à campanha de Conteúdo.",
+        roles: ["admin", "gerente", "marketing", "gerente_marketing", "vendedor"],
+      },
+      {
+        kind: "ajuste",
+        text: "Em Configurações → Captura pública, a dica do link de leads mostra o exemplo completo de UTM (não só ?src=).",
+        roles: ["admin", "gerente", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "4.93.0",
     items: [
       {

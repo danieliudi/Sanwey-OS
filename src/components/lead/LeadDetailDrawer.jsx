@@ -870,6 +870,8 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                   {customValues.capture_source && (
                     <span className="ml-1.5 normal-case tracking-normal font-normal" style={{ color: "var(--text-dim)" }}>
                       via {customValues.capture_source}
+                      {customValues.capture_utm_campaign && ` · ${customValues.capture_utm_campaign}`}
+                      {customValues.capture_content_id && ` · ${String(customValues.capture_content_id).toUpperCase()}`}
                     </span>
                   )}
                 </div>
@@ -1060,6 +1062,16 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                   <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
                   <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
                   <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
+                  <CaptureRow label="utm_source" value={customValues.capture_utm_source} mono />
+                  <CaptureRow label="utm_medium" value={customValues.capture_utm_medium} mono />
+                  <CaptureRow label="utm_campaign" value={customValues.capture_utm_campaign} mono />
+                  <CaptureRow
+                    label="Peça (content_id)"
+                    value={customValues.capture_content_id || customValues.capture_utm_content
+                      ? String(customValues.capture_content_id || customValues.capture_utm_content).toUpperCase()
+                      : null}
+                    mono
+                  />
                   <NegotiationStartRow
                     value={lead.negotiationStartedAt ? lead.negotiationStartedAt.slice(0, 10) : ""}
                     onChange={handleNegotiationStartedAtChange}
