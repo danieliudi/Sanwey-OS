@@ -1362,14 +1362,6 @@ export function CampaignDetailDrawer({
     set("name", value);
   }, [isAgencia, draft, campaign.channel, set]);
 
-  const setCampaignChannel = useCallback((value) => {
-    if (isAgencia) return;
-    const name = ("name" in draft ? draft.name : campaign.name);
-    const err = campaignNameError(name, value);
-    set("channel", value);
-    if (err) setSaveErro(err);
-  }, [isAgencia, draft, campaign.name, set]);
-
   const stageIdx = effectiveStages.findIndex(s => s.id === get("stage"));
   const stage    = effectiveStages[stageIdx] || null;
 
@@ -1614,7 +1606,7 @@ export function CampaignDetailDrawer({
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="Canal">
-              {isAgencia ? <ReadValue value={get("channel")} /> : <EditSelect value={get("channel")} onChange={setCampaignChannel} options={MARKETING_CHANNELS} placeholder="Selecionar canal" />}
+              {isAgencia ? <ReadValue value={get("channel")} /> : <EditSelect value={get("channel")} onChange={v => set("channel", v)} options={MARKETING_CHANNELS} placeholder="Selecionar canal" />}
             </Field>
             <Field label="KPI">
               {isAgencia ? <ReadValue value={get("kpi")} /> : <EditSelect value={get("kpi")} onChange={v => set("kpi", v)} options={MARKETING_KPIS} placeholder="Selecionar KPI" />}
