@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.4",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Reportar um problema ficou mais rápido: o formulário abre com um único campo curto, e \"Impacto\" e \"Onde\" ficam colapsados atrás de \"+ detalhes\". A Central de Bugs mostra o contexto técnico anexado no drawer.",
+      },
+    ],
+  },
+  {
     version: "4.97.3",
     items: [
       {
