@@ -112,8 +112,12 @@ já concedeu:
 > Este é o mecanismo que `docs/treinamento/README.md` cita ao avisar que a
 > sessão de treinamento trava se "Catálogo e Pedidos" estiverem em `test` — a
 > sala inteira abre um menu sem essas telas. Onde se muda: Configurações →
-> Administração. `isModuleInTest()` é só pra decidir se mostra a tarja "em
-> teste" no topo; o acesso já foi resolvido antes.
+> Administração → Módulos. A lista é `MODULE_GROUPS` em
+> `src/utils/module-access.js`, agrupada como o menu (Meu Espaço, Comercial,
+> Marketing, RH, Inteligência, Configuração). Fora da chave de propósito:
+> Pendências (`dashboard`), Configurações (`settings`) e Central de Bugs.
+> `isModuleInTest()` é só pra decidir se mostra a tarja "em teste" no topo;
+> o acesso já foi resolvido antes.
 
 **Camada 3 — RLS.** Decide qual **linha** cada pessoa lê/escreve. Liberar a
 tela não libera o dado — foi exatamente o que aconteceu com o suporte em
