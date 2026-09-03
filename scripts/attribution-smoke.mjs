@@ -18,11 +18,11 @@ import {
 } from "../src/utils/shortener.js";
 
 const full = parseAttributionSearchParams(new URLSearchParams(
-  "utm_source=linkedin&utm_medium=carrossel&utm_campaign=resibag-202609-rapp&utm_content=rb-7k2f",
+  "utm_source=linkedin&utm_medium=carrossel&utm_campaign=resibag-202609-rapp&utm_content=rb-7a2f",
 ));
 assert.equal(full.source, "linkedin");
 assert.equal(full.utmCampaign, "resibag-202609-rapp");
-assert.equal(full.utmContent, "rb-7k2f");
+assert.equal(full.utmContent, "rb-7a2f");
 assert.equal(full.hasUtm, true);
 assert.ok(isContentId(full.utmContent));
 assert.ok(isCampaignName(full.utmCampaign));
@@ -42,7 +42,7 @@ assert.match(block, /utm_campaign=resibag-202609-rapp/);
 
 const args = buildLeadCaptureUtmArgs(full);
 assert.equal(args.p_utm_source, "linkedin");
-assert.equal(args.p_utm_content, "rb-7k2f");
+assert.equal(args.p_utm_content, "rb-7a2f");
 assert.deepEqual(buildLeadCaptureUtmArgs(legacy), {});
 
 assert.equal(isMissingUtmRpcError({ message: "Could not find the function public.submit_lead_capture(p_utm_source) in the schema cache" }), true);

@@ -2331,11 +2331,15 @@ export function SettingsView({
                     </div>
                     {/* eram #1E40AF/#BFDBFE fixos — ilegíveis no tema escuro.
                         Os tokens de canal de e-mail já cobrem este azul. */}
-                    <div className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style={{ background: "var(--channel-email-bg)", color: "var(--channel-email-text)", border: "1px solid var(--channel-email-border)" }}>
+                    <div
+                      className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2"
+                      style={{ background: "var(--channel-email-bg)", color: "var(--channel-email-text)", border: "1px solid var(--channel-email-border)" }}
+                      data-tour="captura-utm-dica"
+                    >
                       <Link2 size={13} className="shrink-0 mt-0.5" />
                       <div>
                         <strong>Rastreio de conteúdo:</strong> use UTM na URL — a origem fica oculta no formulário e liga o lead à campanha.
-                        Ex.: <code>?utm_source=linkedin&amp;utm_medium=carrossel&amp;utm_campaign=resibag-202609-rapp&amp;utm_content=rb-7k2f</code>.
+                        Ex.: <code>?utm_source=linkedin&amp;utm_medium=carrossel&amp;utm_campaign=resibag-202609-rapp&amp;utm_content=rb-7a2f</code>.
                         {" "}Ainda vale <code>?src=instagram</code> como atalho legado.
                       </div>
                     </div>

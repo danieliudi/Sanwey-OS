@@ -25,6 +25,13 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "captura-utm-dica",
+    route: "settings",
+    target: '[data-tour="captura-utm-dica"]',
+    text: "Novo: o link de captura de leads aceita UTM. Cole source/medium/campaign/content na URL — a origem fica escondida no formulário e liga o lead à campanha de Conteúdo.",
+    version: "4.96.0",
+  },
+  {
     id: "entregas-busca-card",
     route: "marketing-entregas",
     // Alvo é o próprio campo de busca — aqui existe elemento estável pra
