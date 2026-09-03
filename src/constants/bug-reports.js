@@ -4,9 +4,9 @@
 // aprovado 17/08/2026 (Central de Bugs): "Atrapalha o trabalho"/"Incômodo",
 // nunca "Alta"/"Baixa" puro.
 export const BUG_PRIORITIES = [
-  { id: "baixa", label: "Detalhe, sem pressa",              pill: "Incômodo",  color: "#64748B" },
-  { id: "media", label: "Incomoda, mas dá pra contornar",   pill: "Incomoda",  color: "#B4790A" },
-  { id: "alta",  label: "Atrapalha o trabalho",             pill: "Atrapalha", color: "#CC2936" },
+  { id: "baixa", label: "Detalhe, sem pressa",              pill: "Leve",  color: "#64748B" },
+  { id: "media", label: "Incomoda, mas dá pra contornar",   pill: "Médio",  color: "#B4790A" },
+  { id: "alta",  label: "Atrapalha o trabalho",             pill: "Alto", color: "#CC2936" },
 ];
 
 export function bugPriorityMeta(id) {

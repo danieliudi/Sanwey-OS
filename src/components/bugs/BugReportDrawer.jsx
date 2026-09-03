@@ -195,6 +195,46 @@ export function BugReportDrawer({ report, stages, isAdmin, currentUser, onClose,
             <div className="text-[10.5px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-faint)" }}>Descrição</div>
             <p className="text-xs leading-relaxed" style={{ color: "var(--text)", whiteSpace: "pre-wrap" }}>{report.description}</p>
           </div>
+
+          {report.contexto && (
+            <div>
+              <div className="text-[10.5px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-faint)" }}>
+                Contexto anexado
+              </div>
+              <dl className="grid gap-2 text-xs" style={{ gridTemplateColumns: "100px 1fr" }}>
+                <dt style={{ color: "var(--text-faint)" }}>Rota</dt>
+                <dd style={{ margin: 0, color: "var(--text)" }}>{report.contexto.rota || "—"}</dd>
+                <dt style={{ color: "var(--text-faint)" }}>Tela</dt>
+                <dd style={{ margin: 0, color: "var(--text)" }}>{report.contexto.tela || "—"}</dd>
+                <dt style={{ color: "var(--text-faint)" }}>Navegador</dt>
+                <dd style={{ margin: 0, color: "var(--text)" }}>{report.contexto.navegador || "—"}</dd>
+                <dt style={{ color: "var(--text-faint)" }}>Versão</dt>
+                <dd style={{ margin: 0, color: "var(--text)" }}>{report.contexto.versao_app || "—"}</dd>
+                <dt style={{ color: "var(--text-faint)" }}>Origem</dt>
+                <dd style={{ margin: 0, color: "var(--text)" }}>{report.origem || "—"}</dd>
+                <dt style={{ color: "var(--text-faint)" }}>URL</dt>
+                <dd style={{ margin: 0, color: "var(--text)" }}>{report.contexto.url || "—"}</dd>
+              </dl>
+
+              {report.contexto.erro?.mensagem && (
+                <div className="mt-2">
+                  <div className="text-[10.5px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-faint)" }}>
+                    Erro técnico
+                  </div>
+                  <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>{report.contexto.erro.mensagem}</p>
+                  {report.contexto.erro.pilha && (
+                    <pre
+                      className="mt-2 text-[11px] leading-snug rounded-lg border px-2.5 py-2 overflow-auto"
+                      style={{ borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text)" }}
+                    >
+                      {report.contexto.erro.pilha}
+                    </pre>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {report.resolution_note && (
             <div>
               <div className="text-[10.5px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-faint)" }}>

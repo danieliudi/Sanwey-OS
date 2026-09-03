@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../ui/Modal";
 import { BUG_PRIORITIES } from "../../constants/bug-reports";
-import { moduloDaRota, montarContexto, tituloAutomatico } from "../../utils/bug-context";
-
-const MODULOS = [
-  "Funil de Vendas", "Explorador", "Sinais", "Pedidos", "Catálogo", "Pós-venda",
-  "Viagens & Despesas", "Comex", "Marketing", "Compras", "RH", "Lista Pessoal", "Chat", "Outro",
-];
+import { BUG_REPORT_MODULES, moduloDaRota, montarContexto, tituloAutomatico } from "../../utils/bug-context";
 
 // Formulário de report de bug (mockup aprovado 17/08/2026, reduzido a um campo
 // no mockup de 02/09/2026).
@@ -76,7 +71,7 @@ export function ReportBugModal({ open, onClose, onSubmit, rota, empresa, erro = 
         >
           <span style={{ color: "var(--accent)", fontWeight: 700, lineHeight: 1.4 }}>✓</span>
           <span>
-            Já anexamos <b style={{ color: "var(--text)" }}>a tela, o navegador e o erro técnico</b> — você não precisa tirar print.
+            Já anexamos <b style={{ color: "var(--text)" }}>as dimensões da tela, o navegador e o erro técnico</b> — você não precisa tirar print.
           </span>
         </div>
 
@@ -134,7 +129,7 @@ export function ReportBugModal({ open, onClose, onSubmit, rota, empresa, erro = 
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
           >
-            {MODULOS.map(m => <option key={m} value={m}>{m}</option>)}
+            {BUG_REPORT_MODULES.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
 
