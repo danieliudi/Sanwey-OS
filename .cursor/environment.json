@@ -1,0 +1,17 @@
+{
+  "name": "Grupo Sanwey",
+  "install": "npm ci",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "npm run dev -- --host 0.0.0.0",
+      "description": "Vite dev server for the Sanwey SPA on port 5173. Runs in mock mode (no Supabase credentials required); set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY secrets to enable real auth."
+    }
+  ],
+  "ports": [
+    {
+      "name": "vite dev server",
+      "port": 5173
+    }
+  ]
+}
