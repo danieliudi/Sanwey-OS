@@ -507,6 +507,15 @@ export const FEATURE_SPOTLIGHTS = [
   // que ela veja. O botão "Reportar isso" da tela de erro NÃO ganhou
   // spotlight próprio: ele só existe quando algo já quebrou, e um tooltip
   // por cima de uma tela de erro seria ruído — o texto do botão se explica.
+  //
+  // 4.93.0 — contador e aviso da fila da IA: DECIDIDO PULAR o spotlight, e o
+  // motivo é concreto, não preguiça. O alvo seria o contador ao lado de
+  // "Agentes", que só é renderizado quando há fila; hoje a fila está em ZERO,
+  // então o elemento não existe na tela e o runtime marcaria o spotlight como
+  // órfão — visto, sem nunca ter aparecido (mesma armadilha já registrada no
+  // alvo de "Prestações a decidir"). Some-se a isso que o público são 3
+  // pessoas (1 admin + 2 gerentes), que ouvem a novidade direto. Coberto pelo
+  // changelog 4.93.0.
 ];
 
 export default FEATURE_SPOTLIGHTS;

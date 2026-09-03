@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.93.0",
+    items: [
+      {
+        kind: "novo",
+        text: "A fila de sugestões da IA passou a avisar. Aparece um contador ao lado de \"Agentes\" no menu assim que algo chega, e um aviso no sino quando passa de um dia sem decisão — um aviso por dia somando tudo, nunca um por sugestão. A partir de três dias o aviso fica âmbar e diz há quanto tempo está parado.",
+        roles: ["admin", "gerente", "gerente_rh", "diretoria"],
+      },
+    ],
+  },
+  {
     version: "4.92.0",
     items: [
       {

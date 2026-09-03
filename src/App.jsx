@@ -70,6 +70,7 @@ import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { ReportBugModal } from "./components/bugs/ReportBugModal";
 import { useBugReports } from "./hooks/use-bug-reports";
 import { instalarCapturaDeErros } from "./utils/error-log";
+import { useAgentQueueAlert, DIAS_ATENCAO, DIAS_AMBAR } from "./hooks/use-agent-queue-alert";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
 import { ExplorerView } from "./components/views/ExplorerView";
@@ -1044,6 +1045,45 @@ export default function App() {
   // deixava rastro nenhum — ver src/utils/error-log.js.
   useEffect(() => { instalarCapturaDeErros(); }, []);
 
+  // Fila da IA esperando aprovação (mockup aprovado 03/09/2026). Só quem pode
+  // aprovar é cobrado — os 10 vendedores não decidem nada nessa fila.
+  // `isManagerRole` (linha ~241), NÃO `isManager`: este último só é
+  // declarado lá pela 1516, depois daqui — usar ele seria TDZ e derrubaria
+  // o App inteiro, a mesma classe de bug documentada na regra 3.2.
+  const podeAprovarFilaIA = !!(currentUser && (isAdmin || isManagerRole || isRHManager));
+  const filaIA = useAgentQueueAlert({ enabled: podeAprovarFilaIA });
+
+  // Degrau 2 e 3 da escada de urgência da fila da IA (mockup 03/09/2026):
+  // um aviso no sino a partir de 1 dia parado, e o texto passa a citar a
+  // idade a partir de 3. `localStorage` guarda o dia do último aviso POR
+  // usuário: sem isso, cada recarga da página gera um aviso novo — o ruído
+  // que a escada existe justamente pra evitar.
+  //
+  // Um aviso por pessoa por dia, somando a fila inteira: 24 sugestões
+  // continuam sendo UM aviso, nunca 24.
+  useEffect(() => {
+    if (!podeAprovarFilaIA || filaIA.carregando) return;
+    if (filaIA.total === 0 || filaIA.diasMaisVelho < DIAS_ATENCAO) return;
+    const chave = `gs_v4_fila_ia_avisada_${currentUser?.id || "anon"}`;
+    const hoje = new Date().toDateString();
+    let jaAvisouHoje = false;
+    try { jaAvisouHoje = window.localStorage.getItem(chave) === hoje; } catch { /* modo privado */ }
+    if (jaAvisouHoje) return;
+    const n = filaIA.total;
+    const velha = filaIA.diasMaisVelho >= DIAS_AMBAR;
+    pushNotification({
+      type: "fila_ia",
+      title: velha
+        ? `${n} ${n === 1 ? "sugestão parada" : "sugestões paradas"} há ${filaIA.diasMaisVelho} dias`
+        : `${n} ${n === 1 ? "sugestão da IA espera" : "sugestões da IA esperam"} sua aprovação`,
+      body: velha
+        ? "Sinal de mercado perde validade parado. Abra Agentes e decida — aprovar ou recusar, os dois resolvem."
+        : "Abra Agentes para aprovar ou recusar.",
+      link: { module: "fila_ia", id: null },
+    });
+    try { window.localStorage.setItem(chave, hoje); } catch { /* modo privado */ }
+  }, [podeAprovarFilaIA, filaIA.carregando, filaIA.total, filaIA.diasMaisVelho, currentUser?.id, pushNotification]);
+
 
   // Descrição editável da página, entregue por contexto pro PageTitle (ver
   // comentário longo lá). Fica aqui porque só o App sabe qual seção está
@@ -1137,6 +1177,10 @@ export default function App() {
     crm_despesas: "crm-viagens",
     crm_cross_sell: "crossref",
     pipeline_summary: "crm",
+    // Fila da IA esperando aprovação: leva pra tela Agentes. Sem entrada aqui
+    // o aviso do sino só marcaria como lido e não navegaria pra lugar nenhum
+    // (handleNotificationNavigate desiste quando o módulo não está no mapa).
+    fila_ia: "agents",
     // Sem estado "selecionado" hoisted aqui (mesma situação de crm_cross_sell/
     // pipeline_summary acima) — a tarefa exata é aberta pelo usuário na tela,
     // o sino só leva até a Lista Pessoal.
@@ -1757,7 +1801,11 @@ export default function App() {
       // chave de IA quebrada/ausente), não pausa manual (enabled=false):
       // isso pede atenção de alguém, pausa manual foi decisão do próprio time.
       const pausedAgentsCount = automations.filter(a => a.module === "rh-fornecedores" && a.pausedReason).length;
-      intelItems.push({ id: "agents", label: "Agentes", icon: Bot, badge: pausedAgentsCount > 0 ? pausedAgentsCount : undefined });
+      // Soma com a fila esperando aprovação (escada de urgência, 03/09/2026):
+      // os dois são "tem coisa te esperando em Agentes", e dois contadores no
+      // mesmo item de menu não caberiam nem se explicariam.
+      const aguardandoAgents = pausedAgentsCount + (filaIA.total || 0);
+      intelItems.push({ id: "agents", label: "Agentes", icon: Bot, badge: aguardandoAgents > 0 ? aguardandoAgents : undefined });
     }
     if (intelItems.length > 0) {
       groups.push({ label: "Inteligência", items: intelItems });
@@ -1795,7 +1843,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isPureSuporte, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isPureSuporte, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled, filaIA.total]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
