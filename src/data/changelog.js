@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.94.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Ao criar um negócio, dá pra marcar a campanha de origem (feira ou conteúdo) e se o registro é teste. Sem campanha, o lead fica como origem não registrada — não inventamos distribuição. No drawer, o seletor de origem agora inclui campanhas de Conteúdo e Digital, além de Evento.",
+        roles: ["admin", "gerente", "vendedor", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "4.93.0",
     items: [
       {

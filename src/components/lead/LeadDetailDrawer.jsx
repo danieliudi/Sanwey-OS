@@ -2803,18 +2803,20 @@ function CaptureRow({ label, value, mono, link, badge, hint }) {
 // chamativo — spec aprovada com o Daniel). Mesmo <input type="date"> já
 // usado no drawer (follow-up).
 function OriginCampaignRow({ value, campaigns, lead, onChange }) {
-  // Só campanhas de canal "Evento" e da empresa do negócio. Sem esse filtro
+  // Só campanhas de origem rastreável (feira ou conteúdo). Sem esse filtro
   // dava pra escolher "Newsletter de Julho" como origem: o negócio saía do
   // aviso de "sem feira indicada" e ao mesmo tempo não entrava em feira
-  // nenhuma no relatório — sumia dos dois lados, calado.
+  // nenhuma no relatório — sumia dos dois lados, calado. Conteúdo entra no
+  // mesmo circuito (PRD rastreio Fase 0/1).
+  const ORIGIN_CHANNELS = new Set(["Evento", "Conteúdo", "Digital"]);
   const list = (campaigns || []).filter(c =>
-    c.channel === "Evento"
+    ORIGIN_CHANNELS.has(c.channel)
     && (!lead?.companyId || !c.companyIds?.length || c.companyIds.includes(lead.companyId))
   );
   return (
     <div>
       <dt className="text-[11px] font-semibold" style={{ color: "var(--text-dim)" }}>
-        Veio de qual feira/campanha?
+        Veio de qual campanha?
       </dt>
       <dd className="text-sm" style={{ marginTop: 2 }}>
         <select
@@ -2832,7 +2834,7 @@ function OriginCampaignRow({ value, campaigns, lead, onChange }) {
         </select>
       </dd>
       <div className="text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>
-        É isso que liga o custo da feira ao resultado deste negócio no relatório.
+        Liga custo e resultado no relatório (feira ou conteúdo). Sem campanha, cai em &quot;origem não registrada&quot;.
       </div>
     </div>
   );

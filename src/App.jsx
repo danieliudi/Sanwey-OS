@@ -2271,6 +2271,7 @@ export default function App() {
               onReplacePipeline={replacePipeline}
               onResetPipeline={resetCompanyPipeline}
               onUpdateStage={updateStage}
+              campaigns={campaigns}
             />
           } />
           <Route path={ROUTES["document-library"]} element={

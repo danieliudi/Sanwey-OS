@@ -351,7 +351,7 @@ function KpiCard({ label, value, sub }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, pipelineTransitions, onViewExistingLead, clients, onCreateClient, onCreateClientContact, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, pipelineTransitions, onViewExistingLead, clients, onCreateClient, onCreateClientContact, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage, campaigns = [] }) {
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
@@ -1165,6 +1165,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         createClient={onCreateClient}
         createClientContact={onCreateClientContact}
         canAddContact={canAddContact}
+        campaigns={campaigns}
       />
 
       {/* Form builder — acessível pelo modal de criação */}
