@@ -30,9 +30,9 @@ Todos conferidos no código em 03/09/2026:
 
 | | |
 |---|---|
-| Rotas autenticadas (`src/constants/routes.js`) | **53** |
+| Rotas autenticadas (`src/constants/routes.js`) | **54** |
 | …das quais só redirecionam | **7** |
-| …telas de verdade | **46** |
+| …telas de verdade | **47** |
 | Rotas **públicas**, sem login (`src/main.jsx`) | **8** |
 | Componentes de view (`src/components/views/`) | **59** |
 | Hooks (`src/hooks/`) | **124** |
