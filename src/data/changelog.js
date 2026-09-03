@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.95.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Relatório de Conteúdo em Marketing — mesmo motor das Feiras (custo, leads, CAC e retorno na mesma idade), filtrando campanhas Conteúdo e Digital. Testes (is_demo) ficam de fora.",
+        roles: ["admin", "gerente", "marketing", "gerente_marketing", "diretoria"],
+      },
+      {
+        kind: "ajuste",
+        text: "Campanha de canal Conteúdo ou Digital exige o nome no formato frente-aaaamm-tema (ex.: resibag-202609-rapp). Fora disso, o relatório agrega errado.",
+        roles: ["admin", "gerente", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "4.94.0",
     items: [
       {

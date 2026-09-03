@@ -36,6 +36,7 @@ export const MODULE_GROUPS = [
       { id: "marketing-compras",      label: "Compras" },
       { id: "marketing-despesas",     label: "Despesas" },
       { id: "marketing-feiras",       label: "Feiras" },
+      { id: "marketing-conteudo",     label: "Conteúdo" },
     ],
   },
   {
@@ -163,7 +164,7 @@ export function defaultModulesForRoles(roles) {
 
   if (f.isMarketing) {
     ["marketing-home", "marketing", "marketing-solicitacoes", "marketing-entregas", "marketing-tarefas",
-     "marketing-fornecedores", "marketing-compras", "marketing-despesas", "marketing-feiras"].forEach(m => set.add(m));
+     "marketing-fornecedores", "marketing-compras", "marketing-despesas", "marketing-feiras", "marketing-conteudo"].forEach(m => set.add(m));
     // Marketing mantém a metade "vitrine" do produto (chamada, destaques,
     // especificações) — o que o Portal B2B mostra pro cliente. Por isso
     // alcança o Catálogo, mesmo sendo tela do Comercial.

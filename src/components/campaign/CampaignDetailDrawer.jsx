@@ -33,6 +33,11 @@ import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { EVENT_CHECKLIST_TEMPLATE } from "../../constants/event-checklist-template";
 import { supabase } from "../../lib/supabase";
 import { Modal } from "../ui/Modal";
+import {
+  campaignNameError,
+  CAMPAIGN_NAME_HINT,
+  requiresCampaignTaxonomy,
+} from "../../utils/campaign-name";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ACCEPTED_TYPES = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.zip";
@@ -1344,6 +1349,19 @@ export function CampaignDetailDrawer({
     }, 600);
   }, [campaign?.id, onUpdate, isAgencia]);
 
+  /** Nome com taxonomia §5.3 — inválido atualiza o draft mas não grava. */
+  const setCampaignName = useCallback((value) => {
+    if (isAgencia) return;
+    const channel = ("channel" in draft ? draft.channel : campaign.channel);
+    const err = campaignNameError(value, channel);
+    if (err) {
+      setDraft(prev => ({ ...prev, name: value }));
+      setSaveErro(err);
+      return;
+    }
+    set("name", value);
+  }, [isAgencia, draft, campaign.channel, set]);
+
   const stageIdx = effectiveStages.findIndex(s => s.id === get("stage"));
   const stage    = effectiveStages[stageIdx] || null;
 
@@ -1549,7 +1567,14 @@ export function CampaignDetailDrawer({
           <Field label="Nome da campanha">
             {isAgencia
               ? <ReadValue value={get("name")} />
-              : <EditInput value={get("name")} onChange={v => set("name", v)} placeholder="Nome da campanha" />}
+              : (
+                <>
+                  <EditInput value={get("name")} onChange={setCampaignName} placeholder="Nome da campanha" />
+                  {requiresCampaignTaxonomy(get("channel")) && (
+                    <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>{CAMPAIGN_NAME_HINT}</div>
+                  )}
+                </>
+              )}
           </Field>
 
           <Field label="Empresas">
@@ -1784,7 +1809,11 @@ export function CampaignDetailDrawer({
         <EditableTitle
           value={get("name")}
           canWrite={canWrite}
-          onSave={(v) => set("name", v)}
+          onSave={async (v) => {
+            const err = campaignNameError(v, get("channel"));
+            if (err) throw new Error(err);
+            set("name", v);
+          }}
         />
         {canWrite && (
           <button

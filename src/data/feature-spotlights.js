@@ -25,6 +25,13 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "marketing-conteudo-report",
+    route: "marketing-conteudo",
+    target: '[data-tour="marketing-conteudo-report"]',
+    text: "Novo: relatório de Conteúdo e Digital com o mesmo motor das Feiras — custo, leads e retorno comparados na mesma idade. Campanhas precisam do nome frente-aaaamm-tema.",
+    version: "4.95.0",
+  },
+  {
     id: "entregas-busca-card",
     route: "marketing-entregas",
     // Alvo é o próprio campo de busca — aqui existe elemento estável pra

@@ -30,9 +30,9 @@ Todos conferidos no código em 03/09/2026:
 
 | | |
 |---|---|
-| Rotas autenticadas (`src/constants/routes.js`) | **52** |
+| Rotas autenticadas (`src/constants/routes.js`) | **53** |
 | …das quais só redirecionam | **7** |
-| …telas de verdade | **45** |
+| …telas de verdade | **46** |
 | Rotas **públicas**, sem login (`src/main.jsx`) | **8** |
 | Componentes de view (`src/components/views/`) | **58** |
 | Hooks (`src/hooks/`) | **123** |
@@ -173,6 +173,7 @@ abre · dado principal · integração externa (quando tem).
 | `/marketing/compras` | `ComprasMarketingView.jsx` | Itens prontos (brindes, uniformes, gráfica) — não é produção. Cotação com fornecedor por e-mail, aprovação por RPC. **Exceção deliberada**: usa `PURCHASE_STAGES` fixo no código, não `rh_pipeline_stages` — as transições são acopladas às RPCs de aprovação. |
 | `/marketing/despesas` | `DespesasView.jsx` | Gastos de marketing, com vínculo a entrega/tarefa. Comprovante em bucket. |
 | `/marketing/feiras` | `FairReportView.jsx` | "Custo, leads e retorno de cada feira — comparados na mesma idade." |
+| `/marketing/conteudo` | `FairReportView.jsx` (`ContentReportView`) | Mesmo motor das Feiras (`computeFairMetrics`), filtro canal Conteúdo + Digital. |
 
 ### 2.4 Recursos Humanos
 
@@ -397,8 +398,8 @@ Nenhum foi corrigido nesta passada: documentar não é consertar.
 2. **2 edge functions implantadas sem nenhuma chamada.** `comexstat` (v11) e
    `check-document-legibility` (v7) — zero referência em `src/`, tirando um
    comentário que diz "ainda NÃO" ligado. São superfície ativa sem uso.
-3. **12 das 52 rotas não têm tutorial nenhum** em `src/data/tutorials.js`:
-   `pedidos`, `catalogo`, `marketing-feiras`, `central-bugs`, `market-intel`,
+3. **13 das 53 rotas não têm tutorial nenhum** em `src/data/tutorials.js`:
+   `pedidos`, `catalogo`, `marketing-feiras`, `marketing-conteudo`, `central-bugs`, `market-intel`,
    `tutorials`, mais as 6 de redirect. Pedidos e Catálogo são as duas que
    pesam — são o dia a dia do `suporte`, e é o cargo sem nenhum guia.
 4. **Nenhuma das 58 views tem comentário dizendo pra que serve.** Os
