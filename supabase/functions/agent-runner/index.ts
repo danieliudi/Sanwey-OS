@@ -271,6 +271,100 @@ async function findCandidateVagas(admin: any, conditionGroups: any[]) {
 
 // ── Sweep agendado ──────────────────────────────────────────────────────────
 
+// `title` de uma sugestão vem do agente (n8n/Perplexity), não de um humano
+// da casa — ou seja, é conteúdo externo indo parar dentro de HTML de e-mail.
+// Escapar aqui não é zelo: é o mesmo cuidado que agent-gateway já toma nos
+// e-mails dele.
+function escapeHtml(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ── Degrau 4 da escada de urgência: e-mail pra quem aprova ──────────────────
+//
+// Medido em 03/09/2026, sobre as 45 sugestões já resolvidas: a espera média
+// até alguém aprovar era de 155 HORAS (6,5 dias), pior caso 319h. A causa não
+// era disciplina — NADA notificava. Os degraus 1-3 (contador, sino, âmbar)
+// vivem no app e só funcionam pra quem abre a plataforma; este é o que
+// resolve "eu nem entrei essa semana".
+const DIAS_ESCALAR_EMAIL = 5;
+
+async function escalarFilaParada(admin: any) {
+  const corte = new Date(Date.now() - DIAS_ESCALAR_EMAIL * 86400000).toISOString();
+
+  const { data: paradas } = await admin
+    .from("agent_actions")
+    .select("id, title, action_type, company_id, created_at")
+    .eq("status", "pending")
+    .lt("created_at", corte)
+    .order("created_at", { ascending: true });
+
+  if (!paradas || paradas.length === 0) return { escalados: 0, emails: 0 };
+
+  // SÓ a fila de APROVAÇÃO por enquanto (status 'pending'). O mockup previa a
+  // mesma escada pra segunda fila — prospect aprovado que nenhum vendedor
+  // puxou — e ela fica deliberadamente DE FORA até a aba do Explorador
+  // existir. Motivo concreto, medido em 03/09/2026: há 15 prospects aprovados
+  // com mais de 5 dias, então ligar isso hoje faria o cron das 9h de amanhã
+  // mandar e-mail pra 10 vendedores sobre uma fila que eles ainda não têm
+  // onde abrir. Avisar sobre tela que não existe é pior que não avisar.
+
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  // Sem chave, o degrau simplesmente não existe — nunca derrubar a varredura
+  // inteira por causa do e-mail, que é o passo menos crítico dela.
+  if (!resendKey) return { escalados: paradas.length, emails: 0, motivo: "sem RESEND_API_KEY" };
+
+  // Quem aprova: admin vê tudo, gerente/gerente_rh só as próprias frentes —
+  // mesmo escopo da policy agent_actions_manager_all. Cada um recebe só o que
+  // pode de fato resolver; e-mail listando o que a pessoa não enxerga na tela
+  // é pior que não mandar.
+  const { data: aprovadores } = await admin
+    .from("profiles")
+    .select("id, name, email, roles, companies")
+    .overlaps("roles", ["admin", "gerente", "gerente_rh"]);
+
+  let emails = 0;
+  for (const p of aprovadores || []) {
+    if (!p.email) continue;
+    const ehAdmin = (p.roles || []).includes("admin");
+    const minhas = p.companies || [];
+    const delas = paradas.filter((a: any) =>
+      ehAdmin || a.company_id === null || minhas.includes(a.company_id));
+    if (delas.length === 0) continue;
+
+    const idade = (iso: string) => Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+    const linhas = delas.slice(0, 15).map((a: any) =>
+      `<li style="margin-bottom:6px"><b>${escapeHtml(a.title || "(sem título)")}</b>`
+      + ` <span style="color:#6B7280">— parada há ${idade(a.created_at)} dias</span></li>`).join("");
+    const resto = delas.length > 15 ? `<p style="color:#6B7280">…e mais ${delas.length - 15}.</p>` : "";
+
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+        body: JSON.stringify({
+          from: "noreply@sanwey.com.br",
+          to: p.email,
+          subject: `${delas.length} ${delas.length === 1 ? "sugestão parada" : "sugestões paradas"} há mais de ${DIAS_ESCALAR_EMAIL} dias`,
+          html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1F2937;max-width:560px">
+            <p>Olá${p.name ? ", " + escapeHtml(p.name) : ""} — estas sugestões da IA estão esperando uma decisão:</p>
+            <ul style="padding-left:18px">${linhas}</ul>${resto}
+            <p style="color:#6B7280;font-size:13px">Sinal de mercado perde validade parado. Aprovar ou recusar, os dois resolvem — o que trava é ficar sem decisão.</p>
+            <p><a href="https://gestao.sanwey.com.br/agentes" style="background:#CC2936;color:#fff;padding:9px 16px;border-radius:6px;text-decoration:none;display:inline-block">Abrir Agentes</a></p>
+          </div>`,
+        }),
+      });
+      if (res.ok) emails++;
+    } catch (_e) { /* um e-mail que falha não pode parar os outros nem a varredura */ }
+  }
+
+  return { escalados: paradas.length, emails };
+}
+
 async function runSweep(admin: any) {
   if (Deno.env.get("AGENT_RUNNER_ENABLED") === "false") {
     return json({ skipped: "kill_switch" });
@@ -555,7 +649,15 @@ async function runSweep(admin: any) {
     }
   }
 
-  return json({ processed, created, paused: pausedNow, skipped_limit: skippedLimit });
+  // Escalonamento por idade roda SEMPRE, mesmo quando a varredura não criou
+  // sugestão nenhuma: o que ele cobra é justamente a fila antiga parada.
+  // `catch` porque e-mail nunca pode derrubar a varredura — ela faz coisa
+  // mais importante que avisar.
+  let escalonamento: unknown = null;
+  try { escalonamento = await escalarFilaParada(admin); }
+  catch (err) { escalonamento = { erro: err instanceof Error ? err.message : String(err) }; }
+
+  return json({ processed, created, paused: pausedNow, skipped_limit: skippedLimit, escalonamento });
 }
 
 // ── Preview (assistente guiado, passo 5) ────────────────────────────────────
