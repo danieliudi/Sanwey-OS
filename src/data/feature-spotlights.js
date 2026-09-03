@@ -537,6 +537,12 @@ export const FEATURE_SPOTLIGHTS = [
   // alvo de "Prestações a decidir"). Some-se a isso que o público são 3
   // pessoas (1 admin + 2 gerentes), que ouvem a novidade direto. Coberto pelo
   // changelog 4.93.0.
+  //
+  // 4.98.0 — lista completa em Configurações → Módulos: DECIDIDO PULAR o
+  // spotlight. O painel só monta na aba Administração → Módulos, e o
+  // mecanismo ancora na rota `settings` (qualquer aba). Apontar um
+  // `data-tour` que não existe no Perfil (pouso da tela) marcaria o aviso
+  // como visto sem nunca aparecer. Público = admin. Coberto pelo changelog.
 ];
 
 export default FEATURE_SPOTLIGHTS;

@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.98.0",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Em Configurações → Módulos, o liga/desliga em três estados (Desligada / Em testes / Liberada) passa a listar as páginas no mesmo agrupamento do menu — Meu Espaço, Comercial, Marketing, RH, Inteligência e Configuração — incluindo Biblioteca de Documentos. Pendências, Configurações e Central de Bugs continuam sempre no ar.",
+        roles: ["admin"],
+      },
+    ],
+  },
+  {
     version: "4.97.1",
     items: [
       {

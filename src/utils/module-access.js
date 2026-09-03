@@ -7,21 +7,40 @@
 // current_user_has_module() (ver migration profile_module_overrides) — se
 // mudar a regra aqui, mude lá também.
 
+// Fora deste registro de propósito — a chave global não se aplica:
+//   dashboard      (Pendências)     — pouso pós-login e fallback de rota
+//   settings       (Configurações)  — a própria tela que liga/desliga o resto
+//   central-bugs   (Central de Bugs)— reportar é aberto a todo mundo
+// Agrupamento e ordem espelham o menu lateral (App.jsx navGroups).
 export const MODULE_GROUPS = [
+  {
+    // Chat e Meu To-do mantêm o liga/desliga POR PESSOA
+    // (profiles.chat_enabled e settings.personalTasksEnabled); o que entra
+    // aqui é a chave da empresa, que é outra coisa. Ajuda & Tutoriais vive
+    // no rodapé do menu (sem rótulo de seção), mas a chave é a mesma.
+    label: "Meu Espaço",
+    modules: [
+      { id: "chat",           label: "Chat" },
+      { id: "personal-tasks", label: "Meu To-do" },
+      { id: "meu-rh",         label: "Meu RH" },
+      { id: "tutorials",      label: "Ajuda & Tutoriais" },
+    ],
+  },
   {
     label: "Comercial",
     modules: [
       { id: "commercial-overview", label: "Visão Geral" },
+      { id: "signals",             label: "Sinais" },
       { id: "crm",                 label: "Funil de Vendas" },
       { id: "posvenda",            label: "Funil de Pós-venda" },
       { id: "pedidos",             label: "Pedidos" },
       { id: "clients",             label: "Clientes" },
       { id: "abm",                 label: "Contas · ABM" },
       { id: "catalogo",            label: "Catálogo" },
-      { id: "signals",             label: "Sinais" },
+      { id: "document-library",    label: "Biblioteca de Documentos" },
+      { id: "crossref",            label: "Cross-sell" },
       { id: "explorer",            label: "Explorador" },
       { id: "crm-viagens",         label: "Viagens & Despesas" },
-      { id: "crossref",            label: "Cross-sell" },
       { id: "comex",               label: "Comex" },
     ],
   },
@@ -67,25 +86,18 @@ export const MODULE_GROUPS = [
       { id: "market-intel", label: "Mercado" },
       { id: "agents",       label: "Agentes" },
       { id: "esg-carbono",  label: "ESG & Carbono" },
-      { id: "automations",  label: "Automações" },
     ],
   },
-  // Páginas que existem no menu de todo mundo. Entraram no registro em
-  // 12/08/2026, junto com a chave global de liga/desliga (module_states) —
-  // antes disso não havia como recolher nenhuma delas, nem por pessoa nem
-  // pra empresa toda. Chat e Meu To-do mantêm o liga/desliga POR PESSOA que
-  // já tinham (profiles.chat_enabled e settings.personalTasksEnabled); o que
-  // entra aqui é a chave da empresa, que é outra coisa.
   {
-    label: "Pessoal",
+    label: "Configuração",
     modules: [
-      { id: "chat",           label: "Chat" },
-      { id: "personal-tasks", label: "Meu To-do" },
-      { id: "meu-rh",         label: "Meu RH" },
-      { id: "tutorials",      label: "Ajuda & Tutoriais" },
+      { id: "automations", label: "Automações" },
     ],
   },
 ];
+
+// Itens de menu que existem de verdade mas NÃO entram na chave global.
+export const UNGATED_NAV_IDS = ["dashboard", "settings", "central-bugs"];
 
 export const ALL_MODULE_IDS = MODULE_GROUPS.flatMap(g => g.modules.map(m => m.id));
 export const MODULE_LABELS = Object.fromEntries(MODULE_GROUPS.flatMap(g => g.modules.map(m => [m.id, m.label])));
@@ -159,7 +171,7 @@ export function defaultModulesForRoles(roles) {
   if (f.isPureSuporte) {
     ["pedidos", "clients", "catalogo"].forEach(m => set.add(m));
   } else if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {
-    ["commercial-overview", "crm", "posvenda", "pedidos", "clients", "abm", "catalogo", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
+    ["commercial-overview", "crm", "posvenda", "pedidos", "clients", "abm", "catalogo", "document-library", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
     if (f.isManager) set.add("crossref");
   }
 

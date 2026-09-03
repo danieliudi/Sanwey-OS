@@ -1841,9 +1841,10 @@ export default function App() {
     });
 
     // Acesso por módulo: só filtra itens que de fato fazem parte do
-    // registro de módulos (dashboard/tutorials/settings/automations ficam
-    // de fora — controlados só por cargo, como sempre). Grupo que fica
-    // vazio depois do filtro some do menu.
+    // registro de módulos. Fora de propósito: dashboard (pouso/fallback),
+    // settings (a própria tela de config) e central-bugs (reporte aberto).
+    // tutorials e automations ENTRAM no registro — a chave global vale pra eles.
+    // Grupo que fica vazio depois do filtro some do menu.
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
@@ -1909,7 +1910,7 @@ export default function App() {
       setSection("marketing");
     }
     // Pure marketing users shouldn't access CRM sections
-    const crmSections = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "abm"];
+    const crmSections = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "abm", "document-library"];
     if (isPureMarketing && crmSections.includes(section)) {
       setSection("dashboard");
     }
