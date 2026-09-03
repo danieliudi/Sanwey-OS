@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.95.1",
+    items: [
+      {
+        kind: "ajuste",
+        text: "No Relatório de Conteúdo, duas pessoas da mesma empresa deixam de contar como duas conversões: o motor das Feiras continua no lead (custo, CAC, idade); por cima entra a conta (cliente ou CNPJ).",
+        roles: ["admin", "gerente", "marketing", "gerente_marketing", "diretoria"],
+      },
+    ],
+  },
+  {
     version: "4.95.0",
     items: [
       {
