@@ -25,6 +25,13 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "abm-tabela",
+    route: "abm",
+    target: '[data-tour="abm-tabela"]',
+    text: "Novo: contas de conteúdo, uma por empresa. Fit e comitê vêm do Funil e de Clientes — clique na conta pra abrir o negócio.",
+    version: "4.97.0",
+  },
+  {
     id: "captura-utm-dica",
     route: "settings",
     target: '[data-tour="captura-utm-dica"]',

@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Contas · ABM no menu Comercial: leads de conteúdo aparecem agrupados por empresa (cliente ou CNPJ), com fit score e comitê de compra — dois contatos da mesma conta não contam como duas conversões.",
+        roles: ["admin", "gerente", "vendedor", "diretoria"],
+      },
+      {
+        kind: "ajuste",
+        text: "O fit score do Funil deixa de nascer zerado: na criação do negócio (e na importação de feira) já grava a pontuação de segmento, valor e recência. No celular, o Kanban também ordena por Fit.",
+        roles: ["admin", "gerente", "vendedor"],
+      },
+    ],
+  },
+  {
     version: "4.96.0",
     items: [
       {

@@ -151,6 +151,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         decisionMaker: { name: "—", role: "—" },
         customFields: customValues,
       };
+      lead.fitScore = computeFitScore(lead);
       await onAdd(lead);
       onCancel();
     } catch (err) {
@@ -951,7 +952,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         itemsByStage={Object.fromEntries(stages.map(s => [s.id, (byStage[s.id]?.leads) || []]))}
         getSortCriteria={getSortCriteria}
         setSortCriteria={setSortCriteria}
-        sortOptions={["recent", "deadline", "value", "alpha"]}
+        sortOptions={["recent", "deadline", "value", "fit", "alpha"]}
         initialExpandedKey="prospeccao"
         addLabel="Nova oportunidade"
         emptyLabel="Nenhum negócio nesta etapa"
