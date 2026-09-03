@@ -153,7 +153,7 @@ function parseXLSX(buffer, users) {
 
       const cnpj = (get("cnpj") || "").toString().replace(/\D/g, "");
 
-      const row = {
+      const lead = {
         _importId: `import-${i}-${Date.now()}`,
         // CRM fields
         id: uuidv4(),
@@ -197,8 +197,8 @@ function parseXLSX(buffer, users) {
         _selected: true,
         _matchedUserName: matchedUser?.name || null,
       };
-      row.fitScore = computeFitScore(row);
-      return row;
+      lead.fitScore = computeFitScore(lead);
+      return lead;
     })
     .filter(Boolean);
 }

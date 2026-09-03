@@ -45,7 +45,7 @@ const campA = "camp-conteudo";
 const leads = [
   { id: "l1", clientId: "c1", company: "Acme", cnpj: "11222333000181", stage: "prospeccao", value: 10000, campaignId: campA, companyId: "industria", sector: "Alimentício", createdAt: now, lastActivity: now },
   { id: "l2", clientId: "c1", company: "Acme Ltda", cnpj: "11222333000181", stage: "ganho", value: 50000, campaignId: campA, companyId: "industria", sector: "Alimentício", createdAt: now, lastActivity: now },
-  { id: "l3", idOnly: true, company: "Solo", stage: "perdido", value: 1, campaignId: campA, companyId: "industria", createdAt: now, lastActivity: now, id: "l3" },
+  { id: "l3", company: "Solo", stage: "perdido", value: 1, campaignId: campA, companyId: "industria", createdAt: now, lastActivity: now },
 ];
 
 const accounts = collapseLeadsToAccounts(leads);
