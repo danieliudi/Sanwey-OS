@@ -29,7 +29,7 @@ export const FEATURE_SPOTLIGHTS = [
     route: "abm",
     target: '[data-tour="abm-tabela"]',
     text: "Novo: contas de conteúdo, uma por empresa. Fit e comitê vêm do Funil e de Clientes — clique na conta pra abrir o negócio.",
-    version: "4.94.0",
+    version: "4.97.0",
   },
   {
     id: "entregas-busca-card",

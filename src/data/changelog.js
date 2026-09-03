@@ -24,7 +24,7 @@
 
 export const CHANGELOG = [
   {
-    version: "4.94.0",
+    version: "4.97.0",
     items: [
       {
         kind: "novo",
