@@ -1,0 +1,61 @@
+---
+description: Quando parar e passar a tarefa para o Claude Code em vez de continuar — e como escrever o recado de passagem.
+alwaysApply: true
+---
+
+# Quando parar e passar pro Claude Code
+
+O Daniel usa duas ferramentas de propósito. **Cursor** é o dia a dia: mudança
+já decidida, em um ou dois arquivos, seguindo padrão que já existe.
+**Claude Code** é onde ele faz planejamento, auditoria, mudança de risco e
+qualquer coisa que exija ler a plataforma inteira.
+
+Ele **não** é programador de formação. Então não basta você parar — você tem
+que **dizer que parou, por quê, e o que ele deve pedir lá.**
+
+## Pare e passe quando bater qualquer um destes
+
+| Situação | Por quê |
+|---|---|
+| Mudança visual ou estrutural **sem mockup aprovado** | a regra é mockup antes de código, e o mockup se faz melhor lá |
+| Toca **migration, policy RLS, Storage, edge function ou segredo** | exige o passe de segurança e confirmação explícita dele antes de aplicar |
+| Toca **componente compartilhado** (`SplitPanelDrawer`, `KanbanFab`, `Modal`, `use-available-height`, `MoveStageMenu`, `StageNavigator`) | o raio de alcance é de 13 quadros; um erro aqui mata várias telas de uma vez |
+| Precisa **conferir dado de produção** ("isso é usado?", "quantas linhas tem?", "quebrou pra quem?") | você não alcança o banco; lá tem acesso de leitura |
+| É **varredura ou auditoria** em muitos arquivos | é trabalho de fôlego, feito melhor lá |
+| É **feature nova do zero**, ou planejamento | precisa de spec antes de código |
+| A entrega exige a **varredura em navegador** (`npm run qa:smoke` / `qa:dados`) | roda melhor lá, e o resultado precisa ser lido com cuidado |
+| Você tentou duas vezes e **não achou a causa raiz** | insistir na terceira costuma piorar; lá dá pra investigar com mais contexto |
+
+## O que fazer quando bater
+
+**Não pare no meio calado, e não force a barra.** Faça o que dá com segurança,
+e entregue o recado.
+
+1. Termine e reporte o que **já dava** para fazer com segurança.
+2. Diga com clareza o que **ficou faltando** e por que você parou.
+3. Escreva o pedido pronto, para ele copiar e colar no Claude Code.
+
+## Formato do recado
+
+> **Fiz:** ajustei o rótulo do botão em `EntregasView.jsx:214` e conferi que o
+> build passa.
+>
+> **Parei aqui porque:** a próxima parte muda o layout do painel de detalhe, e
+> esse painel é o mesmo em 13 quadros. A regra pede mockup aprovado antes, e
+> mexer nele sem ver o efeito nos outros quadros é arriscado.
+>
+> **Pra levar pro Claude Code, copie isto:**
+> "Preciso reorganizar o painel de detalhe das Entregas — quero X e Y. Mostra
+> mockup antes, e confere o efeito nos outros quadros que usam o mesmo painel."
+
+Três blocos, sempre: **Fiz · Parei porque · Copie isto**. Em português, sem
+jargão — ele é publicitário, não programador. Explique o *porquê* em
+consequência prática ("isso pode apagar dados de clientes"), não em termo
+técnico ("viola a policy RLS").
+
+## O contrário também vale
+
+Se a tarefa **é** do seu tamanho, faça. Não empurre para o Claude Code coisa
+simples só por cautela — trocar um texto, corrigir um espaçamento, renomear,
+seguir um padrão que já existe no arquivo ao lado. Mandar tudo embora custa o
+tempo dele.
