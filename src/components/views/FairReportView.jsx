@@ -332,10 +332,7 @@ export function FairReportView({
         />
       ) : (
         <>
-          <StatCardGrid
-            desktopClassName={contentAccounts ? "md:grid-cols-5" : "md:grid-cols-4"}
-            maxMobile={contentAccounts ? 5 : 4}
-          >
+          <StatCardGrid desktopClassName={contentAccounts ? "md:grid-cols-5" : "md:grid-cols-4"}>
             <StatCard icon={HeaderIcon} value={metrics.length} label={entityPlural} />
             <StatCard icon={TrendingUp} value={totals.leadCount} label="Leads captados" sublabel={`${totals.wonCount} viraram negócio`} />
             {contentAccounts && (
