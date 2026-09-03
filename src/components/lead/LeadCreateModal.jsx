@@ -244,6 +244,7 @@ export function LeadCreateModal({
   createClient,
   createClientContact,
   canAddContact = false,
+  campaigns = [],
 }) {
   const [values, setValues] = useState(() => ({
     owner: currentUser?.id ? [currentUser.id] : [],
@@ -267,6 +268,11 @@ export function LeadCreateModal({
   // parte de `values` porque não faz parte do `formConfig` configurável
   // (não é um FIELD_DEFS, é fixo em todo card novo).
   const [negotiationStartedAt, setNegotiationStartedAt] = useState("");
+  // Origem do lead (campaign_id) — mesmo circuito do drawer. Sem isto na
+  // criação, o hábito da Fase 0 dependia só do drawer (PRD rastreio).
+  const [campaignId, setCampaignId] = useState("");
+  // Teste: is_demo = true. Origem incerta = teste (PRD §9).
+  const [isDemo, setIsDemo] = useState(false);
   // O modal nunca desmonta entre um card e outro (CRMView só alterna `open`)
   // — sem isso, uma busca de CNPJ ainda em voo quando o usuário fecha e abre
   // outro card resolveria contra o estado do card NOVO, preenchendo campos
@@ -295,7 +301,7 @@ export function LeadCreateModal({
   // formulário preenchido pede confirmação. Achado da 2ª auditoria.
   const initialSnapshotRef = useRef(null);
   const stateRef = useRef(null);
-  stateRef.current = JSON.stringify({ values, customValues, negotiationStartedAt, contactDraft });
+  stateRef.current = JSON.stringify({ values, customValues, negotiationStartedAt, contactDraft, campaignId, isDemo });
   if (initialSnapshotRef.current === null) initialSnapshotRef.current = stateRef.current;
   const guardedClose = useCallback(() => {
     if (stateRef.current !== initialSnapshotRef.current
@@ -326,6 +332,8 @@ export function LeadCreateModal({
       setValues({ owner: currentUser?.id ? [currentUser.id] : [], sector: currentUser?.sectors?.[0] || "", contactEmail: "" });
       setCustomValues({});
       setNegotiationStartedAt("");
+      setCampaignId("");
+      setIsDemo(false);
       setError(null);
       setSaving(false);
       setDuplicates([]);
@@ -494,6 +502,8 @@ export function LeadCreateModal({
         negotiationStartedAt: negotiationStartedAt ? localDateInputToISOString(negotiationStartedAt) : null,
         fitScore: 0,
         starred: false,
+        campaignId: campaignId || null,
+        isDemo: Boolean(isDemo),
         notes: values.notes ? [{ text: values.notes, createdAt: now.toISOString() }] : [],
         daysAgo: 0,
         dateDetected: now.toISOString(),
@@ -554,7 +564,7 @@ export function LeadCreateModal({
     } finally {
       setSaving(false);
     }
-  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields, negotiationStartedAt, clients, createClient, createClientContact, contactDraft, fuzzyAcceptedClient, canAddContact]);
+  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields, negotiationStartedAt, clients, createClient, createClientContact, contactDraft, fuzzyAcceptedClient, canAddContact, campaignId, isDemo]);
 
   // ESC fecha o modal via hook global (pilha LIFO) — funciona mesmo sem foco
   // dentro do modal, diferente do antigo onKeyDown na raiz.
@@ -912,6 +922,74 @@ export function LeadCreateModal({
             <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 6 }}>
               Deixe em branco pra usar a data de hoje (padrão atual).
             </p>
+          </div>
+
+          {/* Origem / campanha — ponto único de falha do circuito de rastreio
+              (PRD §6). Canal Evento, Conteúdo ou Digital; demais ficam de fora. */}
+          <div style={{ marginBottom: 16, paddingTop: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                Origem
+              </span>
+              <span
+                style={{
+                  fontSize: 10, fontWeight: 700, color: "var(--text-dim)",
+                  background: "var(--surface)", border: "1px solid var(--border)",
+                  borderRadius: 999, padding: "1px 7px", textTransform: "uppercase", letterSpacing: "0.04em",
+                }}
+              >
+                opcional
+              </span>
+            </div>
+            <label
+              style={{
+                display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-dim)",
+                textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5,
+              }}
+            >
+              Campanha
+            </label>
+            <select
+              value={campaignId}
+              onChange={e => setCampaignId(e.target.value)}
+              style={{
+                width: "100%", fontSize: 13, borderRadius: 6, border: "1px solid var(--border-strong)",
+                padding: "8px 12px", color: "var(--text)", background: "var(--surface)", outline: "none",
+                boxSizing: "border-box", appearance: "none",
+                backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+                backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", backgroundSize: "14px",
+                paddingRight: 32,
+              }}
+            >
+              <option value="">Não informado</option>
+              {(campaigns || [])
+                .filter(c =>
+                  ["Evento", "Conteúdo", "Digital"].includes(c.channel)
+                  && (!companyId || !c.companyIds?.length || c.companyIds.includes(companyId))
+                )
+                .map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.channel ? ` · ${c.channel}` : ""}
+                  </option>
+                ))}
+            </select>
+            <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 6 }}>
+              Sem campanha, o lead cai em &quot;origem não registrada&quot; no relatório. Nome no CRM: frente-aaaamm-tema.
+            </p>
+            <label
+              style={{
+                display: "flex", alignItems: "center", gap: 8, marginTop: 12,
+                fontSize: 13, color: "var(--text)", cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={isDemo}
+                onChange={e => setIsDemo(e.target.checked)}
+                style={{ width: 15, height: 15 }}
+              />
+              Registro de teste (is_demo) — some do relatório
+            </label>
           </div>
 
           {/* Campos da etapa de destino (pipeline_stage_fields) — o que a

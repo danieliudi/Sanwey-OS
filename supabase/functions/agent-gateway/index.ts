@@ -248,7 +248,14 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
           origem: 'esteira',
           agent_action_id: action.id,
           sinal: payload.sinal ?? null,
+          // content_id cruza pro entregável pelo mesmo caminho que `sinal`
+          // (PRD rastreio §7.2). A agência passa a ver o código da peça.
+          content_id: payload.content_id ?? null,
+          campaign_id: payload.campaign_id ?? null,
+          campaign_name: payload.campaign_name ?? null,
         },
+        // Coluna nativa quando o pacote trouxe campanha — sem migration nova.
+        ...(payload.campaign_id ? { campaign_id: payload.campaign_id } : {}),
       });
     } catch (_e) { /* ignorado de propósito, como os demais */ }
     return;

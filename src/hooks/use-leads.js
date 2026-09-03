@@ -111,6 +111,7 @@ function leadToRow(l, extras = {}) {
     client_id: l.clientId ?? null,
     sent_to_posvenda_at: l.sentToPosvendaAt ?? null,
     negotiation_started_at: l.negotiationStartedAt ?? null,
+    is_demo: Boolean(l.isDemo),
     ...extras,
   };
 }
