@@ -42,8 +42,8 @@ export const FEATURE_SPOTLIGHTS = [
     id: "marketing-conteudo-report",
     route: "marketing-conteudo",
     target: '[data-tour="marketing-conteudo-report"]',
-    text: "Novo: relatório de Conteúdo e Digital com o mesmo motor das Feiras — custo, leads e retorno comparados na mesma idade. Campanhas precisam do nome frente-aaaamm-tema.",
-    version: "4.95.0",
+    text: "Novo: relatório de Conteúdo com o motor das Feiras e conversão por conta — mesma empresa, dois toques, uma conversão. Campanhas no formato frente-aaaamm-tema.",
+    version: "4.97.1",
   },
   {
     id: "entregas-busca-card",

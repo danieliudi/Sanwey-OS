@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Tent, TrendingUp, TrendingDown, Info, Newspaper } from "lucide-react";
+import { Tent, TrendingUp, TrendingDown, Info, Newspaper, Building2 } from "lucide-react";
 import { PageHeader } from "../shared/PageHeader";
 import { StatCard } from "../ui/StatCard";
 import { StatCardGrid } from "../shared/StatCardGrid";
@@ -15,6 +15,7 @@ import {
   fairStartTime,
 } from "../../utils/fair-report";
 import { contentCampaignPairKey } from "../../utils/campaign-name";
+import { collapseLeadsToAccounts, accountMetrics, metricsForCampaignLeads } from "../../utils/account-collapse";
 
 // Relatório de origem por campanha — motor = computeFairMetrics (fair-report.js).
 // Feiras (canal Evento) e Conteúdo/Digital compartilham esta tela; o filtro de
@@ -57,7 +58,7 @@ function MetricCell({ label, value, delta, invertDelta }) {
   );
 }
 
-function FairCard({ metrics, comparison, onSelect, selected, showChannelBadge }) {
+function FairCard({ metrics, comparison, onSelect, selected, showChannelBadge, accounts, prevAccounts }) {
   const { campaign: c } = metrics;
   const start = fairStartTime(c);
   const cmp = comparison;
@@ -101,8 +102,15 @@ function FairCard({ metrics, comparison, onSelect, selected, showChannelBadge })
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className={`grid grid-cols-2 gap-3 ${accounts ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
         <MetricCell label="Leads" value={metrics.leadCount} delta={cmp && deltaPct(cmp.current.leadCount, cmp.previous.leadCount)} />
+        {accounts && (
+          <MetricCell
+            label="Contas"
+            value={accounts.accountCount}
+            delta={prevAccounts && deltaPct(accounts.accountCount, prevAccounts.accountCount)}
+          />
+        )}
         <MetricCell label="Ganhos" value={metrics.wonCount} delta={cmp && deltaPct(cmp.current.wonCount, cmp.previous.wonCount)} />
         <MetricCell label="CAC" value={metrics.cac == null ? "—" : formatK(metrics.cac)} delta={cmp && deltaPct(cmp.current.cac, cmp.previous.cac)} invertDelta />
         <MetricCell label="Retorno" value={metrics.roi == null ? "—" : `${metrics.roi.toFixed(1)}x`} delta={cmp && deltaPct(cmp.current.roi, cmp.previous.roi)} />
@@ -158,7 +166,7 @@ const FAIR_COPY = {
 const CONTENT_COPY = {
   channels: ["Conteúdo", "Digital"],
   title: "Relatório de Conteúdo",
-  subtitle: "Custo, leads e retorno de campanhas Conteúdo e Digital — comparados na mesma idade",
+  subtitle: "Custo e retorno pelo motor das Feiras; conversão também por conta (mesma empresa ≠ duas conversões)",
   icon: Newspaper,
   emptyTitle: "Nenhuma campanha de conteúdo",
   emptyDescription: "Campanha de canal “Conteúdo” ou “Digital”, no formato frente-aaaamm-tema. Cadastre em Campanhas e vincule o lead na criação pra aparecer aqui.",
@@ -274,6 +282,26 @@ export function FairReportView({
     };
   }, [metrics]);
 
+  const stages = useMemo(() => ({ wonStages: WON_STAGES, lostStages: LOST_STAGES }), []);
+
+  // Overlay de conta só no relatório de conteúdo (PRD §8). Feira permanece
+  // por lead — o circuito de crachá já é uma pessoa por linha.
+  const accountByCampaign = useMemo(() => {
+    if (variant !== "content") return {};
+    const byId = {};
+    for (const c of scoped) {
+      byId[c.id] = metricsForCampaignLeads(reportLeads, c.id, stages);
+    }
+    return byId;
+  }, [variant, scoped, reportLeads, stages]);
+
+  const contentAccounts = useMemo(() => {
+    if (variant !== "content") return null;
+    const ids = new Set(scoped.map(c => c.id));
+    const ofContent = reportLeads.filter(l => ids.has(l.campaignId || l.campaign_id));
+    return accountMetrics(collapseLeadsToAccounts(ofContent, stages));
+  }, [variant, scoped, reportLeads, stages]);
+
   const selected = metrics.find(m => m.campaign.id === selectedId) || null;
 
   const unlinked = useMemo(() => {
@@ -304,10 +332,20 @@ export function FairReportView({
         />
       ) : (
         <>
-          <StatCardGrid desktopClassName="md:grid-cols-4">
+          <StatCardGrid desktopClassName={contentAccounts ? "md:grid-cols-5" : "md:grid-cols-4"}>
             <StatCard icon={HeaderIcon} value={metrics.length} label={entityPlural} />
             <StatCard icon={TrendingUp} value={totals.leadCount} label="Leads captados" sublabel={`${totals.wonCount} viraram negócio`} />
-            <StatCard icon={TrendingDown} value={totals.cac == null ? "—" : formatK(totals.cac)} label="CAC médio" sublabel="custo ÷ clientes conquistados" />
+            {contentAccounts && (
+              <StatCard
+                icon={Building2}
+                value={contentAccounts.accountCount}
+                label="Contas"
+                sublabel={contentAccounts.accountConversion == null
+                  ? `${contentAccounts.touchCount} toques · conversão —`
+                  : `${pct(contentAccounts.accountConversion)} ganhas / decididas`}
+              />
+            )}
+            <StatCard icon={TrendingDown} value={totals.cac == null ? "—" : formatK(totals.cac)} label="CAC médio" sublabel="custo ÷ leads ganhos" />
             <StatCard icon={TrendingUp} value={totals.roi == null ? "—" : `${totals.roi.toFixed(1)}x`} label="Retorno" sublabel={`${formatK(totals.revenue)} sobre ${formatK(totals.cost)}`} />
           </StatCardGrid>
 
@@ -351,6 +389,10 @@ export function FairReportView({
                 selected={selectedId === m.campaign.id}
                 onSelect={id => setSelectedId(prev => (prev === id ? null : id))}
                 showChannelBadge={showChannelBadge}
+                accounts={accountByCampaign[m.campaign.id]}
+                prevAccounts={comparisons[m.campaign.id]
+                  ? accountByCampaign[comparisons[m.campaign.id].previous.campaign.id]
+                  : null}
               />
             ))}
           </div>
@@ -368,11 +410,21 @@ export function FairReportView({
                 <MetricCell label="Em aberto" value={selected.openCount} />
                 <MetricCell label="Receita" value={selected.revenue > 0 ? formatBRL(selected.revenue) : "—"} />
               </div>
+              {accountByCampaign[selected.campaign.id] && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+                  <MetricCell label="Contas" value={accountByCampaign[selected.campaign.id].accountCount} />
+                  <MetricCell label="Conversão conta" value={pct(accountByCampaign[selected.campaign.id].accountConversion)} />
+                  <MetricCell label="Toques" value={accountByCampaign[selected.campaign.id].touchCount} />
+                </div>
+              )}
               {selected.openCount > 0 && (
                 <p className="mt-3" style={{ fontSize: 11.5, color: "var(--text-faint)" }}>
                   {selected.openCount} {selected.openCount === 1 ? "negócio ainda está" : "negócios ainda estão"} em
-                  aberto — a conversão considera só o que já foi decidido, então
-                  esse número ainda pode melhorar.
+                  aberto — a conversão de lead considera só o que já foi decidido, então
+                  esse número ainda pode melhorar
+                  {accountByCampaign[selected.campaign.id]
+                    ? ". Conta ganha se qualquer toque fechou."
+                    : "."}
                 </p>
               )}
             </div>

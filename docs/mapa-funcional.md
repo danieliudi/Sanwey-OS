@@ -174,7 +174,7 @@ abre · dado principal · integração externa (quando tem).
 | `/marketing/compras` | `ComprasMarketingView.jsx` | Itens prontos (brindes, uniformes, gráfica) — não é produção. Cotação com fornecedor por e-mail, aprovação por RPC. **Exceção deliberada**: usa `PURCHASE_STAGES` fixo no código, não `rh_pipeline_stages` — as transições são acopladas às RPCs de aprovação. |
 | `/marketing/despesas` | `DespesasView.jsx` | Gastos de marketing, com vínculo a entrega/tarefa. Comprovante em bucket. |
 | `/marketing/feiras` | `FairReportView.jsx` | "Custo, leads e retorno de cada feira — comparados na mesma idade." |
-| `/marketing/conteudo` | `FairReportView.jsx` (`ContentReportView`) | Mesmo motor das Feiras (`computeFairMetrics`), filtro canal Conteúdo + Digital. |
+| `/marketing/conteudo` | `FairReportView.jsx` (`ContentReportView`) | Mesmo motor das Feiras (`computeFairMetrics`); overlay de conta (PRD §8) sem segundo cálculo. |
 
 ### 2.4 Recursos Humanos
 
