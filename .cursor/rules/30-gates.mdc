@@ -1,0 +1,80 @@
+---
+description: Como verificar de verdade antes de dizer que terminou — as três camadas de gate e por que compilar não prova nada neste repositório.
+alwaysApply: false
+---
+
+# Gates — o que "pronto" exige
+
+## `npm run build` sozinho não prova nada
+
+O Vite usa esbuild, **que não faz análise de escopo**. Um `const` usado no array
+de dependência de um `useMemo` declarado acima dele (TDZ), ou um
+`setXQueNinguemDeclarou("")` sobrando de um refactor, **compilam sem um ruído
+sequer** e a tela morre em produção.
+
+O placar real deste repositório:
+
+| Tela | Causa | Tempo morta | Quem pegou |
+|---|---|---|---|
+| Recrutamento | TDZ em array de dependência | — | QA manual |
+| App.jsx inteiro (tela branca) | TDZ | — | revisão antes de subir |
+| Viagens & Despesas | TDZ | ~3 semanas | auditoria |
+| Compras (painel de detalhe) | `setWinnerSupplierId` órfão | 15 dias | **ESLint**, não o build |
+
+## Rode `npm run build`, nunca `npx vite build`
+
+Os dois gates (`scripts/check-consistencia.mjs` e o ESLint) estão pendurados no
+`prebuild` do `package.json`, que é hook de ciclo de vida do npm.
+`npx vite build` chama o Vite direto e **passa por cima dos dois em silêncio**.
+
+## As três camadas, da mais barata para a mais cara
+
+1. **`scripts/check-consistencia.mjs`** — regras específicas desta plataforma,
+   cada uma nascida de um bug real daqui. Linha de base travada.
+2. **`.eslintrc.cjs`** — só regra que pega bug de runtime: escopo (`no-undef`),
+   `rules-of-hooks`, duplicação silenciosa. **Zero regra de estilo, de
+   propósito** — gate que apita por formatação vira gate ignorado. Ruído
+   conhecido fica em `npm run lint:full`, que não quebra o build.
+3. **`scripts/qa/`** — abre a plataforma num Chromium de verdade, desktop e
+   celular. `npm run qa:smoke` (rotas × 2 viewports), `npm run qa:interacao`
+   (abre card, navega abas), `npm run qa:dados` (com 231 linhas em 20 tabelas).
+   Playwright **não** é dependência do projeto de propósito — instala sob
+   demanda, ver `scripts/qa/README.md`.
+
+Os dois primeiros rodam sozinhos no build. A varredura em navegador é para
+entrega que mexeu em mais de uma tela, e para auditoria.
+
+## Armadilha que já custou uma rodada inteira
+
+A varredura roda sem banco porque, sem `VITE_SUPABASE_*`, o App cai no caminho
+de usuário mock. **Mas o Vite carrega `.env.local` em QUALQUER modo** — o
+"ignora quando `mode === test`" é regra do Vitest, não do Vite. A primeira
+execução deu "104 rotas limpas" que eram 104 telas de **login**.
+
+Por isso existe `scripts/qa/vite.smoke.config.js` com `envDir` apontado para
+pasta vazia, e por isso a rodada confere o texto renderizado antes de declarar
+sucesso. **Varredura que passa sem provar que renderizou a tela certa vale menos
+que nada** — dá sensação de cobertura.
+
+## Antes de dizer que terminou
+
+1. `npm run build` limpo (roda os dois gates).
+2. Se mexeu em mais de uma tela: `npm run qa:smoke` ou `npm run qa:dados`.
+3. Se mexeu em rota, tela, edge function ou integração: `npm run doc:check`.
+4. Se mudou aparência: captura de tela na largura real, conferida contra o
+   mockup aprovado.
+5. Diga **o que você verificou**, com o número que viu — não "passou".
+
+## Entrega com impacto para o usuário final
+
+Mergear não é o último passo. Também fazem parte de "pronto":
+
+- Entrada nova no topo de `CHANGELOG` (`src/data/changelog.js`) **e** bump de
+  `version` no `package.json`. Sem os dois juntos o toast "Novidades" não
+  dispara para ninguém.
+- Avaliar tutorial (`src/data/tutorials.js`) e spotlight
+  (`src/data/feature-spotlights.js` + `data-tour` no elemento real).
+- Departamento/domínio novo? Uma aba no Painel Executivo faz parte de pronto.
+
+Mudança interna sem nada visível (refactor, script, migration de reconciliação)
+não precisa de changelog. O critério é: *alguém que usa a plataforma notaria?*

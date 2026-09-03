@@ -1,0 +1,74 @@
+---
+description: O que já existe e deve ser importado em vez de reescrito — componentes, hooks, utilitários e tokens compartilhados.
+globs: src/**/*.jsx,src/**/*.js
+alwaysApply: false
+---
+
+# Reaproveitamento obrigatório
+
+Confirmado por uso real no código, não aspiracional. Se o que você precisa está
+aqui, **importe**. A lista completa, com a história de cada item, está na
+regra 1 do `CLAUDE.md` — aqui fica o essencial para não reescrever.
+
+## Kanban e board
+
+| Preciso de | Use |
+|---|---|
+| Altura de coluna que não esconde a barra de rolagem | `src/hooks/use-available-height.js` (13 boards) |
+| Botão flutuante de criar card | `src/components/shared/KanbanFab.jsx` |
+| Menu "mover para etapa / excluir" no card | `src/components/shared/MoveStageMenu.jsx` |
+| "Mover para", visual Pipefy (próximas em destaque, passadas atrás do divisor) | `src/components/shared/StageNavigator.jsx` — precisa de `currentStageKey` + `allStages` |
+| Acordeão do board no celular | `src/components/rh-pipeline/RHMobileKanbanAccordion.jsx` (14 views, Funil incluído) |
+| Barra de topo do board | `src/components/shared/KanbanBoardHeader.jsx` |
+
+## Drawer, modal e formulário
+
+| Preciso de | Use |
+|---|---|
+| Casca de drawer de detalhe (header / left 340 / center / right 320) | `src/components/shared/SplitPanelDrawer.jsx` |
+| Campos condicionais e obrigatórios por etapa | `src/utils/field-conditions.js` |
+| Validação de formato (CNPJ, e-mail, telefone, faixa, data) | `src/utils/field-validation.js` |
+| Editor de campos por etapa (CRM e RH, um só) | `src/components/shared/stage-editor/StageFieldsPanel.jsx` |
+| Título editável do card | `src/components/shared/EditableTitle.jsx` |
+| Overlay genérico | `src/components/ui/Modal.jsx` |
+| Tooltip com ícone "?" | `src/components/ui/HelpTooltip.jsx` — só para conceito sem elemento próprio; hint de botão/ícone usa `title=""` nativo |
+
+## Tela de lista e catálogo
+
+| Preciso de | Use |
+|---|---|
+| Abas | `src/components/shared/Tabs.jsx` |
+| Barra de filtro | `src/components/shared/FilterBar.jsx` |
+| Card / grade de cards (com densidade) | `src/components/shared/Card.jsx` |
+| Densidade de linha de tabela | `src/components/shared/TableDensityToggle.jsx` + `src/hooks/use-table-density.js` |
+| Exportar CSV | `src/utils/export-csv.js` — sempre o array **já filtrado**, nunca o cru |
+
+## Utilitário
+
+| Preciso de | Use |
+|---|---|
+| Moeda | `src/utils/currency.js` — `formatK`/`formatBRL` **já incluem "R$ "**, nunca concatene |
+| Data | `src/utils/date.js` |
+| Badge de comentário não lido | `src/lib/comment-badge.js` |
+| "Visto por último" | `src/hooks/use-record-views.js` |
+| Empilhar avatares | `src/components/shared/AvatarStack.jsx` |
+| Debounce de refetch em Realtime | `src/utils/debounce.js` — obrigatório em todo hook que assina `postgres_changes` |
+| Notificação temporária | `src/components/shared/AppToast.jsx` |
+
+## Camada de dados
+
+Toda leitura/escrita passa por um hook em `src/hooks/`, um por domínio
+(`use-leads.js` → `leads`). **Antes de escrever `supabase.from(...)` numa view,
+procure o hook.** Hoje 13 componentes falam direto com o banco e cada um é
+dívida, não padrão.
+
+## Não crie uma terceira família
+
+Já existem duas implementações paralelas de algumas coisas (CRM e RH):
+`StageFieldInput` / `RHStageFieldInput`, `LeadKanbanCard` / `RHKanbanCard`.
+Decida explicitamente a qual família o que você está construindo se parece e
+siga essa. **Nunca crie uma terceira variante.**
+
+Exceção deliberada, não "arrume": Compras (`ComprasMarketingView.jsx`) usa
+`PURCHASE_STAGES` fixo no código em vez de `rh_pipeline_stages` — as transições
+são acopladas às RPCs de aprovação.

@@ -1,0 +1,49 @@
+---
+description: Tokens de cor, padrões de página e regras de layout de header e filtro que valem em toda tela.
+globs: src/components/**,src/index.css
+alwaysApply: false
+---
+
+# UI — tokens e padrões de tela
+
+## Cor: sempre token, nunca hex novo
+
+74+ arquivos usam `var(--accent)`. Escrever hex numa tela quebra o modo escuro
+sem ninguém perceber.
+
+| Token | Significa |
+|---|---|
+| `--accent` | ação/marca. **Muda por frente comercial em runtime** — nunca use para sinalizar erro ou campo obrigatório (já ficou verde na Resibag) |
+| `--danger` / `--danger-bg` | erro, bloqueio do que o usuário digitou |
+| `--warning` / `--warning-bg` | precisa de configuração — não é responsabilidade de quem preenche |
+| `--amber` / `--amber-bg` | urgência intermediária (SLA em 70%, vencimento próximo) |
+| `--text`, `--text-dim`, `--border`, `--surface`, `--surface-alt` | neutros, com variante escura automática |
+
+## Três padrões de página
+
+Página nova que for fundamentalmente uma destas **segue o padrão, não inventa
+variante**. Spec completa em `docs/design-spec-padroes-de-pagina.md`.
+
+- **Tabela com filtro** → referência `RHFuncionariosView.jsx`
+- **Kanban** → 13 boards já maduros
+- **Grade de cards** → `src/components/shared/Card.jsx`
+
+## Header de board nunca reflui entre visões
+
+O `KanbanBoardHeader` (título + toggle de visão + filtros + ações) é uma única
+árvore JSX renderizada **antes** do bloco condicional de `viewMode` — nunca
+dentro dele. Controle que só faz sentido numa visão vira linha própria **dentro
+daquela visão**, senão troca de visão empurra os botões vizinhos.
+
+## Calendário consome o mesmo array filtrado do Kanban
+
+View de Calendário/Agenda recebe o **mesmo array já filtrado** que a Kanban da
+mesma tela usa — nunca o array cru, nunca reimplementa o próprio escopo por
+dentro. Foi assim que o Funil vazou o filtro de vendedor para a Agenda.
+
+## Exclusão em página "Fornecedores"
+
+Referência canônica: `src/components/views/FornecedoresView.jsx` — ícone
+`Trash2` no slot `menu` do `Card`, abrindo `ConfirmDeleteModal` sobre
+`ui/Modal.jsx`, botões "Cancelar" / "Excluir" (`Excluir` em `var(--danger)`).
+Só o texto do corpo muda por página, para refletir o que realmente se perde.

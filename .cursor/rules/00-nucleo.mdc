@@ -1,0 +1,51 @@
+---
+description: Regras inegociáveis do repositório — mockup antes de código, reaproveitamento, confirmação para produção, definição de pronto.
+alwaysApply: true
+---
+
+# Núcleo — vale em toda tarefa
+
+Este arquivo é curto de propósito: entra em **todo** pedido, então cada linha
+aqui custa contexto em tudo que você faz. O detalhe mora nas regras com escopo
+(`.cursor/rules/1*`, `2*`, `3*`, `4*`) e em `CLAUDE.md` / `docs/`.
+
+## Antes de escrever código
+
+1. **Mockup antes de qualquer mudança visual ou estrutural.** Reposicionar item
+   de menu, redesenhar componente, mudar layout de card/drawer, mudar como um
+   dado é agrupado na tela — tudo isso precisa de mockup aprovado pelo Daniel
+   **antes** da implementação. Vale para pedido dele e para sugestão sua.
+   Na dúvida, mostre o mockup: não decida sozinho que "é pequeno o bastante".
+   *Exceção:* bug fix puro (algo que já deveria funcionar e não funciona).
+2. **Nunca reimplemente o que já existe.** Consulte
+   `.cursor/rules/10-reaproveitamento.mdc` antes de criar componente, hook ou
+   utilitário. Importar > copiar o padrão > reescrever parecido.
+3. **Extração só na 3ª ocorrência.** Mesma lógica visual/estrutural escrita pela
+   terceira vez em módulos diferentes → extraia para `src/components/shared/`
+   ou `src/hooks/` naquele momento. Nunca antes (abstração especulativa custa
+   mais que duas cópias), nunca depois.
+
+## Nunca faça sem confirmação explícita do Daniel
+
+- Aplicar migration em produção.
+- Fazer deploy de edge function.
+- Fazer push para `main` ou abrir Pull Request.
+- Qualquer escrita em dado de produção.
+
+Pode **preparar** o arquivo de migration e mostrar o SQL. Não aplique.
+
+## Segredo
+
+Nunca imprima o valor de um segredo, nem para depurar — cite o nome da variável
+e se está definida. Nunca peça uma chave pelo chat.
+
+## Pronto significa verificado
+
+`npm run build` limpo **não é prova suficiente** — leia
+`.cursor/rules/30-gates.mdc` antes de dizer que terminou. Nunca reporte pronto
+com base só em compilar.
+
+## Idioma
+
+Código, comentários, mensagens de commit, changelog e conversa: **português**.
+Comentário explica *por quê*, não *o quê*.

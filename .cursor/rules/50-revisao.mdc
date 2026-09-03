@@ -1,0 +1,66 @@
+---
+description: Como fazer a revisão de 4 papéis (design, frontend, QA, segurança) no Cursor, que não tem subagentes — passes sequenciais em vez de agentes paralelos.
+alwaysApply: false
+---
+
+# Revisão em 4 papéis, sem subagentes
+
+No Claude Code este processo roda como quatro sub-agentes versionados em
+`.claude/agents/`. **O Cursor não tem esse mecanismo.** A adaptação não é
+abandonar o processo — é rodar os mesmos quatro papéis como **passes
+sequenciais explícitos**, cada um numa mensagem própria, sem misturar.
+
+O que se perde: independência real entre revisores. Você está revisando o
+próprio trabalho. Compense sendo **explicitamente adversarial** no passe 3 —
+comece assumindo que tem problema e só aprove se não achar caso de borda.
+
+## Passe 1 — Design (antes de qualquer código de produção)
+
+Escreva a spec objetiva:
+
+- `arquivo:linha` do problema.
+- Tokens exatos a usar, **reaproveitando os que já existem**.
+- Comportamento por estado (vazio, carregando, erro, cheio, sem permissão).
+- Havendo decisão subjetiva: registre as opções e qual foi escolhida.
+  **Nunca apresente escolha subjetiva como única resposta possível.**
+
+Se a mudança é visual ou estrutural, é aqui que entra o **mockup aprovado**
+(regra do núcleo). Não passe para o passe 2 sem ele.
+
+## Passe 2 — Implementação
+
+A **menor** mudança que resolve a causa raiz, seguindo a spec ao pé da letra.
+Não decida token ou cor por conta própria. Rode `npm run build` antes de
+reportar.
+
+## Passe 3 — QA (não corrige, só aprova ou devolve)
+
+Devolva no formato `arquivo:linha — o que está errado — o que deveria ser`.
+Confira contra a spec e contra as classes de bug já conhecidas daqui:
+
+- duplicação de "R$" (as funções de moeda já incluem o prefixo);
+- validação disparando antes de o usuário interagir;
+- campo sem opções configuradas renderizando vazio;
+- saudação ou rascunho de IA com variável ausente;
+- guardrail de transição de etapa ignorado;
+- identificador fora de escopo / TDZ (o build não pega — ver `30-gates.mdc`).
+
+**Mudança não-trivial** (mexeu em hook ou componente compartilhado, criou
+tabela, mudou RLS ou fluxo de aprovação): rode o passe 3 **três vezes, com
+lentes diferentes** — fidelidade à spec, correção funcional e não-regressão, e
+uma passada adversarial. Só aprove se as três concordarem. Custa tempo: reserve
+para risco real, não para ajuste de uma linha.
+
+## Passe 4 — Segurança (condicional)
+
+Entra **só** quando a mudança toca schema/migration, policy RLS, bucket ou path
+de Storage, edge function, ou rota que aceite escrita de usuário não
+autenticado. Checklist em `.cursor/rules/40-seguranca-dados.mdc`.
+
+Só revisa: **nunca aplica migration nem corrige RLS direto.** Aplicar continua
+exigindo confirmação explícita do Daniel.
+
+## Não pule passes em mudança que parece trivial
+
+Os bugs de "R$ R$" duplicado e de validação prematura pareciam pequenos e só
+foram pegos porque passaram pelo QA.

@@ -1,0 +1,62 @@
+---
+description: Regras de RLS, migration, Storage e edge function — acionar sempre que a mudança tocar banco, autenticação ou rota pública.
+globs: supabase/**,src/hooks/use-*.js
+alwaysApply: false
+---
+
+# Segurança e fronteira de dado
+
+Aplique este checklist sempre que a mudança tocar **schema, policy RLS, bucket
+de Storage, edge function, ou rota que aceite escrita de usuário não
+autenticado** (formulário público).
+
+## Antes de considerar pronto
+
+- [ ] RLS habilitada em toda tabela nova (`ENABLE ROW LEVEL SECURITY`).
+- [ ] Policy nova **compara com o predicado já em produção na tabela-irmã mais
+      próxima** — não invente um modelo de permissão do zero.
+- [ ] Isolamento por empresa onde o dado é escopado por empresa. Classe de bug
+      já encontrada aqui: `clients` sem isolamento, Storage cross-fornecedor.
+- [ ] Nenhum self-escalation: usuário alterando a própria role ou a própria
+      aprovação via UPDATE na própria linha (já aconteceu em `profiles` e
+      `rh_ferias`).
+- [ ] Edge function valida JWT **e** autorização de papel/empresa antes de agir.
+- [ ] Rota pública não grava coluna arbitrária nem permite abuso sem limite.
+- [ ] Rodar `get_advisors` (tipo `security`) depois de qualquer migration
+      aplicada — nenhum achado novo introduzido.
+
+## Policy nova sempre lê `roles[]`, nunca `profiles.role`
+
+O escalar existe e é sincronizado por gatilho, mas usá-lo para decidir permissão
+**nega acesso a quem tem o cargo como secundário**. Use
+`current_user_has_role(...)` ou `roles &&`.
+
+**Corolário:** mexeu em cargo por SQL? Grave `role` **e** `roles` na mesma
+instrução. O gatilho `profiles_sync_roles` reinjeta o escalar dentro do array,
+então `UPDATE profiles SET roles = ARRAY['suporte']` **não remove** o cargo
+antigo — e a operação parece ter dado certo.
+
+## Três camadas de acesso, todas precisam liberar
+
+`cargo` (`src/utils/module-access.js`) → `módulo` (`module_states`:
+`off`/`test`/`live`) → `RLS` (linha, no banco). Liberar a tela não libera o
+dado: o suporte já abriu Clientes e viu lista vazia, sem erro nenhum.
+
+`module-access.js` tem espelho em SQL (`current_user_has_module()`). **Mudou
+aqui, muda lá.**
+
+## Decisões fechadas — não "corrija" por conta própria
+
+- `rh_colaboradores` é lido pelo Grupo inteiro, sem filtro por empresa. RH é
+  centralizado de propósito. Não adicione filtro nem mascare `salary`.
+- A chave pessoal de IA fica em texto plano em `profile_secrets.ai_config`.
+  Risco residual aceito; cifrar ou remover a opção é decisão de produto.
+- `pg_net` no schema `public`, e 6 tabelas com RLS ligada e zero policies
+  (deny-all deliberado). Sem ação.
+
+## Testar contra banco
+
+Nunca contra produção. Crie uma branch de banco sob demanda (`create_branch`),
+use, e **apague** (`delete_branch`) — o custo é por hora de existência.
+Migration só de `ADD COLUMN` ou mudança só de UI não precisa: `npm run dev`
+resolve.

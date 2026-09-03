@@ -1,0 +1,30 @@
+---
+description: Onde encontrar o que cada tela faz, quem acessa e do que depende — mapa funcional, spec As-Is e o verificador que impede os dois de envelhecer.
+alwaysApply: false
+---
+
+# Onde está o mapa da plataforma
+
+As regras dizem **como construir**. Elas não descrevem funcionalidade nenhuma,
+de propósito. Para saber o que uma tela faz, quem consegue abrir e do que ela
+depende:
+
+| Preciso saber | Leia |
+|---|---|
+| O que cada tela é, quem acessa, de que tabela/função depende | `docs/mapa-funcional.md` |
+| Como a tela está montada: wireframe, campos, máquina de estado, débito | `docs/as-is-spec.md` |
+| Padrões de página (Tabela / Kanban / Grade de cards) | `docs/design-spec-padroes-de-pagina.md` |
+| Por que uma mudança específica foi feita assim | `docs/design-spec-*.md` (uma por mudança) |
+
+**Mexeu em rota, tela, edge function ou integração?** Atualize
+`docs/mapa-funcional.md` e rode `npm run doc:check` — ele recalcula as contagens
+a partir do código e falha apontando a divergência. Fora do `prebuild` de
+propósito: documento defasado não deve travar deploy.
+
+## Números que orientam a leitura
+
+45 telas em 52 rotas · 8 rotas públicas sem login · 30 edge functions ·
+109 tabelas · 79 etapas em 14 domínios · 2 frentes comerciais
+(`industria` = Sanwey, `resibag`).
+
+Envelhecem. `npm run doc:check` é quem sabe se ainda valem.
