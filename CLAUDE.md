@@ -14,6 +14,27 @@ dá pra generalizar.
 
 ---
 
+## 0. Onde está o mapa da plataforma (este arquivo não é ele)
+
+Este arquivo é **como construir**. Ele não descreve funcionalidade nenhuma, de
+propósito — e isso já causou confusão: uma sessão perguntou onde estava
+documentado "pra que serve cada página, o objetivo, quais conexões precisam
+estar funcionando", e a resposta era **em lugar nenhum** (conferido 03/09/2026:
+zero ocorrências de "objetivo"/"serve para" aqui, e nenhuma das 58 views tem
+comentário de propósito).
+
+Agora está em **`docs/mapa-funcional.md`**: as 45 telas em 52 rotas, as 8 rotas
+públicas sem login, as 3 camadas de acesso (cargo → módulo → RLS), as 30 edge
+functions com os segredos que cada uma exige, e as integrações externas com o
+que quebra quando cada uma cai.
+
+Leia de lá — não repita conteúdo aqui. Se mexer em rota, tela, edge function ou
+integração, atualize lá e rode `npm run doc:check` (ele recalcula as contagens
+do código e falha apontando a divergência; fora do `prebuild` de propósito —
+doc defasado não deve travar deploy).
+
+---
+
 ## 1. Reaproveitamento obrigatório — nunca reimplemente do zero
 
 Antes de escrever qualquer coisa relacionada a Kanban, formulário por etapa, ou

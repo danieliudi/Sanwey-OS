@@ -14,7 +14,8 @@
     "lint:full": "eslint --ext .js,.jsx,.mjs --rule \"{\\\"no-unused-vars\\\":[\\\"warn\\\",{\\\"args\\\":\\\"none\\\"}],\\\"react-hooks/exhaustive-deps\\\":\\\"warn\\\"}\" src scripts",
     "qa:smoke": "node scripts/qa/run.mjs rotas",
     "qa:interacao": "node scripts/qa/run.mjs interacao",
-    "qa:dados": "node scripts/qa/run.mjs dados"
+    "qa:dados": "node scripts/qa/run.mjs dados",
+    "doc:check": "node scripts/mapa-funcional-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

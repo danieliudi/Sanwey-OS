@@ -1,8 +1,14 @@
 # Grupo Sanwey · Commercial Intelligence (v4)
 
-Plataforma multi-tenant para 4 empresas do Grupo Sanwey (Comercial, Indústria, Resibag, Monte Mor).
-Reescrita da v3 (monolito de 2385 linhas) em arquitetura modular, com correção de bugs e
-otimizações de performance.
+Plataforma multi-frente do Grupo Sanwey. Duas frentes comerciais —
+**Sanwey** (`industria`) e **Resibag** — mais a visão consolidada do Grupo;
+Monte Mor aparece só em solicitações de Marketing, porque a unidade não vende
+(`MARKETING_UNIT_IDS` em `src/constants/companies.js`).
+
+> Este README é **setup e histórico da reescrita v4**. Pra saber **o que cada
+> tela faz, quem consegue abrir e do que depende**, leia
+> **[`docs/mapa-funcional.md`](docs/mapa-funcional.md)** — 45 telas em 52
+> rotas, 8 rotas públicas, 30 edge functions e as integrações externas.
 
 ## Setup
 
@@ -24,35 +30,26 @@ npm run preview
 
 ```
 src/
-  App.jsx                       # raiz: estado global + routing
-  main.jsx                      # entry (createRoot + StrictMode)
-  index.css                     # tailwind base
-  constants/
-    companies.js                # paleta + metadata das 4 empresas
-    pipelines.js                # etapas do funil (frozen + factory)
-    skus.js                     # catálogo de produtos por empresa
-    signal-types.js             # fontes de sinais por empresa
-    storage-keys.js             # chaves do localStorage
-    users.js                    # usuários-semente
-  data/
-    generate-leads.js           # PRNG determinístico (mulberry32, seed 42)
-    generate-signals.js         # sinais por empresa
-    cross-referrals.js          # overlaps derivados + sugestões sintéticas
-  utils/
-    currency.js                 # Intl.NumberFormat cacheado (formatK/M/BRL)
-    date.js                     # formatDateBR, daysSince
-    storage.js                  # loadJSON / saveJSON com try/catch
-  hooks/
-    use-persistent-state.js     # useState + localStorage com debounce
-    use-cross-referrals.js      # deriva overlaps de leads vivos + overrides
-    use-users-by-id.js          # Map memoizado para lookup O(1)
+  App.jsx            # raiz: estado global, navegação e as 52 rotas autenticadas
+  main.jsx           # entry + as 8 rotas PÚBLICAS (sem login), fora do <App>
+  index.css          # base do Tailwind + os tokens de design (--accent, --danger…)
+  constants/         # companies, pipelines, routes, taxonomy, user-settings…
+  data/              # geradores de dado demo, changelog, tutoriais, spotlights
+  utils/             # currency, date, field-conditions, export-csv, module-access…
+  hooks/             # 122 hooks — 97 falam com o banco, 1 por domínio
+  lib/               # cliente Supabase e utilitários de baixo nível
   components/
-    ui/                         # primitivos (Button, Select, Modal, ...)
-    shell/                      # LoginScreen, TopBar, NavTabs
-    lead/                       # LeadCard, LeadRow, LeadKanbanCard, LeadDetailDrawer
-    views/                      # Dashboard, Signals, Explorer, CRM,
-                                # Executive, CrossReferrals, UserManagement
+    ui/              # primitivos (Button, Select, Modal, CurrencyInput…)
+    shell/           # LoginScreen, Sidebar, TopBar, MobileBottomNav
+    shared/          # o que é reaproveitado entre módulos (ver CLAUDE.md regra 1)
+    public/          # os 7 formulários das rotas públicas
+    lead/ campaign/ rh-pipeline/ client/ …   # por domínio
+    views/           # 58 telas
 ```
+
+As contagens acima são conferidas por `node scripts/mapa-funcional-check.mjs`
+— foi escrito justamente porque a versão anterior desta árvore descrevia 7
+views quando já existiam 58, e ninguém percebeu.
 
 ## Correções vs v3
 
