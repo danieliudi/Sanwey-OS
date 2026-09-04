@@ -143,6 +143,152 @@ async function notifyVagaResponsibleIfApproved(admin: any, action: any) {
   } catch (_e) { /* ignorado de propósito */ }
 }
 
+// Quem fica como responsável na entrega gerada pela esteira: quem aprovou
+// (resolved_by). Se a aprovação não trouxe pessoa (caminho automático raro),
+// cai no UUID/e-mail configurado — por enquanto o Daniel, até haver dono
+// de conteúdo configurável por frente.
+async function resolveEsteiraAssignee(admin: any, preferredUserId: string | null): Promise<string | null> {
+  if (preferredUserId) return preferredUserId;
+  const envId = Deno.env.get('ESTEIRA_DEFAULT_ASSIGNEE_USER_ID');
+  if (envId) return envId;
+  const email = Deno.env.get('ESTEIRA_DEFAULT_ASSIGNEE_EMAIL') || 'iudiyano@gmail.com';
+  try {
+    const { data } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+    return data?.id ?? null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function isPublicImageUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    const host = u.hostname.toLowerCase();
+    return host !== 'localhost' && host !== '127.0.0.1' && host !== '[::1]';
+  } catch {
+    return false;
+  }
+}
+
+function mapDeliverablePriority(raw: unknown): string {
+  const p = String(raw ?? '').toLowerCase();
+  if (p === 'alta' || p === 'high') return 'alta';
+  if (p === 'baixa' || p === 'low') return 'baixa';
+  return 'media';
+}
+
+/** Brief em texto puro pra agência — markdown da tela não vira preview. */
+function buildAgencyDeliverableBody(payload: any, action: any): string {
+  const pecas = Array.isArray(payload.pecas) ? payload.pecas : [];
+  const imagens = Array.isArray(payload.imagens) ? payload.imagens : [];
+
+  const listaPecas = pecas.length === 0
+    ? ['(nenhuma peça derivada no pacote — produzir a partir do artigo)']
+    : pecas.map((peca: any, i: number) => {
+      const plataforma = peca.plataforma || 'Canal';
+      const formato = peca.formato || peca.titulo || 'Peça';
+      const blocos = Array.isArray(peca.blocos) && peca.blocos.length > 0
+        ? peca.blocos
+        : (Array.isArray(peca.slides) ? peca.slides.map((s: any) => ({
+          number: s.slideNumber,
+          text: s.headline + (s.bodyText ? ` — ${s.bodyText}` : ''),
+        })) : []);
+      const linhas = blocos.map((b: any) =>
+        `   ${b.number ?? ''}. ${b.label ? `${b.label}: ` : ''}${b.text ?? ''}`.replace(/\s+$/, '')
+      );
+      return [
+        `${i + 1}. ${plataforma} · ${formato}${peca.titulo && peca.titulo !== formato ? ` — ${peca.titulo}` : ''}`,
+        ...linhas,
+      ].join('\n');
+    });
+
+  const listaImagens = imagens.length === 0
+    ? ['(sem imagens no pacote)']
+    : imagens.map((img: any, i: number) => {
+      const slot = img.slot || `imagem ${i + 1}`;
+      const url = typeof img.url === 'string' ? img.url : '';
+      if (url && isPublicImageUrl(url)) {
+        const credit = img.credit ? ` — crédito: ${img.credit}` : '';
+        return `${i + 1}. ${slot}: ${url}${credit}`;
+      }
+      const fileName = img.fileName || url || '(arquivo local)';
+      return `${i + 1}. ${slot}: arquivo da biblioteca "${fileName}" — anexar junto (URL local não atravessa).`;
+    });
+
+  const artigo = payload.artigo_markdown
+    || (payload.artigo?.dek ? String(payload.artigo.dek) : '')
+    || action.summary
+    || '';
+
+  return [
+    'INSTRUÇÕES PARA A AGÊNCIA',
+    '========================',
+    '',
+    'Produzir e entregar as peças abaixo a partir do artigo. O texto de cada',
+    'peça já vem redigido — diagramar, ajustar formato e publicar conforme o canal.',
+    '',
+    'PEÇAS A PRODUZIR',
+    '----------------',
+    ...listaPecas,
+    '',
+    'IMAGENS DE REFERÊNCIA',
+    '--------------------',
+    ...listaImagens,
+    '',
+    'ARTIGO COMPLETO',
+    '---------------',
+    artigo,
+  ].join('\n');
+}
+
+async function attachPublicImagesToDeliverable(
+  admin: any,
+  deliverableId: string,
+  imagens: any[],
+  uploadedBy: string | null,
+) {
+  for (let i = 0; i < imagens.length; i++) {
+    const img = imagens[i];
+    const url = typeof img?.url === 'string' ? img.url : '';
+    if (!url || !isPublicImageUrl(url)) continue;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const mime = (res.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
+      if (!mime.startsWith('image/')) continue;
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      if (bytes.byteLength === 0 || bytes.byteLength > 12 * 1024 * 1024) continue;
+      const extFromMime = mime.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+      const baseName = (img.fileName || img.slot || `imagem-${i + 1}`)
+        .toString()
+        .replace(/[^\w.\-]+/g, '_')
+        .slice(0, 80);
+      const fileName = baseName.includes('.') ? baseName : `${baseName}.${extFromMime}`;
+      const path = `${deliverableId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${extFromMime}`;
+      const { error: upErr } = await admin.storage
+        .from('deliverable-attachments')
+        .upload(path, bytes, { contentType: mime, upsert: false });
+      if (upErr) continue;
+      await admin.from('marketing_deliverable_attachments').insert({
+        deliverable_id: deliverableId,
+        file_name: fileName,
+        file_path: path,
+        file_size: bytes.byteLength,
+        mime_type: mime,
+        uploaded_by: uploadedBy,
+      });
+    } catch (_e) {
+      // Uma imagem falhou: as outras e a entrega seguem. Melhor brief sem
+      // anexo do que perder a entrega inteira.
+    }
+  }
+}
+
 // Sinais de Mercado / Prospecção (Explorador) — a pesquisa real (Rotina
 // agendada fora do Supabase, com acesso de verdade à web — o mecanismo de
 // Agent Builder comum roda dentro desta edge function e não navega na
@@ -193,10 +339,15 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
     return;
   }
 
-  // Peça de conteúdo vinda da esteira editorial (carousel-builder). Mesmo
-  // padrão rascunho→aprovação→publicação dos blocos acima; o destino aqui é
-  // a entrega de marketing, já na etapa em que a agência enxerga e pode mexer.
-  // Protocolo e histórico de etapa vêm do trigger do banco.
+  // Peça de conteúdo vinda da esteira editorial (carousel-builder / trackforge).
+  // Mesmo padrão rascunho→aprovação→publicação; destino = entrega de marketing
+  // na etapa em que a agência enxerga e pode mexer.
+  //
+  // O QUE A AGÊNCIA PASSA A VER (fronteira deliberada, 01/09/2026 + reforço
+  // 04/09/2026): título, brief com peças + URLs de imagem, artigo em texto,
+  // anexos baixados de URL pública, responsáveis (quem aprovou). Continua
+  // FORA: rascunho, fonte por afirmação e parecer do auditor — ficam só em
+  // agent_actions.payload, que o papel `agencia` não lê.
   if (action.action_type === 'sugestao_peca_conteudo') {
     const companyId = action.company_id || payload.company_id;
     if (!companyId || !action.title) return;
@@ -215,48 +366,52 @@ async function publishMarketResearchIfApproved(admin: any, action: any) {
       if (existing && existing.length > 0) return;
     } catch (_e) { /* na dúvida segue: perder uma entrega é pior que duplicar */ }
 
-    // Só o texto aprovado. Rascunho, fonte por afirmação e parecer do auditor
-    // ficam em agent_actions.payload, que o papel `agencia` não lê — decisão de
-    // 01/09/2026, tomada pra não mexer na política de leitura que já tinha
-    // derrubado o acesso da agência uma vez (20/08/2026).
-    const pecas = Array.isArray(payload.pecas) ? payload.pecas : [];
-    const corpo = [
-      payload.artigo_markdown ?? '',
-      ...pecas.map((peca: any) => {
-        const slides = Array.isArray(peca.slides) ? peca.slides : [];
-        const linhas = slides.map(
-          (s: any) => `${s.slideNumber}. ${s.headline}${s.bodyText ? ` — ${s.bodyText}` : ''}`,
-        );
-        return `\n\n## ${peca.plataforma}: ${peca.titulo}\n\n${linhas.join('\n')}`;
-      }),
-    ].join('');
+    const corpo = buildAgencyDeliverableBody(payload, action);
+    const assigneeId = await resolveEsteiraAssignee(admin, action.resolved_by ?? null);
+    const imagens = Array.isArray(payload.imagens) ? payload.imagens : [];
 
     try {
-      await admin.from('marketing_deliverables').insert({
-        title: action.title,
-        description: corpo || action.summary || null,
-        // UMA frente, sempre. A coluna aceita lista, mas pacote que sai pra
-        // terceiro com duas frentes é exatamente o que a guarda anti-vazamento
-        // da esteira proíbe.
-        company_ids: [companyId],
-        department: 'Marketing',
-        // A etapa É a entrega: é aqui que a agência passa a ver e a poder
-        // editar (política md_update). Nenhum e-mail é disparado, de propósito.
-        stage: 'encaminhado_para_agencia',
-        priority: action.priority === 'alta' ? 'alta' : 'media',
-        custom_fields: {
-          origem: 'esteira',
-          agent_action_id: action.id,
-          sinal: payload.sinal ?? null,
-          // content_id cruza pro entregável pelo mesmo caminho que `sinal`
-          // (PRD rastreio §7.2). A agência passa a ver o código da peça.
-          content_id: payload.content_id ?? null,
-          campaign_id: payload.campaign_id ?? null,
-          campaign_name: payload.campaign_name ?? null,
-        },
-        // Coluna nativa quando o pacote trouxe campanha — sem migration nova.
-        ...(payload.campaign_id ? { campaign_id: payload.campaign_id } : {}),
-      });
+      const { data: created, error: insertErr } = await admin
+        .from('marketing_deliverables')
+        .insert({
+          title: action.title,
+          description: corpo || action.summary || null,
+          // UMA frente, sempre. A coluna aceita lista, mas pacote que sai pra
+          // terceiro com duas frentes é exatamente o que a guarda anti-vazamento
+          // da esteira proíbe.
+          company_ids: [companyId],
+          department: 'Marketing',
+          requester_name: 'Esteira editorial',
+          // A etapa É a entrega: é aqui que a agência passa a ver e a poder
+          // editar (política md_update). Nenhum e-mail é disparado, de propósito.
+          stage: 'encaminhado_para_agencia',
+          // trackforge manda high/normal; o CRM grava alta/media/baixa.
+          priority: mapDeliverablePriority(action.priority),
+          // Quem aprovou vira responsável; sem pessoa, fallback (Daniel).
+          assignee: assigneeId,
+          assignee_ids: assigneeId ? [assigneeId] : [],
+          created_by: assigneeId,
+          custom_fields: {
+            origem: 'esteira',
+            agent_action_id: action.id,
+            sinal: payload.sinal ?? null,
+            // content_id cruza pro entregável pelo mesmo caminho que `sinal`
+            // (PRD rastreio §7.2). A agência passa a ver o código da peça.
+            content_id: payload.content_id ?? null,
+            campaign_id: payload.campaign_id ?? null,
+            campaign_name: payload.campaign_name ?? null,
+            pecas_count: Array.isArray(payload.pecas) ? payload.pecas.length : 0,
+            imagens_count: imagens.length,
+          },
+          // Coluna nativa quando o pacote trouxe campanha — sem migration nova.
+          ...(payload.campaign_id ? { campaign_id: payload.campaign_id } : {}),
+        })
+        .select('id')
+        .single();
+      if (insertErr) throw insertErr;
+      if (created?.id && imagens.length > 0) {
+        await attachPublicImagesToDeliverable(admin, created.id, imagens, assigneeId);
+      }
     } catch (_e) { /* ignorado de propósito, como os demais */ }
     return;
   }
