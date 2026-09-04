@@ -21,7 +21,9 @@ Aplicar o design system do `dashboard-spec.json` (creme `#F9F5F1`, accent `#B62D
 
 ## Mudança estrutural proposta (só no mockup)
 
-- Sidebar lateral → **top nav** com 5 áreas + **subnav** por área
+- Duas variantes de shell para feedback: **top nav** (`nova.html`) e **menu lateral** (`nova-lateral.html`), mesma pele
+- Botão ☰ (accent) ao lado do logo **recolhe / expande** o menu nas duas variantes
+- Top nav: 5 áreas + **subnav** por área · Lateral: mesmos itens + subnav aninhada
 - **KPIs com tendência** (sparkline/gauge) e denominador (`n=`) visível
 - **Cards Kanban** com 2 campos de preview (não só título/valor)
 - **Drawer:** **só UI** — layout idêntico ao atual (left identidade+abas · center fase · right mover+comentários). Sem sugestão estrutural. Decisão do Daniel 04/09/2026.

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proposta — sanwey OS (nova UI)</title>
+  <title>Proposta · Menu lateral — sanwey OS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -52,55 +52,102 @@
     .mock-banner strong { color: #FCA5A5; }
     .mock-banner a { color: #fff; text-decoration: underline; opacity: .85; }
 
+    /* .app redefined in shell lateral */
+
+
+    /* Shell lateral */
     .app {
       max-width: 1440px; margin: 0 auto;
-      padding: 20px 28px 56px;
+      padding: 16px 20px 56px;
       min-height: calc(100vh - 36px);
-      display: flex; flex-direction: column; gap: 16px;
+      display: grid;
+      grid-template-columns: 248px 1fr;
+      gap: 16px;
+      align-items: start;
+      transition: grid-template-columns .22s ease;
     }
-
-    /* Shell */
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-    .brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .app.nav-collapsed {
+      grid-template-columns: 72px 1fr;
+    }
+    .side {
+      position: sticky; top: 52px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow-card);
+      padding: 14px 12px;
+      display: flex; flex-direction: column; gap: 10px;
+      min-height: calc(100vh - 80px);
+    }
+    .side-brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 4px 6px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
     .menu-toggle {
       width: 36px; height: 36px; border: 0; border-radius: 10px;
       background: var(--accent); color: #fff; cursor: pointer;
       display: grid; place-items: center; flex-shrink: 0;
       box-shadow: 0 4px 12px rgba(182,45,44,.22);
-      transition: transform .15s, opacity .15s;
     }
     .menu-toggle:hover { transform: scale(1.04); }
-    .menu-toggle:active { transform: scale(.98); }
-    .menu-toggle svg { display: block; }
-    .app.nav-collapsed .menu-toggle { opacity: .92; }
-    .brand-name { font-weight: 800; font-size: 18px; letter-spacing: -0.02em; }
+    .brand-text { min-width: 0; }
+    .brand-name { font-weight: 800; font-size: 16px; letter-spacing: -0.02em; white-space: nowrap; }
     .brand-name span {
       display: inline-block; background: var(--accent); color: #fff;
-      font-size: 11px; font-weight: 700; padding: 2px 5px; border-radius: 4px; margin-left: 4px; vertical-align: 2px;
+      font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; margin-left: 3px; vertical-align: 2px;
     }
-    .brand-tag { font-size: 9px; font-weight: 600; letter-spacing: .12em; color: var(--ink-3); text-transform: uppercase; margin-top: 2px; }
+    .brand-tag { font-size: 8px; font-weight: 600; letter-spacing: .1em; color: var(--ink-3); text-transform: uppercase; margin-top: 2px; }
+    .app.nav-collapsed .brand-text,
+    .app.nav-collapsed .nav-label,
+    .app.nav-collapsed .side-profile span,
+    .app.nav-collapsed .side-profile small { display: none; }
+    .app.nav-collapsed .side { padding: 12px 8px; align-items: center; }
+    .app.nav-collapsed .side-brand { border: 0; padding: 4px; justify-content: center; }
+    .app.nav-collapsed .nav-item { justify-content: center; padding: 10px; }
+    .app.nav-collapsed .subnav-side { display: none; }
 
-    .nav-pill {
-      display: flex; align-items: center; gap: 2px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 9999px; padding: 4px; box-shadow: var(--shadow-card);
-      transition: opacity .2s, transform .2s, max-width .2s;
-    }
-    .app.nav-collapsed .nav-pill {
-      opacity: 0; pointer-events: none; max-width: 0; overflow: hidden; padding: 0; border: 0;
-      transform: translateY(-4px);
-    }
-    .app.nav-collapsed .subnav { display: none !important; }
+    .side-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
     .nav-item {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: flex; align-items: center; gap: 10px;
       border: 0; background: transparent; color: var(--ink-2);
-      font-size: 12.5px; font-weight: 500; padding: 8px 12px;
-      border-radius: 9999px; cursor: pointer; white-space: nowrap;
+      font-size: 13px; font-weight: 600; padding: 10px 12px;
+      border-radius: 12px; cursor: pointer; text-align: left; width: 100%;
     }
     .nav-item:hover { background: var(--surface-muted); color: var(--ink); }
     .nav-item.active { background: var(--nav-active); color: #fff; }
+    .nav-ico { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; }
 
-    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .subnav-side {
+      display: none; flex-direction: column; gap: 2px;
+      margin: 2px 0 8px 12px; padding-left: 10px;
+      border-left: 2px solid var(--border);
+    }
+    .subnav-side.visible { display: flex; }
+    .subnav-side button {
+      border: 0; background: transparent; color: var(--ink-2);
+      font-size: 12.5px; font-weight: 500; padding: 7px 10px;
+      border-radius: 8px; cursor: pointer; text-align: left;
+    }
+    .subnav-side button:hover { background: var(--surface-muted); color: var(--ink); }
+    .subnav-side button.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+    .side-profile {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 8px 4px; border-top: 1px solid var(--border-subtle);
+      margin-top: auto;
+    }
+    .side-profile .avatar {
+      width: 32px; height: 32px; border-radius: 9999px; background: var(--black);
+      color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex-shrink: 0;
+    }
+    .side-profile span { font-size: 12px; font-weight: 600; display: block; }
+    .side-profile small { font-size: 10.5px; color: var(--ink-3); }
+
+    .main-col { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+    .top-actions-bar {
+      display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+    }
     .icon-btn {
       width: 38px; height: 38px; border-radius: 9999px; border: 1px solid var(--border);
       background: var(--surface); display: grid; place-items: center; cursor: pointer; color: var(--ink-2); position: relative;
@@ -110,26 +157,10 @@
       padding: 0 4px; border-radius: 9999px; background: var(--accent); color: #fff;
       font-size: 10px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--canvas);
     }
-    .profile {
-      display: flex; align-items: center; gap: 8px; padding: 3px 10px 3px 3px;
-      border-radius: 9999px; border: 1px solid var(--border); background: var(--surface);
-    }
-    .avatar {
-      width: 32px; height: 32px; border-radius: 9999px; background: var(--black);
-      color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700;
-    }
-    .profile-name { font-size: 12.5px; font-weight: 600; }
-    .profile-role { font-size: 10.5px; color: var(--ink-3); }
 
-    .subnav { display: none; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .subnav.visible { display: flex; }
-    .subnav button {
-      border: 1px solid transparent; background: transparent; color: var(--ink-2);
-      font-size: 12.5px; font-weight: 500; padding: 7px 12px; border-radius: 9999px; cursor: pointer;
-    }
-    .subnav button.active {
-      background: var(--surface); border-color: var(--border); color: var(--ink); box-shadow: var(--shadow-card);
-    }
+    /* hide old top shell remnants if any */
+    .topbar, .subnav, .nav-pill, .brand-mark, .profile { display: none !important; }
+
 
     .note {
       display: flex; gap: 10px; align-items: flex-start;
@@ -592,7 +623,8 @@
     .stat-mini .v { font-size: 22px; font-weight: 800; margin-top: 3px; letter-spacing: -0.03em; }
 
     @media (max-width: 1100px) {
-      .nav-pill { display: none; }
+      .app { grid-template-columns: 1fr; }
+      .side { position: static; min-height: 0; }
       .kpi-row, .dash-grid, .signal-grid, .signals-layout, .settings-layout, .split-2 { grid-template-columns: 1fr; }
       .dash-grid .span-2, .dash-grid .span-3 { grid-column: auto; }
       .drawer-body { grid-template-columns: 1fr; }
@@ -602,48 +634,51 @@
 </head>
 <body>
   <div class="mock-banner">
-    <div><strong>PROPOSTA · TOP NAV</strong> — menu em cima, recolhível no botão ao lado do logo · não é o app real</div>
+    <div><strong>PROPOSTA · MENU LATERAL</strong> — mesma pele, navegação na esquerda (recolhível) · não é o app real</div>
     <div>
       <a href="./index.html">← Comparar</a> ·
-      <a href="./nova-lateral.html">Ver menu lateral</a> ·
+      <a href="./nova.html">Ver top nav</a> ·
       <a href="./atual.html">Ver atual</a>
     </div>
   </div>
 
   <div class="app" id="app">
-    <header class="topbar">
-      <div class="brand">
-        <button class="menu-toggle" id="menu-toggle" type="button" title="Recolher / expandir menu" aria-label="Recolher menu" aria-expanded="true">
+    <aside class="side" aria-label="Navegação">
+      <div class="side-brand">
+        <button class="menu-toggle" id="menu-toggle" type="button" title="Recolher / expandir menu" aria-expanded="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M5 7h14M5 12h14M5 17h14" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
           </svg>
         </button>
-        <div>
+        <div class="brand-text">
           <div class="brand-name">sanwey <span>OS</span></div>
           <div class="brand-tag">Enterprise Intelligence</div>
         </div>
       </div>
-      <nav class="nav-pill" id="nav-pill" aria-label="Principal">
-        <button class="nav-item active" data-area="visao" type="button">Visão Geral</button>
-        <button class="nav-item" data-area="comercial" type="button">Comercial</button>
-        <button class="nav-item" data-area="marketing" type="button">Marketing</button>
-        <button class="nav-item" data-area="rh" type="button">RH / Pessoas</button>
-        <button class="nav-item" data-area="config" type="button">Configurações</button>
+      <nav class="side-nav" aria-label="Principal">
+        <button class="nav-item active" data-area="visao" type="button"><span class="nav-ico">◈</span><span class="nav-label">Visão Geral</span></button>
+        <button class="nav-item" data-area="comercial" type="button"><span class="nav-ico">↗</span><span class="nav-label">Comercial</span></button>
+        <div class="subnav-side" id="subnav-comercial"></div>
+        <button class="nav-item" data-area="marketing" type="button"><span class="nav-ico">▣</span><span class="nav-label">Marketing</span></button>
+        <div class="subnav-side" id="subnav-marketing"></div>
+        <button class="nav-item" data-area="rh" type="button"><span class="nav-ico">◎</span><span class="nav-label">RH / Pessoas</span></button>
+        <div class="subnav-side" id="subnav-rh"></div>
+        <button class="nav-item" data-area="config" type="button"><span class="nav-ico">⚙</span><span class="nav-label">Configurações</span></button>
       </nav>
-      <div class="top-actions">
-        <button class="icon-btn" type="button" title="Buscar">🔍</button>
-        <button class="icon-btn" type="button" title="Notificações">🔔<span class="badge">15</span></button>
-        <div class="profile">
-          <div class="avatar">DY</div>
-          <div class="profile-meta">
-            <div class="profile-name">Daniel Iudi Yano</div>
-            <div class="profile-role">Head Executivo</div>
-          </div>
+      <div class="side-profile">
+        <div class="avatar">DY</div>
+        <div>
+          <span>Daniel Iudi</span>
+          <small>Head Executivo</small>
         </div>
       </div>
-    </header>
+    </aside>
 
-    <div class="subnav" id="subnav"></div>
+    <div class="main-col">
+      <div class="top-actions-bar">
+        <button class="icon-btn" type="button" title="Buscar">🔍</button>
+        <button class="icon-btn" type="button" title="Notificações">🔔<span class="badge">15</span></button>
+      </div>
 
     <!-- ========== VISÃO GERAL V2 — gráficos ========== -->
     <section class="screen active" id="screen-visao" data-screen="visao">
@@ -960,6 +995,8 @@
       <div>v4.8.2-prod · docs/mockups/sanwey-os-ui</div>
     </footer>
   </div>
+  </div>
+
 
   <!-- DRAWER — layout idêntico ao LeadDetailDrawer; só tokens novos -->
   <div class="drawer-overlay" id="drawer" role="dialog" aria-modal="true">
@@ -1429,15 +1466,20 @@
       });
     }
 
+    function clearSubnavs() {
+      document.querySelectorAll(".subnav-side").forEach((el) => {
+        el.classList.remove("visible");
+        el.innerHTML = "";
+      });
+    }
+
     function setArea(area, preferredScreen) {
-      document.querySelectorAll(".nav-item").forEach((btn) => {
+      document.querySelectorAll(".side-nav > .nav-item").forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.area === area);
       });
-      const sub = document.getElementById("subnav");
+      clearSubnavs();
       const items = SUBNAVS[area];
       if (!items) {
-        sub.classList.remove("visible");
-        sub.innerHTML = "";
         if (area === "visao") showScreen("visao");
         if (area === "config") {
           showScreen("config");
@@ -1445,6 +1487,8 @@
         }
         return;
       }
+      const sub = document.getElementById("subnav-" + area);
+      if (!sub) return;
       sub.classList.add("visible");
       const activeId = preferredScreen || items[0].id;
       sub.innerHTML = items.map((it) =>
@@ -1499,6 +1543,7 @@
         btn.classList.add("active");
       });
     });
+
 
     document.getElementById("menu-toggle").addEventListener("click", () => {
       const app = document.getElementById("app");

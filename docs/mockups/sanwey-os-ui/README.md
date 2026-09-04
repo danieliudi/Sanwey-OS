@@ -1,33 +1,33 @@
 # Mockups para feedback — sanwey OS
 
-Pacote HTML **navegável** para comparar a UI atual com a proposta.
+Pacote HTML **navegável** para comparar a UI atual com duas propostas da nova pele.
 
 ## Como enviar
 
-1. Zipar a pasta inteira `sanwey-os-ui` (ou usar o zip já gerado).
-2. Quem recebe: descompacta e abre **`index.html`** no Chrome, Safari ou Edge.
-3. No hub, abre **A · Atual** e **B · Proposta** (duas abas) e percorre o roteiro.
-
-Não precisa de internet para navegar (só a fonte Inter; se o Google Fonts estiver bloqueado, cai no system-ui).
+1. Zipar a pasta inteira `sanwey-os-ui`.
+2. Quem recebe: descompacta e abre **`index.html`**.
+3. Abre **A · Atual**, **B · Top nav** e **C · Lateral** (abas) e percorre o roteiro.
 
 ## Arquivos
 
 | Arquivo | O quê |
 |---|---|
-| `index.html` | Hub de comparação + perguntas de feedback (comece aqui) |
-| `atual.html` | Como está hoje — sidebar, cores `#CC2936` / `#FBFBFA`, Config com sub-abas, drawer completo |
-| `nova.html` | Proposta — top nav, gráficos, Sinais com coluna analítica, Minha Conta sem sub-abas; drawer só pele + limpeza (sem e-mail/pesquisa/Prob/Fechamento) |
+| `index.html` | Hub de comparação + perguntas (comece aqui) |
+| `atual.html` | Como está hoje |
+| `nova.html` | Proposta · **menu em cima**, recolhível no ☰ ao lado do logo |
+| `nova-lateral.html` | Proposta · **menu lateral**, mesma pele, também recolhível |
 | `dashboard-spec.json` | Tokens da proposta |
-| `reference.png` | Referência visual original da Visão Geral |
+| `reference.png` | Referência visual original |
+| `menu-toggle.png` | Ícone de referência do botão ☰ |
 
-## Telas nos dois mockups
+## Telas nos mockups da proposta
 
-- Painel / Visão Geral  
-- Funil (clique num card → drawer)  
-- Entregas  
-- Sinais  
-- Funcionários  
-- Configurações  
+- Visão Geral (gráficos)
+- Funil (drawer)
+- Entregas
+- Sinais
+- Funcionários
+- Configurações / Minha Conta
 
 ## Isto não é o app
 
