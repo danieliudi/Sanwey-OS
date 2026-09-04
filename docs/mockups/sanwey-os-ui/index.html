@@ -671,7 +671,7 @@
     <!-- ========== FUNIL ========== -->
     <section class="screen" id="screen-funil" data-screen="funil">
       <div class="note">
-        <div><strong>Cards densos:</strong> além de título e valor, cada card mostra 2 campos de preview (fechamento + próximo passo). Clique num card para abrir o drawer reorganizado.</div>
+        <div><strong>Cards densos:</strong> preview de 2 campos. Clique abre o drawer com a <strong>estrutura atual</strong> (só a pele muda).</div>
       </div>
       <div class="board-toolbar">
         <div class="board-title-block">
@@ -696,7 +696,7 @@
     <!-- ========== ENTREGAS ========== -->
     <section class="screen" id="screen-entregas" data-screen="entregas">
       <div class="note">
-        <div><strong>Mesma densidade no Marketing:</strong> prazo + campanha no preview; atraso em destaque vermelho sem depender só do badge.</div>
+        <div><strong>Mesma densidade no Marketing:</strong> prazo + campanha no preview. Drawer = estrutura atual + nova UI.</div>
       </div>
       <div class="board-toolbar">
         <div class="board-title-block">
@@ -798,15 +798,15 @@
     <!-- ========== CONFIG ========== -->
     <section class="screen" id="screen-config" data-screen="config">
       <div class="note">
-        <div><strong>Organização proposta:</strong> em vez de grupo → aba → sub-aba, um menu lateral fixo com as 3 áreas e o conteúdo à direita numa página só. Menos cliques para chegar em Usuários, Módulos ou Preferências.</div>
+        <div><strong>Organização:</strong> rail lateral permanece. Em <em>Minha conta</em>: Conta · Experiência · Avisos — sem sub-abas internas. Clique Conta / Experiência / Avisos na esquerda.</div>
       </div>
       <div class="settings-layout">
         <nav class="settings-nav" id="settings-nav">
           <div class="settings-group">
             <h4>Minha conta</h4>
-            <button type="button" class="active" data-settings="perfil">Perfil</button>
-            <button type="button" data-settings="preferencias">Preferências</button>
-            <button type="button" data-settings="notificacoes">Notificações</button>
+            <button type="button" class="active" data-settings="conta">Conta</button>
+            <button type="button" data-settings="experiencia">Experiência</button>
+            <button type="button" data-settings="avisos">Avisos</button>
           </div>
           <div class="settings-group">
             <h4>Plataforma</h4>
@@ -831,7 +831,7 @@
     </footer>
   </div>
 
-  <!-- DRAWER -->
+  <!-- DRAWER — estrutura atual (abas no left), só pele nova -->
   <div class="drawer-overlay" id="drawer" role="dialog" aria-modal="true">
     <div class="drawer">
       <div class="drawer-header">
@@ -840,80 +840,72 @@
           <div class="drawer-chips">
             <span class="tag tag-danger">Sanwey</span>
             <span class="tag tag-amber">Proposta</span>
-            <span class="tag tag-muted">R$ 210k</span>
+            <span class="tag tag-muted">Urgência média</span>
           </div>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
           <button class="btn-secondary" type="button">Gravar ata</button>
+          <button class="btn-ghost btn" type="button" title="Excluir">🗑</button>
           <button class="btn-ghost btn" type="button" id="drawer-close">Fechar</button>
         </div>
       </div>
       <div class="drawer-body">
-        <!-- LEFT: identidade enxuta (proposta) -->
+        <!-- LEFT: identidade + abas (como hoje) -->
         <div class="drawer-col">
-          <div class="note blue" style="margin-bottom:12px;padding:8px 10px">
-            <div style="font-size:11.5px"><strong>Left enxuto:</strong> só identidade + atalhos. Abas saem daqui.</div>
-          </div>
-          <p class="drawer-section-title">Cliente</p>
           <div class="id-block">
             <p class="company">Granel Express Ltda</p>
-            <p class="line">CNPJ 12.345.678/0001-90</p>
             <p class="line">contato@granelexpress.com.br</p>
             <p class="line">Responsáveis: Daniel · Carla</p>
           </div>
-          <div class="field-grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <div class="field-grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
             <div class="field"><label>Prob.</label><input value="65%" readonly /></div>
             <div class="field"><label>Fechamento</label><input value="28/09/2026" readonly /></div>
             <div class="field full"><label>Follow-up</label><input value="Ligar após visita técnica" readonly /></div>
           </div>
-          <button class="btn-secondary" type="button" style="width:100%;justify-content:center">Abrir ficha do cliente</button>
-        </div>
-
-        <!-- CENTER: formulário da etapa + abas -->
-        <div class="drawer-col center">
-          <div class="note" style="margin-bottom:12px;padding:8px 10px">
-            <div style="font-size:11.5px"><strong>Centro = trabalho:</strong> abas + campos da etapa atual. É onde se edita de verdade.</div>
-          </div>
-          <div class="stage-tabs">
+          <div class="stage-tabs" style="flex-direction:column;align-items:stretch">
             <button class="active" type="button">Formulário</button>
+            <button type="button">E-mail</button>
             <button type="button">Atividades</button>
             <button type="button">Histórico</button>
             <button type="button">IA</button>
             <button type="button">Anexos</button>
             <button type="button">Checklists</button>
+            <button type="button">PDF</button>
           </div>
-          <p class="drawer-section-title">Campos da etapa · Proposta</p>
+          <p style="font-size:12px;color:var(--ink-3);margin:8px 0 0;line-height:1.4">Conteúdo da aba ativa (ex.: campos gerais do lead) aparece aqui, como hoje.</p>
+        </div>
+
+        <!-- CENTER: fase atual / campos de etapa -->
+        <div class="drawer-col center">
+          <p class="drawer-section-title">Fase atual · Proposta</p>
           <div class="field-grid">
             <div class="field full"><label>Escopo da proposta</label><textarea rows="3">Linha pesada 1.5 ton · 2.000 un/mês · entrega CIF Campinas</textarea></div>
             <div class="field"><label>Valor proposto</label><input value="R$ 210.000" /></div>
             <div class="field"><label>Validade</label><input value="15 dias" /></div>
             <div class="field"><label>Condição de pagamento</label><input value="30/60" /></div>
             <div class="field"><label>Concorrente citado</label><input value="Embalagem Sul" /></div>
-            <div class="field full"><label>Próximo passo</label><input value="Enviar PDF revisado até sextas 12h" /></div>
-          </div>
-          <div style="margin-top:14px;display:flex;gap:8px">
-            <button class="btn-accent" type="button">Salvar campos</button>
-            <button class="btn-secondary" type="button">Gerar PDF</button>
+            <div class="field full"><label>Próximo passo</label><input value="Enviar PDF revisado até sexta 12h" /></div>
           </div>
         </div>
 
-        <!-- RIGHT: mover etapa + comentários -->
+        <!-- RIGHT: StageNavigator + comentários -->
         <div class="drawer-col">
           <p class="drawer-section-title">Mover para</p>
+          <div class="stage-nav-item next">Negociação</div>
+          <div class="stage-nav-item next">Fechamento</div>
+          <div style="font-size:11px;color:var(--ink-3);margin:8px 0 4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase">Etapas anteriores</div>
           <div class="stage-nav-item">Qualificação</div>
           <div class="stage-nav-item">Diagnóstico</div>
           <div class="stage-nav-item current">Proposta · atual</div>
-          <div class="stage-nav-item next">Negociação →</div>
-          <div class="stage-nav-item">Fechamento</div>
           <hr style="border:0;border-top:1px solid var(--border-subtle);margin:14px 0" />
           <p class="drawer-section-title">Comentários</p>
           <div class="comment">
             <div class="who">Carla Ribeiro <span class="when">· há 2h</span></div>
-            <div class="txt">Cliente pediu revisão do frete CIF. Mandar versão B sem instalação.</div>
+            <div class="txt">Cliente pediu revisão do frete CIF.</div>
           </div>
           <div class="comment">
             <div class="who">Daniel Iudi <span class="when">· ontem</span></div>
-            <div class="txt">Ok — priorizar para sexta. Concorrente está 8% abaixo.</div>
+            <div class="txt">Priorizar para sexta. Concorrente 8% abaixo.</div>
           </div>
           <div class="comment-compose">
             <input placeholder="Escrever comentário…" />
@@ -924,7 +916,7 @@
     </div>
   </div>
 
-  <script>
+<script>
     const SUBNAVS = {
       comercial: [
         { id: "funil", label: "Funil de Vendas", screen: "funil" },
@@ -1095,34 +1087,102 @@
     }
 
     const SETTINGS = {
-      perfil: {
-        title: "Perfil",
-        desc: "Dados da sua conta na plataforma.",
+      conta: {
+        title: "Conta",
+        desc: "Tudo sobre você numa página — sem aba Dados/Senha.",
         html: `
+          <div class="note blue" style="margin-bottom:16px">
+            <div><strong>Menos fricção:</strong> hoje Perfil exige clique em Dados ou Senha. Aqui foto, nome, e-mail e senha ficam no mesmo scroll. Senha só expande quando você precisa.</div>
+          </div>
+          <div style="display:flex;gap:16px;align-items:center;margin-bottom:18px">
+            <div class="avatar" style="width:64px;height:64px;font-size:20px;background:var(--accent)">DY</div>
+            <div>
+              <div style="font-weight:700">Daniel Iudi Yano</div>
+              <div style="font-size:12px;color:var(--ink-3)">admin · diretoria</div>
+              <button class="btn-secondary" type="button" style="margin-top:8px">Trocar foto</button>
+            </div>
+          </div>
           <div class="field-grid">
             <div class="field"><label>Nome</label><input value="Daniel Iudi Yano" /></div>
             <div class="field"><label>E-mail</label><input value="daniel@sanwey.com.br" /></div>
-            <div class="field"><label>Cargo exibido</label><input value="Head Executivo" /></div>
-            <div class="field"><label>Telefone</label><input value="(11) 99999-0000" /></div>
-            <div class="field full"><label>Assinatura de e-mail</label><textarea rows="3">Daniel Iudi Yano · Head de Estratégia e Marketing · Grupo Sanwey</textarea></div>
+            <div class="field full"><label>Assinatura de e-mail</label><textarea rows="2">Daniel Iudi Yano · Head de Estratégia e Marketing · Grupo Sanwey</textarea></div>
           </div>
-          <div style="margin-top:16px"><button class="btn-accent" type="button">Salvar perfil</button></div>`
+          <div style="margin-top:14px;display:flex;gap:8px;align-items:center">
+            <button class="btn-accent" type="button">Salvar</button>
+            <span style="font-size:12px;color:var(--ink-3)">Salva só o que mudou</span>
+          </div>
+          <details style="margin-top:22px;border-top:1px solid var(--border-subtle);padding-top:14px">
+            <summary style="cursor:pointer;font-weight:700;font-size:14px">Alterar senha</summary>
+            <div class="field-grid" style="margin-top:12px">
+              <div class="field"><label>Nova senha</label><input type="password" placeholder="••••••••" /></div>
+              <div class="field"><label>Confirmar</label><input type="password" placeholder="••••••••" /></div>
+            </div>
+            <button class="btn-secondary" type="button" style="margin-top:10px">Atualizar senha</button>
+          </details>`
       },
-      preferencias: {
-        title: "Preferências",
-        desc: "Aparência e comportamento do shell.",
+      experiencia: {
+        title: "Experiência",
+        desc: "O que você mexe com frequência vem primeiro — sem sub-abas Aparência / Recursos / Barra.",
         html: `
-          <div class="toggle-row"><div><div class="t">Tema do sistema</div><div class="d">Segue o claro/escuro do SO</div></div><div class="switch"></div></div>
-          <div class="toggle-row"><div><div class="t">Barra inferior de atalhos</div><div class="d">Atalhos rápidos no rodapé em telas grandes</div></div><div class="switch"></div></div>
-          <div class="toggle-row"><div><div class="t">Densidade compacta padrão</div><div class="d">Tabelas abrem em modo compacto</div></div><div class="switch off"></div></div>`
+          <div class="note" style="margin-bottom:16px">
+            <div><strong>Ordem proposta:</strong> 1) Tema e densidade (todo dia) → 2) Recursos do seu trabalho → 3) Barra inferior (só quem usa mobile). Acaba o clique extra nas 3 sub-abas.</div>
+          </div>
+          <p class="drawer-section-title">Aparência</p>
+          <div class="toggle-row"><div><div class="t">Tema</div><div class="d">Claro · Escuro · Sistema</div></div>
+            <div class="seg"><button type="button">Claro</button><button class="active" type="button">Sistema</button><button type="button">Escuro</button></div>
+          </div>
+          <div class="toggle-row"><div><div class="t">Densidade de tabela</div><div class="d">Padrão ao abrir listas</div></div>
+            <div class="seg"><button type="button">Confortável</button><button class="active" type="button">Compacta</button></div>
+          </div>
+          <div style="margin:8px 0 4px;font-size:12px;font-weight:600;color:var(--ink-2)">Cor de destaque</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <button class="btn-secondary" type="button" style="border-color:var(--accent);color:var(--accent)">● Sanwey</button>
+            <button class="btn-secondary" type="button">● Neutro</button>
+            <button class="btn-secondary" type="button">● Azul</button>
+          </div>
+          <p class="drawer-section-title" style="margin-top:18px">Recursos</p>
+          <div class="toggle-row"><div><div class="t">Lista Pessoal na barra</div><div class="d">Atalho rápido pras suas tarefas</div></div><div class="switch"></div></div>
+          <div class="toggle-row"><div><div class="t">Widgets do Painel Executivo</div><div class="d">Recorte que você vê no Executivo</div></div><div class="switch"></div></div>
+          <div class="toggle-row"><div><div class="t">Tour de novidades</div><div class="d">Spotlight quando sair feature nova</div></div><div class="switch"></div></div>
+          <details style="margin-top:16px;border-top:1px solid var(--border-subtle);padding-top:12px">
+            <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--ink-2)">Barra inferior (mobile)</summary>
+            <p style="font-size:12px;color:var(--ink-3);margin:8px 0 10px">Só aparece no celular. Escolha até 4 atalhos.</p>
+            <div class="toggle-row"><div><div class="t">Funil</div></div><div class="switch"></div></div>
+            <div class="toggle-row"><div><div class="t">Entregas</div></div><div class="switch"></div></div>
+            <div class="toggle-row"><div><div class="t">Lista Pessoal</div></div><div class="switch"></div></div>
+            <div class="toggle-row"><div><div class="t">Configurações</div></div><div class="switch off"></div></div>
+          </details>`
       },
-      notificacoes: {
-        title: "Notificações",
-        desc: "O que chega no sino e por e-mail.",
+      avisos: {
+        title: "Avisos",
+        desc: "Essenciais primeiro. O resto por área, sem obrigar a escolher aba antes de ver nada.",
         html: `
-          <div class="toggle-row"><div><div class="t">Comentários nas minhas entregas</div><div class="d">Quando alguém menciona você</div></div><div class="switch"></div></div>
-          <div class="toggle-row"><div><div class="t">Lead parado > 7 dias</div><div class="d">Alerta no Funil</div></div><div class="switch"></div></div>
-          <div class="toggle-row"><div><div class="t">Sinais críticos</div><div class="d">Push imediato</div></div><div class="switch"></div></div>`
+          <div class="note blue" style="margin-bottom:16px">
+            <div><strong>Fricção de hoje:</strong> Notificações abre numa área (ex. Comercial) e esconde o resto atrás de abas. Aqui: bloco Essenciais sempre visível; áreas viram seções expansíveis abaixo.</div>
+          </div>
+          <p class="drawer-section-title">Essenciais · qualquer cargo</p>
+          <div class="toggle-row"><div><div class="t">Alguém me mencionou (@)</div><div class="d">Comentários em qualquer quadro</div></div><div class="switch"></div></div>
+          <div class="toggle-row"><div><div class="t">Itens urgentes da Visão Geral</div><div class="d">Resumo diário no sino</div></div><div class="switch"></div></div>
+          <div class="toggle-row"><div><div class="t">Sinais críticos</div><div class="d">Push quando urgência = crítico</div></div><div class="switch"></div></div>
+
+          <details open style="margin-top:16px">
+            <summary style="cursor:pointer;font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border-subtle)">
+              <span>Comercial</span>
+              <button class="btn-secondary" type="button" style="padding:4px 10px;font-size:11px" onclick="event.preventDefault()">Ligar todos</button>
+            </summary>
+            <div class="toggle-row"><div><div class="t">Lead parado &gt; 7 dias</div></div><div class="switch"></div></div>
+            <div class="toggle-row"><div><div class="t">Mudança de etapa nos meus leads</div></div><div class="switch"></div></div>
+            <div class="toggle-row"><div><div class="t">Proposta prestes a vencer</div></div><div class="switch off"></div></div>
+          </details>
+          <details style="margin-top:4px">
+            <summary style="cursor:pointer;font-weight:700;font-size:13px;padding:8px 0;border-top:1px solid var(--border-subtle)">Marketing</summary>
+            <div class="toggle-row"><div><div class="t">Mudança de etapa nas minhas entregas</div></div><div class="switch"></div></div>
+            <div class="toggle-row"><div><div class="t">Entrega atrasada</div></div><div class="switch"></div></div>
+          </details>
+          <details style="margin-top:4px">
+            <summary style="cursor:pointer;font-weight:700;font-size:13px;padding:8px 0;border-top:1px solid var(--border-subtle)">Sistema</summary>
+            <div class="toggle-row"><div><div class="t">Nova versão / changelog</div></div><div class="switch"></div></div>
+          </details>`
       },
       geral: {
         title: "Geral",
@@ -1213,7 +1273,7 @@
         if (area === "visao") showScreen("visao");
         if (area === "config") {
           showScreen("config");
-          showSettings("perfil");
+          showSettings("conta");
         }
         return;
       }
@@ -1272,7 +1332,7 @@
     renderBoard("entregas-board", entregasCols, true);
     buildSignals();
     buildFunc();
-    showSettings("perfil");
+    showSettings("conta");
   </script>
 </body>
 </html>
