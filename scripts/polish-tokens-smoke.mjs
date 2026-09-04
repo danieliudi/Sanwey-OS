@@ -40,4 +40,11 @@ if (!css.includes("prefers-reduced-motion")) {
   process.exit(1);
 }
 
+const overviewBars = [".polish-bar-track", ".polish-bar-fill", "polish-bar-grow", ".polish-matrix-row"];
+const missingBars = overviewBars.filter((t) => !css.includes(t));
+if (missingBars.length) {
+  console.error("polish-tokens: faltando classes OverviewTab:", missingBars.join(", "));
+  process.exit(1);
+}
+
 console.log("polish-tokens: ok");

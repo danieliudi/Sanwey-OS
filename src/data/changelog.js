@@ -38,6 +38,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.7",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Visão Geral do Painel: barras do funil animam na entrada, o % fica num badge ao lado (não mais espremido na barra) e a matriz destaca a linha no hover.",
+      },
+    ],
+  },
+  {
     version: "4.97.6",
     items: [
       {
