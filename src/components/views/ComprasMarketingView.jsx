@@ -727,7 +727,13 @@ export function ComprasMarketingView({ user, users = [], notifyMentions, initial
     reopenAfterMove(setSelected, () => purchasesRef.current.find(p => p.id === id) || null);
   }, []);
 
-  const handleCreate = useCallback(async (purchase) => { await createPurchase(purchase); }, [createPurchase]);
+  const handleCreate = useCallback(async (purchase) => {
+    // Abrir o card logo após criar — sem isso a solicitação some na coluna
+    // Solicitado e a pessoa procura em "Solicitações para aprovar" (fila
+    // outra, de formulário público). Feedback marketing 04/09/2026.
+    const created = await createPurchase(purchase);
+    if (created) setSelected(created);
+  }, [createPurchase]);
 
   // Excluir direto pelo card (menu "..." → lixeira) — deletePurchase já
   // existia no hook (hard delete, RLS permite a qualquer usuário de

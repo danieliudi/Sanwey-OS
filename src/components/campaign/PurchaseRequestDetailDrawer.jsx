@@ -892,12 +892,20 @@ export function PurchaseRequestDetailDrawer({
         </div>
       )}
 
-      {/* Aprovar/Rejeitar — em "solicitado" ou "cotacao", só
-          gerente_marketing/admin. Na Cotação, escolhe-se o fornecedor
-          vencedor (se houver cotações salvas) antes de aprovar. */}
+      {/* Aprovar/Rejeitar — em "solicitado" ou "cotacao". Qualquer pessoa
+          de marketing pode (RPC + canApprove). Em Solicitado dá pra aprovar
+          direto (sem passar por Cotação) — útil nos testes e quando a
+          cotação/aprovação já rolou fora (feedback marketing 04/09/2026).
+          Na Cotação, se houver cotações salvas, escolhe o vencedor antes. */}
       {isPending && canApprove && (
         <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
           <SectionLabel>{isCotacao ? "Aprovar solicitação" : "Decisão"}</SectionLabel>
+
+          {isSolicitado && (
+            <p className="text-[11px] mb-3" style={{ color: "var(--text-dim)", lineHeight: 1.45 }}>
+              Pode aprovar direto daqui se a cotação já foi feita fora, ou mover pra Cotação primeiro.
+            </p>
+          )}
 
           {isCotacao && quoteOptions.length > 0 && (
             <FieldRow label="Fornecedor vencedor">
@@ -929,14 +937,12 @@ export function PurchaseRequestDetailDrawer({
 
           {!showReject ? (
             <div className="flex items-center gap-2">
-              {isCotacao && (
-                <button onClick={handleApprove} disabled={actionLoading || !canApproveNow}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: "var(--success-bg)", color: "var(--success)", border: "none", cursor: (actionLoading || !canApproveNow) ? "default" : "pointer", opacity: (actionLoading || !canApproveNow) ? 0.6 : 1 }}>
-                  <CheckCircle2 size={13} />
-                  {actionLoading ? "Aprovando…" : "Aprovar"}
-                </button>
-              )}
+              <button onClick={handleApprove} disabled={actionLoading || !canApproveNow}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{ background: "var(--success-bg)", color: "var(--success)", border: "none", cursor: (actionLoading || !canApproveNow) ? "default" : "pointer", opacity: (actionLoading || !canApproveNow) ? 0.6 : 1 }}>
+                <CheckCircle2 size={13} />
+                {actionLoading ? "Aprovando…" : "Aprovar"}
+              </button>
               <button onClick={() => setShowReject(true)} disabled={actionLoading}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
                 style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "none", cursor: actionLoading ? "default" : "pointer" }}>
