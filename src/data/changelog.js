@@ -38,6 +38,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.8",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Kanban: cards sobem no hover com sombra curta e levantam no arraste (Funil, RH, Marketing, Entregas).",
+      },
+    ],
+  },
+  {
     version: "4.97.7",
     items: [
       {

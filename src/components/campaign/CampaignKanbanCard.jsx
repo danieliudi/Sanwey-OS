@@ -20,6 +20,7 @@ function daysUntilDate(dateStr) {
 
 function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, onDuplicateCard, completeness, unread, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const cardRef = useRef(null);
 
   // FASE 5: mais de um responsável por campanha — resolve owner_ids (com
@@ -44,9 +45,6 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
     ? (CHANNEL_COLORS[campaign.channel] || { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" })
     : null;
 
-  const shadowBase  = `var(--shadow-card)`;
-  const shadowHover = `var(--shadow-pop)`;
-
   const companyLabels = (campaign.companyIds || [])
     .map(id => COMPANIES[id]?.short || id)
     .join(", ");
@@ -62,25 +60,14 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
     <div
       ref={cardRef}
       draggable
-      onDragStart={() => onDragStart?.(campaign)}
-      onDragEnd={() => onDragEnd?.()}
+      onDragStart={() => { setDragging(true); onDragStart?.(campaign); }}
+      onDragEnd={() => { setDragging(false); onDragEnd?.(); }}
       onClick={() => { if (!menuOpen) onClick?.(campaign); }}
-      className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
+      className={`p-3.5 rounded-lg cursor-pointer polish-kanban-card${dragging ? " is-dragging" : ""}`}
       style={{
         background: terminalCardBackground(isTerminal),
         border: "1px solid var(--border)",
-        boxShadow: shadowBase,
         position: "relative",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = shadowHover;
-        e.currentTarget.style.borderColor = "var(--border-strong)";
-        e.currentTarget.style.transform = "translateY(-1px)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = shadowBase;
-        e.currentTarget.style.borderColor = "var(--border)";
-        e.currentTarget.style.transform = "translateY(0)";
       }}
     >
       {/* Header: name + badges + menu */}

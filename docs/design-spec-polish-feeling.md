@@ -1,8 +1,8 @@
 # Design spec — Polish / “feeling” em toda a plataforma
 
 **Data:** 2026-09-04  
-**Status:** Fases 1–2 **na `main`** (merge 04/09/2026) — v4.97.6  
-**Plano:** `docs/superpowers/plans/2026-09-04-polish-feeling-fases-1-2.md`  
+**Status:** Fases 1–3 **na branch / em andamento** — v4.97.8 (fase 3 Kanban)  
+**Planos:** `docs/superpowers/plans/2026-09-04-polish-feeling-fases-1-2.md` · `docs/superpowers/plans/2026-09-04-polish-feeling-fase-3-kanban.md`  
 **Mockups:** `docs/mockups/sanwey-os-ui/polish-visao.html` · `polish-padroes.html`  
 **Referência externa:** Worktail (vídeo Dribbble) — só motion/elevação, **não** a marca/creme/laranja  
 
@@ -194,10 +194,10 @@ Ordem pensada para **sentir o feeling cedo** sem redesenhar 47 telas de uma vez.
 
 | Fase | Escopo | Critério de pronto |
 |---|---|---|
-| **0** | Aprovar §2 (sombra A/B/C) + mockups A+ e padrões | ok do Daniel |
-| **1** | Tokens em `index.css` + `prefers-reduced-motion` | build + visual ok no Painel |
-| **2** | Painel Executivo (charts + KPI) | mockup A+ → `src` |
-| **3** | Kanban compartilhado (card + drag lift) — uma família (CRM) depois RH/Marketing | drag em Funil |
+| **0** | Aprovar §2 (sombra A/B/C) + mockups A+ e padrões | ok do Daniel ✅ |
+| **1** | Tokens em `index.css` + `prefers-reduced-motion` | ✅ main |
+| **2** | Painel Executivo (charts + KPI + Visão Geral) | ✅ main (4.97.6–7) |
+| **3** | Kanban compartilhado (card + drag lift) — shells Lead/RH/Campaign/Deliverable | ✅ implementação 4.97.8 |
 | **4** | FilterBar / Tabs / Button / Select (ui/) | 2 telas tabela + 1 grade |
 | **5** | Drawer shell (scrim + enter) sem mudar layout | Funil drawer |
 | **6** | Restante por bucket quando a tela for tocada ( opportunista ) | sem big-bang |
@@ -235,4 +235,6 @@ Ordem pensada para **sentir o feeling cedo** sem redesenhar 47 telas de uma vez.
 - [x] Ok para **executar** o plano Fases 1–2 em `src/` (Daniel 04/09)
 - [x] Implementação Fases 1–2 (tokens + Painel) na branch de polish
 - [x] Ok para merge em `main`
-- [ ] Ok ao rollout das fases 3+ (Kanban / FilterBar / drawer) depois
+- [x] Ok ao rollout da fase 3 (Kanban) — Daniel 04/09
+- [ ] Ok ao rollout das fases 4+ (FilterBar / drawer) depois
+- [ ] Ok para merge fase 3 em `main`

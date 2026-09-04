@@ -44,6 +44,7 @@ function renderPreviewField(key, lead, { probDisplay, closeStyle, accentOpacity 
 
 function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, onDuplicateCard, completeness, unread, pipelineTransitions, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const cardRef = useRef(null);
 
   // FASE 5: mais de um responsável por card — resolve owner_ids (com
@@ -83,32 +84,18 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
   const isTerminal = Boolean(currentStage?.terminal);
   const closeStyle = !isTerminal ? closeDateUrgencyStyle(lead.closeDate) : null;
 
-  const shadowBase  = `var(--shadow-card)`;
-  const shadowHover = `var(--shadow-pop)`;
-
   return (
     <div
       ref={cardRef}
       draggable
-      onDragStart={() => onDragStart?.(lead)}
-      onDragEnd={() => onDragEnd?.()}
+      onDragStart={() => { setDragging(true); onDragStart?.(lead); }}
+      onDragEnd={() => { setDragging(false); onDragEnd?.(); }}
       onClick={() => { if (!menuOpen) onClick?.(lead); }}
-      className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
+      className={`p-3.5 rounded-lg cursor-pointer polish-kanban-card${dragging ? " is-dragging" : ""}`}
       style={{
         background: terminalCardBackground(isTerminal),
         border: "1px solid var(--border)",
-        boxShadow: shadowBase,
         position: "relative",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = shadowHover;
-        e.currentTarget.style.borderColor = "var(--border-strong)";
-        e.currentTarget.style.transform = "translateY(-1px)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = shadowBase;
-        e.currentTarget.style.borderColor = "var(--border)";
-        e.currentTarget.style.transform = "translateY(0)";
       }}
     >
       {/* Company + aging badge + score + menu */}

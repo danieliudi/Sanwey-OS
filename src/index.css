@@ -352,6 +352,28 @@ body {
   background: var(--surface-alt);
 }
 
+/* Kanban cards (Fase 3) — hover curto + lift no drag */
+.polish-kanban-card {
+  box-shadow: var(--shadow-card);
+  transition:
+    transform var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out);
+}
+.polish-kanban-card:hover:not(.is-dragging) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--border-strong);
+}
+.polish-kanban-card.is-dragging {
+  cursor: grabbing;
+  opacity: 0.92;
+  transform: scale(1.02);
+  box-shadow: var(--shadow-drag);
+  z-index: 5;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 0ms;
@@ -367,5 +389,14 @@ body {
   .polish-bar-fill {
     animation: none !important;
     transform: none !important;
+  }
+  .polish-kanban-card,
+  .polish-kanban-card:hover:not(.is-dragging),
+  .polish-kanban-card.is-dragging {
+    transition: none !important;
+    transform: none !important;
+  }
+  .polish-kanban-card.is-dragging {
+    opacity: 1 !important;
   }
 }
