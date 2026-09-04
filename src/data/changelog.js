@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "Quando a esteira aprova um pacote de conteúdo, a entrega de marketing chega pra agência com instruções (peças a produzir), imagens anexadas quando a URL é pública, e o responsável preenchido com quem aprovou — antes ia só título e descrição, sem dono no card. Se a entrega for apagada, em Aprovados aparece \"Gerar entrega de novo\".",
+        roles: ["admin", "marketing", "gerente_marketing", "agencia", "diretoria"],
+      },
+    ],
+  },
+  {
     version: "4.97.2",
     items: [
       { kind: "correcao", text: "Em Contas · ABM, a conversão por conta agora mostra de quantas contas ela saiu. Com poucas contas decididas ela aparece como fração (2/3) em vez de porcentagem — uma conta ganha e nenhuma perdida exibia \"100%\", que era verdade e enganava ao mesmo tempo." },
