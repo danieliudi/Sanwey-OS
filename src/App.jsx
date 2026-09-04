@@ -520,20 +520,30 @@ export default function App() {
   // "Solicitações" manualmente. Só a primeira leva (pendentes já existentes
   // no primeiro carregamento) não dispara notificação — só as que chegam
   // depois, via Realtime.
-  const { requests: marketingRequests } = useMarketingRequests({
+  //
+  // Guard de seed: NÃO seedar enquanto `loading` — o hook começa com
+  // requests=[] e, se seedarmos nessa pintura, a lista real que chega no
+  // fetch seguinte parece "toda nova" e re-notifica todos os pendentes a
+  // cada remount (mesmo padrão de race que o lembrete de reembolso tinha
+  // com dedup só em useRef). Já-existente em localStorage também bloqueia.
+  const { requests: marketingRequests, loading: marketingRequestsLoading } = useMarketingRequests({
     userId: currentUser?.id,
     role: currentUser?.role,
     enabled: Boolean(currentUser) && isMarketingUser,
   });
   const requestsVistosRef = useRef(null);
   useEffect(() => {
-    if (!isMarketingUser) return;
+    if (!isMarketingUser || marketingRequestsLoading) return;
     if (requestsVistosRef.current === null) {
       requestsVistosRef.current = new Set(marketingRequests.map(r => r.id));
       return;
     }
     for (const r of marketingRequests) {
       if (r.status === "pendente" && !requestsVistosRef.current.has(r.id)) {
+        const alreadyExists = notifications.some(n =>
+          n.type === "marketing_request" && n.link?.id === r.id
+        );
+        if (alreadyExists) { requestsVistosRef.current.add(r.id); continue; }
         requestsVistosRef.current.add(r.id);
         pushNotification({
           type: "marketing_request",
@@ -545,23 +555,28 @@ export default function App() {
         requestsVistosRef.current.add(r.id);
       }
     }
-  }, [marketingRequests, isMarketingUser, pushNotification]);
+  }, [marketingRequests, marketingRequestsLoading, isMarketingUser, pushNotification, notifications]);
 
   // Aprovação de Férias/Licenças é centralizada no RH (não por gestor direto,
   // já que nem todo gestor tem acesso à plataforma) — então quem precisa ser
   // avisado de uma nova solicitação pendente é o time de RH (gerente_rh/admin).
-  const { requests: feriasRequests } = useRHFeriasRequests({
+  // Mesmo guard de seed+localStorage do marketing_request acima.
+  const { requests: feriasRequests, loading: feriasRequestsLoading } = useRHFeriasRequests({
     enabled: Boolean(currentUser) && isRHManager,
   });
   const feriasVistosRef = useRef(null);
   useEffect(() => {
-    if (!isRHManager) return;
+    if (!isRHManager || feriasRequestsLoading) return;
     if (feriasVistosRef.current === null) {
       feriasVistosRef.current = new Set(feriasRequests.map(r => r.id));
       return;
     }
     for (const r of feriasRequests) {
       if (r.status === "pendente" && !feriasVistosRef.current.has(r.id)) {
+        const alreadyExists = notifications.some(n =>
+          n.type === "ferias_solicitada" && n.link?.id === r.id
+        );
+        if (alreadyExists) { feriasVistosRef.current.add(r.id); continue; }
         feriasVistosRef.current.add(r.id);
         const tipo = RH_LEAVE_TYPES.find(t => t.id === r.type)?.label || r.type;
         pushNotification({
@@ -574,7 +589,7 @@ export default function App() {
         feriasVistosRef.current.add(r.id);
       }
     }
-  }, [feriasRequests, isRHManager, pushNotification]);
+  }, [feriasRequests, feriasRequestsLoading, isRHManager, pushNotification, notifications]);
 
   // Lembrete de prazo de autoavaliação de Feedback: avisa o próprio
   // colaborador quando o prazo (period_end) do ciclo pendente está a até 3
@@ -824,12 +839,23 @@ export default function App() {
     // conformidade acima). Achado da 2ª auditoria.
     const hoje = new Date();
     const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    const todayStr = hoje.toDateString();
     for (const d of despesasParaLembretes) {
       if (d.status_reembolso !== "pendente" || !d.created_at) continue;
       const diasPendente = Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000);
       if (diasPendente < 5) continue;
       const key = `${d.id}:${hojeISO}`;
       if (despesaPendenteVistaRef.current.has(key)) continue;
+      // Guard contra o array JÁ PERSISTIDO (localStorage) — mesmo padrão
+      // BUG-12 dos contratos fornecedor acima. Sem isso, cada reload/
+      // remount reinsería o mesmo reembolso pendente (spam de "há 25/24
+      // dias" a cada abertura da sessão).
+      const alreadyExists = notifications.some(n =>
+        n.type === "reembolso_pendente_ha_dias" &&
+        n.link?.id === d.id &&
+        new Date(n.createdAt).toDateString() === todayStr
+      );
+      if (alreadyExists) { despesaPendenteVistaRef.current.add(key); continue; }
       despesaPendenteVistaRef.current.add(key);
       pushNotification({
         type: "reembolso_pendente_ha_dias",
@@ -838,7 +864,7 @@ export default function App() {
         link: { module: "crm_despesas", id: d.id },
       });
     }
-  }, [despesasParaLembretes, isManagerRole, pushNotification]);
+  }, [despesasParaLembretes, isManagerRole, pushNotification, notifications]);
 
   // Geradores de notificação — stale_lead, cross_sell, weekly_digest,
   // new_candidato: toggles existiam em Configurações > Notificações desde a

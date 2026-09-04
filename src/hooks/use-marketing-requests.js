@@ -62,7 +62,10 @@ function requestToRow(req, extras = {}) {
 
 export function useMarketingRequests({ userId, role, roles, enabled = true } = {}) {
   const [requests, setRequests] = useState([]);
-  const [loading, setLoading]   = useState(false);
+  // Começa true (igual useRHFeriasRequests) pra o seed de notificações em
+  // App.jsx não gravar Set([]) na primeira pintura — loading=false + lista
+  // vazia re-notificava todos os pendentes a cada remount.
+  const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
 
   // roles[] cobre cargo adicional (ex: gerente_marketing como cargo
@@ -72,7 +75,7 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
   const canWrite = roleList.some(r => ["admin", "marketing", "gerente_marketing"].includes(r));
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured || !enabled) return;
+    if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
@@ -89,7 +92,7 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     }
   }, [enabled]);
 
-  useEffect(() => { if (enabled) fetchAll(); }, [fetchAll, enabled]);
+  useEffect(() => { if (enabled) fetchAll(); else setLoading(false); }, [fetchAll, enabled]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled) return;
