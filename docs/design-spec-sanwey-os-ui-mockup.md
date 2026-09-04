@@ -24,7 +24,7 @@ Aplicar o design system do `dashboard-spec.json` (creme `#F9F5F1`, accent `#B62D
 - Sidebar lateral → **top nav** com 5 áreas + **subnav** por área
 - **KPIs com tendência** (sparkline/gauge) e denominador (`n=`) visível
 - **Cards Kanban** com 2 campos de preview (não só título/valor)
-- **Drawer:** **só pele nova** — estrutura atual mantida (left = identidade + abas · center = fase atual · right = mover + comentários). Reorganização do drawer foi rejeitada pelo Daniel em 04/09/2026.
+- **Drawer:** **só UI** — layout idêntico ao atual (left identidade+abas · center fase · right mover+comentários). Sem sugestão estrutural. Decisão do Daniel 04/09/2026.
 - **Sinais:** coluna de leitura (urgência + volume) separada da grade de ação
 - **Config:** menu lateral de 3 grupos; em **Minha conta** → Conta · Experiência · Avisos (sem sub-abas Dados/Senha, Aparência/Recursos/Barra, nem área obrigatória em Notificações)
 

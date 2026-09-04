@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>sanwey OS — Mockup UI (estrutura + drawers + Sinais + Config)</title>
+  <title>sanwey OS — Mockup UI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -473,7 +473,7 @@
 </head>
 <body>
   <div class="mock-banner">
-    <div>Mockup <strong>estrutura + drawers</strong> · clique num card do Funil para abrir o drawer · não é produção</div>
+    <div>Mockup <strong>sanwey OS UI</strong> · clique num card do Funil para ver o drawer · não é produção</div>
     <div>
       <a href="#screen-visao">Visão + gráficos</a> ·
       <a href="#" data-jump="sinais">Sinais</a> ·
@@ -671,12 +671,12 @@
     <!-- ========== FUNIL ========== -->
     <section class="screen" id="screen-funil" data-screen="funil">
       <div class="note">
-        <div><strong>Cards densos:</strong> preview de 2 campos. Clique abre o drawer com a <strong>estrutura atual</strong> (só a pele muda).</div>
+        <div><strong>Cards:</strong> preview de 2 campos da etapa. Clique no card abre o detalhe.</div>
       </div>
       <div class="board-toolbar">
         <div class="board-title-block">
           <h2>Funil de Vendas</h2>
-          <p>Pipeline comercial · cards com preview de campos · clique para abrir</p>
+          <p>Pipeline comercial · clique no card para abrir</p>
         </div>
         <div class="toolbar-right">
           <div class="view-toggle">
@@ -696,12 +696,12 @@
     <!-- ========== ENTREGAS ========== -->
     <section class="screen" id="screen-entregas" data-screen="entregas">
       <div class="note">
-        <div><strong>Mesma densidade no Marketing:</strong> prazo + campanha no preview. Drawer = estrutura atual + nova UI.</div>
+        <div><strong>Cards:</strong> prazo + campanha no preview. Clique no card abre o detalhe.</div>
       </div>
       <div class="board-toolbar">
         <div class="board-title-block">
           <h2>Entregas</h2>
-          <p>Produção criativa · clique num card para o mesmo padrão de drawer</p>
+          <p>Produção criativa · clique no card para abrir</p>
         </div>
         <div class="toolbar-right">
           <div class="view-toggle">
@@ -831,7 +831,7 @@
     </footer>
   </div>
 
-  <!-- DRAWER — estrutura atual (abas no left), só pele nova -->
+  <!-- DRAWER — mesmo layout de hoje; só tokens/UI -->
   <div class="drawer-overlay" id="drawer" role="dialog" aria-modal="true">
     <div class="drawer">
       <div class="drawer-header">
@@ -850,7 +850,6 @@
         </div>
       </div>
       <div class="drawer-body">
-        <!-- LEFT: identidade + abas (como hoje) -->
         <div class="drawer-col">
           <div class="id-block">
             <p class="company">Granel Express Ltda</p>
@@ -872,10 +871,13 @@
             <button type="button">Checklists</button>
             <button type="button">PDF</button>
           </div>
-          <p style="font-size:12px;color:var(--ink-3);margin:8px 0 0;line-height:1.4">Conteúdo da aba ativa (ex.: campos gerais do lead) aparece aqui, como hoje.</p>
+          <div class="field-grid" style="margin-top:12px;grid-template-columns:1fr">
+            <div class="field"><label>Produto de interesse</label><input value="Big Bag 1.5 ton" /></div>
+            <div class="field"><label>Cidade / UF</label><input value="Campinas · SP" /></div>
+            <div class="field"><label>Origem</label><input value="Feira · Plast Show" /></div>
+          </div>
         </div>
 
-        <!-- CENTER: fase atual / campos de etapa -->
         <div class="drawer-col center">
           <p class="drawer-section-title">Fase atual · Proposta</p>
           <div class="field-grid">
@@ -888,7 +890,6 @@
           </div>
         </div>
 
-        <!-- RIGHT: StageNavigator + comentários -->
         <div class="drawer-col">
           <p class="drawer-section-title">Mover para</p>
           <div class="stage-nav-item next">Negociação</div>
