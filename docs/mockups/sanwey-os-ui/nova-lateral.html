@@ -1605,7 +1605,7 @@
       setNavCollapsed(!document.getElementById("app").classList.contains("nav-collapsed"));
     });
     document.getElementById("menu-toggle-float").addEventListener("click", () => {
-      setNavCollapsed(false);
+      setNavCollapsed(!document.getElementById("app").classList.contains("nav-collapsed"));
     });
 
     buildFunnel();
