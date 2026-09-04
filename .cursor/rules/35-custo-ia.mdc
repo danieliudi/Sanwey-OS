@@ -1,0 +1,42 @@
+---
+description: Custo de chamada de modelo — o que já é registrado, o que não é, e o que declarar ao entregar funcionalidade que usa IA.
+globs: supabase/functions/ai-assistant/**,supabase/functions/agent-runner/**,supabase/functions/crm-ata-voz/**,supabase/functions/caso-prospeccao-voz/**,src/hooks/use-ai.js
+alwaysApply: false
+---
+
+# Custo de IA é visível ou não existe
+
+Regra 16 do `CLAUDE.md`. Quatro edge functions gastam dinheiro por uso:
+`ai-assistant`, `agent-runner`, `crm-ata-voz`, `caso-prospeccao-voz`.
+
+## O que já existe (conferido 03/09/2026)
+
+As quatro **registram uso por chamada** — `ai-assistant/index.ts:93` emite um
+`console.log` com `event`, `user_id`, `crm_module`, `provider`,
+`execution_status`, `latency_ms`, `prompt_tokens` e `completion_tokens`. É
+trilha de auditoria deliberada: só metadado, **nunca o conteúdo da conversa**.
+Ao mexer nessas functions, mantenha o log e mantenha-o sem conteúdo.
+
+## O que NÃO existe
+
+Nada disso vai para tabela — fica só no log da edge function, que é efêmero e
+não dá para consultar. E **não há cálculo de custo em lugar nenhum**: sem preço
+por modelo, sem conversão USD→BRL, sem soma por período.
+
+A cota (`ai_org_quota_increment(p_user_id, p_daily_limit)`) conta **chamadas**
+por dia contra `AI_ORG_DAILY_LIMIT`. Ela **limita**, que não é **medir**.
+
+Consequência prática: dá para saber que alguém chamou e quantos tokens gastou
+naquele instante, se você estiver olhando o log na hora. Não dá para responder
+"quanto a plataforma gastou de IA em agosto" nem "qual tela puxa mais custo".
+
+## Regra
+
+Funcionalidade nova que chama modelo **declara, na entrega**, o que uma execução
+típica custa e onde esse custo aparece para quem olha. Busca externa, quando
+existir, é linha separada — nunca embutida no custo do modelo. Estimativa sai
+rotulada como estimativa, com a origem do número.
+
+**Não implemente a tabela de custo por conta própria.** Transformar o log em
+tabela e acrescentar preço por modelo é a saída real, mas é decisão de produto —
+o volume de hoje pode não justificar.

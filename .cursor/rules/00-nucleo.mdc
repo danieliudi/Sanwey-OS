@@ -49,3 +49,14 @@ com base só em compilar.
 
 Código, comentários, mensagens de commit, changelog e conversa: **português**.
 Comentário explica *por quê*, não *o quê*.
+
+## Precedência: o `CLAUDE.md` é a fonte
+
+Estas regras são o espelho do `CLAUDE.md` recortado por escopo, porque o Cursor
+carrega regra por glob em vez de um arquivo só. **Se os dois discordarem, o
+`CLAUDE.md` vence** e o `.mdc` é o que está errado — avise no lugar de seguir o
+`.mdc`.
+
+Mudou uma regra aqui, mude lá também. E **cuidado com número em regra**: o
+`npm run doc:check` confere `docs/`, **não confere os `.mdc`** — prefira apontar
+para `docs/mapa-funcional.md` a repetir contagem que envelhece em silêncio.

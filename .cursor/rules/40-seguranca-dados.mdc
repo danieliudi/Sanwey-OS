@@ -47,6 +47,10 @@ aqui, muda lá.**
 
 ## Decisões fechadas — não "corrija" por conta própria
 
+O racional completo de cada uma, com o que foi medido no banco, está em
+**`docs/decisoes-de-seguranca.md`**. Leia de lá antes de propor mudança em
+qualquer uma — as quatro abaixo já foram decididas com o Daniel.
+
 - `rh_colaboradores` é lido pelo Grupo inteiro, sem filtro por empresa. RH é
   centralizado de propósito. Não adicione filtro nem mascare `salary`.
 - A chave pessoal de IA fica em texto plano em `profile_secrets.ai_config`.

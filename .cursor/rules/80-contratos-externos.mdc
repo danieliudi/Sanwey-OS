@@ -1,0 +1,45 @@
+---
+description: Identificador que outro sistema lê é contrato, não nome — conferir antes de renomear id de empresa, chave de agente, action_type ou campo de custom_fields.
+globs: src/constants/companies.js,src/constants/taxonomy.js,src/constants/routes.js,supabase/functions/agent-gateway/**,supabase/functions/sanwey-crm-mcp/**
+alwaysApply: false
+---
+
+# String que é contrato, não nome
+
+Regra 18 do `CLAUDE.md`.
+
+## O caso que originou a regra
+
+**`industria` é o identificador da frente Sanwey** — e é o que o repositório
+irmão `trackforge-os` usa para mapear `sanwey` ao ler `market_signals`. Do outro
+lado (`trackforge-os/src/lib/marketSignals.ts:28-31`):
+
+```ts
+export const COMPANY_ID: Record<BrandId, string> = {
+  resibag: "resibag",
+  sanwey: "industria",
+};
+```
+
+E a consulta é `market_signals?company_id=eq.${COMPANY_ID[brandId]}`.
+
+Renomear `industria` aqui **não quebra nada aqui**. Quebra a leitura de sinais
+do outro lado, **em silêncio** — e o sintoma aparece como uma seção que
+simplesmente deixa de existir na outra ferramenta.
+
+## Regra
+
+Identificador que outro sistema lê não é nome, é contrato. Antes de renomear:
+
+- id de empresa (`industria`, `resibag`)
+- chave de agente do gateway (`AGENT_GATEWAY_KEY_<AGENTE>`)
+- valor de canal de campanha
+- `action_type`
+- nome de campo dentro de `custom_fields`
+
+…confira **quem lê do outro lado** e registre a decisão no comentário do próprio
+código. A lista do que atravessa a fronteira vive em `docs/mapa-funcional.md`.
+
+Na dúvida sobre quem lê: isso é caso de parar e passar pro Claude Code
+(`.cursor/rules/70-quando-passar-pro-claude.mdc`) — você não alcança o outro
+repositório nem o banco.
