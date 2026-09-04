@@ -47,3 +47,27 @@ Referência canônica: `src/components/views/FornecedoresView.jsx` — ícone
 `Trash2` no slot `menu` do `Card`, abrindo `ConfirmDeleteModal` sobre
 `ui/Modal.jsx`, botões "Cancelar" / "Excluir" (`Excluir` em `var(--danger)`).
 Só o texto do corpo muda por página, para refletir o que realmente se perde.
+
+## Número em tela declara de onde veio
+
+Regra 14 do `CLAUDE.md`, nascida de dois defeitos reais em 03/09/2026 — nenhum
+dos dois era bug de código, os dois faziam exatamente o que estava escrito.
+
+Número que aparece em tela só está pronto com três coisas:
+
+1. **Origem declarada** — tabela, campo e cálculo, no comentário de topo do
+   utilitário que produz o número e na spec da tela. Vale para cartão de
+   destaque, coluna de tabela e rótulo de gráfico.
+2. **Denominador visível quando for razão** — percentual nunca aparece
+   sozinho: exibe o `n` ao lado, ou não exibe. Abaixo de um mínimo definido
+   por tela, mostre a contagem em vez do percentual.
+3. **O que ficou de fora, contado** — se o filtro descarta linha (lead sem
+   campanha, registro de demonstração, fora da frente ativa), a tela mostra
+   quantas foram descartadas.
+
+O caso que originou a regra: `accountConversion` em
+`src/utils/account-collapse.js:95` é `ganhas / (ganhas + perdidas)`. Uma conta
+ganha e nenhuma perdida exibe **100%** num cartão que vai pra diretoria.
+`FairReportView` já rotula "ganhas / decididas" e trata o caso nulo;
+`AbmAccountsView:136` ainda mostra o percentual com sublabel
+"ganhas · abertas" — que não revela o denominador.

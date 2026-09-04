@@ -23,7 +23,7 @@ estar funcionando", e a resposta era **em lugar nenhum** (conferido 03/09/2026:
 zero ocorrências de "objetivo"/"serve para" aqui, e nenhuma das 58 views tem
 comentário de propósito).
 
-Agora está em **`docs/mapa-funcional.md`**: as 45 telas em 52 rotas, as 8 rotas
+Agora está em **`docs/mapa-funcional.md`**: as 47 telas em 54 rotas, as 8 rotas
 públicas sem login, as 3 camadas de acesso (cargo → módulo → RLS), as 30 edge
 functions com os segredos que cada uma exige, e as integrações externas com o
 que quebra quando cada uma cai.
@@ -688,3 +688,162 @@ mudança só de UI, não precisa — o `npm run dev` local já resolve.
 **O que NÃO muda**: aplicar migration em PRODUÇÃO continua exigindo
 confirmação explícita do Daniel, sempre (regra 5). Ter onde testar antes não é
 autorização para aplicar depois.
+## 14. Todo número em tela declara de onde veio
+
+Achado de 03/09/2026, na auditoria das telas de rastreio. O `trackforge-os`
+tem uma disciplina que este repositório não tem: lá, nenhuma afirmação é
+publicada sem nível de proveniência, e existe verificação automática que barra
+termo proibido antes da peça sair. Aqui, quatro telas cheias de número subiram
+sem nada equivalente, e dois defeitos previsíveis apareceram na mesma semana.
+
+O primeiro: em `AbmAccountsView`, a conversão por conta é ganhas dividido por
+ganhas mais perdidas, com as abertas fora do denominador. Uma conta ganha e
+nenhuma perdida exibe **100%** num cartão de destaque, e esse é o cartão que vai
+para a diretoria. O segundo: no Relatório de Conteúdo, `unlinkedTrigger` é
+`null` por decisão documentada, então lead sem campanha some dos números sem
+contador. A conversão fica sem denominador honesto, porque não dá para saber
+quantos entraram sem origem no mesmo período.
+
+Nenhum dos dois é bug de código. Os dois fazem exatamente o que foi escrito. O
+que faltou foi a regra.
+
+**Daqui pra frente, número que aparece em tela só está pronto com três coisas:**
+
+1. **Origem declarada.** Tabela, campo e cálculo, no comentário de topo do
+   utilitário que produz o número, e na spec da tela. Vale para cartão de
+   destaque, coluna de tabela e rótulo de gráfico.
+2. **Denominador visível quando for razão.** Percentual nunca aparece sozinho:
+   exibe o `n` ao lado, ou não exibe. Abaixo de um mínimo definido por tela,
+   mostrar a contagem em vez do percentual.
+3. **O que ficou de fora, contado.** Se o filtro descarta linha (lead sem
+   campanha, registro de demonstração, fora da frente ativa), a tela mostra
+   quantas foram descartadas. Número sem denominador honesto não sustenta
+   decisão de investimento, que é para o que ele é olhado.
+
+Regra 5 continua valendo: antes de assumir que falta coluna, veja se o dado já é
+configurável.
+
+## 15. O laço do mockup fecha com captura de tela
+
+A regra 3 exige mockup **antes** de implementar e não exige nada depois. O
+resultado apareceu em 03/09/2026: o Daniel abriu a tela nova de Contas · ABM e a
+frase foi que não sabia dizer se estava de acordo com o que se queria. O mockup
+tinha sido aprovado. Nada nunca conferiu o construído contra ele.
+
+O `trackforge-os` fecha esse laço na seção 8 do arquivo dele, e é a peça que
+falta aqui.
+
+**Acrescentar ao passo de QA da regra 3:** antes de aprovar, captura de tela na
+largura real, conferida contra o mockup aprovado, junto com a devolutiva. Build
+verde não é prova de que a tela ficou como foi combinado, e os dois gates da
+regra 3.2 provam ausência de erro de execução, não presença do que foi
+especificado.
+
+Vale a frase do repositório irmão, que descreve um bug real de lá: uma regra de
+CSS venceu o atributo `hidden`, e aquilo passou por typecheck, por lint e por um
+teste que media a propriedade errada. Só a captura mostrou as telas empilhadas.
+
+## 16. Custo de IA é visível ou não existe
+
+Transplantado do `trackforge-os`, onde é seção própria porque a ferramenta
+inteira gasta por chamada. Aqui a exposição é menor e a regra é a mesma.
+
+`ai-assistant`, `agent-runner`, `crm-ata-voz` e `caso-prospeccao-voz` gastam
+dinheiro por uso. A cota diária de IA por pessoa **limita**, que não é a mesma
+coisa que **medir**: ela impede o estouro e não diz quanto custou o mês, nem
+qual funcionalidade puxou.
+
+**O que existe hoje** (conferido 03/09/2026, respondendo o `[FALTA DADO]` que
+esta seção carregava): as quatro edge functions de IA **registram uso por
+chamada** — `ai-assistant/index.ts:93` emite um `console.log` com
+`event: "ai_assistant_call"`, `user_id`, `crm_module`, `provider`,
+`execution_status`, `latency_ms`, `prompt_tokens` e `completion_tokens`. É
+trilha de auditoria deliberada (GAP 2, 18/08/2026), só metadado, nunca o
+conteúdo da conversa.
+
+**O que NÃO existe**: nada disso vai pra tabela. Fica só no log da edge
+function, que é efêmero e não dá pra consultar. E **não há cálculo de custo em
+lugar nenhum** — não existe tabela de preço por modelo, não existe conversão
+USD→BRL, não existe soma por período. A cota
+(`ai_org_quota_increment(p_user_id, p_daily_limit)`) conta CHAMADAS por dia
+contra `AI_ORG_DAILY_LIMIT`; ela não sabe o que cada chamada custou.
+
+Ou seja: dá pra saber que alguém chamou, e quantos tokens gastou naquele
+instante, se você estiver olhando o log na hora. Não dá pra responder "quanto
+a plataforma gastou de IA em agosto" nem "qual tela puxa mais custo".
+
+**Regra.** Funcionalidade nova que chama modelo declara, na entrega, o que uma
+execução típica custa e onde esse custo aparece pra quem olha. Busca externa,
+quando existir, é linha separada, nunca embutida no custo do modelo.
+Estimativa sai rotulada como estimativa, com a origem do número.
+
+**Débito registrado, não tarefa aberta**: transformar o `console.log` numa
+tabela e acrescentar preço por modelo (como o `trackforge-os` faz em
+`src/constants/pricing.ts`, com `satisfies` que quebra o build se faltar
+modelo) é a saída real. Não fazer por conta própria — é decisão de produto, e
+o volume de hoje pode não justificar.
+
+## 17. Espelho de regra para o Cursor, com precedência declarada
+
+Achado de 03/09/2026. A regra 3 deste arquivo termina apontando para quatro
+sub-agentes versionados em `.claude/agents/`, e a própria seção conta que em
+28/08/2026 eles apontavam para arquivos que nenhuma sessão nova encontrava,
+porque `.claude/` era gitignorada e estava vazia. Foi corrigido.
+
+O mesmo defeito voltou por outra porta: as Fases 1 a 4 do rastreio saíram de
+branches `cursor/rastreio-*`, e este repositório não tinha `.cursor/rules/`. O
+processo mais elaborado deste arquivo era invisível na ferramenta onde o código
+estava sendo escrito.
+
+**Resolvido em 03/09/2026** — `.cursor/rules/` existe, com 8 arquivos:
+
+| Arquivo | Ativação | Espelha |
+|---|---|---|
+| `00-nucleo.mdc` | **sempre** | mockup antes de código (regra 3), reaproveitar (1), 3ª ocorrência (4), nada em produção sem confirmação (5), pronto = verificado (3.2) |
+| `10-reaproveitamento.mdc` | `src/**` | regra 1 + a duplicação conhecida da regra 2 |
+| `20-ui-tokens.mdc` | componentes, `index.css` | tokens da regra 1 + padrões de página (6) + toolbar/calendário (11) |
+| `30-gates.mdc` | sob demanda | regra 3.2 inteira + o "pronto" das regras 10 e 12 |
+| `40-seguranca-dados.mdc` | `supabase/**`, hooks | checklist da 3.1 + as decisões fechadas da regra 2 + branch de banco (13) |
+| `50-revisao.mdc` | sob demanda | o fluxo de 4 papéis da regra 3, adaptado — **o Cursor não tem sub-agentes**, então vira passe sequencial com passada adversarial declarada |
+| `60-mapa.mdc` | sob demanda | regra 0 |
+| `70-quando-passar-pro-claude.mdc` | **sempre** | não tem equivalente aqui — é a regra que manda o Cursor parar e devolver a tarefa quando ela exige mockup, produção, componente compartilhado, dado de produção ou varredura |
+
+**Regra.** Este arquivo é a fonte. Mudou uma regra aqui, mude o `.mdc`
+correspondente; e vice-versa. Se os dois discordarem, **este vence** e o outro
+é o que está errado.
+
+**Cuidado que já mordeu**: o `npm run doc:check` confere `docs/`, **não confere
+os `.mdc`**. O `60-mapa.mdc` subiu com "45 telas em 52 rotas" no mesmo dia em
+que a main foi para 54 — pego na revisão, não pelo gate. Número em `.mdc`
+envelhece em silêncio; prefira apontar para `docs/mapa-funcional.md` a repetir
+a contagem.
+
+## 18. String que é contrato, não nome
+
+O `trackforge-os` abre o arquivo dele com um comentário explicando por que o
+nome antigo do repositório continua no código: é prefixo das chaves de
+armazenamento local e do campo `origem` que o gateway daqui lê. Renomear apaga
+rascunho e peça produzida de quem já usa.
+
+Este repositório tem o caso gêmeo sem nenhum aviso. **`industria` é o
+identificador da frente Sanwey**, e é o que o `trackforge-os` usa para mapear
+`sanwey` ao ler `market_signals`. Conferido no código do outro lado
+(`trackforge-os/src/lib/marketSignals.ts:28-31`):
+
+```ts
+export const COMPANY_ID: Record<BrandId, string> = {
+  resibag: "resibag",
+  sanwey: "industria",
+};
+```
+
+— e a consulta é `market_signals?company_id=eq.${COMPANY_ID[brandId]}`.
+Renomear `industria` aqui não quebra nada aqui: quebra a leitura de sinais do
+outro lado, **em silêncio**, e o sintoma aparece como uma seção que
+simplesmente deixa de existir na outra ferramenta.
+
+**Regra.** Identificador que outro sistema lê não é nome, é contrato. Antes de
+renomear id de empresa, chave de agente do gateway, valor de canal de campanha,
+`action_type` ou nome de campo dentro de `custom_fields`, confira quem lê do
+outro lado e registre a decisão no comentário do próprio código. A lista atual
+do que atravessa a fronteira vive em `docs/mapa-funcional.md`.
