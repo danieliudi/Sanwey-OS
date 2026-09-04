@@ -1,7 +1,8 @@
 # Design spec — Polish / “feeling” em toda a plataforma
 
 **Data:** 2026-09-04  
-**Status:** plano para aprovação visual — **não implementar em `src/` sem ok explícito**  
+**Status:** Fases 1–2 com plano de implementação — **não começar `src/` sem ok explícito do plano**  
+**Plano:** `docs/superpowers/plans/2026-09-04-polish-feeling-fases-1-2.md`  
 **Mockups:** `docs/mockups/sanwey-os-ui/polish-visao.html` · `polish-padroes.html`  
 **Referência externa:** Worktail (vídeo Dribbble) — só motion/elevação, **não** a marca/creme/laranja  
 
@@ -230,8 +231,9 @@ Ordem pensada para **sentir o feeling cedo** sem redesenhar 47 telas de uma vez.
 - [x] Escolha §2: sombra **A curta** (Daniel 04/09 — “a sombra está boa”)
 - [x] Mockup Painel A+ com dots corrigidos
 - [x] Mockup padrões (`polish-padroes.html`)
+- [x] Plano de implementação Fases 1–2 (`docs/superpowers/plans/2026-09-04-polish-feeling-fases-1-2.md`)
 - [ ] Ok formal aos princípios §1 (minimal + reduced-motion; sem som agora)
-- [ ] Ok ao rollout §6 (Fase 1 tokens → Fase 2 Painel em `src/`)
-- [ ] Próximo: plano de implementação Fase 1 (ainda sem código de produção)
+- [ ] Ok para **executar** o plano Fases 1–2 em `src/`
+- [ ] Ok ao rollout das fases 3+ (Kanban / FilterBar / drawer) depois
 
-Depois do ok do rollout: plano de implementação por fase (não começa sozinho em `src/`).
+Depois do ok de execução: implementar task-a-task conforme o plano (não começa sozinho).
