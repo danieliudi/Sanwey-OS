@@ -13,6 +13,23 @@ import { ultimosErros } from "./error-log";
 // um vazamento silencioso pra dentro do próprio banco, que ninguém pediu.
 // Quem quiser mandar imagem manda por anexo, decidindo o que aparece.
 
+export const BUG_REPORT_MODULES = [
+  "Funil de Vendas",
+  "Explorador",
+  "Sinais",
+  "Pedidos",
+  "Catálogo",
+  "Pós-venda",
+  "Viagens & Despesas",
+  "Comex",
+  "Marketing",
+  "Compras",
+  "RH",
+  "Lista Pessoal",
+  "Chat",
+  "Outro",
+];
+
 const MODULO_POR_ROTA = {
   crm: "Funil de Vendas",
   "commercial-overview": "Funil de Vendas",
@@ -24,10 +41,15 @@ const MODULO_POR_ROTA = {
   posvenda: "Pós-venda",
   "crm-viagens": "Viagens & Despesas",
   comex: "Comex",
+  crossref: "Comex",
   marketing: "Marketing",
   "marketing-tarefas": "Marketing",
   "marketing-despesas": "Marketing",
-  entregas: "Marketing",
+  "marketing-home": "Marketing",
+  "marketing-entregas": "Marketing",
+  "marketing-solicitacoes": "Marketing",
+  "marketing-fornecedores": "Marketing",
+  "marketing-feiras": "Marketing",
   "marketing-compras": "Compras",
   "personal-tasks": "Lista Pessoal",
   chat: "Chat",

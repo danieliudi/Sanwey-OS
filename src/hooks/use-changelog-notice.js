@@ -18,6 +18,18 @@ import { CHANGELOG } from "../data/changelog";
 // plataforma, não é regra nova). Isso filtra só o TOAST — a aba "Novidades"
 // (TutoriaisView) continua mostrando o histórico completo pra quem quiser
 // ver o que mudou em outras áreas.
+//
+// Filtro por impacto no toast (04/09/2026, pedido do Daniel: toast virava
+// muro de texto em patch visual/layout): por default só `kind: "novo"`
+// interrompe. `correcao`/`ajuste` ficam na aba Novidades. Override opcional
+// `toast: true|false` no item — ver cabeçalho de changelog.js. Histórico
+// antigo sem o campo herda o default por kind (não precisa reescrever).
+function shouldShowInToast(item) {
+  if (item.toast === true) return true;
+  if (item.toast === false) return false;
+  return item.kind === "novo";
+}
+
 export function useChangelogNotice(currentUser, currentUserRoles, { skip = false } = {}) {
   const [changelogSeenMap, setChangelogSeenMap] = usePersistentState(STORAGE_KEYS.changelogSeen, {});
   const userId = currentUser?.id;
@@ -43,7 +55,9 @@ export function useChangelogNotice(currentUser, currentUserRoles, { skip = false
     if (lastSeenIdx === -1) return [];
     // Array vem mais novo primeiro — tudo ANTES do índice da última vista é
     // mais novo que ela (exclusive) até a versão atual no topo (inclusive).
-    return CHANGELOG.slice(0, lastSeenIdx).flatMap(c => c.items).filter(item => sees(item.roles));
+    return CHANGELOG.slice(0, lastSeenIdx)
+      .flatMap(c => c.items)
+      .filter(item => sees(item.roles) && shouldShowInToast(item));
   }, [skip, userId, lastSeen, currentUserRoles]);
 
   const dismiss = () => {

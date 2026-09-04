@@ -29,6 +29,11 @@ function BugCardBody({ report }) {
       <div className="text-[10.5px] mb-1.5" style={{ color: "var(--text-faint)" }}>
         👤 {report.reporter?.name || "alguém"} · {report.module || "—"} · {relativeTime(report.created_at)}
       </div>
+      {report.contexto && (
+        <div className="text-[9.5px] mb-1" style={{ color: "var(--text-faint)" }} title="Contexto técnico anexado automaticamente">
+          📎 Contexto anexado
+        </div>
+      )}
       {report.stage === "em_analise" ? (
         <span className="inline-flex text-[9.5px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--accent-tint)", color: "var(--accent)" }}>
           🤖 Em análise

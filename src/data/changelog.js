@@ -7,22 +7,58 @@
 // esse valor gravado em silêncio (ver use-changelog-notice.js) — sem ela,
 // ninguém veria os itens da 4.1.0 abaixo.
 //
-// Cada item é { kind, text, roles? } — `kind` é "novo" | "correcao" | "ajuste",
-// usado pra colorir a etiqueta na aba "Novidades" (TutoriaisView) e no toast
-// (App.jsx). Migrado de string solta pra objeto quando a aba "Novidades" foi
-// criada (30/07/2026) — antes disso, o prefixo ("Novo:"/"Correção:") vivia
-// dentro do próprio texto.
+// Cada item é { kind, text, roles?, toast? } — `kind` é "novo" | "correcao" |
+// "ajuste", usado pra colorir a etiqueta na aba "Novidades" (TutoriaisView)
+// e no toast (App.jsx). Migrado de string solta pra objeto quando a aba
+// "Novidades" foi criada (30/07/2026) — antes disso, o prefixo
+// ("Novo:"/"Correção:") vivia dentro do próprio texto.
 //
 // `roles` (opcional, adicionado 30/07/2026 a pedido do Daniel): lista de
 // cargos (mesmo vocabulário de `profiles.roles`) pra quem esse item é
 // relevante — filtra só o TOAST (use-changelog-notice.js), nunca a aba
 // "Novidades", que sempre mostra o histórico completo. Sem `roles` = item
-// global, aparece pro toast de todo mundo — esse é o padrão seguro quando a
-// mudança não é claramente de um departamento só (ex.: um campo novo num
-// formulário que qualquer pessoa da empresa preenche). admin/diretoria
-// sempre veem tudo, tenha `roles` ou não.
+// global (candidato a toast pra todo mundo, sujeito ao filtro de impacto
+// abaixo). admin/diretoria sempre passam no filtro de cargo.
+//
+// Política do TOAST (04/09/2026, pedido do Daniel — toast virava muro de
+// texto em patch visual/layout que ninguém precisa interromper o trabalho
+// pra ler). Regra 10 (CLAUDE.md) continua: toda mudança VISÍVEL entra no
+// CHANGELOG + bump de version. O que mudou é o que INTERROMPE via toast:
+//
+//   1. `kind: "novo"` → toast por default (feature que muda como a pessoa
+//      trabalha).
+//   2. `kind: "correcao"` / `"ajuste"` → NÃO toastam por default; ficam só
+//      na aba Novidades. Patch de layout, texto, borda, bug cosmético = isto.
+//   3. Override explícito: `toast: true` num ajuste/correção de alto impacto
+//      (ex.: "Recrutamento voltou a abrir") OU `toast: false` num "novo"
+//      que não precisa interromper.
+//
+// Itens antigos sem o campo `toast` herdam o default por kind — não
+// reescrever o histórico. Aba Novidades continua mostrando tudo.
 
 export const CHANGELOG = [
+  {
+    version: "4.97.4",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Reportar um problema ficou mais rápido: o formulário abre com um único campo curto, e \"Impacto\" e \"Onde\" ficam colapsados atrás de \"+ detalhes\". A Central de Bugs mostra o contexto técnico anexado no drawer.",
+      },
+      {
+        kind: "correcao",
+        text: "O sino parou de repetir o mesmo aviso a cada vez que a página recarrega — reembolso pendente e solicitação de marketing novas não voltam a aparecer em loop.",
+      },
+      {
+        kind: "ajuste",
+        text: "O aviso de \"Novidades\" no canto da tela agora só aparece quando há algo realmente novo pra usar. Correção e ajuste pequeno ficam só na aba Novidades, sem interromper o trabalho.",
+      },
+      {
+        kind: "correcao",
+        text: "Em Entregas, ao combinar um novo SLA a data do Prazo atualiza junto — o card deixa de ficar marcado como atrasado pela data antiga.",
+        roles: ["marketing", "gerente_marketing", "agencia", "admin", "diretoria"],
+      },
+    ],
+  },
   {
     version: "4.97.3",
     items: [

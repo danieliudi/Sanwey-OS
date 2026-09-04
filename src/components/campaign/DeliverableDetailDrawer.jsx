@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { NEUTRAL, marketingUnitLabel } from "../../constants/companies";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { isOverdueDeliverable } from "../../utils/deliverable-status";
 import { stageTextColor } from "../../utils/stage-colors";
 import { useDeliverableAttachments }  from "../../hooks/use-deliverable-attachments";
@@ -437,7 +437,13 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     return () => {
       if (customDebounceRef.current) { clearTimeout(customDebounceRef.current); customDebounceRef.current = null; }
       if (Object.keys(customDraftRef.current).length > 0) {
-        onUpdate(item.id, { customFields: { ...(item.customFields || {}), ...customDraftRef.current } });
+        const draft = customDraftRef.current;
+        const patch = { customFields: { ...(item.customFields || {}), ...draft } };
+        // sla_combinado espelha a coluna deadline (Kanban/filtro/calendário).
+        if ("sla_combinado" in draft && draft.sla_combinado) {
+          patch.deadline = localDateInputToISOString(String(draft.sla_combinado));
+        }
+        onUpdate(item.id, patch);
       }
       if (assigneeDebounceRef.current) { clearTimeout(assigneeDebounceRef.current); assigneeDebounceRef.current = null; }
     };
@@ -454,8 +460,16 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     customDebounceRef.current = setTimeout(() => {
       const it = itemRef.current;
-      const merged = { ...(it.customFields || {}), ...customDraftRef.current };
-      onUpdate(it.id, { customFields: merged });
+      const draft = customDraftRef.current;
+      const merged = { ...(it.customFields || {}), ...draft };
+      const patch = { customFields: merged };
+      // sla_combinado espelha a coluna deadline (Kanban/filtro/calendário).
+      // Limpar o SLA não apaga o prazo — o usuário pode ter um deadline
+      // legado que ainda vale pra overdue/agenda.
+      if ("sla_combinado" in draft && draft.sla_combinado) {
+        patch.deadline = localDateInputToISOString(String(draft.sla_combinado));
+      }
+      onUpdate(it.id, patch);
       customDebounceRef.current = null;
     }, 600);
   };

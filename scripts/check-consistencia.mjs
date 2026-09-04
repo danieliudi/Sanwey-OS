@@ -46,7 +46,10 @@ function arquivosFonte(dir, acc = []) {
 
 const violacoes = [];
 function achado(regra, arquivo, linha, detalhe) {
-  violacoes.push({ regra, arquivo: relative(RAIZ, arquivo), linha, detalhe });
+  // Sempre `/` — relative() no Windows devolve `\`, e a baseline (gravada
+  // em Linux/CI) usa `/`. Sem normalizar, TODA violação conhecida vira
+  // "nova" no prebuild do Windows (chave não casa → teto 0).
+  violacoes.push({ regra, arquivo: relative(RAIZ, arquivo).replace(/\\/g, "/"), linha, detalhe });
 }
 const linhaDe = (texto, idx) => texto.slice(0, idx).split("\n").length;
 
