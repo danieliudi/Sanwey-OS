@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.2",
+    items: [
+      { kind: "correcao", text: "Em Contas · ABM, a conversão por conta agora mostra de quantas contas ela saiu. Com poucas contas decididas ela aparece como fração (2/3) em vez de porcentagem — uma conta ganha e nenhuma perdida exibia \"100%\", que era verdade e enganava ao mesmo tempo." },
+    ],
+  },
+  {
     version: "4.97.1",
     items: [
       {

@@ -81,6 +81,16 @@ export function collapseLeadsToAccounts(leads, { wonStages, lostStages } = {}) {
   return accounts;
 }
 
+// Origem do número (regra 14 do CLAUDE.md): conta uma linha por empresa
+// compradora, classificada em `outcome` por `collapseLeadsToAccounts` a partir
+// de `wonStages`/`lostStages`. `accountConversion` é **ganhas ÷ decididas**,
+// onde decididas = ganhas + perdidas — as ABERTAS ficam de fora do
+// denominador de propósito (ainda não decidiram nada), e por isso quem exibe
+// o número tem que mostrar quantas ficaram de fora.
+//
+// Devolve `null` (não `0`) quando não há nenhuma conta decidida: 0% e
+// "não dá pra saber" são coisas diferentes, e quem renderiza precisa
+// distinguir as duas.
 export function accountMetrics(accounts) {
   const list = accounts || [];
   const won = list.filter(a => a.outcome === "won").length;

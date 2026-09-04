@@ -30,6 +30,17 @@ function pct(v) {
   return v == null ? "—" : `${Math.round(v * 100)}%`;
 }
 
+// Regra 14 do CLAUDE.md: percentual não aparece sem denominador, e abaixo de um
+// mínimo definido POR TELA mostra a contagem em vez do percentual. Com 1 conta
+// ganha e nenhuma perdida, "100%" é verdadeiro e enganoso ao mesmo tempo — e
+// este cartão vai pra diretoria.
+//
+// 5 é escolha, não cálculo: é o menor número em que um ponto percentual ainda
+// significa alguma coisa (1/5 = 20%, 2/5 = 40%). Abaixo disso a fração é mais
+// honesta que a porcentagem. Se o volume crescer, subir esse piso é ajuste de
+// uma linha.
+const MIN_DECIDIDAS_PARA_PERCENTUAL = 5;
+
 function thStyle(i, last) {
   return {
     fontSize: 10,
@@ -105,6 +116,32 @@ export function AbmAccountsView({
   }, [accounts, search, clientsById]);
 
   const totals = useMemo(() => accountMetrics(filtered), [filtered]);
+
+  // Regra 14 do CLAUDE.md, as tres exigencias no mesmo lugar:
+  // 1. origem — accountMetrics() documenta o calculo (account-collapse.js);
+  // 2. denominador visivel — "X de Y decididas" no sublabel, sempre;
+  // 3. o que ficou de fora, contado — as abertas nao entram no denominador,
+  //    entao aparecem rotuladas como fora da conta.
+  // Abaixo do minimo, exibe a fracao no lugar do percentual.
+  const conversao = useMemo(() => {
+    const ganhas = totals.wonAccountCount;
+    const decididas = ganhas + totals.lostAccountCount;
+    const abertas = totals.openAccountCount;
+    if (decididas === 0) {
+      if (abertas === 0) return { valor: "—", sublabel: "nenhuma conta" };
+      return {
+        valor: "—",
+        sublabel: abertas === 1 ? "1 conta aberta, nenhuma decidida" : `${abertas} contas abertas, nenhuma decidida`,
+      };
+    }
+    const base = `${ganhas} de ${decididas} ${decididas === 1 ? "decidida" : "decididas"}`;
+    const fora = abertas === 0 ? "" : ` · ${abertas === 1 ? "1 aberta fora da conta" : `${abertas} abertas fora da conta`}`;
+    return {
+      valor: decididas >= MIN_DECIDIDAS_PARA_PERCENTUAL ? pct(totals.accountConversion) : `${ganhas}/${decididas}`,
+      sublabel: base + fora,
+    };
+  }, [totals]);
+
   const withCommittee = filtered.filter(a => (committeeCounts[a.clientId]?.active || 0) > 0).length;
 
   const contentCampaigns = (campaigns || []).filter(c => c.channel === "Conteúdo" || c.channel === "Digital");
@@ -133,7 +170,13 @@ export function AbmAccountsView({
         <>
           <StatCardGrid desktopClassName="md:grid-cols-4">
             <StatCard icon={Building2} value={totals.accountCount} label="Contas" sublabel={`${totals.touchCount} toques`} />
-            <StatCard icon={Users} value={pct(totals.accountConversion)} label="Conversão por conta" sublabel={`${totals.wonAccountCount} ganhas · ${totals.openAccountCount} abertas`} />
+            <StatCard
+              icon={Users}
+              value={conversao.valor}
+              label="Conversão por conta"
+              sublabel={conversao.sublabel}
+              tooltip="Ganhas ÷ decididas (ganhas + perdidas). Contas ainda abertas não entram no denominador."
+            />
             <StatCard icon={Gauge} value={totals.avgFit} label="Fit médio" sublabel="fórmula do Funil de Vendas" tooltip="Pontuação determinística (segmento, valor, recência). Sem IA." />
             <StatCard icon={Users} value={withCommittee} label="Com comitê" sublabel="pelo menos 1 contato ativo" />
           </StatCardGrid>
