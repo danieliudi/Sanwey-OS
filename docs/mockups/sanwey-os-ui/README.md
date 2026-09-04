@@ -14,9 +14,11 @@ Pacote HTML **navegável** para comparar UI atual, polish incremental e shells n
 |---|---|
 | `index.html` | Hub (comece aqui) |
 | `atual.html` | Como está hoje |
-| `polish-visao.html` | **Shell atual** + Painel Executivo modernizado (sombras, stagger, gráficos, tooltips) |
-| `nova.html` | Proposta · menu em cima (recolhível) |
-| `nova-lateral.html` | Proposta · menu lateral (some + reflow) |
+| `polish-visao.html` | Shell atual + Painel modernizado |
+| `polish-padroes.html` | Kanban / filtros / dropdown / Config com motion |
+| `nova.html` | Proposta · menu em cima |
+| `nova-lateral.html` | Proposta · menu lateral |
+| `../design-spec-polish-feeling.md` | Plano de polish em todas as páginas |
 | `dashboard-spec.json` | Tokens da proposta “nova UI” |
 | `reference.png` | Referência visual original |
 
