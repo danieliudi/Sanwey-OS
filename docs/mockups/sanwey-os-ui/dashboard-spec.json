@@ -1,0 +1,334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "metadata": {
+    "project": "sanwey-os-dashboard",
+    "version": "2.0.0",
+    "brand": "Sanwey Enterprise Intelligence",
+    "description": "Especificação técnica contratual de design tokens, layout e dados para renderização do Sanwey OS."
+  },
+  "design_system": {
+    "brand_palette_60_30_10": {
+      "60_fundo_absoluto": "#F9F5F1",
+      "30_estrutura_textos": "#2C2C2B",
+      "apoio_divisorias_bordas": "#E5E0DA",
+      "10_foco_cirurgico": "#B62D2C",
+      "premium_black": "#0A0A0A"
+    },
+    "colors": {
+      "canvas_background": "#F9F5F1",
+      "surface_card": "#FFFFFF",
+      "surface_muted": "#F4EFEA",
+      "border_card": "#E5E0DA",
+      "border_subtle": "#EFECE6",
+      "accent_primary": "#B62D2C",
+      "accent_primary_soft": "rgba(182, 45, 44, 0.08)",
+      "accent_secondary_green": "#C8E6C9",
+      "accent_terracotta_soft": "rgba(182, 45, 44, 0.12)",
+      "nav_active_pill": "#2C2C2B",
+      "tooltip_dark": "#0A0A0A",
+      "text_primary": "#2C2C2B",
+      "text_secondary": "#595856",
+      "text_muted": "#8C877D"
+    },
+    "border_radius": {
+      "card": "24px",
+      "pill": "9999px",
+      "sub_element": "12px"
+    },
+    "box_shadow": {
+      "card": "0px 4px 20px rgba(44, 44, 43, 0.03)",
+      "tooltip": "0px 8px 16px rgba(10, 10, 10, 0.12)"
+    },
+    "typography": {
+      "font_family": "Inter, system-ui, sans-serif",
+      "title_size": "24px",
+      "metric_size": "32px",
+      "body_size": "14px",
+      "caption_size": "12px"
+    }
+  },
+  "layout_structure": {
+    "container": "max-w-[1440px] mx-auto p-6 md:p-8 space-y-6 bg-[#F9F5F1]",
+    "sections": {
+      "top_bar": "flex items-center justify-between w-full mb-6",
+      "header": "flex items-center justify-between w-full mb-6",
+      "kpi_grid": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
+      "charts_grid": "grid grid-cols-1 lg:grid-cols-2 gap-4",
+      "widgets_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+    }
+  },
+  "app": {
+    "name": "sanwey OS",
+    "tagline": "Enterprise Intelligence",
+    "top_navigation": {
+      "menu_items": [
+        { "id": "visao_geral", "label": "Visão Geral", "active": true },
+        { "id": "comercial", "label": "Comercial", "has_dropdown": false, "active": false },
+        { "id": "marketing", "label": "Marketing", "has_dropdown": false, "active": false },
+        { "id": "rh_pessoas", "label": "RH / Pessoas", "has_dropdown": false, "active": false },
+        { "id": "configuracoes", "label": "Configurações", "has_dropdown": false, "active": false }
+      ],
+      "quick_actions": {
+        "search": { "placeholder": "Buscar lead, campanha, funcionário...", "shortcut": "Ctrl K" },
+        "notifications": { "unread_count": 15 },
+        "profile": {
+          "initials": "DY",
+          "name": "Daniel Iudi Yano",
+          "role": "Head Executivo"
+        }
+      }
+    }
+  },
+  "header": {
+    "greeting": "Bom dia, Daniel!",
+    "subtitle": "Painel integrado de operações, pendências críticas e marketing",
+    "brand_filter": {
+      "current": "Todas",
+      "options": ["Todas", "Sanwey", "Resibag"]
+    },
+    "date_filter": {
+      "type": "range_picker",
+      "value": "04 Set 2026"
+    }
+  },
+  "kpi_cards": [
+    {
+      "id": "urgentes_agora",
+      "title": "URGENTES AGORA",
+      "value": "5",
+      "subtitle": "Ação imediata necessária",
+      "theme_variant": "card_accent_red",
+      "bg_color": "#B62D2C",
+      "text_color": "#FFFFFF",
+      "visualization_type": "alert_badge_icon",
+      "has_external_link": true
+    },
+    {
+      "id": "campanhas_ativas",
+      "title": "CAMPANHAS ATIVAS",
+      "value": "3",
+      "subtitle": "+100% vs mês anterior",
+      "theme_variant": "card_standard_white",
+      "bg_color": "#FFFFFF",
+      "change": { "direction": "up", "color": "#10B981" },
+      "visualization_type": "bar_mini_indicator",
+      "visualization_meta": {
+        "bars": [
+          { "height": 35, "color": "#93C5FD" },
+          { "height": 60, "color": "#60A5FA" },
+          { "height": 95, "color": "#10B981" }
+        ]
+      },
+      "has_external_link": true
+    },
+    {
+      "id": "orcamento_consumido",
+      "title": "ORÇAMENTO CONSUMIDO",
+      "value": "R$ 44k",
+      "subtitle": "73% do budget trimestral",
+      "theme_variant": "card_standard_white",
+      "bg_color": "#FFFFFF",
+      "visualization_type": "continuous_semi_circle_gauge",
+      "visualization_meta": {
+        "metric": "73%",
+        "fill_percentage": 73,
+        "track_color": "#E5E0DA",
+        "progress_color": "#B62D2C"
+      },
+      "has_external_link": true
+    },
+    {
+      "id": "entregas_sla",
+      "title": "ENTREGAS & SLA",
+      "value": "09",
+      "subtitle": "Concluídas • 11% SLA",
+      "theme_variant": "card_standard_white",
+      "bg_color": "#FFFFFF",
+      "visualization_type": "dot_matrix",
+      "visualization_meta": {
+        "rows": 4,
+        "cols": 6,
+        "active_color": "#B62D2C",
+        "inactive_color": "#E5E0DA"
+      },
+      "has_external_link": true
+    }
+  ],
+  "charts": [
+    {
+      "id": "atividade_mensal",
+      "title": "Atividade Mensal",
+      "description": "Entregas e marcos executados por mês",
+      "type": "custom_bar_chart",
+      "filter": {
+        "current": "Este Ano",
+        "options": ["Este Ano", "Último Trimestre", "Mês Anterior"]
+      },
+      "y_axis": {
+        "scale": "percentage",
+        "ticks": ["0%", "25%", "50%", "75%", "100%"]
+      },
+      "interactive": {
+        "default_color": "#C8E6C9",
+        "highlight_color": "#B62D2C",
+        "background_track_color": "#F4EFEA",
+        "active_tooltip": { "text": "78%", "background": "#0A0A0A", "color": "#FFFFFF" }
+      },
+      "legend": [
+        { "label": "Mês Corrente", "color": "#B62D2C" },
+        { "label": "Metas Batidas", "color": "#C8E6C9" },
+        { "label": "SLA Médio: 94.2%", "color": "#8C877D" }
+      ],
+      "data": [
+        { "month": "Jan", "value": 68, "capacity": 100, "highlighted": false },
+        { "month": "Fev", "value": 72, "capacity": 100, "highlighted": false },
+        { "month": "Mar", "value": 64, "capacity": 100, "highlighted": false },
+        { "month": "Abr", "value": 60, "capacity": 100, "highlighted": false },
+        { "month": "Mai", "value": 78, "capacity": 100, "highlighted": true },
+        { "month": "Jun", "value": 70, "capacity": 100, "highlighted": false },
+        { "month": "Jul", "value": 65, "capacity": 100, "highlighted": false },
+        { "month": "Ago", "value": 69, "capacity": 100, "highlighted": false },
+        { "month": "Set", "value": 62, "capacity": 100, "highlighted": false }
+      ]
+    },
+    {
+      "id": "distribuicao_por_canal",
+      "title": "Distribuição por Canal",
+      "description": "Alocação e tração de lead por vertente operacional",
+      "type": "smooth_area_chart",
+      "filter": {
+        "current": "Todos os Canais",
+        "options": ["Todos os Canais", "Eventos", "Conteúdo & Social", "Feiras Técnicas", "Parcerias", "Institucional"]
+      },
+      "interactive": {
+        "curve_type": "monotone",
+        "stroke_color": "#B62D2C",
+        "stroke_width": 2.5,
+        "area_gradient_start": "rgba(182, 45, 44, 0.12)",
+        "area_gradient_end": "rgba(182, 45, 44, 0.00)",
+        "grid_lines_vertical": true,
+        "grid_line_color": "#E5E0DA"
+      },
+      "data": [
+        { "channel": "Eventos", "volume": 32 },
+        { "channel": "Conteúdo & Social", "volume": 48 },
+        { "channel": "Feiras Técnicas", "volume": 78 },
+        { "channel": "Parcerias", "volume": 24 },
+        { "channel": "Institucional", "volume": 85 }
+      ]
+    }
+  ],
+  "widget_panels": {
+    "entregas_atrasadas": {
+      "id": "entregas_atrasadas",
+      "title": "Entregas Atrasadas",
+      "status_color": "#B62D2C",
+      "has_external_link": true,
+      "footer_action": { "label": "Notificar Líderes", "action_type": "button_action" },
+      "records": [
+        {
+          "id": "ea1",
+          "title": "Catálogo Linha Pesada",
+          "responsible": "Resp: Marketing Industrial",
+          "delay_tag": "-4 dias",
+          "tag_variant": "badge_danger_soft"
+        },
+        {
+          "id": "ea2",
+          "title": "Revisão Contratual Resibag 2026",
+          "responsible": "Resp: Diretoria Operacional",
+          "delay_tag": "-2 dias",
+          "tag_variant": "badge_danger_soft"
+        },
+        {
+          "id": "ea3",
+          "title": "Setup Stand Feira Plast Show",
+          "responsible": "Resp: Eventos & Branding",
+          "delay_tag": "-1 dia",
+          "tag_variant": "badge_danger_soft"
+        }
+      ]
+    },
+    "presas_em_revisao": {
+      "id": "presas_em_revisao",
+      "title": "Presas em Revisão",
+      "status_color": "#F59E0B",
+      "has_external_link": true,
+      "footer_action": { "label": "Painel de Aprovações", "action_type": "link" },
+      "records": [
+        {
+          "id": "pr1",
+          "title": "Vídeo Institucional 40 Anos",
+          "responsible": "Daniel Iudi • Executivo",
+          "avatar_initials": "DY",
+          "avatar_bg": "#2C2C2B",
+          "status_badge": "Aguardando",
+          "badge_style": "text-zinc-700 bg-zinc-100"
+        },
+        {
+          "id": "pr2",
+          "title": "Proposta Big Bag Granel",
+          "responsible": "Comercial • B2B",
+          "avatar_initials": "CR",
+          "avatar_bg": "#2563EB",
+          "status_badge": "Em análise",
+          "badge_style": "text-amber-700 bg-amber-50"
+        },
+        {
+          "id": "pr3",
+          "title": "Peças de Campanha LinkedIn",
+          "responsible": "Mariana K. • Designer",
+          "avatar_initials": "MK",
+          "avatar_bg": "#7C3AED",
+          "status_badge": "Revisão final",
+          "badge_style": "text-emerald-700 bg-emerald-50"
+        }
+      ]
+    },
+    "aprovacoes_financeiras": {
+      "id": "aprovacoes_financeiras",
+      "title": "Aprovações Financeiras",
+      "status_color": "#10B981",
+      "has_external_link": true,
+      "footer_action": { "label": "Lote de Pagamento", "action_type": "link", "summary": "Total em fila: R$ 44.550" },
+      "records": [
+        {
+          "id": "af1",
+          "title": "Impressão Gráfica Catálogos",
+          "value": "R$ 14.200",
+          "supplier": "Gráfica Alfa",
+          "actions": [
+            { "type": "approve", "label": "Aprovar", "style": "bg-[#B62D2C] text-white hover:bg-[#9E2524]" },
+            { "type": "reject", "label": "Recusar", "style": "text-[#2C2C2B] hover:bg-gray-100" }
+          ]
+        },
+        {
+          "id": "af2",
+          "title": "Stand PlastShow 2026 - Sinal",
+          "value": "R$ 28.500",
+          "supplier": "Montadora Prime",
+          "actions": [
+            { "type": "approve", "label": "Aprovar", "style": "bg-[#B62D2C] text-white hover:bg-[#9E2524]" },
+            { "type": "reject", "label": "Recusar", "style": "text-[#2C2C2B] hover:bg-gray-100" }
+          ]
+        },
+        {
+          "id": "af3",
+          "title": "Licença Software BI Cloud",
+          "value": "R$ 1.850",
+          "supplier": "Cloud SaaS",
+          "actions": [
+            { "type": "approve", "label": "Aprovar", "style": "bg-[#B62D2C] text-white hover:bg-[#9E2524]" },
+            { "type": "reject", "label": "Recusar", "style": "text-[#2C2C2B] hover:bg-gray-100" }
+          ]
+        }
+      ]
+    }
+  },
+  "footer": {
+    "system_status": "Serviços Sanwey OS 100% operacionais",
+    "last_sync": "Sincronizado há 2 min",
+    "links": ["Segurança & Conformidade", "Auditoria de Logs"],
+    "version": "v4.8.2-prod"
+  }
+}

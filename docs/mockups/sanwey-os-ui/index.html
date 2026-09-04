@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sanwey OS — Mockup UI (shell + 4 telas)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --canvas: #F9F5F1;
+      --surface: #FFFFFF;
+      --surface-muted: #F4EFEA;
+      --border: #E5E0DA;
+      --border-subtle: #EFECE6;
+      --accent: #B62D2C;
+      --accent-soft: rgba(182, 45, 44, 0.08);
+      --green-soft: #C8E6C9;
+      --nav-active: #2C2C2B;
+      --ink: #2C2C2B;
+      --ink-2: #595856;
+      --ink-3: #8C877D;
+      --black: #0A0A0A;
+      --ok: #10B981;
+      --warn: #F59E0B;
+      --radius-card: 24px;
+      --radius-sub: 12px;
+      --shadow-card: 0px 4px 20px rgba(44, 44, 43, 0.03);
+      --shadow-tip: 0px 8px 16px rgba(10, 10, 10, 0.12);
+      --font: Inter, system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--canvas);
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, select { font-family: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    .app {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px 32px 48px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* —— Top bar —— */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--accent);
+      display: grid;
+      place-items: center;
+      color: #fff;
+    }
+    .brand-mark svg { display: block; }
+    .brand-text { line-height: 1.1; }
+    .brand-name {
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+    .brand-name span {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 4px;
+      margin-left: 4px;
+      vertical-align: 2px;
+      letter-spacing: 0.04em;
+    }
+    .brand-tag {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--ink-3);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 4px;
+      box-shadow: var(--shadow-card);
+    }
+    .nav-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 0;
+      background: transparent;
+      color: var(--ink-2);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 14px;
+      border-radius: 9999px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s, color .15s;
+    }
+    .nav-item:hover { background: var(--surface-muted); color: var(--ink); }
+    .nav-item.active {
+      background: var(--nav-active);
+      color: #fff;
+    }
+    .nav-item svg { width: 15px; height: 15px; opacity: .85; }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      color: var(--ink-2);
+      position: relative;
+    }
+    .icon-btn .badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 9999px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--canvas);
+    }
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 10px 4px 4px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 9999px;
+      background: var(--black);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .profile-meta { line-height: 1.15; }
+    .profile-name { font-size: 13px; font-weight: 600; }
+    .profile-role { font-size: 11px; color: var(--ink-3); }
+
+    /* —— Page header —— */
+    .page-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .greeting h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .greeting h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    .greeting p {
+      margin: 6px 0 0;
+      color: var(--ink-2);
+      font-size: 14px;
+    }
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .seg {
+      display: inline-flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 3px;
+    }
+    .seg button {
+      border: 0;
+      background: transparent;
+      padding: 7px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-2);
+      cursor: pointer;
+    }
+    .seg button.active {
+      background: var(--nav-active);
+      color: #fff;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    .subnav {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 4px 0 0;
+    }
+    .subnav.visible { display: flex; }
+    .subnav button {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--ink-2);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: 9999px;
+      cursor: pointer;
+    }
+    .subnav button:hover { background: var(--surface-muted); color: var(--ink); }
+    .subnav button.active {
+      background: var(--surface);
+      border-color: var(--border);
+      color: var(--ink);
+      box-shadow: var(--shadow-card);
+    }
+
+    /* —— Screens —— */
+    .screen { display: none; flex-direction: column; gap: 16px; }
+    .screen.active { display: flex; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+    }
+
+    /* KPI */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .kpi {
+      padding: 20px 22px;
+      min-height: 128px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi.accent {
+      background: var(--accent);
+      border-color: transparent;
+      color: #fff;
+    }
+    .kpi-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      opacity: .75;
+    }
+    .kpi.accent .kpi-label { opacity: .9; color: #fff; }
+    .kpi-value {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-top: 10px;
+    }
+    .kpi-sub {
+      font-size: 13px;
+      color: var(--ink-2);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .kpi.accent .kpi-sub { color: rgba(255,255,255,.9); }
+    .kpi-sub.up { color: var(--ok); font-weight: 600; }
+    .kpi-viz {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+    }
+    .mini-bars { display: flex; align-items: flex-end; gap: 4px; height: 42px; }
+    .mini-bars span {
+      width: 8px;
+      border-radius: 3px 3px 0 0;
+      display: block;
+    }
+    .dot-matrix {
+      display: grid;
+      grid-template-columns: repeat(6, 7px);
+      gap: 4px;
+    }
+    .dot-matrix i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--border);
+      display: block;
+    }
+    .dot-matrix i.on { background: var(--accent); }
+    .gauge {
+      width: 56px;
+      height: 28px;
+      position: relative;
+    }
+    .gauge svg { width: 56px; height: 32px; display: block; }
+    .gauge-pct {
+      position: absolute;
+      left: 50%;
+      bottom: -2px;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .ext-link {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.25);
+      background: rgba(255,255,255,.12);
+      color: inherit;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .kpi:not(.accent) .ext-link {
+      border-color: var(--border);
+      background: var(--surface-muted);
+      color: var(--ink-3);
+    }
+
+    /* Charts */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 14px;
+    }
+    .panel { padding: 22px 24px; }
+    .panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .panel-title { font-size: 16px; font-weight: 700; margin: 0; }
+    .panel-desc { margin: 4px 0 0; font-size: 12px; color: var(--ink-3); }
+    .selectish {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 9999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      color: var(--ink-2);
+      cursor: pointer;
+    }
+    .bar-chart {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 8px;
+      height: 220px;
+    }
+    .y-axis {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--ink-3);
+      padding-bottom: 22px;
+      text-align: right;
+    }
+    .bars {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 10px;
+      align-items: end;
+      height: 100%;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+      position: relative;
+    }
+    .bar-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+      gap: 8px;
+      position: relative;
+    }
+    .bar-track {
+      width: 100%;
+      max-width: 34px;
+      flex: 1;
+      background: var(--surface-muted);
+      border-radius: 8px 8px 4px 4px;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+    }
+    .bar-fill {
+      width: 100%;
+      border-radius: 8px 8px 0 0;
+      background: repeating-linear-gradient(
+        -45deg,
+        #C8E6C9,
+        #C8E6C9 4px,
+        #b7dcb9 4px,
+        #b7dcb9 8px
+      );
+    }
+    .bar-fill.hot {
+      background: var(--accent);
+    }
+    .bar-label {
+      font-size: 11px;
+      color: var(--ink-3);
+      font-weight: 500;
+      height: 18px;
+    }
+    .tip {
+      position: absolute;
+      top: 8%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--black);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 9999px;
+      box-shadow: var(--shadow-tip);
+      white-space: nowrap;
+      z-index: 2;
+    }
+    .tip::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -5px;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--black);
+      border-bottom: 0;
+    }
+    .legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--ink-2);
+      flex-wrap: wrap;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .area-chart {
+      height: 220px;
+      position: relative;
+    }
+    .area-chart svg { width: 100%; height: 100%; display: block; }
+    .x-labels {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--ink-3);
+      text-align: center;
+    }
+
+    /* Widget panels */
+    .widgets-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .widget { padding: 20px 22px; display: flex; flex-direction: column; min-height: 280px; }
+    .widget-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .widget-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .list { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .list-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 12px;
+      border-radius: var(--radius-sub);
+      background: var(--surface-muted);
+    }
+    .list-main { min-width: 0; }
+    .list-title {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .list-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 9px;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+    .tag-danger { background: rgba(182,45,44,.1); color: var(--accent); }
+    .tag-warn { background: #FFF7ED; color: #C2410C; }
+    .tag-muted { background: #F4F4F5; color: #3F3F46; }
+    .tag-amber { background: #FFFBEB; color: #B45309; }
+    .tag-ok { background: #ECFDF5; color: #047857; }
+    .person {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+    .person .av {
+      width: 30px;
+      height: 30px;
+      border-radius: 9999px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .money-row { align-items: flex-start; background: transparent; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; }
+    .money-row:last-of-type { border-bottom: 0; }
+    .money { font-size: 14px; font-weight: 700; }
+    .actions { display: flex; gap: 6px; margin-top: 8px; }
+    .btn {
+      border: 0;
+      border-radius: 9999px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--border);
+    }
+    .widget-foot {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .widget-foot .muted { color: var(--ink-3); font-weight: 500; font-size: 12px; }
+
+    /* Board / table shared */
+    .board-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .board-title-block h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .board-title-block p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--ink-2);
+    }
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .view-toggle {
+      display: inline-flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 3px;
+    }
+    .view-toggle button {
+      border: 0;
+      background: transparent;
+      padding: 7px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-2);
+      cursor: pointer;
+    }
+    .view-toggle button.active {
+      background: var(--nav-active);
+      color: #fff;
+    }
+    .filter-select {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 9999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--ink-2);
+    }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 9999px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .btn-accent {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 0;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 9999px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(182, 45, 44, 0.22);
+    }
+
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(200px, 1fr));
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .kanban-4 { grid-template-columns: repeat(4, minmax(220px, 1fr)); }
+    .column {
+      background: var(--surface-muted);
+      border-radius: 18px;
+      padding: 12px;
+      min-height: 420px;
+    }
+    .col-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding: 2px 4px;
+    }
+    .col-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .col-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .col-count {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ink-3);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 2px 8px;
+    }
+    .k-card {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow-card);
+      cursor: pointer;
+    }
+    .k-card:hover { border-color: #d9d2c9; }
+    .k-title {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin: 0 0 8px;
+    }
+    .k-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .k-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .k-value { font-size: 12px; font-weight: 700; color: var(--ink); }
+    .k-owner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--ink-3);
+    }
+    .k-owner .av {
+      width: 22px;
+      height: 22px;
+      border-radius: 9999px;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+      display: grid;
+      place-items: center;
+    }
+
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+    .table-filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      align-items: center;
+    }
+    .search-field {
+      flex: 1;
+      min-width: 200px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 9px 14px;
+      background: var(--canvas);
+      color: var(--ink-3);
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-muted);
+    }
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--ink);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: 0; }
+    tr:hover td { background: rgba(249, 245, 241, 0.6); }
+    .emp {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .emp .av {
+      width: 32px;
+      height: 32px;
+      border-radius: 9999px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+    }
+    .emp strong { display: block; font-size: 13px; }
+    .emp span { font-size: 11px; color: var(--ink-3); }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .stat-mini {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow-card);
+    }
+    .stat-mini .l { font-size: 11px; color: var(--ink-3); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+    .stat-mini .v { font-size: 24px; font-weight: 800; margin-top: 4px; letter-spacing: -0.03em; }
+
+    .footer-bar {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-top: 8px;
+      font-size: 12px;
+      color: var(--ink-3);
+    }
+    .footer-bar .ok-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ok);
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .footer-links { display: flex; gap: 16px; align-items: center; }
+    .footer-links a:hover { color: var(--ink); }
+
+    .mock-banner {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--black);
+      color: #fff;
+      font-size: 12px;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .mock-banner strong { color: #FCA5A5; }
+    .mock-banner a { color: #fff; text-decoration: underline; opacity: .85; }
+
+    @media (max-width: 1100px) {
+      .kpi-grid, .widgets-grid, .stats-row { grid-template-columns: 1fr 1fr; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .nav-pill { display: none; }
+      .profile-meta { display: none; }
+    }
+    @media (max-width: 720px) {
+      .app { padding: 16px; }
+      .kpi-grid, .widgets-grid, .stats-row { grid-template-columns: 1fr; }
+      .kanban, .kanban-4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    <div>Mockup <strong>sanwey OS UI</strong> — shell + 4 telas · não é o app de produção</div>
+    <div><a href="./reference.png" target="_blank">referência visual</a> · <a href="./dashboard-spec.json" target="_blank">spec JSON</a></div>
+  </div>
+
+  <div class="app">
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M4 8h16M4 12h16M4 16h16" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">sanwey <span>OS</span></div>
+          <div class="brand-tag">Enterprise Intelligence</div>
+        </div>
+      </div>
+
+      <nav class="nav-pill" aria-label="Navegação principal">
+        <button class="nav-item active" data-area="visao" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+          Visão Geral
+        </button>
+        <button class="nav-item" data-area="comercial" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+          Comercial
+        </button>
+        <button class="nav-item" data-area="marketing" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5l16 7-16 7z"/></svg>
+          Marketing
+        </button>
+        <button class="nav-item" data-area="rh" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          RH / Pessoas
+        </button>
+        <button class="nav-item" data-area="config" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.6.9 1 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          Configurações
+        </button>
+      </nav>
+
+      <div class="top-actions">
+        <button class="icon-btn" type="button" title="Buscar (Ctrl K)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </button>
+        <button class="icon-btn" type="button" title="Notificações">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+          <span class="badge">15</span>
+        </button>
+        <div class="profile">
+          <div class="avatar">DY</div>
+          <div class="profile-meta">
+            <div class="profile-name">Daniel Iudi Yano</div>
+            <div class="profile-role">Head Executivo</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="subnav" id="subnav"></div>
+
+    <!-- ========== VISÃO GERAL ========== -->
+    <section class="screen active" id="screen-visao" data-screen="visao">
+      <div class="page-header">
+        <div class="greeting">
+          <h1>Bom dia, <em>Daniel!</em></h1>
+          <p>Painel integrado de operações, pendências críticas e marketing</p>
+        </div>
+        <div class="header-controls">
+          <div class="seg" id="brand-filter">
+            <button class="active" type="button">Todas</button>
+            <button type="button">Sanwey</button>
+            <button type="button">Resibag</button>
+          </div>
+          <div class="chip">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            04 Set 2026
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <article class="card kpi accent">
+          <div class="kpi-top">
+            <div>
+              <div class="kpi-label">URGENTES AGORA</div>
+              <div class="kpi-value">5</div>
+            </div>
+            <button class="ext-link" type="button" aria-label="Abrir">↗</button>
+          </div>
+          <div class="kpi-sub">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+            Ação imediata necessária
+          </div>
+        </article>
+
+        <article class="card kpi">
+          <div class="kpi-top">
+            <div>
+              <div class="kpi-label">CAMPANHAS ATIVAS</div>
+              <div class="kpi-value">3</div>
+            </div>
+            <button class="ext-link" type="button" aria-label="Abrir">↗</button>
+          </div>
+          <div class="kpi-sub up">↑ +100% vs mês anterior</div>
+          <div class="kpi-viz mini-bars" aria-hidden="true">
+            <span style="height:35%;background:#93C5FD"></span>
+            <span style="height:60%;background:#60A5FA"></span>
+            <span style="height:95%;background:#10B981"></span>
+          </div>
+        </article>
+
+        <article class="card kpi">
+          <div class="kpi-top">
+            <div>
+              <div class="kpi-label">ORÇAMENTO CONSUMIDO</div>
+              <div class="kpi-value">R$ 44k</div>
+            </div>
+            <button class="ext-link" type="button" aria-label="Abrir">↗</button>
+          </div>
+          <div class="kpi-sub">73% do budget trimestral</div>
+          <div class="kpi-viz gauge" aria-hidden="true">
+            <svg viewBox="0 0 56 32">
+              <path d="M4 28 A24 24 0 0 1 52 28" fill="none" stroke="#E5E0DA" stroke-width="6" stroke-linecap="round"/>
+              <path d="M4 28 A24 24 0 0 1 44 8" fill="none" stroke="#B62D2C" stroke-width="6" stroke-linecap="round"/>
+            </svg>
+            <div class="gauge-pct">73%</div>
+          </div>
+        </article>
+
+        <article class="card kpi">
+          <div class="kpi-top">
+            <div>
+              <div class="kpi-label">ENTREGAS &amp; SLA</div>
+              <div class="kpi-value">09</div>
+            </div>
+            <button class="ext-link" type="button" aria-label="Abrir">↗</button>
+          </div>
+          <div class="kpi-sub up">● Concluídas · 11% SLA</div>
+          <div class="kpi-viz dot-matrix" aria-hidden="true" id="dot-matrix"></div>
+        </article>
+      </div>
+
+      <div class="charts-grid">
+        <article class="card panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">Atividade Mensal</h3>
+              <p class="panel-desc">Entregas e marcos executados por mês</p>
+            </div>
+            <button class="selectish" type="button">Este Ano ▾</button>
+          </div>
+          <div class="bar-chart">
+            <div class="y-axis"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span></div>
+            <div class="bars" id="monthly-bars"></div>
+          </div>
+          <div class="legend">
+            <span><i class="swatch" style="background:#B62D2C"></i> Mês Corrente</span>
+            <span><i class="swatch" style="background:#C8E6C9"></i> Metas Batidas</span>
+            <span><i class="swatch" style="background:#8C877D"></i> SLA Médio: 94.2%</span>
+          </div>
+        </article>
+
+        <article class="card panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">Distribuição por Canal</h3>
+              <p class="panel-desc">Alocação e tração de lead por vertente operacional</p>
+            </div>
+            <button class="selectish" type="button">Todos os Canais ▾</button>
+          </div>
+          <div class="area-chart">
+            <svg viewBox="0 0 480 220" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="rgba(182,45,44,0.18)"/>
+                  <stop offset="100%" stop-color="rgba(182,45,44,0)"/>
+                </linearGradient>
+              </defs>
+              <g stroke="#E5E0DA" stroke-width="1">
+                <line x1="96" y1="10" x2="96" y2="190"/>
+                <line x1="192" y1="10" x2="192" y2="190"/>
+                <line x1="288" y1="10" x2="288" y2="190"/>
+                <line x1="384" y1="10" x2="384" y2="190"/>
+              </g>
+              <path d="M20,150 C70,140 90,120 116,115 C150,108 170,55 212,40 C250,28 270,150 308,160 C345,170 370,45 420,30 C450,22 465,35 470,40 L470,190 L20,190 Z" fill="url(#areaFill)"/>
+              <path d="M20,150 C70,140 90,120 116,115 C150,108 170,55 212,40 C250,28 270,150 308,160 C345,170 370,45 420,30 C450,22 465,35 470,40" fill="none" stroke="#B62D2C" stroke-width="2.5"/>
+              <g fill="#B62D2C">
+                <circle cx="20" cy="150" r="4"/><circle cx="116" cy="115" r="4"/><circle cx="212" cy="40" r="4"/><circle cx="308" cy="160" r="4"/><circle cx="420" cy="30" r="4"/>
+              </g>
+            </svg>
+          </div>
+          <div class="x-labels">
+            <span>Eventos</span><span>Conteúdo &amp; Social</span><span>Feiras Técnicas</span><span>Parcerias</span><span>Institucional</span>
+          </div>
+        </article>
+      </div>
+
+      <div class="widgets-grid">
+        <article class="card widget">
+          <div class="widget-head">
+            <h3 class="widget-title"><i class="status-dot" style="background:#B62D2C"></i> Entregas Atrasadas</h3>
+            <button class="ext-link" type="button" aria-label="Abrir">↗</button>
+          </div>
+          <div class="list">
+            <div class="list-row">
+              <div class="list-main">
+                <div class="list-title">Catálogo Linha Pesada</div>
+                <div class="list-meta">Resp: Marketing Industrial</div>
+              </div>
+              <span class="tag tag-danger">-4 dias</span>
+            </div>
+            <div class="list-row">
+              <div class="list-main">
+                <div class="list-title">Revisão Contratual Resibag 2026</div>
+                <div class="list-meta">Resp: Diretoria Operacional</div>
+              </div>
+              <span class="tag tag-danger">-2 dias</span>
+            </div>
+            <div class="list-row">
+              <div class="list-main">
+                <div class="list-title">Setup Stand Feira Plast Show</div>
+                <div class="list-meta">Resp: Eventos &amp; Branding</div>
+              </div>
+              <span class="tag tag-warn">-1 dia</span>
+            </div>
+          </div>
+          <div class="widget-foot"><span>Notificar Líderes</span></div>
+        </article>
+
+        <article class="card widget">
+          <div class="widget-head">
+            <h3 class="widget-title"><i class="status-dot" style="background:#F59E0B"></i> Presas em Revisão</h3>
+            <button class="ext-link" type="button" aria-label="Abrir">↗</button>
+          </div>
+          <div class="list">
+            <div class="list-row">
+              <div class="person">
+                <div class="av" style="background:#2C2C2B">DY</div>
+                <div class="list-main">
+                  <div class="list-title">Vídeo Institucional 40 Anos</div>
+                  <div class="list-meta">Daniel Iudi · Executivo</div>
+                </div>
+              </div>
+              <span class="tag tag-muted">Aguardando</span>
+            </div>
+            <div class="list-row">
+              <div class="person">
+                <div class="av" style="background:#2563EB">CR</div>
+                <div class="list-main">
+                  <div class="list-title">Proposta Big Bag Granel</div>
+                  <div class="list-meta">Comercial · B2B</div>
+                </div>
+              </div>
+              <span class="tag tag-amber">Em análise</span>
+            </div>
+            <div class="list-row">
+              <div class="person">
+                <div class="av" style="background:#7C3AED">MK</div>
+                <div class="list-main">
+                  <div class="list-title">Peças de Campanha LinkedIn</div>
+                  <div class="list-meta">Mariana K. · Designer</div>
+                </div>
+              </div>
+              <span class="tag tag-ok">Revisão final</span>
+            </div>
+          </div>
+          <div class="widget-foot"><span>Painel de Aprovações</span></div>
+        </article>
+
+        <article class="card widget">
+          <div class="widget-head">
+            <h3 class="widget-title"><i class="status-dot" style="background:#10B981"></i> Aprovações Financeiras</h3>
+            <button class="ext-link" type="button" aria-label="Abrir">↗</button>
+          </div>
+          <div class="list">
+            <div class="list-row money-row">
+              <div class="list-main">
+                <div class="list-title">Impressão Gráfica Catálogos</div>
+                <div class="list-meta">Gráfica Alfa</div>
+                <div class="money">R$ 14.200</div>
+                <div class="actions">
+                  <button class="btn btn-primary" type="button">Aprovar</button>
+                  <button class="btn btn-ghost" type="button">Recusar</button>
+                </div>
+              </div>
+            </div>
+            <div class="list-row money-row">
+              <div class="list-main">
+                <div class="list-title">Stand PlastShow 2026 - Sinal</div>
+                <div class="list-meta">Montadora Prime</div>
+                <div class="money">R$ 28.500</div>
+                <div class="actions">
+                  <button class="btn btn-primary" type="button">Aprovar</button>
+                  <button class="btn btn-ghost" type="button">Recusar</button>
+                </div>
+              </div>
+            </div>
+            <div class="list-row money-row">
+              <div class="list-main">
+                <div class="list-title">Licença Software BI Cloud</div>
+                <div class="list-meta">Cloud SaaS</div>
+                <div class="money">R$ 1.850</div>
+                <div class="actions">
+                  <button class="btn btn-primary" type="button">Aprovar</button>
+                  <button class="btn btn-ghost" type="button">Recusar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="widget-foot">
+            <span>Lote de Pagamento</span>
+            <span class="muted">Total em fila: R$ 44.550</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ========== FUNIL ========== -->
+    <section class="screen" id="screen-funil" data-screen="funil">
+      <div class="board-toolbar">
+        <div class="board-title-block">
+          <h2>Funil de Vendas</h2>
+          <p>Pipeline comercial · frente ativa: Sanwey + Resibag</p>
+        </div>
+        <div class="toolbar-right">
+          <div class="view-toggle">
+            <button class="active" type="button">Kanban</button>
+            <button type="button">Tabela</button>
+            <button type="button">Agenda</button>
+            <button type="button">Análise</button>
+          </div>
+          <select class="filter-select"><option>Todos os vendedores</option><option>Meus leads</option></select>
+          <button class="btn-secondary" type="button">Exportar CSV</button>
+          <button class="btn-accent" type="button">+ Novo lead</button>
+        </div>
+      </div>
+
+      <div class="kanban" id="funil-board"></div>
+    </section>
+
+    <!-- ========== ENTREGAS ========== -->
+    <section class="screen" id="screen-entregas" data-screen="entregas">
+      <div class="board-toolbar">
+        <div class="board-title-block">
+          <h2>Entregas</h2>
+          <p>Produção criativa · Marketing</p>
+        </div>
+        <div class="toolbar-right">
+          <div class="view-toggle">
+            <button class="active" type="button">Kanban</button>
+            <button type="button">Tabela</button>
+            <button type="button">Agenda</button>
+          </div>
+          <select class="filter-select"><option>Todas as campanhas</option><option>Plast Show 2026</option></select>
+          <button class="btn-secondary" type="button">Exportar CSV</button>
+          <button class="btn-accent" type="button">+ Nova entrega</button>
+        </div>
+      </div>
+
+      <div class="kanban kanban-4" id="entregas-board"></div>
+    </section>
+
+    <!-- ========== FUNCIONÁRIOS ========== -->
+    <section class="screen" id="screen-funcionarios" data-screen="funcionarios">
+      <div class="board-toolbar">
+        <div class="board-title-block">
+          <h2>Funcionários</h2>
+          <p>Cadastro e situação do time · RH</p>
+        </div>
+        <div class="toolbar-right">
+          <div class="view-toggle">
+            <button type="button">Confortável</button>
+            <button class="active" type="button">Compacta</button>
+          </div>
+          <button class="btn-secondary" type="button">Exportar CSV</button>
+          <button class="btn-accent" type="button">+ Novo colaborador</button>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-mini"><div class="l">Ativos</div><div class="v">128</div></div>
+        <div class="stat-mini"><div class="l">Em experiência</div><div class="v">7</div></div>
+        <div class="stat-mini"><div class="l">Férias hoje</div><div class="v">4</div></div>
+        <div class="stat-mini"><div class="l">Afastados</div><div class="v">2</div></div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-filters">
+          <div class="search-field">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            Buscar por nome, cargo ou unidade…
+          </div>
+          <select class="filter-select"><option>Todas as unidades</option><option>Sanwey</option><option>Resibag</option></select>
+          <select class="filter-select"><option>Todos os status</option><option>Ativo</option><option>Férias</option></select>
+          <select class="filter-select"><option>Todos os departamentos</option><option>Comercial</option><option>Marketing</option><option>RH</option></select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Cargo</th>
+              <th>Unidade</th>
+              <th>Departamento</th>
+              <th>Admissão</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="func-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== CONFIG PLACEHOLDER ========== -->
+    <section class="screen" id="screen-config" data-screen="config">
+      <div class="page-header">
+        <div class="greeting">
+          <h1>Configurações</h1>
+          <p>Fora do escopo deste pacote de mockup — só o shell.</p>
+        </div>
+      </div>
+      <div class="card panel" style="min-height:240px;display:grid;place-items:center;color:var(--ink-3)">
+        Conteúdo real fica para a próxima rodada.
+      </div>
+    </section>
+
+    <footer class="footer-bar">
+      <div>
+        <span class="ok-dot"></span>Serviços Sanwey OS 100% operacionais
+        <span style="margin-left:12px">Sincronizado há 2 min</span>
+      </div>
+      <div class="footer-links">
+        <a href="#">Segurança &amp; Conformidade</a>
+        <a href="#">Auditoria de Logs</a>
+        <span>v4.8.2-prod · mockup</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const SUBNAVS = {
+      comercial: [
+        { id: "funil", label: "Funil de Vendas", screen: "funil" },
+        { id: "clientes", label: "Clientes", screen: "funil" },
+        { id: "pedidos", label: "Pedidos", screen: "funil" },
+      ],
+      marketing: [
+        { id: "entregas", label: "Entregas", screen: "entregas" },
+        { id: "campanhas", label: "Campanhas", screen: "entregas" },
+        { id: "tarefas", label: "Tarefas", screen: "entregas" },
+      ],
+      rh: [
+        { id: "funcionarios", label: "Funcionários", screen: "funcionarios" },
+        { id: "ferias", label: "Férias", screen: "funcionarios" },
+        { id: "recrutamento", label: "Recrutamento", screen: "funcionarios" },
+      ],
+    };
+
+    const monthly = [
+      { m: "Jan", v: 68 }, { m: "Fev", v: 72 }, { m: "Mar", v: 64 },
+      { m: "Abr", v: 60 }, { m: "Mai", v: 78, hot: true }, { m: "Jun", v: 70 },
+      { m: "Jul", v: 65 }, { m: "Ago", v: 69 }, { m: "Set", v: 62 },
+    ];
+
+    function buildMonthly() {
+      const host = document.getElementById("monthly-bars");
+      host.innerHTML = monthly.map((d) => `
+        <div class="bar-col">
+          ${d.hot ? '<div class="tip">78%</div>' : ""}
+          <div class="bar-track"><div class="bar-fill ${d.hot ? "hot" : ""}" style="height:${d.v}%"></div></div>
+          <div class="bar-label">${d.m}</div>
+        </div>
+      `).join("");
+    }
+
+    function buildDots() {
+      const host = document.getElementById("dot-matrix");
+      const on = new Set([0,1,2,3,4,5,6,7,8]);
+      host.innerHTML = Array.from({ length: 24 }, (_, i) =>
+        `<i class="${on.has(i) ? "on" : ""}"></i>`
+      ).join("");
+    }
+
+    const funilCols = [
+      { name: "Qualificação", color: "#64748B", cards: [
+        { title: "Plásticos Norte · Big Bag", tags: ["Indústria", "Inbound"], value: "R$ 86k", owner: "CR", ownerBg: "#2563EB", ownerName: "Carla" },
+        { title: "AgroSul Embalagens", tags: ["Resibag"], value: "R$ 42k", owner: "RM", ownerBg: "#0F766E", ownerName: "Rafael" },
+      ]},
+      { name: "Diagnóstico", color: "#2563EB", cards: [
+        { title: "Metalúrgica Horizonte", tags: ["Sanwey"], value: "R$ 120k", owner: "DY", ownerBg: "#2C2C2B", ownerName: "Daniel" },
+        { title: "Química Vale Verde", tags: ["Feira"], value: "R$ 67k", owner: "CR", ownerBg: "#2563EB", ownerName: "Carla" },
+        { title: "LogiPack Campinas", tags: ["Indicação"], value: "R$ 31k", owner: "LS", ownerBg: "#7C3AED", ownerName: "Lucas" },
+      ]},
+      { name: "Proposta", color: "#B62D2C", cards: [
+        { title: "Granel Express · Linha Pesada", tags: ["Urgente"], value: "R$ 210k", owner: "DY", ownerBg: "#2C2C2B", ownerName: "Daniel" },
+        { title: "ResinTech 2026", tags: ["Resibag"], value: "R$ 95k", owner: "RM", ownerBg: "#0F766E", ownerName: "Rafael" },
+      ]},
+      { name: "Negociação", color: "#F59E0B", cards: [
+        { title: "Porto Seco Campinas", tags: ["Comex"], value: "R$ 154k", owner: "CR", ownerBg: "#2563EB", ownerName: "Carla" },
+      ]},
+      { name: "Fechamento", color: "#10B981", cards: [
+        { title: "BioFertil · Contrato Anual", tags: ["Ganho"], value: "R$ 78k", owner: "LS", ownerBg: "#7C3AED", ownerName: "Lucas" },
+      ]},
+    ];
+
+    const entregasCols = [
+      { name: "Briefing", color: "#64748B", cards: [
+        { title: "Carrossel LinkedIn · Feira", tags: ["Social"], value: "Prazo 12/09", owner: "MK", ownerBg: "#7C3AED", ownerName: "Mariana" },
+        { title: "Roteiro vídeo 40 anos", tags: ["Institucional"], value: "Prazo 18/09", owner: "DY", ownerBg: "#2C2C2B", ownerName: "Daniel" },
+      ]},
+      { name: "Produção", color: "#2563EB", cards: [
+        { title: "Catálogo Linha Pesada", tags: ["Atrasado", "-4d"], value: "Prazo 01/09", owner: "MK", ownerBg: "#7C3AED", ownerName: "Mariana" },
+        { title: "Banner stand Plast Show", tags: ["Evento"], value: "Prazo 20/09", owner: "JP", ownerBg: "#EA580C", ownerName: "João" },
+        { title: "Peças campanha Resibag", tags: ["Campanha"], value: "Prazo 15/09", owner: "MK", ownerBg: "#7C3AED", ownerName: "Mariana" },
+      ]},
+      { name: "Revisão", color: "#F59E0B", cards: [
+        { title: "Vídeo Institucional 40 Anos", tags: ["Aguardando"], value: "Prazo 10/09", owner: "DY", ownerBg: "#2C2C2B", ownerName: "Daniel" },
+        { title: "Landing Feiras Técnicas", tags: ["Em análise"], value: "Prazo 08/09", owner: "CR", ownerBg: "#2563EB", ownerName: "Carla" },
+      ]},
+      { name: "Publicado", color: "#10B981", cards: [
+        { title: "Post case Big Bag Granel", tags: ["OK"], value: "05/09", owner: "MK", ownerBg: "#7C3AED", ownerName: "Mariana" },
+      ]},
+    ];
+
+    function renderBoard(hostId, cols) {
+      const host = document.getElementById(hostId);
+      host.innerHTML = cols.map((col) => `
+        <div class="column">
+          <div class="col-head">
+            <div class="col-name"><i class="col-dot" style="background:${col.color}"></i>${col.name}</div>
+            <span class="col-count">${col.cards.length}</span>
+          </div>
+          ${col.cards.map((c) => `
+            <article class="k-card">
+              <h4 class="k-title">${c.title}</h4>
+              <div class="k-meta">${c.tags.map((t) => {
+                const danger = t.startsWith("-") || t === "Atrasado" || t === "Urgente";
+                return `<span class="tag ${danger ? "tag-danger" : "tag-muted"}">${t}</span>`;
+              }).join("")}</div>
+              <div class="k-foot">
+                <div class="k-value">${c.value}</div>
+                <div class="k-owner"><span class="av" style="background:${c.ownerBg}">${c.owner}</span>${c.ownerName}</div>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+      `).join("");
+    }
+
+    const funcionarios = [
+      ["Ana Paula Costa", "APC", "#0F766E", "Coordenadora Comercial", "Sanwey", "Comercial", "12/03/2019", "Ativo", "tag-ok"],
+      ["Bruno Mendes", "BM", "#2563EB", "Analista de Marketing", "Sanwey", "Marketing", "04/08/2022", "Ativo", "tag-ok"],
+      ["Carla Ribeiro", "CR", "#7C3AED", "Gerente de Vendas", "Sanwey", "Comercial", "21/01/2017", "Ativo", "tag-ok"],
+      ["Diego Santos", "DS", "#EA580C", "Assistente de RH", "Resibag", "RH", "15/05/2024", "Experiência", "tag-amber"],
+      ["Elena Martins", "EM", "#B62D2C", "Designer Sênior", "Sanwey", "Marketing", "09/11/2020", "Férias", "tag-muted"],
+      ["Felipe Rocha", "FR", "#0A0A0A", "Comprador", "Resibag", "Compras", "30/06/2021", "Ativo", "tag-ok"],
+      ["Gabriela Nunes", "GN", "#047857", "Analista Contábil", "Sanwey", "Financeiro", "18/02/2018", "Ativo", "tag-ok"],
+      ["Hugo Almeida", "HA", "#1D4ED8", "Operador Logística", "Resibag", "Operações", "02/09/2023", "Ativo", "tag-ok"],
+    ];
+
+    function buildFuncTable() {
+      document.getElementById("func-tbody").innerHTML = funcionarios.map((r) => `
+        <tr>
+          <td><div class="emp"><span class="av" style="background:${r[2]}">${r[1]}</span><div><strong>${r[0]}</strong><span>${r[0].split(" ")[0].toLowerCase()}@sanwey.com.br</span></div></div></td>
+          <td>${r[3]}</td>
+          <td>${r[4]}</td>
+          <td>${r[5]}</td>
+          <td>${r[6]}</td>
+          <td><span class="tag ${r[8]}">${r[7]}</span></td>
+        </tr>
+      `).join("");
+    }
+
+    function showScreen(screenId) {
+      document.querySelectorAll(".screen").forEach((el) => {
+        el.classList.toggle("active", el.dataset.screen === screenId);
+      });
+    }
+
+    function setArea(area, preferredScreen) {
+      document.querySelectorAll(".nav-item").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.area === area);
+      });
+
+      const sub = document.getElementById("subnav");
+      const items = SUBNAVS[area];
+      if (!items) {
+        sub.classList.remove("visible");
+        sub.innerHTML = "";
+        if (area === "visao") showScreen("visao");
+        if (area === "config") showScreen("config");
+        return;
+      }
+
+      sub.classList.add("visible");
+      const activeId = preferredScreen || items[0].id;
+      sub.innerHTML = items.map((it) =>
+        `<button type="button" data-sub="${it.id}" data-screen="${it.screen}" class="${it.id === activeId ? "active" : ""}">${it.label}</button>`
+      ).join("");
+
+      const first = items.find((i) => i.id === activeId) || items[0];
+      showScreen(first.screen);
+
+      sub.querySelectorAll("button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          sub.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          showScreen(btn.dataset.screen);
+        });
+      });
+    }
+
+    document.querySelectorAll(".nav-item").forEach((btn) => {
+      btn.addEventListener("click", () => setArea(btn.dataset.area));
+    });
+
+    document.querySelectorAll("#brand-filter button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#brand-filter button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+
+    buildMonthly();
+    buildDots();
+    renderBoard("funil-board", funilCols);
+    renderBoard("entregas-board", entregasCols);
+    buildFuncTable();
+  </script>
+</body>
+</html>
