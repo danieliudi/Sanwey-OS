@@ -39,11 +39,11 @@ O polish propõe **sombras muito sutis em repouso** (não o `--shadow-pop` atual
 
 | Opção | Efeito |
 |---|---|
-| **A — Soft card (recomendada se o A+ agradar)** | `--shadow-card` vira sombra difusa baixa; borda pode ficar mais leve ou sumir em cards |
-| **B — Manter flat** | Continua sem sombra em repouso; feeling só com motion (stagger, drag lift, tooltip) |
-| **C — Híbrido** | Flat em tabela/kanban coluna; soft só em “dashboard cards” e empty states |
+| **A — Soft card curto (preferência Daniel 04/09 no mockup A+)** | Sombra **curta** e baixa (1–2px offset, blur ~6–10px); card perto do fundo |
+| **B — Manter flat** | Continua sem sombra em repouso; feeling só com motion |
+| **C — Híbrido** | Soft curto só em dashboard; flat em kanban/tabela |
 
-**Pergunta ao Daniel:** A, B ou C?
+**Status:** mockup A+ validado com ajuste de sombra curta + bolinhas do gráfico redondas (não SVG stretch). Opção **A curta** é a hipótese atual até ok formal em §9.
 
 ---
 
@@ -53,9 +53,9 @@ Só entram em `index.css` depois do ok + mockup aprovado.
 
 | Token | Valor proposto | Uso |
 |---|---|---|
-| `--shadow-card` | `0 8px 24px rgba(55,53,47,.05)` (se opção A) | card/KPI/coluna board em repouso |
-| `--shadow-card-hover` | `0 12px 28px rgba(55,53,47,.08)` | hover de card clicável |
-| `--shadow-drag` | `0 16px 36px rgba(55,53,47,.14)` | card Kanban sendo arrastado |
+| `--shadow-card` | `0 1px 2px rgba(55,53,47,.04), 0 2px 6px rgba(55,53,47,.05)` | card em repouso — **curta** (feedback Daniel 04/09: evita “flutuar longe”) |
+| `--shadow-card-hover` | `0 2px 4px …, 0 4px 10px …` | hover |
+| `--shadow-drag` | `0 4px 14px rgba(55,53,47,.12)` | Kanban dragging |
 | `--motion-fast` | `150ms` | tooltip, chip, focus |
 | `--motion-base` | `220ms` | hover elevate, dropdown open |
 | `--motion-enter` | `420ms` | stagger de entrada de página |
