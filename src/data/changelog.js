@@ -44,6 +44,19 @@ export const CHANGELOG = [
         kind: "ajuste",
         text: "Reportar um problema ficou mais rápido: o formulário abre com um único campo curto, e \"Impacto\" e \"Onde\" ficam colapsados atrás de \"+ detalhes\". A Central de Bugs mostra o contexto técnico anexado no drawer.",
       },
+      {
+        kind: "correcao",
+        text: "O sino parou de repetir o mesmo aviso a cada vez que a página recarrega — reembolso pendente e solicitação de marketing novas não voltam a aparecer em loop.",
+      },
+      {
+        kind: "ajuste",
+        text: "O aviso de \"Novidades\" no canto da tela agora só aparece quando há algo realmente novo pra usar. Correção e ajuste pequeno ficam só na aba Novidades, sem interromper o trabalho.",
+      },
+      {
+        kind: "correcao",
+        text: "Em Entregas, ao combinar um novo SLA a data do Prazo atualiza junto — o card deixa de ficar marcado como atrasado pela data antiga.",
+        roles: ["marketing", "gerente_marketing", "agencia", "admin", "diretoria"],
+      },
     ],
   },
   {
