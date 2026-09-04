@@ -28,8 +28,8 @@ export const CHANGELOG = [
     items: [
       {
         kind: "ajuste",
-        text: "Nas Entregas, SLA e Brief deixam de travar a movimentação em Encaminhado à Agência — a Beehave combina prazo/brief e preenche depois. Observações de triagem (e esses dois campos) continuam visíveis quando o card vai pra Em Produção.",
-        roles: ["admin", "marketing", "gerente_marketing", "agencia", "diretoria"],
+        text: "Nas Entregas, SLA e Brief deixam de travar a movimentação em Encaminhado à Agência — a Beehave combina prazo/brief e preenche depois. Observações de triagem continuam visíveis em Em Produção. No Histórico, cada passagem mostra o que estava preenchido naquela etapa naquele momento (idas e voltas ficam com detalhes diferentes).",
+        roles: ["admin", "marketing", "gerente_marketing", "agencia", "diretoria", "rh", "gerente_rh"],
       },
     ],
   },

@@ -473,15 +473,18 @@ function formatSnapshotValue(v) {
   return String(v);
 }
 
-// "Mostrar mais" por entrada: os campos configurados da etapa de DESTINO
-// dessa passagem específica, com o valor congelado no momento da transição
-// (custom_fields_snapshot, ver migration pendente 20260807_rh_stage_history_
-// custom_fields_snapshot.sql) — não o valor atual do registro. É o que
-// resolve reprovações repetidas mostrarem cada passagem com seu próprio
-// motivo, em vez de todas mostrarem só o mais recente (pedido do Daniel,
-// referência: histórico de etapa do Pipefy).
+// "Mostrar mais" por entrada: campos da etapa em que o card ESTAVA
+// (from_stage) — o que foi preenchido naquela passagem —, com valores
+// congelados no snapshot da transição. Sem from_stage (criação), usa a
+// etapa de destino. O snapshot já existe desde 07/08/2026
+// (custom_fields_snapshot); o bug era ler as defs de to_stage, então
+// idas-e-vindas (ex.: Observações de triagem ao sair de Encaminhado, ou
+// motivo de reprovação ao sair de Revisão) sumiam do expand mesmo estando
+// no retrato. Pedido Beehave/Daniel 04/09/2026: cada linha do histórico
+// traz o detalhe daquela passagem, mesmo com várias idas e voltas.
 function StageHistoryEntryFields({ entry, stageFieldsHook }) {
-  const defs = stageFieldsHook ? stageFieldsHook.getFields(entry.toStage) : [];
+  const stageKey = entry.fromStage || entry.toStage;
+  const defs = stageFieldsHook ? stageFieldsHook.getFields(stageKey) : [];
   const snapshot = entry.customFieldsSnapshot || {};
   const rows = defs
     .map(f => ({ label: f.label, value: formatSnapshotValue(snapshot[f.fieldKey]) }))
