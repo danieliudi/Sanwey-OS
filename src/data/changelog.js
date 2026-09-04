@@ -28,7 +28,7 @@ export const CHANGELOG = [
     items: [
       {
         kind: "correcao",
-        text: "Quando a esteira aprova um pacote de conteúdo, a entrega de marketing chega pra agência com instruções (peças a produzir), imagens anexadas quando a URL é pública, e o responsável preenchido com quem aprovou — antes ia só título e descrição, sem dono no card.",
+        text: "Quando a esteira aprova um pacote de conteúdo, a entrega de marketing chega pra agência com instruções (peças a produzir), imagens anexadas quando a URL é pública, e o responsável preenchido com quem aprovou — antes ia só título e descrição, sem dono no card. Se a entrega for apagada, em Aprovados aparece \"Gerar entrega de novo\".",
         roles: ["admin", "marketing", "gerente_marketing", "agencia", "diretoria"],
       },
     ],
