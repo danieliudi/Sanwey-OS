@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atual — sanwey gestão (como está hoje)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #FBFBFA;
+      --surface: #FFFFFF;
+      --surface-alt: #F7F6F3;
+      --border: #E9E8E5;
+      --border-strong: #DEDCD7;
+      --text: #37352F;
+      --text-dim: #57534E;
+      --text-faint: #706C65;
+      --accent: #CC2936;
+      --accent-hover: #8B0000;
+      --on-accent: #FFF;
+      --ok: #0F7B4B;
+      --warn: #B45309;
+      --sidebar-w: 240px;
+      --font: Inter, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    button, select, input, textarea { font-family: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    .banner {
+      background: #1A1A18; color: #fff; font-size: 12px;
+      padding: 8px 16px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .banner strong { color: #FCA5A5; }
+    .banner a { color: #fff; text-decoration: underline; opacity: .9; }
+
+    .shell { display: flex; flex: 1; min-height: 0; }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-w); flex-shrink: 0;
+      background: var(--surface-alt);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 14px 10px;
+      overflow-y: auto;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 8px 14px; font-weight: 800; font-size: 14px;
+    }
+    .brand-mark {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--accent); color: #fff;
+      display: grid; place-items: center; font-size: 12px;
+    }
+    .nav-group { margin-bottom: 12px; }
+    .nav-group-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-faint);
+      padding: 4px 10px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; border: 0; background: transparent;
+      color: var(--text-dim); font-size: 13px; font-weight: 500;
+      padding: 8px 10px; border-radius: 8px; cursor: pointer; text-align: left;
+      position: relative;
+    }
+    .nav-item:hover { background: var(--border); }
+    .nav-item.active {
+      background: var(--surface); color: var(--accent); font-weight: 600;
+      box-shadow: 0 0 0 1px var(--border);
+    }
+    .nav-item.active::before {
+      content: ""; position: absolute; left: 0; top: 8px; bottom: 8px;
+      width: 3px; border-radius: 0 2px 2px 0; background: var(--accent);
+    }
+    .user-box {
+      margin-top: auto; padding: 10px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px; font-size: 12px;
+    }
+    .av {
+      width: 28px; height: 28px; border-radius: 9999px;
+      background: var(--accent); color: #fff;
+      display: grid; place-items: center; font-size: 10px; font-weight: 700;
+    }
+
+    /* Main */
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: auto; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      background: var(--surface); gap: 12px; flex-wrap: wrap;
+    }
+    .topbar h1 { margin: 0; font-size: 18px; font-weight: 700; }
+    .topbar .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      border: 1px solid var(--border); background: var(--surface);
+      border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 600;
+      color: var(--text); cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--accent); color: var(--on-accent); border-color: var(--accent);
+    }
+    .content { padding: 16px 20px 40px; display: none; flex-direction: column; gap: 14px; }
+    .content.active { display: flex; }
+
+    .note {
+      font-size: 12px; padding: 10px 12px; border-radius: 10px;
+      background: #FFF7ED; border: 1px solid #FED7AA; color: #9A3412;
+    }
+
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .kpi {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px;
+    }
+    .kpi .l { font-size: 11px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi .v { font-size: 26px; font-weight: 800; margin-top: 4px; letter-spacing: -0.02em; }
+    .kpi .s { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+    }
+    .panel h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+    .panel .desc { margin: 0 0 12px; font-size: 12px; color: var(--text-dim); }
+
+    .kanban {
+      display: grid; grid-template-columns: repeat(5, minmax(180px, 1fr));
+      gap: 10px; overflow-x: auto;
+    }
+    .kanban-4 { grid-template-columns: repeat(4, minmax(200px, 1fr)); }
+    .col {
+      background: var(--surface-alt); border-radius: 10px; padding: 10px; min-height: 380px;
+    }
+    .col-h {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; font-weight: 700; margin-bottom: 10px; padding: 0 2px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .count {
+      font-size: 11px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 9999px; padding: 1px 7px; color: var(--text-dim);
+    }
+    .kcard {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px; margin-bottom: 8px; cursor: pointer;
+    }
+    .kcard:hover { border-color: var(--border-strong); }
+    .kcard h4 { margin: 0 0 6px; font-size: 12.5px; font-weight: 700; }
+    .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .tag {
+      font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 9999px;
+      background: var(--surface-alt); color: var(--text-dim);
+    }
+    .tag-danger { background: #FEE2E2; color: var(--accent); }
+    .kfoot { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+    .kfoot b { font-size: 12px; }
+    .owner { display: flex; align-items: center; gap: 5px; color: var(--text-dim); }
+    .owner .av { width: 20px; height: 20px; font-size: 8px; }
+
+    .signals { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .scard {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .scard h4 { margin: 0; font-size: 14px; font-weight: 700; }
+    .scard p { margin: 0; font-size: 12.5px; color: var(--text-dim); line-height: 1.4; flex: 1; }
+    .sfoot { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-faint); }
+
+    .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-pills button {
+      border: 1px solid var(--border); background: var(--surface); border-radius: 9999px;
+      padding: 6px 12px; font-size: 12px; cursor: pointer; color: var(--text-dim);
+    }
+    .filter-pills button.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+    th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); padding: 10px 12px; background: var(--surface-alt); border-bottom: 1px solid var(--border); }
+    td { padding: 12px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: 0; }
+
+    /* Settings as-is: horizontal tabs + nested */
+    .settings-tabs {
+      display: flex; gap: 4px; flex-wrap: wrap;
+      border-bottom: 1px solid var(--border); padding-bottom: 0;
+    }
+    .settings-tabs button {
+      border: 0; background: transparent; padding: 10px 14px;
+      font-size: 13px; font-weight: 600; color: var(--text-dim); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .settings-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .subtabs { display: flex; gap: 6px; margin: 12px 0; }
+    .subtabs button {
+      border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+      padding: 6px 12px; font-size: 12px; cursor: pointer; color: var(--text-dim);
+    }
+    .subtabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+    .field input, .field textarea, .field select {
+      width: 100%; border: 1px solid var(--border); border-radius: 8px;
+      padding: 9px 12px; font-size: 13px; background: var(--surface); color: var(--text);
+    }
+    .toggle { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .toggle .t { font-size: 13px; font-weight: 600; }
+    .toggle .d { font-size: 12px; color: var(--text-dim); }
+    .sw { width: 36px; height: 22px; border-radius: 9999px; background: var(--accent); position: relative; }
+    .sw::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 3px; right: 3px; }
+
+    /* Drawer */
+    .overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.4); padding: 20px; align-items: stretch; justify-content: flex-end;
+    }
+    .overlay.open { display: flex; }
+    .drawer {
+      width: min(1120px, 100%); background: var(--bg); border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.25); display: flex; flex-direction: column; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .d-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 14px; background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .d-head .spacer { flex: 1; }
+    .d-body {
+      flex: 1; display: grid; grid-template-columns: 300px 1fr 280px; min-height: 0; overflow: hidden;
+    }
+    .d-col { padding: 14px; overflow: auto; background: var(--surface); border-right: 1px solid var(--border); }
+    .d-col:last-child { border-right: 0; }
+    .d-col.center { background: var(--bg); }
+    .sec { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 8px; }
+    .client-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .client-card .name { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+    .meta { font-size: 11px; color: var(--text-dim); display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill { background: #FEE2E2; color: var(--accent); padding: 2px 7px; border-radius: 9999px; font-weight: 600; font-size: 10px; }
+    .link { color: var(--accent); font-size: 12px; font-weight: 600; background: none; border: 0; cursor: pointer; padding: 0; margin-top: 8px; }
+    .mail { font-size: 13px; color: var(--text-dim); font-style: italic; margin: 8px 0; }
+    .search {
+      border: 1px solid var(--border); border-radius: 9999px; padding: 7px 12px;
+      font-size: 12px; color: var(--text-faint); background: var(--bg); margin-bottom: 10px;
+    }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0; }
+    .m { border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--surface); }
+    .m .k { font-size: 9px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; }
+    .m .v { font-size: 13px; font-weight: 800; margin-top: 2px; }
+    .m .v.acc { color: var(--accent); }
+    .samples { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+    .samples button {
+      border: 1px solid #BBF7D0; background: #F0FDF4; color: #166534;
+      border-radius: 8px; padding: 8px; font-size: 11px; font-weight: 600; text-align: left; cursor: pointer;
+    }
+    .outreach {
+      width: 100%; border: 0; background: var(--accent); color: #fff;
+      border-radius: 8px; padding: 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; margin: 6px 0 10px;
+    }
+    .tabs { display: flex; flex-wrap: wrap; gap: 4px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .tabs button {
+      border: 1px solid var(--border); background: transparent; border-radius: 9999px;
+      padding: 5px 9px; font-size: 11px; font-weight: 600; color: var(--text-dim); cursor: pointer;
+    }
+    .tabs button.active { border-color: var(--accent); color: var(--accent); background: var(--surface); }
+    .capture { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px; }
+    .capture h4 { margin: 0 0 8px; font-size: 12px; color: var(--accent); }
+    .crow { display: grid; grid-template-columns: 110px 1fr; gap: 6px; font-size: 12px; margin-bottom: 6px; }
+    .crow .l { color: var(--text-dim); }
+    .crow .v { font-weight: 600; }
+    .move {
+      display: flex; justify-content: space-between; width: 100%;
+      border: 0; border-radius: 10px; padding: 11px 12px; margin-bottom: 6px;
+      font-size: 13px; font-weight: 700; cursor: pointer; text-align: left;
+    }
+    .move.y { background: #FEF3C7; color: #92400E; }
+    .move.r { background: #FFE4E6; color: #9F1239; }
+    .move.p { background: var(--surface-alt); color: var(--text-dim); font-weight: 600; }
+    .empty {
+      border: 1px dashed var(--border); border-radius: 10px; padding: 14px;
+      text-align: center; font-size: 12px; color: var(--text-faint); margin: 8px 0;
+    }
+    .compose { display: flex; gap: 6px; }
+    .compose input { flex: 1; border: 1px solid var(--border); border-radius: 9999px; padding: 8px 12px; font-size: 12px; }
+    .fit {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: conic-gradient(#D4A017 0 252deg, var(--border) 0);
+      display: grid; place-items: center; position: relative;
+    }
+    .fit::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--surface); }
+    .fit span { position: relative; font-size: 11px; font-weight: 800; }
+
+    @media (max-width: 1000px) {
+      .sidebar { display: none; }
+      .kpi-row, .signals { grid-template-columns: 1fr 1fr; }
+      .d-body { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <div><strong>ATUAL</strong> — como a plataforma está hoje · mockup navegável · não é o app real</div>
+    <div><a href="./index.html">← Comparar</a> · <a href="./nova.html">Ver proposta</a></div>
+  </div>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">S</div> sanwey gestão</div>
+
+      <div class="nav-group">
+        <button class="nav-item active" data-screen="executivo" type="button">📊 Painel Executivo</button>
+        <button class="nav-item" data-screen="funil" type="button">📈 Funil de Vendas</button>
+        <button class="nav-item" data-screen="sinais" type="button">📡 Sinais</button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">Marketing</div>
+        <button class="nav-item" data-screen="entregas" type="button">📦 Entregas</button>
+        <button class="nav-item" data-screen="campanhas" type="button">📣 Campanhas</button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">RH</div>
+        <button class="nav-item" data-screen="funcionarios" type="button">👥 Funcionários</button>
+      </div>
+      <div class="nav-group">
+        <button class="nav-item" data-screen="config" type="button">⚙ Configurações</button>
+      </div>
+
+      <div class="user-box">
+        <div class="av">DY</div>
+        <div>
+          <div style="font-weight:600">Daniel Iudi</div>
+          <div style="color:var(--text-faint);font-size:11px">Administrador</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <!-- EXECUTIVO -->
+      <section class="content active" data-screen="executivo">
+        <div class="topbar">
+          <div>
+            <h1>Painel Executivo</h1>
+            <div class="sub">Visão do Grupo · números em cartões</div>
+          </div>
+          <div class="actions">
+            <select class="btn"><option>Todas</option><option>Sanwey</option><option>Resibag</option></select>
+          </div>
+        </div>
+        <div class="note">Hoje a Visão Geral / Executivo é sobretudo cartões de número + abas por área. Gráficos existem em profundidade, mas a primeira leitura é métrica solta.</div>
+        <div class="kpi-row">
+          <div class="kpi"><div class="l">Urgentes</div><div class="v">5</div><div class="s">Ação imediata</div></div>
+          <div class="kpi"><div class="l">Campanhas ativas</div><div class="v">3</div><div class="s">+100% vs mês</div></div>
+          <div class="kpi"><div class="l">Orçamento</div><div class="v">R$ 44k</div><div class="s">73% do trimestre</div></div>
+          <div class="kpi"><div class="l">Entregas</div><div class="v">09</div><div class="s">Concluídas</div></div>
+        </div>
+        <div class="panel">
+          <h3>Saúde por área</h3>
+          <div class="desc">Faixa resumida — Comercial · Marketing · RH · Compras…</div>
+          <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+            <div class="kpi"><div class="l">Comercial</div><div class="v" style="font-size:18px">R$ 883k aberto</div></div>
+            <div class="kpi"><div class="l">Marketing</div><div class="v" style="font-size:18px">3 atrasadas</div></div>
+            <div class="kpi"><div class="l">RH</div><div class="v" style="font-size:18px">7 em experiência</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FUNIL -->
+      <section class="content" data-screen="funil">
+        <div class="topbar">
+          <div>
+            <h1>Funil de Vendas</h1>
+            <div class="sub">Pipeline comercial</div>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button">Kanban</button>
+            <button class="btn" type="button">Tabela</button>
+            <button class="btn" type="button">Exportar CSV</button>
+            <button class="btn btn-primary" type="button">+ Novo lead</button>
+          </div>
+        </div>
+        <div class="kanban" id="funil-board"></div>
+      </section>
+
+      <!-- ENTREGAS -->
+      <section class="content" data-screen="entregas">
+        <div class="topbar">
+          <div>
+            <h1>Entregas</h1>
+            <div class="sub">Marketing · produção</div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="button">+ Nova entrega</button>
+          </div>
+        </div>
+        <div class="kanban kanban-4" id="entregas-board"></div>
+      </section>
+
+      <section class="content" data-screen="campanhas">
+        <div class="topbar"><div><h1>Campanhas</h1><div class="sub">Placeholder — mesma casca do Kanban de Marketing</div></div></div>
+        <div class="panel">Abra Entregas para ver o padrão de board atual.</div>
+      </section>
+
+      <!-- SINAIS -->
+      <section class="content" data-screen="sinais">
+        <div class="topbar">
+          <div>
+            <h1>Sinais de Mercado</h1>
+            <div class="sub">Grade + 2 contadores</div>
+          </div>
+        </div>
+        <div class="kpi-row" style="grid-template-columns:1fr 1fr;max-width:480px">
+          <div class="kpi"><div class="l">Monitorados</div><div class="v">24</div></div>
+          <div class="kpi"><div class="l">Críticos</div><div class="v">4</div></div>
+        </div>
+        <div class="filter-pills">
+          <button class="active" type="button">Todos</button>
+          <button type="button">Crítico</button>
+          <button type="button">Alto</button>
+          <button type="button">Médio</button>
+        </div>
+        <div class="signals" id="signal-grid"></div>
+      </section>
+
+      <!-- FUNCIONARIOS -->
+      <section class="content" data-screen="funcionarios">
+        <div class="topbar">
+          <div><h1>Funcionários</h1><div class="sub">RH · tabela com filtro</div></div>
+          <div class="actions"><button class="btn btn-primary" type="button">+ Novo</button></div>
+        </div>
+        <table>
+          <thead><tr><th>Nome</th><th>Cargo</th><th>Unidade</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Ana Paula Costa</td><td>Coord. Comercial</td><td>Sanwey</td><td>Ativo</td></tr>
+            <tr><td>Carla Ribeiro</td><td>Gerente de Vendas</td><td>Sanwey</td><td>Ativo</td></tr>
+            <tr><td>Diego Santos</td><td>Assistente de RH</td><td>Resibag</td><td>Experiência</td></tr>
+            <tr><td>Elena Martins</td><td>Designer Sênior</td><td>Sanwey</td><td>Férias</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- CONFIG -->
+      <section class="content" data-screen="config">
+        <div class="topbar">
+          <div>
+            <h1>Configurações</h1>
+            <div class="sub">Minha conta · com sub-abas (como hoje)</div>
+          </div>
+        </div>
+        <div class="note">Hoje: grupo → aba → sub-aba. Ex.: Preferências exige escolher Aparência / Recursos / Barra inferior.</div>
+        <div class="settings-tabs" id="cfg-tabs">
+          <button class="active" data-cfg="perfil" type="button">Perfil</button>
+          <button data-cfg="preferencias" type="button">Preferências</button>
+          <button data-cfg="notificacoes" type="button">Notificações</button>
+          <button data-cfg="geral" type="button">Geral</button>
+          <button data-cfg="usuarios" type="button">Usuários</button>
+        </div>
+        <div class="panel" id="cfg-panel"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- DRAWER ATUAL (com e-mail, pesquisar, Prob, Fechamento) -->
+  <div class="overlay" id="drawer">
+    <div class="drawer">
+      <div class="d-head">
+        <span class="tag" style="background:#ECFDF5;color:#047857;padding:4px 10px;border-radius:9999px;font-size:11px;font-weight:700">Resibag</span>
+        <span class="tag" style="background:var(--surface-alt);padding:4px 10px;border-radius:9999px;font-size:11px;font-weight:600;color:var(--text-dim)">Info</span>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" type="button">🎙 Gravar ata</button>
+        <button class="btn" type="button">🗑</button>
+        <button class="btn" type="button" id="drawer-close">✕</button>
+      </div>
+      <div class="d-body">
+        <div class="d-col">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div class="sec" style="margin:0">Cliente</div>
+            <div class="fit"><span>70</span></div>
+          </div>
+          <div class="client-card">
+            <div class="name" id="drawer-title">Pfizer Brasil LTDA</div>
+            <div class="meta"><span class="pill">Indústria</span><span>📍 ITAPEVI / SP</span><span>📅 26/08/2026</span></div>
+            <button class="link" type="button">↻ Trocar cliente</button>
+          </div>
+          <div class="mail">✉ Adicionar e-mail</div>
+          <div class="search">🔍 Pesquisar</div>
+
+          <div class="sec">Responsáveis</div>
+          <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:10px">
+            <span class="tag">Cléber Campos ×</span>
+          </div>
+
+          <div class="metrics">
+            <div class="m"><div class="k">Prob.</div><div class="v acc">10%</div></div>
+            <div class="m"><div class="k">Fechamento</div><div class="v">25/09/26</div></div>
+            <div class="m"><div class="k">Follow-up</div><div class="v">Agendar</div></div>
+          </div>
+
+          <div class="samples">
+            <button type="button">Amostras enviadas ›</button>
+            <button type="button">＋ Registrar amostra</button>
+          </div>
+          <button class="outreach" type="button">✈ Preparar e-mail de abordagem</button>
+
+          <div class="tabs">
+            <button class="active" type="button">Form</button>
+            <button type="button">Email</button>
+            <button type="button">WhatsApp</button>
+            <button type="button">Atividades</button>
+            <button type="button">Histórico</button>
+            <button type="button">IA</button>
+            <button type="button">Anexos</button>
+            <button type="button">Checklists</button>
+            <button type="button">PDF</button>
+          </div>
+          <div class="capture">
+            <h4>Formulário Inicial</h4>
+            <div class="crow"><div class="l">Empresa</div><div class="v">Pfizer Brasil LTDA</div></div>
+            <div class="crow"><div class="l">Setor</div><div class="v">Resíduos</div></div>
+            <div class="crow"><div class="l">Responsável</div><div class="v">Cléber Campos</div></div>
+          </div>
+        </div>
+
+        <div class="d-col center">
+          <div class="sec" style="color:var(--accent)">Fase atual · Qualificação</div>
+          <div class="field"><label>Próximo passo</label><input value="Investigar novo canal de negociação." /></div>
+          <div class="field"><label>Tipo de Qualificação</label>
+            <div style="display:flex;gap:12px;font-size:13px">
+              <label><input type="radio" checked name="tq" /> Inicial</label>
+              <label><input type="radio" name="tq" /> Intermediária</label>
+              <label><input type="radio" name="tq" /> Avançada</label>
+            </div>
+          </div>
+          <div class="field"><label>Data de Qualificação</label><input value="02/09/2026" /></div>
+          <div class="field"><label>Resultado da Qualificação</label><textarea rows="3">Cliente retornou com interesse em agendar uma visita no dia 16/09/2026.</textarea></div>
+          <div class="field"><label>Responsável pela Qualificação</label><select><option>Cléber Campos</option></select></div>
+        </div>
+
+        <div class="d-col">
+          <div class="sec">Mover para</div>
+          <button class="move y" type="button">Visitas/Apresentação ›</button>
+          <button class="move r" type="button">Perdido ›</button>
+          <div class="sec" style="margin-top:12px">Etapas anteriores</div>
+          <button class="move p" type="button">‹ Prospecção</button>
+          <div class="sec" style="margin-top:14px">Comentários</div>
+          <div class="empty">Nenhum comentário ainda.</div>
+          <div class="compose">
+            <input placeholder="Escreva um comentário…" />
+            <button class="btn btn-primary" type="button">➤</button>
+          </div>
+          <div style="margin-top:14px;font-size:12px;color:var(--text-dim);display:flex;flex-direction:column;gap:8px">
+            <a href="#">⚙ Editar etapas do pipeline</a>
+            <a href="#">✦ Mover cards com IA</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const funil = [
+      { name: "Qualificação", color: "#64748B", cards: [
+        { t: "Plásticos Norte · Big Bag", tags: ["Inbound"], v: "R$ 86k", o: "CR", bg: "#2563EB" },
+        { t: "AgroSul Embalagens", tags: ["Resibag"], v: "R$ 42k", o: "RM", bg: "#0F766E" },
+      ]},
+      { name: "Diagnóstico", color: "#2563EB", cards: [
+        { t: "Metalúrgica Horizonte", tags: ["Sanwey"], v: "R$ 120k", o: "DY", bg: "#37352F" },
+        { t: "Química Vale Verde", tags: ["Feira"], v: "R$ 67k", o: "CR", bg: "#2563EB" },
+      ]},
+      { name: "Proposta", color: "#CC2936", cards: [
+        { t: "Granel Express · Linha Pesada", tags: ["Urgente"], v: "R$ 210k", o: "DY", bg: "#37352F", open: true },
+        { t: "ResinTech 2026", tags: ["Resibag"], v: "R$ 95k", o: "RM", bg: "#0F766E" },
+      ]},
+      { name: "Negociação", color: "#B45309", cards: [
+        { t: "Porto Seco Campinas", tags: ["Comex"], v: "R$ 154k", o: "CR", bg: "#2563EB" },
+      ]},
+      { name: "Fechamento", color: "#0F7B4B", cards: [
+        { t: "BioFertil · Contrato", tags: ["Ganho"], v: "R$ 78k", o: "LS", bg: "#7C3AED" },
+      ]},
+    ];
+
+    const entregas = [
+      { name: "Briefing", color: "#64748B", cards: [
+        { t: "Carrossel LinkedIn", tags: ["Social"], v: "12/09", o: "MK", bg: "#7C3AED" },
+      ]},
+      { name: "Produção", color: "#2563EB", cards: [
+        { t: "Catálogo Linha Pesada", tags: ["Atrasado"], v: "-4 dias", o: "MK", bg: "#7C3AED", late: true },
+        { t: "Banner Plast Show", tags: ["Evento"], v: "20/09", o: "JP", bg: "#EA580C" },
+      ]},
+      { name: "Revisão", color: "#B45309", cards: [
+        { t: "Vídeo 40 Anos", tags: ["Aguardando"], v: "10/09", o: "DY", bg: "#37352F" },
+      ]},
+      { name: "Publicado", color: "#0F7B4B", cards: [
+        { t: "Post case Big Bag", tags: ["OK"], v: "05/09", o: "MK", bg: "#7C3AED" },
+      ]},
+    ];
+
+    function board(el, cols, openable) {
+      el.innerHTML = cols.map(c => `
+        <div class="col">
+          <div class="col-h"><span><i class="dot" style="background:${c.color}"></i>${c.name}</span><span class="count">${c.cards.length}</span></div>
+          ${c.cards.map(card => `
+            <article class="kcard" data-open="${openable && card.open ? 1 : openable ? 1 : 0}" data-title="${card.t}">
+              <h4>${card.t}</h4>
+              <div class="tags">${card.tags.map(tg => `<span class="tag ${tg==='Atrasado'||tg==='Urgente'?'tag-danger':''}">${tg}</span>`).join("")}</div>
+              <div class="kfoot">
+                <b style="${card.late?'color:var(--accent)':''}">${card.v}</b>
+                <span class="owner"><span class="av" style="background:${card.bg}">${card.o}</span></span>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+      `).join("");
+      if (openable) {
+        el.querySelectorAll(".kcard").forEach(card => {
+          card.addEventListener("click", () => {
+            document.getElementById("drawer-title").textContent = card.dataset.title || "Cliente";
+            document.getElementById("drawer").classList.add("open");
+          });
+        });
+      }
+    }
+
+    document.getElementById("signal-grid").innerHTML = [
+      ["ANTT consulta tabela de frete 2026", "Crítico", "Diário Oficial · há 3h"],
+      ["Plast Show: expositores confirmados", "Alto", "Plast Show · ontem"],
+      ["Petrobras ajusta preço de resina PP", "Alto", "Argus · há 1 dia"],
+      ["Edital Vale — embalagens a granel", "Crítico", "ComprasGov · há 5h"],
+    ].map(([t,u,m]) => `
+      <article class="scard">
+        <div><span class="tag ${u==='Crítico'?'tag-danger':''}">${u}</span></div>
+        <h4>${t}</h4>
+        <p>Resumo do sinal para leitura rápida no card.</p>
+        <div class="sfoot"><span>${m}</span><button class="btn btn-primary" type="button">Criar lead</button></div>
+      </article>
+    `).join("");
+
+    board(document.getElementById("funil-board"), funil, true);
+    board(document.getElementById("entregas-board"), entregas, true);
+
+    function show(id) {
+      document.querySelectorAll(".content").forEach(el => el.classList.toggle("active", el.dataset.screen === id));
+      document.querySelectorAll(".nav-item").forEach(btn => btn.classList.toggle("active", btn.dataset.screen === id));
+      const titles = {
+        executivo: null, funil: null, entregas: null, campanhas: null,
+        sinais: null, funcionarios: null, config: null,
+      };
+    }
+    document.querySelectorAll(".nav-item").forEach(btn => {
+      btn.addEventListener("click", () => show(btn.dataset.screen));
+    });
+
+    const CFG = {
+      perfil: `
+        <div class="subtabs">
+          <button class="active" type="button">Dados</button>
+          <button type="button">Senha</button>
+        </div>
+        <div class="field"><label>Nome</label><input value="Daniel Iudi Yano" /></div>
+        <div class="field"><label>E-mail</label><input value="daniel@sanwey.com.br" /></div>
+        <button class="btn btn-primary" type="button">Salvar perfil</button>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:12px">Senha fica na outra sub-aba.</p>`,
+      preferencias: `
+        <div class="subtabs">
+          <button class="active" type="button">Aparência</button>
+          <button type="button">Recursos</button>
+          <button type="button">Barra inferior</button>
+        </div>
+        <div class="field"><label>Cor de destaque</label><input value="#CC2936" /></div>
+        <div class="toggle"><div><div class="t">Tema do sistema</div><div class="d">Claro / escuro</div></div><div class="sw"></div></div>`,
+      notificacoes: `
+        <div class="subtabs">
+          <button class="active" type="button">Comercial</button>
+          <button type="button">Marketing</button>
+          <button type="button">Sistema</button>
+        </div>
+        <div class="toggle"><div><div class="t">Lead parado &gt; 7 dias</div><div class="d">Área Comercial</div></div><div class="sw"></div></div>
+        <div class="toggle"><div><div class="t">Mudança de etapa</div><div class="d">Meus leads</div></div><div class="sw"></div></div>
+        <p style="font-size:12px;color:var(--text-dim);margin-top:10px">Essenciais (@menção) ficam atrás da aba Sistema.</p>`,
+      geral: `<p style="font-size:13px;color:var(--text-dim)">Empresas · Painel Executivo · Chat — com sub-abas internas conforme o cargo.</p>`,
+      usuarios: `<p style="font-size:13px;color:var(--text-dim)">Lista de usuários (admin).</p>`,
+    };
+
+    function showCfg(id) {
+      document.getElementById("cfg-panel").innerHTML = CFG[id] || "";
+      document.querySelectorAll("#cfg-tabs button").forEach(b => b.classList.toggle("active", b.dataset.cfg === id));
+    }
+    document.querySelectorAll("#cfg-tabs button").forEach(b => {
+      b.addEventListener("click", () => showCfg(b.dataset.cfg));
+    });
+    showCfg("perfil");
+
+    document.getElementById("drawer-close").addEventListener("click", () => {
+      document.getElementById("drawer").classList.remove("open");
+    });
+    document.getElementById("drawer").addEventListener("click", (e) => {
+      if (e.target.id === "drawer") e.target.classList.remove("open");
+    });
+  </script>
+</body>
+</html>

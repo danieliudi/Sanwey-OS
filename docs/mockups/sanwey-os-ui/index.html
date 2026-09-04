@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Comparar — sanwey OS (atual × propostas)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --canvas: #F9F5F1;
+      --ink: #2C2C2B;
+      --ink-2: #595856;
+      --accent: #B62D2C;
+      --border: #E5E0DA;
+      --surface: #FFF;
+      --atual: #37352F;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--canvas); color: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+      padding: 32px 20px;
+    }
+    .wrap { max-width: 1040px; width: 100%; }
+    h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+    .sub { margin: 0 0 28px; color: var(--ink-2); font-size: 15px; line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    a.card {
+      display: block; text-decoration: none; color: inherit;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 22px; box-shadow: 0 4px 20px rgba(44,44,43,.04);
+      transition: border-color .15s, transform .15s; height: 100%;
+    }
+    a.card:hover { border-color: #cfc6bb; transform: translateY(-2px); }
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+      padding: 4px 9px; border-radius: 9999px; margin-bottom: 12px;
+    }
+    .badge.atual { background: #F4F4F5; color: #3F3F46; }
+    .badge.top { background: rgba(182,45,44,.1); color: var(--accent); }
+    .badge.lat { background: #EFF6FF; color: #1D4ED8; }
+    a.card h2 { margin: 0 0 8px; font-size: 18px; font-weight: 800; }
+    a.card p { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+    a.card .cta {
+      display: inline-block; margin-top: 14px; font-size: 12.5px; font-weight: 700;
+      color: var(--accent);
+    }
+    a.card.atual-card .cta { color: var(--atual); }
+    a.card.lat-card .cta { color: #1D4ED8; }
+    .tips {
+      margin-top: 24px; padding: 16px 18px; border-radius: 14px;
+      background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF;
+      font-size: 13px; line-height: 1.55;
+    }
+    .tips strong { color: #1E3A8A; }
+    .tips ol { margin: 8px 0 0; padding-left: 18px; }
+    .tips li { margin-bottom: 4px; }
+    .ask {
+      margin-top: 16px; padding: 16px 18px; border-radius: 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      font-size: 13px; line-height: 1.55; color: var(--ink-2);
+    }
+    .ask h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; color: var(--ink); letter-spacing: .02em; text-transform: uppercase; }
+    .ask ul { margin: 0; padding-left: 18px; }
+    .ask li { margin-bottom: 6px; }
+    .meta { margin-top: 18px; font-size: 12px; color: #8C877D; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>sanwey OS — feedback de UI</h1>
+    <p class="sub">
+      Três mockups HTML navegáveis. Compare a plataforma <strong>atual</strong> com duas propostas da nova pele:
+      menu <strong>em cima</strong> (recolhível) vs menu <strong>lateral</strong> (também recolhível no botão ao lado do logo).
+      Isto <strong>não é o app de produção</strong>.
+    </p>
+    <div class="grid">
+      <a class="card atual-card" href="./atual.html" target="_blank" rel="noopener">
+        <span class="badge atual">A · Atual</span>
+        <h2>Como está hoje</h2>
+        <p>Sidebar clássica, cores atuais, drawer completo, Config com sub-abas.</p>
+        <span class="cta">Abrir atual →</span>
+      </a>
+      <a class="card" href="./nova.html" target="_blank" rel="noopener">
+        <span class="badge top">B · Top nav</span>
+        <h2>Nova UI · menu em cima</h2>
+        <p>Nav pill no topo. Botão ☰ ao lado do logo recolhe/expande o menu.</p>
+        <span class="cta">Abrir top nav →</span>
+      </a>
+      <a class="card lat-card" href="./nova-lateral.html" target="_blank" rel="noopener">
+        <span class="badge lat">C · Lateral</span>
+        <h2>Nova UI · menu lateral</h2>
+        <p>Mesma pele e telas, navegação na esquerda. Mesmo botão ☰ recolhe a barra.</p>
+        <span class="cta">Abrir lateral →</span>
+      </a>
+    </div>
+    <div class="tips">
+      <strong>Roteiro rápido:</strong>
+      <ol>
+        <li>Abra B e C em abas — mesma Visão Geral, só muda o shell</li>
+        <li>Clique no botão vermelho ☰ ao lado do logo (recolher / expandir)</li>
+        <li>Funil → clique num card → drawer</li>
+        <li>Sinais e Configurações → Minha conta</li>
+        <li>Compare com A se quiser o “antes”</li>
+      </ol>
+    </div>
+    <div class="ask">
+      <h3>Perguntas para o feedback</h3>
+      <ul>
+        <li>Menu em cima ou na lateral — qual fica mais natural no dia a dia?</li>
+        <li>O botão de recolher ajuda ou sobra?</li>
+        <li>A nova pele (gráficos, Sinais, Minha Conta) melhora a leitura vs a atual?</li>
+        <li>O que você <em>não</em> mudaria de jeito nenhum?</li>
+      </ul>
+    </div>
+    <p class="meta">Pasta: docs/mockups/sanwey-os-ui · comece por index.html · Chrome / Safari / Edge</p>
+  </div>
+</body>
+</html>
