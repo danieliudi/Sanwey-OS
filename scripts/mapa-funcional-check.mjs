@@ -152,6 +152,45 @@ if (orfas.length) console.log("\ncaminhos citados no doc que não são rota (pod
 const edgeAusentes = pastasEdge.filter(f => !doc.includes("`" + f + "`"));
 if (edgeAusentes.length) { console.log("\nedge functions que o doc não cita:", edgeAusentes.join(", ")); falhas++; }
 
-console.log(falhas ? `\n${falhas} divergência(s) — atualize docs/mapa-funcional.md` : "\nmapa em dia com o código");
+// ── Regras do Cursor (.cursor/rules/*.mdc) ────────────────────────────────
+// O 60-mapa.mdc subiu com "45 telas em 52 rotas" no mesmo dia em que a main
+// foi pra 54, e nada avisou: este verificador so olhava docs/. Numero em
+// arquivo de regra envelhece igual, e la ninguem le pra conferir.
+//
+// Nao tenta validar todo numero de dentro dos .mdc — so os que sao contagem
+// da plataforma, comparados com o que o codigo diz agora.
+const dirRegras = path.join(RAIZ, ".cursor/rules");
+if (fs.existsSync(dirRegras)) {
+  //
+  // Os padroes abaixo sao ESPECIFICOS de proposito. A primeira versao usava
+  // /(\d+)\s+tabelas/ e acusou "6 tabelas com RLS ligada e zero policies" —
+  // que e outra coisa. Gate que apita errado vira gate ignorado (mesmo
+  // principio do .eslintrc.cjs, que nao tem regra de estilo), entao cada
+  // padrao aqui so casa a frase inteira em que aquela contagem aparece.
+  const contagens = [
+    [/(\d+)\s+telas em\s+(\d+)\s+rotas/g,        [real["…telas de verdade"], real["Rotas autenticadas"]], "telas/rotas"],
+    [/(\d+)\s+rotas p[uú]blicas sem login/g,      [real["Rotas **públicas**"]],                             "rotas públicas"],
+    [/(\d+)\s+edge functions\b(?!\s+de IA)/g,     [pastasEdge.length],                                      "edge functions"],
+    [/(\d+)\s+hooks\s*\((\d+)\s+falam com o banco\)/g, [hooks.length, real["…que falam com o banco"]],     "hooks"],
+    [/Hoje (\d+) componentes falam direto com o banco/g, [null],                                             "componentes diretos"],
+  ];
+  for (const arq of fs.readdirSync(dirRegras).filter(f => f.endsWith(".mdc"))) {
+    const txt = fs.readFileSync(path.join(dirRegras, arq), "utf8");
+    for (const [re, esperados, rotulo] of contagens) {
+      for (const m of txt.matchAll(re)) {
+        esperados.forEach((esperado, i) => {
+          if (esperado == null) return;
+          const achado = Number(m[i + 1]);
+          if (achado !== esperado) {
+            console.log(`\n.cursor/rules/${arq}: diz ${achado} ${rotulo}, o código diz ${esperado}`);
+            falhas++;
+          }
+        });
+      }
+    }
+  }
+}
+
+console.log(falhas ? `\n${falhas} divergência(s) — atualize docs/mapa-funcional.md e/ou .cursor/rules/` : "\nmapa e regras em dia com o código");
 console.log("\nNão conferido aqui (precisa do projeto Supabase): edge functions ATIVAS em produção e buckets de Storage.");
 process.exit(falhas ? 1 : 0);

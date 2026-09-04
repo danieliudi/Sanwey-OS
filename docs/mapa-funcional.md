@@ -40,7 +40,7 @@ Todos conferidos no código em 03/09/2026:
 | Tabelas referenciadas pelo front | **109** |
 | Funções RPC chamadas pelo front | **48** |
 | Edge functions **ativas em produção** | **30** |
-| …com fonte versionada no repo | **27** |
+| …com fonte versionada no repo | **30** |
 | Buckets de Storage | **13** (2 públicos) |
 | Frentes comerciais (`COMPANY_IDS`) | **2** — `industria` (Sanwey) e `resibag` |
 
@@ -304,8 +304,10 @@ tabela deny-all deliberada). `rh_pesquisa_respostas` também é deny-all: só
 **Implantadas e sem nenhuma chamada no código (2)** — ver §4:
 `comexstat`, `check-document-legibility`.
 
-**Implantadas sem fonte no repositório (3)** — ver §4:
-`analyze-lead`, `backfill-avatars-once`, `chat-sticker-upload`.
+**Todas as 30 têm fonte versionada** desde 03/09/2026. As três que faltavam
+(`analyze-lead`, `backfill-avatars-once`, `chat-sticker-upload`) foram
+recuperadas do painel e commitadas — as duas primeiras são stubs inertes que
+respondem 410 de propósito, a terceira é código vivo (ver §4).
 
 **As 7 que aceitam requisição sem JWT** (`verify_jwt: false` em produção) são
 exatamente a superfície que precisa de autenticação própria:
