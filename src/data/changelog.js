@@ -38,6 +38,17 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.5",
+    items: [
+      {
+        kind: "correcao",
+        toast: true,
+        text: "Em Compras, \"Nova solicitação\" abre o card na hora (antes sumia na coluna Solicitado). Dá pra aprovar direto em Solicitado — sem precisar passar por Cotação — pra quem já alinhou fora ou está testando o fluxo.",
+        roles: ["marketing", "gerente_marketing", "admin", "diretoria"],
+      },
+    ],
+  },
+  {
     version: "4.97.4",
     items: [
       {
