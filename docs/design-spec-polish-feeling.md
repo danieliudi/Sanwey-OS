@@ -43,7 +43,10 @@ O polish propõe **sombras muito sutis em repouso** (não o `--shadow-pop` atual
 | **B — Manter flat** | Continua sem sombra em repouso; feeling só com motion |
 | **C — Híbrido** | Soft curto só em dashboard; flat em kanban/tabela |
 
-**Status:** mockup A+ validado com ajuste de sombra curta + bolinhas do gráfico redondas (não SVG stretch). Opção **A curta** é a hipótese atual até ok formal em §9.
+**Status:** ✅ **Aprovada opção A curta** pelo Daniel (04/09/2026) — “a sombra está boa”.  
+Bolinhas do gráfico: HTML circular (sem stretch SVG).  
+
+Referências adicionais (mesma família UI): prints mobile (perfil, payroll, performance, leave) + vídeo desktop Performance (~6,4s). Ver §4.9.
 
 ---
 
@@ -147,6 +150,25 @@ Já mockado em `polish-visao.html`:
 
 ---
 
+### 4.9 Padrões extras da 2ª leva de referências (04/09)
+
+Extraídos dos prints mobile + vídeo desktop “Employee Performance”. **Levar a linguagem**, não a marca (creme / peach / bottom nav).
+
+| Padrão visto | Onde usar no Sanwey OS |
+|---|---|
+| **Ícone em círculo pastel** (briefcase, calendar…) | Tiles de “quick info” em RH overview, cards de Sinais, atalhos de Config — com tint semântico ou accent Sanwey, não peach |
+| **Barra de progresso** com trecho restante em **hachura diagonal** | Conclusão de perfil, SLA, metas, onboarding — só quando “faltante” tem significado |
+| **Ring / gauge circular perfeito** | KPI de taxa (conversão, SLA %, attendance-like) — círculos sem stretch |
+| **Pill tabs** com active suave | FilterBar / subnav de área (já no mock A+) — active pode ser `var(--text)` ou accent soft, não peach |
+| **Status pill** na tabela (“On Track”, “At Risk”) | Já temos `ui/Badge.jsx` — alinhar visual (fundo soft + texto) |
+| **Lista breakdown** (label · valor · separador fino) | Drawer resumo, payroll-like, fechamento comercial |
+| **Stagger + count-up** no load do dashboard | Painel Executivo (vídeo 2) — números sobem; anéis preenchem |
+| **CTA pill largo** (“Apply for Leave”, “Download Payslip”) | Botões secundários full-width em drawers mobile; no desktop manter densidade |
+
+**Não levar:** bottom nav flutuante mobile; densidade sparse de tabela lifestyle; radius 24–32px; peach como cor primária.
+
+---
+
 ## 5. Mapa por tipo de tela (47 telas → padrão)
 
 Não listar 47 nomes aqui — agrupar. Toda tela cai em um bucket; o polish do bucket se aplica.
@@ -205,9 +227,11 @@ Ordem pensada para **sentir o feeling cedo** sem redesenhar 47 telas de uma vez.
 
 ## 9. Aprovação
 
-- [ ] Escolha §2: sombra **A / B / C**  
-- [ ] Ok aos princípios §1 (minimal + reduced-motion; sem som agora)  
-- [ ] Ok ao rollout §6 (fase 1–2 primeiro)  
-- [ ] Ok para montar `polish-padroes.html` e só então planejar implementação Fase 1  
+- [x] Escolha §2: sombra **A curta** (Daniel 04/09 — “a sombra está boa”)
+- [x] Mockup Painel A+ com dots corrigidos
+- [x] Mockup padrões (`polish-padroes.html`)
+- [ ] Ok formal aos princípios §1 (minimal + reduced-motion; sem som agora)
+- [ ] Ok ao rollout §6 (Fase 1 tokens → Fase 2 Painel em `src/`)
+- [ ] Próximo: plano de implementação Fase 1 (ainda sem código de produção)
 
-Depois do ok: plano de implementação por fase (não começa sozinho em `src/`).
+Depois do ok do rollout: plano de implementação por fase (não começa sozinho em `src/`).
