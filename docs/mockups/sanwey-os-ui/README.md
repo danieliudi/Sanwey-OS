@@ -1,31 +1,37 @@
-# Mockup — sanwey OS UI
+# Mockup — sanwey OS UI (estrutura expandida)
 
-Pacote de mockup HTML clicável para avaliar o redesign visual da plataforma
-(top nav + design tokens do `dashboard-spec.json`), **sem alterar o app**.
+HTML clicável para avaliar **visual + estrutura**, sem alterar o app.
 
 ## Como abrir
 
-Abra `index.html` no navegador (duplo clique ou servidor estático local).
+Abra `index.html` no navegador.
 
-Telas no mesmo shell:
+## O que tem agora
 
-1. **Visão Geral** — fiel ao spec + referência visual
-2. **Funil de Vendas** — Kanban comercial (via Comercial → Funil)
-3. **Entregas** — Kanban de marketing (via Marketing → Entregas)
-4. **Funcionários** — tabela RH (via RH / Pessoas → Funcionários)
+| Tela | Como chegar | O que muda vs. hoje |
+|---|---|---|
+| **Visão Geral v2** | Top nav → Visão Geral | KPIs com sparkline/gauge; funil de conversão; donut de origem; barras empilhadas; heatmap |
+| **Funil** | Comercial → Funil | Cards com 2 campos de preview; **clique abre drawer** |
+| **Entregas** | Marketing → Entregas | Mesma densidade; clique abre drawer |
+| **Sinais** | Comercial → Sinais | Coluna de leitura (urgência + tendência) + grade de ação |
+| **Configurações** | Top nav → Config | Menu lateral 3 grupos (acaba o grupo→aba→sub-aba) |
+| **Drawer** | Clique em qualquer card Kanban | Left = identidade · Center = abas + form · Right = mover + comentários |
+
+## Propostas estruturais (resumo)
+
+1. **Dashboard:** número sem gráfico não decide — cada KPI carrega tendência e o `n` do denominador.
+2. **Kanban card:** título + valor não bastam; preview de 2 campos da etapa (fechamento / próximo passo).
+3. **Drawer:** abas saem do left (hoje o Funil empilha identidade + 9 abas em 340px); center vira o trabalho.
+4. **Sinais:** separar “entender o volume” (esquerda) de “agir no card” (grade).
+5. **Config:** um nível de navegação lateral em vez de três níveis de abas.
 
 ## Arquivos
 
-| Arquivo | O quê |
-|---|---|
-| `index.html` | Mockup clicável |
-| `dashboard-spec.json` | Spec de tokens / layout / dados da Visão Geral |
-| `reference.png` | Referência visual aprovada como direção |
-
-## Fora de escopo deste pacote
-
-Drawer aberto, mobile dedicado, dark mode, conteúdo real de Configurações.
+- `index.html` — mockup
+- `dashboard-spec.json` — tokens originais
+- `reference.png` — referência visual da Visão Geral v1
+- `../design-spec-sanwey-os-ui-mockup.md` — spec curta
 
 ## Status
 
-Mockup para aprovação visual. **Não implementar no `src/` sem aprovação explícita do Daniel.**
+Só mockup. **Não implementar no `src/` sem aprovação explícita.**
