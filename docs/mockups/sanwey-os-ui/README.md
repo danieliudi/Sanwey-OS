@@ -1,39 +1,34 @@
-# Mockup — sanwey OS UI (estrutura expandida)
+# Mockups para feedback — sanwey OS
 
-HTML clicável para avaliar **visual + estrutura**, sem alterar o app.
+Pacote HTML **navegável** para comparar a UI atual com a proposta.
 
-## Como abrir
+## Como abrir (envio para pessoas)
 
-Abra `index.html` no navegador.
+1. Envie a pasta inteira `sanwey-os-ui` (zip).
+2. Quem receber: descompacta e abre **`index.html`** no Chrome, Safari ou Edge.
+3. No hub, escolhe **A · Atual** ou **B · Proposta** (pode abrir as duas em abas).
 
-## O que tem agora
-
-| Tela | Como chegar | O que muda vs. hoje |
-|---|---|---|
-| **Visão Geral v2** | Top nav → Visão Geral | KPIs com sparkline/gauge; funil de conversão; donut de origem; barras empilhadas; heatmap |
-| **Funil** | Comercial → Funil | Cards com 2 campos de preview; **clique abre drawer** |
-| **Entregas** | Marketing → Entregas | Mesma densidade; clique abre drawer |
-| **Sinais** | Comercial → Sinais | Coluna de leitura (urgência + tendência) + grade de ação |
-| **Configurações** | Top nav → Config | Menu lateral 3 grupos (acaba o grupo→aba→sub-aba) |
-| **Drawer** | Clique em qualquer card Kanban | **Só UI** — mesmo layout de hoje; sem proposta estrutural |
-| **Minha Conta** | Config → Conta / Experiência / Avisos | Sem sub-abas; ordem por frequência; essenciais primeiro nos avisos |
-
-## Propostas estruturais (resumo)
-
-1. **Dashboard:** número sem gráfico não decide — cada KPI carrega tendência e o `n` do denominador.
-2. **Kanban card:** título + valor não bastam; preview de 2 campos da etapa.
-3. **Drawer:** fora de reorganização — só tokens/cores/radius. Layout idêntico ao atual.
-4. **Sinais:** separar “entender o volume” (esquerda) de “agir no card” (grade).
-5. **Config (shell):** rail lateral de 3 grupos.
-6. **Minha Conta:** Conta (perfil+senha no mesmo scroll) · Experiência (tema→recursos→mobile) · Avisos (essenciais + áreas expansíveis).
+Não precisa de internet para navegar (só a fonte Inter, se o Google Fonts estiver bloqueado, cai no system-ui).
 
 ## Arquivos
 
-- `index.html` — mockup
-- `dashboard-spec.json` — tokens originais
-- `reference.png` — referência visual da Visão Geral v1
-- `../design-spec-sanwey-os-ui-mockup.md` — spec curta
+| Arquivo | O quê |
+|---|---|
+| `index.html` | Hub de comparação (comece aqui) |
+| `atual.html` | Como está hoje — sidebar, cores `#CC2936` / `#FBFBFA`, Config com sub-abas, drawer completo |
+| `nova.html` | Proposta — top nav, gráficos, Sinais com coluna analítica, Minha Conta sem sub-abas; drawer só pele + limpeza (sem e-mail/pesquisa/Prob/Fechamento) |
+| `dashboard-spec.json` | Tokens da proposta |
+| `reference.png` | Referência visual original da Visão Geral |
 
-## Status
+## Telas em ambos
 
-Só mockup. **Não implementar no `src/` sem aprovação explícita.**
+- Painel / Visão Geral  
+- Funil (clique num card → drawer)  
+- Entregas  
+- Sinais  
+- Funcionários  
+- Configurações  
+
+## Isto não é o app
+
+Protótipo estático. Dados inventados. Sem login, sem banco.
