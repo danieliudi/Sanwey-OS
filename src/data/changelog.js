@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.3",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Nas Entregas, SLA e Brief deixam de travar a movimentação em Encaminhado à Agência — a Beehave combina prazo/brief e preenche depois. Observações de triagem (e esses dois campos) continuam visíveis quando o card vai pra Em Produção.",
+        roles: ["admin", "marketing", "gerente_marketing", "agencia", "diretoria"],
+      },
+    ],
+  },
+  {
     version: "4.97.2",
     items: [
       { kind: "correcao", text: "Em Contas · ABM, a conversão por conta agora mostra de quantas contas ela saiu. Com poucas contas decididas ela aparece como fração (2/3) em vez de porcentagem — uma conta ganha e nenhuma perdida exibia \"100%\", que era verdade e enganava ao mesmo tempo." },
