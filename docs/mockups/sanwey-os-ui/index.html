@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Comparar — sanwey OS (atual × propostas)</title>
+  <title>Comparar — sanwey OS (feedback UI)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -16,6 +16,7 @@
       --border: #E5E0DA;
       --surface: #FFF;
       --atual: #37352F;
+      --polish: #0F7B4B;
     }
     * { box-sizing: border-box; }
     body {
@@ -25,10 +26,15 @@
       display: flex; align-items: center; justify-content: center;
       padding: 32px 20px;
     }
-    .wrap { max-width: 1040px; width: 100%; }
+    .wrap { max-width: 1080px; width: 100%; }
     h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
-    .sub { margin: 0 0 28px; color: var(--ink-2); font-size: 15px; line-height: 1.55; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    .sub { margin: 0 0 22px; color: var(--ink-2); font-size: 15px; line-height: 1.55; }
+    h2.sec {
+      margin: 22px 0 10px; font-size: 12px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2);
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
     a.card {
       display: block; text-decoration: none; color: inherit;
       background: var(--surface); border: 1px solid var(--border);
@@ -42,84 +48,82 @@
       padding: 4px 9px; border-radius: 9999px; margin-bottom: 12px;
     }
     .badge.atual { background: #F4F4F5; color: #3F3F46; }
+    .badge.polish { background: #ECFDF5; color: #047857; }
     .badge.top { background: rgba(182,45,44,.1); color: var(--accent); }
     .badge.lat { background: #EFF6FF; color: #1D4ED8; }
-    a.card h2 { margin: 0 0 8px; font-size: 18px; font-weight: 800; }
+    a.card h3 { margin: 0 0 8px; font-size: 18px; font-weight: 800; }
     a.card p { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
     a.card .cta {
       display: inline-block; margin-top: 14px; font-size: 12.5px; font-weight: 700;
-      color: var(--accent);
     }
-    a.card.atual-card .cta { color: var(--atual); }
-    a.card.lat-card .cta { color: #1D4ED8; }
+    .cta.atual { color: var(--atual); }
+    .cta.polish { color: var(--polish); }
+    .cta.top { color: var(--accent); }
+    .cta.lat { color: #1D4ED8; }
     .tips {
-      margin-top: 24px; padding: 16px 18px; border-radius: 14px;
+      margin-top: 22px; padding: 16px 18px; border-radius: 14px;
       background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF;
       font-size: 13px; line-height: 1.55;
     }
     .tips strong { color: #1E3A8A; }
-    .tips ol { margin: 8px 0 0; padding-left: 18px; }
-    .tips li { margin-bottom: 4px; }
-    .ask {
-      margin-top: 16px; padding: 16px 18px; border-radius: 14px;
-      background: var(--surface); border: 1px solid var(--border);
-      font-size: 13px; line-height: 1.55; color: var(--ink-2);
+    .meta { margin-top: 16px; font-size: 12px; color: #8C877D; }
+    @media (max-width: 900px) {
+      .grid, .grid-3 { grid-template-columns: 1fr; }
     }
-    .ask h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; color: var(--ink); letter-spacing: .02em; text-transform: uppercase; }
-    .ask ul { margin: 0; padding-left: 18px; }
-    .ask li { margin-bottom: 6px; }
-    .meta { margin-top: 18px; font-size: 12px; color: #8C877D; }
-    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>sanwey OS — feedback de UI</h1>
     <p class="sub">
-      Três mockups HTML navegáveis. Compare a plataforma <strong>atual</strong> com duas propostas da nova pele:
-      menu <strong>em cima</strong> (recolhível) vs menu <strong>lateral</strong> (também recolhível no botão ao lado do logo).
-      Isto <strong>não é o app de produção</strong>.
+      Mockups HTML navegáveis. Comece pelo <strong>polish incremental</strong> (mesma sidebar de hoje,
+      Painel mais moderno). Depois compare com as propostas de shell novo, se quiser.
     </p>
+
+    <h2 class="sec">1 · UI atual (mesmo shell)</h2>
     <div class="grid">
-      <a class="card atual-card" href="./atual.html" target="_blank" rel="noopener">
+      <a class="card" href="./atual.html" target="_blank" rel="noopener">
         <span class="badge atual">A · Atual</span>
-        <h2>Como está hoje</h2>
-        <p>Sidebar clássica, cores atuais, drawer completo, Config com sub-abas.</p>
-        <span class="cta">Abrir atual →</span>
+        <h3>Como está hoje</h3>
+        <p>Sidebar, cores atuais, KPIs em cartões simples — baseline para comparar.</p>
+        <span class="cta atual">Abrir atual →</span>
       </a>
+      <a class="card" href="./polish-visao.html" target="_blank" rel="noopener">
+        <span class="badge polish">A+ · Polish</span>
+        <h3>Painel modernizado</h3>
+        <p>Mesma sidebar. Sombra suave, stagger, KPIs com mini-gráfico, tooltips no hover. Sem trocar o menu.</p>
+        <span class="cta polish">Abrir polish →</span>
+      </a>
+    </div>
+
+    <h2 class="sec">2 · Shell novo (opcional)</h2>
+    <div class="grid-3">
       <a class="card" href="./nova.html" target="_blank" rel="noopener">
         <span class="badge top">B · Top nav</span>
-        <h2>Nova UI · menu em cima</h2>
-        <p>Nav pill no topo. ☰ ao lado do logo: o menu anima recolhendo para o botão.</p>
-        <span class="cta">Abrir top nav →</span>
+        <h3>Menu em cima</h3>
+        <p>Nav pill recolhível no ☰ ao lado do logo.</p>
+        <span class="cta top">Abrir →</span>
       </a>
-      <a class="card lat-card" href="./nova-lateral.html" target="_blank" rel="noopener">
+      <a class="card" href="./nova-lateral.html" target="_blank" rel="noopener">
         <span class="badge lat">C · Lateral</span>
-        <h2>Nova UI · menu lateral</h2>
-        <p>Mesma pele e telas. Recolhe e some; conteúdo reflow full-width. No mobile vira overlay.</p>
-        <span class="cta">Abrir lateral →</span>
+        <h3>Menu lateral novo</h3>
+        <p>Mesma pele; barra some e o conteúdo ocupa 100%.</p>
+        <span class="cta lat">Abrir →</span>
+      </a>
+      <a class="card" href="./atual.html" target="_blank" rel="noopener" style="opacity:.85">
+        <span class="badge atual">Ref</span>
+        <h3>Baseline de novo</h3>
+        <p>Use A ao lado de B/C se for avaliar shell, não só o painel.</p>
+        <span class="cta atual">Abrir →</span>
       </a>
     </div>
+
     <div class="tips">
-      <strong>Roteiro rápido:</strong>
-      <ol>
-        <li>Abra B e C em abas — mesma Visão Geral, só muda o shell</li>
-        <li>Clique no botão vermelho ☰ — no top, o menu anima recolhendo para o botão; no lateral, a barra some e o conteúdo ocupa 100%</li>
-        <li>Funil → clique num card → drawer</li>
-        <li>Sinais e Configurações → Minha conta</li>
-        <li>Compare com A se quiser o “antes”</li>
-      </ol>
+      <strong>Roteiro sugerido:</strong> abra A e A+ em abas → compare só o Painel.
+      Se gostar do polish, isso pode ir para produção sem mudar o menu.
+      B/C são outra decisão (shell).
     </div>
-    <div class="ask">
-      <h3>Perguntas para o feedback</h3>
-      <ul>
-        <li>Menu em cima ou na lateral — qual fica mais natural no dia a dia?</li>
-        <li>O botão de recolher ajuda ou sobra?</li>
-        <li>A nova pele (gráficos, Sinais, Minha Conta) melhora a leitura vs a atual?</li>
-        <li>O que você <em>não</em> mudaria de jeito nenhum?</li>
-      </ul>
-    </div>
-    <p class="meta">Pasta: docs/mockups/sanwey-os-ui · comece por index.html · Chrome / Safari / Edge</p>
+    <p class="meta">Pasta: docs/mockups/sanwey-os-ui · index.html · Chrome / Safari / Edge</p>
   </div>
 </body>
 </html>
