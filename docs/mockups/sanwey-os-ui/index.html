@@ -15,6 +15,7 @@
       --accent: #B62D2C;
       --border: #E5E0DA;
       --surface: #FFF;
+      --atual: #37352F;
     }
     * { box-sizing: border-box; }
     body {
@@ -24,9 +25,9 @@
       display: flex; align-items: center; justify-content: center;
       padding: 32px 20px;
     }
-    .wrap { max-width: 920px; width: 100%; }
+    .wrap { max-width: 960px; width: 100%; }
     h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
-    .sub { margin: 0 0 28px; color: var(--ink-2); font-size: 15px; line-height: 1.5; }
+    .sub { margin: 0 0 28px; color: var(--ink-2); font-size: 15px; line-height: 1.55; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     a.card {
       display: block; text-decoration: none; color: inherit;
@@ -44,12 +45,27 @@
     .badge.nova { background: rgba(182,45,44,.1); color: var(--accent); }
     a.card h2 { margin: 0 0 8px; font-size: 20px; font-weight: 800; }
     a.card p { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+    a.card .cta {
+      display: inline-block; margin-top: 14px; font-size: 12.5px; font-weight: 700;
+      color: var(--accent);
+    }
+    a.card.atual-card .cta { color: var(--atual); }
     .tips {
       margin-top: 24px; padding: 16px 18px; border-radius: 14px;
       background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF;
-      font-size: 13px; line-height: 1.5;
+      font-size: 13px; line-height: 1.55;
     }
     .tips strong { color: #1E3A8A; }
+    .tips ol { margin: 8px 0 0; padding-left: 18px; }
+    .tips li { margin-bottom: 4px; }
+    .ask {
+      margin-top: 16px; padding: 16px 18px; border-radius: 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      font-size: 13px; line-height: 1.55; color: var(--ink-2);
+    }
+    .ask h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; color: var(--ink); letter-spacing: .02em; text-transform: uppercase; }
+    .ask ul { margin: 0; padding-left: 18px; }
+    .ask li { margin-bottom: 6px; }
     .meta { margin-top: 18px; font-size: 12px; color: #8C877D; }
     @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
   </style>
@@ -58,26 +74,45 @@
   <div class="wrap">
     <h1>sanwey OS — feedback de UI</h1>
     <p class="sub">
-      Dois mockups HTML navegáveis para comparar. Abra os dois (duas abas do navegador)
-      e percorra as mesmas telas. Isto <strong>não é o app de produção</strong> — são protótipos estáticos.
+      Dois mockups HTML navegáveis para comparar lado a lado.
+      Abra <strong>A</strong> e <strong>B</strong> em abas separadas e percorra as mesmas telas.
+      Isto <strong>não é o app de produção</strong> — são protótipos estáticos, sem login e sem dados reais.
     </p>
     <div class="grid">
-      <a class="card" href="./atual.html">
+      <a class="card atual-card" href="./atual.html" target="_blank" rel="noopener">
         <span class="badge atual">A · Atual</span>
         <h2>Como está hoje</h2>
-        <p>Sidebar à esquerda, cores atuais, drawer e Configurações como no app em produção.</p>
+        <p>Sidebar à esquerda, cores atuais (#CC2936), drawer completo (e-mail, pesquisar, Prob., Fechamento) e Configurações com sub-abas.</p>
+        <span class="cta">Abrir mockup atual →</span>
       </a>
-      <a class="card" href="./nova.html">
+      <a class="card" href="./nova.html" target="_blank" rel="noopener">
         <span class="badge nova">B · Proposta</span>
         <h2>Nova UI</h2>
-        <p>Top nav, Visão Geral com gráficos, Sinais com coluna analítica, Minha Conta simplificada. Drawer com a mesma estrutura (só a pele muda).</p>
+        <p>Top nav, Visão Geral com gráficos, Sinais com coluna analítica, Minha Conta simplificada. Drawer com a mesma estrutura — só a pele muda.</p>
+        <span class="cta">Abrir proposta →</span>
       </a>
     </div>
     <div class="tips">
-      <strong>O que observar:</strong> shell (menu), Visão Geral, Funil (clique num card), Sinais, Configurações → Minha conta.
-      No drawer da proposta, e-mail/pesquisar/Prob./Fechamento já saíram — só Follow-up.
+      <strong>Roteiro rápido (5–8 min):</strong>
+      <ol>
+        <li>Painel / Visão Geral — primeiros números que você vê</li>
+        <li>Funil — clique num card e abra o drawer</li>
+        <li>Sinais — grade de leitura</li>
+        <li>Configurações → Minha conta / Preferências</li>
+        <li>Entregas e Funcionários (opcional)</li>
+      </ol>
     </div>
-    <p class="meta">Pasta: docs/mockups/sanwey-os-ui · abra index.html no navegador (Chrome/Safari/Edge)</p>
+    <div class="ask">
+      <h3>Perguntas para o feedback</h3>
+      <ul>
+        <li>A proposta fica mais clara / mais fácil de usar que a atual?</li>
+        <li>O menu em cima (em vez da sidebar) ajuda ou atrapalha?</li>
+        <li>Os gráficos na Visão Geral ajudam a decidir, ou poluem?</li>
+        <li>No drawer da proposta: tirar e-mail / pesquisar / Prob. / Fechamento (ficar só Follow-up) faz sentido?</li>
+        <li>O que você <em>não</em> mudaria de jeito nenhum?</li>
+      </ul>
+    </div>
+    <p class="meta">Pasta: docs/mockups/sanwey-os-ui · comece por index.html · Chrome / Safari / Edge</p>
   </div>
 </body>
 </html>
