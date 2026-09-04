@@ -10,6 +10,21 @@ import { formatK } from "../../utils/currency";
 // Gráficos profissionais (recharts) que vivem dentro da tab "Gráficos"
 // do Painel Executivo. Recebe leads já filtrados por período do parent.
 
+const CHART_TOOLTIP_STYLE = {
+  contentStyle: {
+    background: "#1A1A18",
+    border: "none",
+    borderRadius: 9999,
+    padding: "6px 10px",
+    boxShadow: "0 8px 20px rgba(0,0,0,.18)",
+    fontSize: 12,
+    fontWeight: 700,
+  },
+  itemStyle: { color: "#fff" },
+  labelStyle: { color: "#E5E5E5", marginBottom: 2 },
+  cursor: { fill: "rgba(204,41,54,0.06)" },
+};
+
 const STAGE_COLORS = {
   prospeccao:   "#B45309",
   qualificacao: "#DC2626",
@@ -161,10 +176,10 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
               <CartesianGrid stroke="var(--border)" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 10 }} tickFormatter={formatK} />
-              <Tooltip formatter={(v) => formatK(v)} />
+              <Tooltip formatter={(v) => formatK(v)} {...CHART_TOOLTIP_STYLE} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="valor"    name="Funil de Vendas" fill="#1D4ED8" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="forecast" name="Forecast" fill="#10B981" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="valor"    name="Funil de Vendas" fill="#1D4ED8" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={700} />
+              <Bar dataKey="forecast" name="Forecast" fill="#10B981" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={700} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -175,8 +190,8 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
               <CartesianGrid stroke="var(--border)" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 10 }} />
               <YAxis dataKey="stage" type="category" tick={{ fontSize: 11 }} width={90} />
-              <Tooltip />
-              <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+              <Tooltip {...CHART_TOOLTIP_STYLE} />
+              <Bar dataKey="count" radius={[0, 6, 6, 0]} isAnimationActive animationDuration={700}>
                 <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: "var(--text)" }} />
                 {funnelData.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Bar>
@@ -194,8 +209,8 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
               <CartesianGrid stroke="var(--border)" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={formatK} />
               <YAxis dataKey="company" type="category" tick={{ fontSize: 11 }} width={180} />
-              <Tooltip formatter={(v) => formatK(v)} />
-              <Bar dataKey="valor" radius={[0, 6, 6, 0]}>
+              <Tooltip formatter={(v) => formatK(v)} {...CHART_TOOLTIP_STYLE} />
+              <Bar dataKey="valor" radius={[0, 6, 6, 0]} isAnimationActive animationDuration={700}>
                 <LabelList dataKey="valor" position="right" formatter={(v) => formatK(v)} style={{ fontSize: 10, fill: "var(--text)" }} />
                 {topLeads.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Bar>
@@ -214,10 +229,10 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
+                <Tooltip {...CHART_TOOLTIP_STYLE} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="aberto" name="Em aberto" stackId="a" fill="#93C5FD" />
-                <Bar dataKey="ganho"  name="Ganhos"    stackId="a" fill="#1A6E35" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="aberto" name="Em aberto" stackId="a" fill="#93C5FD" isAnimationActive animationDuration={700} />
+                <Bar dataKey="ganho"  name="Ganhos"    stackId="a" fill="#1A6E35" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={700} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -232,8 +247,17 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
                 <CartesianGrid stroke="var(--border)" />
                 <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={formatK} />
-                <Tooltip formatter={(v) => formatK(v)} />
-                <Line type="monotone" dataKey="valor" stroke="#1A6E35" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                <Tooltip formatter={(v) => formatK(v)} {...CHART_TOOLTIP_STYLE} />
+                <Line
+                  type="monotone"
+                  dataKey="valor"
+                  stroke="var(--accent)"
+                  strokeWidth={2.5}
+                  dot={{ r: 4, strokeWidth: 0, fill: "var(--accent)" }}
+                  activeDot={{ r: 5 }}
+                  isAnimationActive
+                  animationDuration={700}
+                />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -260,7 +284,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
               >
                 {pipelineDistribution.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Pie>
-              <Tooltip />
+              <Tooltip {...CHART_TOOLTIP_STYLE} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ResponsiveContainer>
@@ -272,7 +296,14 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
 
 function ChartCard({ title, subtitle, children }) {
   return (
-    <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+    <div
+      className="rounded-xl border p-4"
+      style={{
+        borderColor: "var(--border)",
+        background: "var(--surface)",
+        boxShadow: "var(--shadow-card)",
+      }}
+    >
       <div className="mb-2">
         <div className="text-sm font-bold" style={{ color: "var(--text)" }}>{title}</div>
         {subtitle && (

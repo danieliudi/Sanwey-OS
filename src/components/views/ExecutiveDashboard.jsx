@@ -497,7 +497,7 @@ export function ExecutiveDashboard({
                 query mora no index.css — Tailwind JIT não gera classe
                 montada por template string em runtime. */}
             <div
-              className="exec-health-band grid gap-2.5"
+              className="exec-health-band polish-stagger grid gap-2.5"
               style={{ "--exec-health-cols": `repeat(${Math.min(healthCards.length, 6) || 1}, 1fr)` }}
             >
               {healthCards.map(h => (
@@ -559,7 +559,7 @@ export function ExecutiveDashboard({
                     com 4 visíveis + "+3 indicadores" (StatCardGrid); a partir
                     de lg volta a ser exatamente a grade de 7 de hoje. Era o
                     pior caso de altura no mobile da plataforma (~700px). */}
-                <StatCardGrid desktopClassName="md:grid-cols-3 lg:grid-cols-7">
+                <StatCardGrid desktopClassName="md:grid-cols-3 lg:grid-cols-7" stagger>
                   <StatCard icon={HandCoins}    value={formatK(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
                   <StatCard icon={TrendingUp}   value={formatK(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
                   <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
