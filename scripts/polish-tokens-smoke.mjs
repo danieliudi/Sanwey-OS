@@ -29,7 +29,8 @@ if (darkIdx < 0) {
   process.exit(1);
 }
 const rootBlock = css.slice(css.indexOf(":root"), darkIdx);
-if (/--shadow-card:\s*none/.test(rootBlock)) {
+const shadowCardDecl = rootBlock.match(/--shadow-card:\s*([^;]+);/);
+if (!shadowCardDecl || /^\s*none\s*$/.test(shadowCardDecl[1])) {
   console.error("polish-tokens: --shadow-card ainda é none no :root (esperado sombra A curta)");
   process.exit(1);
 }
