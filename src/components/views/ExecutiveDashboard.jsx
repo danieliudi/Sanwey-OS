@@ -948,33 +948,41 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages, showComercia
     return extra;
   }
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 polish-stagger">
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Funil de Vendas por empresa */}
         <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
-          <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
+          <h3 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>
             Funil de Vendas por empresa
           </h3>
+          <p className="text-xs mt-0.5 mb-4" style={{ color: "var(--text-faint)" }}>
+            Valor em aberto · barra cresce na entrada
+          </p>
           <div className="space-y-4">
-            {metricsByCompany.map(m => {
-              const pct = (m.pipeline / maxPipeline) * 100;
+            {metricsByCompany.map((m, i) => {
+              const pct = maxPipeline > 0 ? (m.pipeline / maxPipeline) * 100 : 0;
               return (
                 <div key={m.id}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: m.company.primary }} />
-                      <span className="text-sm font-medium" style={{ color: "var(--text)" }}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: m.company.primary }} />
+                      <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>
                         {m.company.name}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold font-mono" style={{ color: "var(--text)" }}>
+                    <span className="text-sm font-semibold font-mono shrink-0 ml-2" style={{ color: "var(--text)" }}>
                       {formatK(m.pipeline)}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-alt)" }}>
+                  <div className="h-2.5 rounded-full polish-bar-track">
                     <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: m.company.primary }}
+                      className="h-full rounded-full polish-bar-fill"
+                      style={{
+                        width: `${pct}%`,
+                        background: m.company.primary,
+                        animationDelay: `${80 + i * 60}ms`,
+                      }}
+                      title={`${m.company.name}: ${formatK(m.pipeline)} · ${m.open} ativos`}
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs mt-1.5" style={{ color: "var(--text-dim)" }}>
@@ -987,27 +995,47 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages, showComercia
           </div>
         </div>
 
-        {/* Funil de conversão */}
+        {/* Funil de conversão — % fora da barra (não vira “pílula achatada”) */}
         <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
-          <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
+          <h3 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>
             Funil de conversão (Grupo)
           </h3>
-          <div className="space-y-2.5">
-            {funnelStages.map(({ stage, count, pct }) => (
+          <p className="text-xs mt-0.5 mb-4" style={{ color: "var(--text-faint)" }}>
+            Share por etapa · badge circular ao lado da barra
+          </p>
+          <div className="space-y-3">
+            {funnelStages.map(({ stage, count, pct }, i) => (
               <div key={stage.id}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium" style={{ color: "var(--text)" }}>
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>
                     {stage.name}
                   </span>
-                  <span className="text-xs" style={{ color: "var(--text-dim)" }}>{count} leads</span>
+                  <span className="text-xs shrink-0" style={{ color: "var(--text-dim)" }}>{count} lead{count !== 1 ? "s" : ""}</span>
                 </div>
-                <div className="h-5 rounded-lg overflow-hidden" style={{ background: "var(--surface-alt)" }}>
-                  <div
-                    className="h-full rounded-lg transition-all flex items-center justify-end pr-2"
-                    style={{ width: `${Math.max(pct, 5)}%`, background: stage.color }}
-                  >
-                    <span className="text-[10px] font-bold text-white">{pct.toFixed(0)}%</span>
+                <div className="flex items-center gap-2.5">
+                  <div className="flex-1 h-2.5 rounded-full polish-bar-track min-w-0">
+                    <div
+                      className="h-full rounded-full polish-bar-fill"
+                      style={{
+                        width: `${Math.max(0, Math.min(100, pct))}%`,
+                        background: stage.color,
+                        animationDelay: `${100 + i * 50}ms`,
+                      }}
+                      title={`${stage.name}: ${pct.toFixed(0)}% · ${count} leads`}
+                    />
                   </div>
+                  <span
+                    className="shrink-0 inline-flex items-center justify-center rounded-full text-[11px] font-bold"
+                    style={{
+                      minWidth: 40,
+                      height: 22,
+                      padding: "0 8px",
+                      background: `color-mix(in srgb, ${stage.color} 16%, transparent)`,
+                      color: stage.color,
+                    }}
+                  >
+                    {pct.toFixed(0)}%
+                  </span>
                 </div>
               </div>
             ))}
@@ -1037,7 +1065,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages, showComercia
             </thead>
             <tbody>
               {metricsByCompany.map(m => (
-                <tr key={m.id} className="border-b" style={{ borderColor: "var(--border)" }}>
+                <tr key={m.id} className="border-b polish-matrix-row" style={{ borderColor: "var(--border)" }}>
                   <td className="py-3 pr-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: m.company.primary }} />

@@ -326,6 +326,32 @@ body {
   transform: translateY(-1px);
 }
 
+/* Barras da Visão Geral (OverviewTab) — grow + trilha hachurada */
+.polish-bar-track {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--surface-alt),
+    var(--surface-alt) 3px,
+    color-mix(in srgb, var(--border) 65%, transparent) 3px,
+    color-mix(in srgb, var(--border) 65%, transparent) 6px
+  );
+  overflow: hidden;
+}
+.polish-bar-fill {
+  transform-origin: left center;
+  animation: polish-bar-grow var(--motion-enter) var(--ease-out) both;
+}
+@keyframes polish-bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.polish-matrix-row {
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.polish-matrix-row:hover {
+  background: var(--surface-alt);
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 0ms;
@@ -336,6 +362,10 @@ body {
   .polish-stagger > * {
     animation: none !important;
     opacity: 1 !important;
+    transform: none !important;
+  }
+  .polish-bar-fill {
+    animation: none !important;
     transform: none !important;
   }
 }
