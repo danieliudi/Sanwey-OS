@@ -38,6 +38,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.6",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Painel Executivo: cards com sombra mais suave, entrada leve dos indicadores e tooltips dos gráficos mais legíveis.",
+      },
+    ],
+  },
+  {
     version: "4.97.5",
     items: [
       {

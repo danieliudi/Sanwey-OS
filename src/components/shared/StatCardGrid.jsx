@@ -29,6 +29,7 @@ export function StatCardGrid({
   desktopClassName = "md:grid-cols-4",
   maxMobile = 4,
   className = "",
+  stagger = false,
 }) {
   const [expanded, setExpanded] = useState(false);
   // toArray já descarta null/false — as views montam os cards atrás de
@@ -38,7 +39,7 @@ export function StatCardGrid({
 
   return (
     <div className={className}>
-      <div className={`grid grid-cols-2 gap-2 md:gap-3 ${desktopClassName}`}>
+      <div className={`grid grid-cols-2 gap-2 md:gap-3 ${desktopClassName}${stagger ? " polish-stagger" : ""}`}>
         {items.map((child, i) => (
           <div
             key={child.key ?? i}

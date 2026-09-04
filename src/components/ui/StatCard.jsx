@@ -65,11 +65,12 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
   }
   return (
     <div
-      className={`${dense ? "h-full p-2.5 md:p-5" : "p-5"} rounded-lg border transition-all duration-150 hover:shadow-md cursor-default`}
+      className={`${dense ? "h-full p-2.5 md:p-5" : "p-5"} rounded-lg border cursor-default${accent ? "" : " polish-stat-card"}`}
       style={{
         background: accent || "var(--surface)",
         borderColor: accent ? "transparent" : "var(--border)",
         boxShadow: accent ? "none" : "var(--shadow-card)",
+        transition: "box-shadow var(--motion-base) var(--ease-out), transform var(--motion-fast) var(--ease-out)",
       }}
     >
       <div className={`flex items-center justify-between ${dense ? "mb-2 md:mb-4" : "mb-4"}`}>
