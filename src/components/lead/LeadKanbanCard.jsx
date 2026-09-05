@@ -10,6 +10,7 @@ import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
 import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
 import { recentCompetitorMention } from "../../utils/competitor-alert";
 import { computeFitScore } from "../../utils/pipeline-metrics";
+import { startKanbanCardDrag, endKanbanCardDrag } from "../../utils/kanban-card-drag";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -44,6 +45,7 @@ function renderPreviewField(key, lead, { probDisplay, closeStyle, accentOpacity 
 
 function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, onDuplicateCard, completeness, unread, pipelineTransitions, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const cardRef = useRef(null);
 
   // FASE 5: mais de um responsável por card — resolve owner_ids (com
@@ -83,32 +85,18 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
   const isTerminal = Boolean(currentStage?.terminal);
   const closeStyle = !isTerminal ? closeDateUrgencyStyle(lead.closeDate) : null;
 
-  const shadowBase  = `var(--shadow-card)`;
-  const shadowHover = `var(--shadow-pop)`;
-
   return (
     <div
       ref={cardRef}
       draggable
-      onDragStart={() => onDragStart?.(lead)}
-      onDragEnd={() => onDragEnd?.()}
+      onDragStart={(e) => { startKanbanCardDrag(e, setDragging); onDragStart?.(lead); }}
+      onDragEnd={(e) => { endKanbanCardDrag(e, setDragging); onDragEnd?.(); }}
       onClick={() => { if (!menuOpen) onClick?.(lead); }}
-      className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
+      className={`p-3.5 rounded-lg cursor-pointer polish-kanban-card${dragging ? " is-dragging" : ""}`}
       style={{
         background: terminalCardBackground(isTerminal),
         border: "1px solid var(--border)",
-        boxShadow: shadowBase,
         position: "relative",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = shadowHover;
-        e.currentTarget.style.borderColor = "var(--border-strong)";
-        e.currentTarget.style.transform = "translateY(-1px)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = shadowBase;
-        e.currentTarget.style.borderColor = "var(--border)";
-        e.currentTarget.style.transform = "translateY(0)";
       }}
     >
       {/* Company + aging badge + score + menu */}

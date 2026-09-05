@@ -133,12 +133,37 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [spotlight, onDismiss]);
 
+  useEffect(() => {
+    if (!spotlight || !rect) return;
+    const onPointerDown = (e) => {
+      // Clique no tooltip (Entendi / texto): deixa o handler do botão agir.
+      if (e.target.closest?.('[role="dialog"]')) return;
+      // Clique no alvo destacado: o listener do target já chama onDismiss.
+      const target = document.querySelector(spotlight.target);
+      if (target && (target === e.target || target.contains(e.target))) return;
+      onDismiss?.();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [spotlight, rect, onDismiss]);
+
   if (!spotlight || !rect) return null;
 
   const PAD = 4;
   const cardWidth = 260;
+  // Altura estimada do card (ícone + texto ~2–3 linhas + botão). Usada só
+  // pra decidir acima/abaixo — se ficar baixa demais o card ainda cabe;
+  // se alta demais, sobra gap. O bug reportado (FAB "+ Nova oportunidade"
+  // no canto inferior): cardTop = rect.bottom + 10 ia pra FORA da viewport,
+  // e o usuário via só o escurecido + buraco, sem "Entendi".
+  const estimatedCardHeight = 118;
+  const gap = PAD + 10;
+  const spaceBelow = window.innerHeight - rect.bottom - gap;
+  const placeAbove = spaceBelow < estimatedCardHeight;
   const cardLeft = Math.max(8, Math.min(rect.left, window.innerWidth - cardWidth - 8));
-  const cardTop = rect.bottom + PAD + 10; // position:fixed é viewport-relative, rect já vem de getBoundingClientRect
+  const cardTop = placeAbove
+    ? Math.max(8, rect.top - gap - estimatedCardHeight)
+    : rect.bottom + gap;
 
   return createPortal(
     <>
@@ -154,6 +179,8 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
         }}
       />
       <div
+        role="dialog"
+        aria-live="polite"
         style={{
           position: "fixed", top: cardTop, left: cardLeft, width: cardWidth,
           zIndex: 2001, background: "var(--surface)", border: "1px solid var(--border)",
@@ -166,6 +193,7 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
         </div>
         <div className="flex justify-end">
           <button
+            type="button"
             onClick={onDismiss}
             style={{ fontSize: 11.5, fontWeight: 700, padding: "5px 12px", borderRadius: 7, background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer" }}
           >
