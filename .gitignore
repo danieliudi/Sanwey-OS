@@ -9,12 +9,13 @@ dist
 vite.config.js.timestamp-*.mjs
 vite.config.ts.timestamp-*.mjs
 # .claude/ continua fora do Git (settings locais, cache de sessão), MENOS os
-# sub-agentes: os 4 papéis do fluxo do CLAUDE.md (regra 3) precisam existir
-# no repositório, senão toda sessão nova os reinterpreta do zero — foi o que
-# aconteceu até 28/08/2026, com o CLAUDE.md apontando pra arquivos que não
-# existiam em lugar nenhum.
+# sub-agentes e as skills: os 4 papéis do fluxo do CLAUDE.md (regra 3) e o
+# pacote ghaida/intent precisam existir no repositório, senão toda sessão nova
+# os reinterpreta do zero — foi o que aconteceu até 28/08/2026, com o
+# CLAUDE.md apontando pra arquivos que não existiam em lugar nenhum.
 .claude/*
 !.claude/agents/
+!.claude/skills/
 /screenshots/
 
 # Rascunho da CLI do Supabase — guarda a ultima versao vista da CLI e muda
