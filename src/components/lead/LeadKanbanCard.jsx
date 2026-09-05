@@ -10,6 +10,7 @@ import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
 import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
 import { recentCompetitorMention } from "../../utils/competitor-alert";
 import { computeFitScore } from "../../utils/pipeline-metrics";
+import { startKanbanCardDrag, endKanbanCardDrag } from "../../utils/kanban-card-drag";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -88,8 +89,8 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
     <div
       ref={cardRef}
       draggable
-      onDragStart={() => { setDragging(true); onDragStart?.(lead); }}
-      onDragEnd={() => { setDragging(false); onDragEnd?.(); }}
+      onDragStart={(e) => { startKanbanCardDrag(e, setDragging); onDragStart?.(lead); }}
+      onDragEnd={(e) => { endKanbanCardDrag(e, setDragging); onDragEnd?.(); }}
       onClick={() => { if (!menuOpen) onClick?.(lead); }}
       className={`p-3.5 rounded-lg cursor-pointer polish-kanban-card${dragging ? " is-dragging" : ""}`}
       style={{

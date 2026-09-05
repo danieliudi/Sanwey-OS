@@ -3,6 +3,7 @@ import { Check, X as XIcon } from "lucide-react";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
 import { terminalCardBackground, terminalAccentOpacity } from "../shared/terminal-card-style";
+import { startKanbanCardDrag, endKanbanCardDrag } from "../../utils/kanban-card-drag";
 
 function stageKeyOf(s) {
   return s?.stageKey ?? s?.id;
@@ -27,8 +28,8 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
     <div
       ref={cardRef}
       draggable={!!onDragStart}
-      onDragStart={() => { setDragging(true); onDragStart?.(id); }}
-      onDragEnd={() => { setDragging(false); onDragEnd?.(); }}
+      onDragStart={(e) => { startKanbanCardDrag(e, setDragging); onDragStart?.(id); }}
+      onDragEnd={(e) => { endKanbanCardDrag(e, setDragging); onDragEnd?.(); }}
       onClick={() => { if (!menuOpen) onClick?.(id); }}
       className={`p-3.5 rounded-lg cursor-pointer polish-kanban-card${dragging ? " is-dragging" : ""}`}
       style={{

@@ -7,6 +7,7 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
 import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
+import { startKanbanCardDrag, endKanbanCardDrag } from "../../utils/kanban-card-drag";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -60,8 +61,8 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
     <div
       ref={cardRef}
       draggable
-      onDragStart={() => { setDragging(true); onDragStart?.(campaign); }}
-      onDragEnd={() => { setDragging(false); onDragEnd?.(); }}
+      onDragStart={(e) => { startKanbanCardDrag(e, setDragging); onDragStart?.(campaign); }}
+      onDragEnd={(e) => { endKanbanCardDrag(e, setDragging); onDragEnd?.(); }}
       onClick={() => { if (!menuOpen) onClick?.(campaign); }}
       className={`p-3.5 rounded-lg cursor-pointer polish-kanban-card${dragging ? " is-dragging" : ""}`}
       style={{

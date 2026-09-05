@@ -7,6 +7,7 @@ import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { KanbanCardStatusChips, hasQuietStatusChips } from "../shared/KanbanCardStatusChips";
 import { StatusChip } from "../shared/StatusChip";
 import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
+import { startKanbanCardDrag, endKanbanCardDrag } from "../../utils/kanban-card-drag";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -73,12 +74,12 @@ function DeliverableKanbanCardImpl({
     <div
       ref={cardRef}
       draggable={canWrite}
-      onDragStart={() => {
+      onDragStart={(e) => {
         if (!canWrite) return;
-        setDragging(true);
+        startKanbanCardDrag(e, setDragging);
         onDragStart?.(item);
       }}
-      onDragEnd={() => { setDragging(false); onDragEnd?.(); }}
+      onDragEnd={(e) => { endKanbanCardDrag(e, setDragging); onDragEnd?.(); }}
       onClick={() => { if (!menuOpen) onClick?.(item); }}
       className={`p-3.5 rounded-lg cursor-pointer polish-kanban-card${dragging ? " is-dragging" : ""}`}
       style={{

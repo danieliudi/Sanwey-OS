@@ -369,7 +369,8 @@ body {
 .polish-kanban-card.is-dragging {
   cursor: grabbing;
   opacity: 0.92;
-  transform: scale(1.02);
+  /* Tilt leve (~1.5°) — “carregado” pelo mouse; alinhado ao mockup polish-padroes */
+  transform: scale(1.02) rotate(1.5deg);
   box-shadow: var(--shadow-drag);
   z-index: 5;
 }

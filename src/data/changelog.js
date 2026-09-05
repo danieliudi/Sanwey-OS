@@ -42,7 +42,7 @@ export const CHANGELOG = [
     items: [
       {
         kind: "ajuste",
-        text: "Kanban: cards sobem no hover com sombra curta e levantam no arraste (Funil, RH, Marketing, Entregas).",
+        text: "Kanban: cards sobem no hover, levantam e tombam levemente no arraste (Funil, RH, Marketing, Entregas). Spotlight do FAB “Nova oportunidade” abre o texto acima do botão (antes sumia da tela).",
       },
     ],
   },
