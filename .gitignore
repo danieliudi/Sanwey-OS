@@ -9,13 +9,40 @@ dist
 vite.config.js.timestamp-*.mjs
 vite.config.ts.timestamp-*.mjs
 # .claude/ continua fora do Git (settings locais, cache de sessão), MENOS os
-# sub-agentes: os 4 papéis do fluxo do CLAUDE.md (regra 3) precisam existir
-# no repositório, senão toda sessão nova os reinterpreta do zero — foi o que
-# aconteceu até 28/08/2026, com o CLAUDE.md apontando pra arquivos que não
-# existiam em lugar nenhum.
+# sub-agentes e a skill Impeccable: os 4 papéis do fluxo do CLAUDE.md (regra 3)
+# e a skill precisam existir no repositório, senão toda sessão nova os
+# reinterpreta do zero — foi o que aconteceu até 28/08/2026, com o CLAUDE.md
+# apontando pra arquivos que não existiam em lugar nenhum.
 .claude/*
 !.claude/agents/
+!.claude/skills/
+!.claude/settings.json
 /screenshots/
+
+# impeccable-ignore-start
+# Ephemeral output, runtime state, and per-dev overrides.
+# Unanchored: .impeccable may sit at the repo root or under a nested
+# workspace (apps/web/.impeccable/...); anchored patterns would miss it.
+# Shared artifacts stay tracked: config.json, live/config.json,
+# design.json, surfaces/*.md, critique/*.md.
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.impeccable/*.png
+.impeccable/review/
+.impeccable/questions/
+.impeccable/live/server.json
+.impeccable/live/sessions/
+.impeccable/live/previews/
+.impeccable/live/annotations/
+.impeccable/live/cache/
+.impeccable/live/manual-edit-apply-transaction.json
+.impeccable/live/manual-edit-events.jsonl
+.impeccable/live/manual-edit-evidence/
+.impeccable/live/pending-manual-edits.json
+.impeccable/live/deferred-svelte-component-accepts.json
+.impeccable/live/*.png
+# impeccable-ignore-end
 
 # Rascunho da CLI do Supabase — guarda a ultima versao vista da CLI e muda
 # sozinho a cada checagem de update. Entrou no repo por engano em 37db6b3
