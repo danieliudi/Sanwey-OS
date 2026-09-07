@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight, Ship, Handshake, Leaf, Wallet } from "lucide-react";
+import { AlertCircle, TrendingUp, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight, Ship, Handshake, Leaf } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { ROUTES } from "../../constants/routes";
 import { useAI } from "../../hooks/use-ai";
@@ -26,8 +26,6 @@ import { useEsgEmissionRecords, useEsgEmissionFactors, useEsgReports } from "../
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
-import { StatCard } from "../ui/StatCard";
-import { StatCardGrid } from "../shared/StatCardGrid";
 import { EmptyState } from "../ui/EmptyState";
 import { formatK } from "../../utils/currency";
 import {
@@ -385,86 +383,121 @@ export function ExecutiveDashboard({
 
   const healthCards = [
     showComercialArea && {
-      id: "comercial", label: "Comercial", color: "var(--text)",
-      value: formatK(totals.pipeline), sub: `${totals.stale} parado${totals.stale !== 1 ? "s" : ""}`,
+      id: "comercial", label: "Comercial",
+      value: formatK(totals.pipeline),
+      sub: `${totals.stale} parado${totals.stale !== 1 ? "s" : ""}`,
+      warn: totals.stale > 0,
     },
     showMarketingArea && {
-      id: "marketing", label: "Marketing", color: "#7C3AED",
+      id: "marketing", label: "Marketing",
       value: campanhasAtivas,
-      // A entrada continua sendo 1 número + 1 sinal (regra 9 — a faixa nunca
-      // é redesenhada, só enriquecida). O sinal de orçamento tem precedência
-      // sobre o de tarefas quando dispara (>= 80% do teto): é o alerta mais
-      // caro de descobrir tarde, e a linha só comporta um.
-      // formatBudgetPct já devolve o "%" — nunca concatenar de novo (mesma
-      // classe do bug de "R$ R$" duplicado).
+      // 1 número + 1 sinal; orçamento >= 80% tem precedência sobre tarefas.
       sub: marketingBudgetColor
-        ? <span style={{ color: marketingBudgetColor, fontWeight: 700 }}>
-            Orçamento {marketingPctConsumido} consumido
-          </span>
+        ? `Orçamento ${marketingPctConsumido} consumido`
         : `${tarefasAtrasadas} tarefa${tarefasAtrasadas !== 1 ? "s" : ""} atrasada${tarefasAtrasadas !== 1 ? "s" : ""}`,
+      warn: Boolean(marketingBudgetColor) || tarefasAtrasadas > 0,
     },
     showRHArea && {
-      id: "rh", label: "RH", color: "#0EA5E9",
-      value: vagasPublicadas, sub: `${avaliacoesPendentes} avaliaç${avaliacoesPendentes !== 1 ? "ões" : "ão"} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
+      id: "rh", label: "RH",
+      value: vagasPublicadas,
+      sub: `${avaliacoesPendentes} avaliaç${avaliacoesPendentes !== 1 ? "ões" : "ão"} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
+      warn: avaliacoesPendentes > 0,
     },
     showComexArea && {
-      id: "comex", label: "Comex", color: "#0D9488",
+      id: "comex", label: "Comex",
       value: comexTotalAbertas, sub: "operações em curso",
+      warn: false,
     },
     showPosVendaArea && {
-      id: "posvenda", label: "Pós-venda", color: "#DB2777",
+      id: "posvenda", label: "Pós-venda",
       value: posvendaAbertos, sub: "casos abertos",
+      warn: posvendaAbertos > 0,
     },
     showEsgArea && {
-      id: "esg", label: "ESG & Carbono", color: "#16A34A",
+      id: "esg", label: "ESG & Carbono",
       value: esgTotalLabel, sub: "CO2e no período",
+      warn: false,
     },
   ].filter(Boolean);
 
+  // Trilho "Atenção agora" — só entra item com evidência real no período.
+  const attentionItems = [
+    showComercialArea && totals.stale > 0 && {
+      id: "stale",
+      title: "Leads com SLA estourado",
+      detail: `Comercial · ${totals.stale} parado${totals.stale !== 1 ? "s" : ""}`,
+      go: () => { setAreaTab("comercial"); setComercialSubTab("overview"); },
+    },
+    showMarketingArea && marketingBudgetColor && {
+      id: "budget",
+      title: "Orçamento de marketing no limiar",
+      detail: `Marketing · ${marketingPctConsumido} consumido`,
+      go: () => setAreaTab("marketing"),
+    },
+    showMarketingArea && !marketingBudgetColor && tarefasAtrasadas > 0 && {
+      id: "tasks",
+      title: "Tarefas de marketing atrasadas",
+      detail: `Marketing · ${tarefasAtrasadas} atrasada${tarefasAtrasadas !== 1 ? "s" : ""}`,
+      go: () => setAreaTab("marketing"),
+    },
+    showRHArea && avaliacoesPendentes > 0 && {
+      id: "reviews",
+      title: "Avaliações de desempenho pendentes",
+      detail: `RH · ${avaliacoesPendentes} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
+      go: () => setAreaTab("rh"),
+    },
+    showPosVendaArea && posvendaAbertos > 0 && {
+      id: "posvenda",
+      title: "Casos de pós-venda abertos",
+      detail: `Pós-venda · ${posvendaAbertos} aberto${posvendaAbertos !== 1 ? "s" : ""}`,
+      go: () => setAreaTab("posvenda"),
+    },
+  ].filter(Boolean);
+
+  const situationLine = (() => {
+    const alerts = attentionItems.length;
+    const areas = healthCards.length;
+    const periodLabel = PERIODS.find(p => p.id === period)?.label || "período";
+    if (alerts === 0) {
+      return `${areas} área${areas !== 1 ? "s" : ""} no recorte “${periodLabel}”. Nenhum sinal de atenção na fila agora.`;
+    }
+    return `${areas} área${areas !== 1 ? "s" : ""} no recorte “${periodLabel}”. ${alerts} item${alerts !== 1 ? "s" : ""} pedindo atenção — lista à direita.`;
+  })();
+
   return (
-    <div className="space-y-5">
-      {/* Header com filtros e ações */}
-      <div className="flex items-start justify-between flex-wrap gap-3 print:hidden">
+    <div className="exec-aperture space-y-5">
+      {/* Header — período global sempre visível (antes só na aba Comercial). */}
+      <div className="flex items-start justify-between flex-wrap gap-4 print:hidden">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-            Painel Executivo
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {showComercialArea && areaTab === "comercial"
-              ? <>Visão consolidada do Grupo · {filteredLeads.length} leads · {PERIODS.find(p => p.id === period)?.label}</>
-              : `${healthCards.length} área${healthCards.length !== 1 ? "s" : ""} do Grupo`}
+          <h1 className="exec-ap-title">Painel Executivo</h1>
+          <p className="exec-ap-sub">
+            Grupo Sanwey · o que precisa da sua atenção agora
+            {showComercialArea && areaTab === "comercial" ? ` · ${filteredLeads.length} leads` : ""}
           </p>
         </div>
-        {showComercialArea && areaTab === "comercial" && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-              {PERIODS.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => setPeriod(p.id)}
-                  className="px-2.5 py-1.5 text-xs font-semibold cursor-pointer transition-colors"
-                  style={{
-                    background: period === p.id ? "var(--accent)" : "var(--surface)",
-                    color: period === p.id ? "#FFFFFF" : "var(--text-dim)",
-                  }}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-              title="Imprimir / salvar como PDF"
-            >
-              <Printer size={11} />
-              Exportar PDF
-            </button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="exec-ap-period" role="group" aria-label="Período">
+            {PERIODS.map(p => (
+              <button
+                key={p.id}
+                type="button"
+                aria-pressed={period === p.id}
+                onClick={() => setPeriod(p.id)}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
-        )}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="exec-ap-btn"
+            title="Imprimir / salvar como PDF"
+          >
+            <Printer size={12} />
+            Exportar PDF
+          </button>
+        </div>
       </div>
 
       {!anyAreaVisible && (
@@ -474,9 +507,9 @@ export function ExecutiveDashboard({
           description="As áreas deste painel foram ocultadas em Configurações → Geral → Painel Executivo. Habilite ao menos uma para ver os dados do seu departamento."
           action={
             <button
+              type="button"
               onClick={() => navigate(ROUTES.settings)}
-              className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
-              style={{ background: "var(--accent)", color: "var(--on-accent)" }}
+              className="exec-ap-btn exec-ap-btn-primary"
             >
               Ir para Configurações
             </button>
@@ -486,58 +519,39 @@ export function ExecutiveDashboard({
 
       {anyAreaVisible && (
         <>
-          {/* Faixa de saúde — sempre visível, 1 número + 1 sinal de alerta por
-              área. Área nova = uma entrada nova aqui + uma aba, nunca um
-              redesign da grade (regra 8 do CLAUDE.md). */}
+          {/* Faixa de saúde — 1 número + 1 sinal por área. */}
           <div className="print:hidden">
-            {/* Colunas: 3 fixas no mobile (a 360px, 6 colunas cortavam o
-                rótulo — "Comerci…"), o layout de hoje a partir de lg. O
-                número de colunas do desktop é dinâmico (varia com as áreas
-                visíveis), então vai por custom property inline e a media
-                query mora no index.css — Tailwind JIT não gera classe
-                montada por template string em runtime. */}
             <div
-              className="exec-health-band polish-stagger grid gap-2.5"
+              className="exec-health-band polish-stagger grid"
               style={{ "--exec-health-cols": `repeat(${Math.min(healthCards.length, 6) || 1}, 1fr)` }}
             >
               {healthCards.map(h => (
                 <button
                   key={h.id}
+                  type="button"
                   onClick={() => setAreaTab(h.id)}
-                  className="text-left rounded-xl border p-3 cursor-pointer transition-colors"
-                  style={{
-                    background: "var(--surface)",
-                    borderColor: areaTab === h.id ? h.color : "var(--border)",
-                    borderWidth: areaTab === h.id ? 1.5 : 1,
-                    boxShadow: "var(--shadow-card)",
-                    position: "relative",
-                  }}
+                  className="exec-ap-pulse"
+                  aria-pressed={areaTab === h.id}
                 >
-                  <div style={{ position: "absolute", left: 0, top: 8, bottom: 8, width: 3, borderRadius: "0 4px 4px 0", background: h.color }} />
-                  <div className="pl-2">
-                    <div className="text-[11px] font-bold" style={{ color: "var(--text-dim)" }}>{h.label}</div>
-                    <div className="font-bold" style={{ fontSize: 17, color: "var(--text)", lineHeight: 1.2, marginTop: 4 }}>{h.value}</div>
-                    <div className="text-[10.5px] mt-0.5" style={{ color: "var(--text-faint)" }}>{h.sub}</div>
-                  </div>
+                  <div className="exec-ap-pulse-label">{h.label}</div>
+                  <div className="exec-ap-pulse-value">{h.value}</div>
+                  <div className={`exec-ap-pulse-signal${h.warn ? " warn" : ""}`}>{h.sub}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+          <div className="exec-ap-tabs print:hidden" role="tablist" aria-label="Áreas">
             {visibleAreaTabs.map(t => {
               const active = areaTab === t.id;
               return (
                 <button
                   key={t.id}
+                  type="button"
+                  role="tab"
                   data-tour={t.id === "esg" ? "executive-esg-tab" : undefined}
+                  aria-selected={active}
                   onClick={() => setAreaTab(t.id)}
-                  className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
-                  style={{
-                    color: active ? "var(--text)" : "var(--text-dim)",
-                    borderBottomColor: active ? "var(--accent)" : "transparent",
-                    letterSpacing: "0.08em",
-                  }}
                 >
                   {t.label}
                 </button>
@@ -546,49 +560,104 @@ export function ExecutiveDashboard({
           </div>
 
           {areaTab === "overview" && (
-            <OverviewTab metricsByCompany={showComercialArea ? metricsByCompany : []} maxPipeline={maxPipeline} funnelStages={funnelStages} showComercial={showComercialArea} />
+            <div className="space-y-5">
+              <div className="grid lg:grid-cols-[1.35fr_1fr] gap-4">
+                <div className="exec-ap-glass exec-ap-sit">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <h2 className="m-0 text-[18px] font-bold" style={{ color: "var(--ap-ink)" }}>Situação do Grupo</h2>
+                    <span className="exec-ap-chip">{attentionItems.length === 0 ? "Sinal limpo" : `${attentionItems.length} atenção`}</span>
+                  </div>
+                  <p className="mt-3 mb-0 text-sm leading-relaxed" style={{ color: "var(--ap-ink-dim)" }}>
+                    {situationLine}
+                  </p>
+                </div>
+                <div className="exec-ap-glass">
+                  <h2 className="m-0 text-[12px] font-bold uppercase tracking-[0.1em]" style={{ color: "var(--ap-ink-dim)" }}>
+                    Atenção agora
+                  </h2>
+                  {attentionItems.length === 0 ? (
+                    <p className="mt-3 mb-0 text-sm" style={{ color: "var(--ap-ink-dim)" }}>
+                      Nada na fila neste período.
+                    </p>
+                  ) : (
+                    attentionItems.map(item => (
+                      <div key={item.id} className="exec-ap-attn-row">
+                        <div>
+                          <div className="text-sm font-bold" style={{ color: "var(--ap-ink)" }}>{item.title}</div>
+                          <div className="text-xs mt-1" style={{ color: "var(--ap-ink-dim)" }}>{item.detail}</div>
+                        </div>
+                        <button type="button" onClick={item.go}>Ir</button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <OverviewTab metricsByCompany={showComercialArea ? metricsByCompany : []} maxPipeline={maxPipeline} funnelStages={funnelStages} showComercial={showComercialArea} />
+            </div>
           )}
 
           {areaTab === "comercial" && showComercialArea && (
             <>
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
-                  Comercial
+                <div className="exec-ap-kpi-grid polish-stagger">
+                  <div className="exec-ap-kpi">
+                    <div className="label">Funil aberto</div>
+                    <div className="value">{formatK(totals.pipeline)}</div>
+                    <div className="hint">Em aberto</div>
+                  </div>
+                  <div className="exec-ap-kpi">
+                    <div className="label">Forecast</div>
+                    <div className="value">{formatK(totals.forecast)}</div>
+                    <div className="hint">Ponderado por etapa</div>
+                  </div>
+                  <div className="exec-ap-kpi">
+                    <div className="label">Receita realizada</div>
+                    <div className="value">{formatK(totals.wonValue)}</div>
+                    <div className="hint">{totals.wonCount} ganhos</div>
+                  </div>
+                  <div className="exec-ap-kpi">
+                    <div className="label">Conversão</div>
+                    <div className="value">{totals.conversion}%</div>
+                    <div className="hint">Leads → ganhos · n={filteredLeads.length}</div>
+                  </div>
+                  <div className="exec-ap-kpi">
+                    <div className="label">CAC médio</div>
+                    <div className="value">{cac != null ? formatK(cac) : "—"}</div>
+                    <div className="hint" title={cacFormulaHint(period)}>Aquisição por negócio ganho</div>
+                  </div>
+                  <div className="exec-ap-kpi">
+                    <div className="label">Leads parados</div>
+                    <div className="value">{totals.stale}</div>
+                    <div className="hint">SLA estourado</div>
+                  </div>
+                  <div className="exec-ap-kpi">
+                    <div className="label">Cross-sell pendente</div>
+                    <div className="value">{pendingCross}</div>
+                    <div className="hint">Aguardando</div>
+                  </div>
+                  <div className="exec-ap-kpi flex items-center justify-center">
+                    <button
+                      type="button"
+                      className="exec-ap-btn exec-ap-btn-primary"
+                      onClick={() => navigate(ROUTES.crm)}
+                    >
+                      Abrir Funil de Vendas
+                    </button>
+                  </div>
                 </div>
-                {/* 7 indicadores — abaixo de lg vira grade densa de 2 colunas
-                    com 4 visíveis + "+3 indicadores" (StatCardGrid); a partir
-                    de lg volta a ser exatamente a grade de 7 de hoje. Era o
-                    pior caso de altura no mobile da plataforma (~700px). */}
-                <StatCardGrid desktopClassName="md:grid-cols-3 lg:grid-cols-7" stagger>
-                  <StatCard icon={HandCoins}    value={formatK(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
-                  <StatCard icon={TrendingUp}   value={formatK(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
-                  <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
-                  <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
-                  {/* formatK em vez de formatBRL: em card estreito o valor
-                      cheio cortava. O hint da fórmula saiu do <div title>
-                      externo (que quebraria o cloneElement do StatCardGrid)
-                      pro `tooltip` do próprio StatCard — HelpTooltip é o
-                      padrão da plataforma pra hint de rótulo de StatCard. */}
-                  <StatCard icon={Wallet}       value={cac != null ? formatK(cac) : "—"} label="CAC médio" tooltip={cacFormulaHint(period)} sublabel="Aquisição por negócio ganho" />
-                  <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
-                  <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
-                </StatCardGrid>
               </div>
 
-              <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto mt-4" style={{ borderColor: "var(--border)" }}>
+              <div className="exec-ap-tabs print:hidden mt-2" role="tablist" aria-label="Profundidade Comercial">
                 {visibleComercialSubtabs.map(t => {
                   const active = comercialSubTab === t.id;
                   return (
                     <button
                       key={t.id}
-                      onClick={() => setComercialSubTab(t.id)}
+                      type="button"
+                      role="tab"
                       title={t.hint}
-                      className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
-                      style={{
-                        color: active ? "var(--text)" : "var(--text-dim)",
-                        borderBottomColor: active ? "var(--accent)" : "transparent",
-                        letterSpacing: "0.08em",
-                      }}
+                      aria-selected={active}
+                      onClick={() => setComercialSubTab(t.id)}
                     >
                       {t.label}
                     </button>

@@ -369,3 +369,280 @@ body {
     transform: none !important;
   }
 }
+
+/* —— Painel Executivo · mundo Aperture Lab (teste de redesign 2026) ——
+   Escopo local: só .exec-aperture. Não redefine tokens globais da plataforma. */
+.exec-aperture {
+  --ap-bg: #1a1d22;
+  --ap-bg-2: #12151a;
+  --ap-ink: #eef2f4;
+  --ap-ink-dim: #9aa6b2;
+  --ap-glass: rgba(255, 255, 255, 0.05);
+  --ap-glass-strong: rgba(255, 255, 255, 0.08);
+  --ap-line: rgba(255, 255, 255, 0.1);
+  --ap-teal: #3dd6c6;
+  --ap-lime: #c4ff4d;
+  --ap-teal-soft: rgba(61, 214, 198, 0.14);
+  --ap-lime-soft: rgba(196, 255, 77, 0.16);
+  --ap-radius: 18px;
+  --ap-radius-sm: 12px;
+  --ap-font: "Geologica", system-ui, sans-serif;
+  --ap-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  font-family: var(--ap-font);
+  color: var(--ap-ink);
+  background:
+    radial-gradient(900px 420px at 82% -8%, rgba(61, 214, 198, 0.16), transparent 55%),
+    radial-gradient(720px 380px at 0% 110%, rgba(196, 255, 77, 0.1), transparent 48%),
+    var(--ap-bg);
+  border-radius: 24px;
+  padding: 28px 28px 32px;
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.35);
+  isolation: isolate;
+}
+.exec-aperture * { font-family: inherit; }
+.exec-aperture ::selection {
+  background: color-mix(in srgb, var(--ap-teal) 45%, transparent);
+  color: var(--ap-ink);
+}
+
+.exec-aperture .exec-ap-title {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ap-ink);
+}
+.exec-aperture .exec-ap-sub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ap-ink-dim);
+}
+
+.exec-aperture .exec-ap-period {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.exec-aperture .exec-ap-period button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--ap-radius-sm);
+  border: 1px solid transparent;
+  background: var(--ap-glass);
+  color: var(--ap-ink-dim);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms var(--ap-ease), color 160ms var(--ap-ease), border-color 160ms var(--ap-ease);
+}
+.exec-aperture .exec-ap-period button:hover {
+  color: var(--ap-ink);
+  background: var(--ap-glass-strong);
+}
+.exec-aperture .exec-ap-period button[aria-pressed="true"] {
+  background: var(--ap-lime);
+  color: #142018;
+  border-color: transparent;
+}
+.exec-aperture .exec-ap-period button:focus-visible {
+  outline: 2px solid var(--ap-teal);
+  outline-offset: 2px;
+}
+
+.exec-aperture .exec-ap-btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--ap-radius-sm);
+  border: 1px solid var(--ap-line);
+  background: var(--ap-glass);
+  color: var(--ap-ink);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 160ms var(--ap-ease), border-color 160ms var(--ap-ease);
+}
+.exec-aperture .exec-ap-btn:hover { background: var(--ap-glass-strong); border-color: rgba(255,255,255,.18); }
+.exec-aperture .exec-ap-btn:focus-visible { outline: 2px solid var(--ap-teal); outline-offset: 2px; }
+.exec-aperture .exec-ap-btn-primary {
+  background: var(--ap-teal);
+  border-color: transparent;
+  color: #062422;
+}
+.exec-aperture .exec-ap-btn-primary:hover { filter: brightness(1.06); }
+
+.exec-aperture .exec-health-band { gap: 12px; }
+.exec-aperture .exec-ap-pulse {
+  text-align: left;
+  border-radius: 22px;
+  padding: 14px;
+  border: 1px solid var(--ap-line);
+  background: var(--ap-glass);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: var(--ap-ink);
+  cursor: pointer;
+  transition: transform 220ms var(--ap-ease), border-color 220ms var(--ap-ease), background 220ms var(--ap-ease);
+}
+.exec-aperture .exec-ap-pulse:hover { transform: translateY(-2px); border-color: rgba(61, 214, 198, 0.35); }
+.exec-aperture .exec-ap-pulse[aria-pressed="true"] {
+  background: var(--ap-teal-soft);
+  border-color: rgba(61, 214, 198, 0.55);
+}
+.exec-aperture .exec-ap-pulse:focus-visible { outline: 2px solid var(--ap-teal); outline-offset: 2px; }
+.exec-aperture .exec-ap-pulse-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ap-ink-dim);
+}
+.exec-aperture .exec-ap-pulse-value {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.exec-aperture .exec-ap-pulse-signal {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ap-ink-dim);
+}
+.exec-aperture .exec-ap-pulse-signal.warn { color: var(--ap-lime); font-weight: 600; }
+
+.exec-aperture .exec-ap-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--ap-line);
+  overflow-x: auto;
+}
+.exec-aperture .exec-ap-tabs button {
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ap-ink-dim);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.exec-aperture .exec-ap-tabs button[aria-selected="true"] {
+  color: var(--ap-ink);
+  border-bottom-color: var(--ap-lime);
+}
+.exec-aperture .exec-ap-tabs button:focus-visible { outline: 2px solid var(--ap-teal); outline-offset: 2px; }
+
+.exec-aperture .exec-ap-glass {
+  border-radius: var(--ap-radius);
+  border: 1px solid var(--ap-line);
+  background: var(--ap-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 18px;
+}
+.exec-aperture .exec-ap-sit {
+  background:
+    linear-gradient(135deg, rgba(61, 214, 198, 0.14), rgba(196, 255, 77, 0.06)),
+    var(--ap-glass);
+}
+.exec-aperture .exec-ap-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--ap-lime-soft);
+  color: var(--ap-lime);
+  font-size: 11px;
+  font-weight: 700;
+}
+.exec-aperture .exec-ap-attn-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ap-line);
+}
+.exec-aperture .exec-ap-attn-row:last-child { border-bottom: 0; }
+.exec-aperture .exec-ap-attn-row button {
+  border: 0;
+  background: transparent;
+  color: var(--ap-lime);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.exec-aperture .exec-ap-attn-row button:focus-visible { outline: 2px solid var(--ap-teal); outline-offset: 2px; }
+
+.exec-aperture .exec-ap-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (min-width: 1024px) {
+  .exec-aperture .exec-ap-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.exec-aperture .exec-ap-kpi {
+  border-radius: var(--ap-radius);
+  border: 1px solid var(--ap-line);
+  background: var(--ap-glass);
+  padding: 14px;
+}
+.exec-aperture .exec-ap-kpi .label { font-size: 12px; color: var(--ap-ink-dim); font-weight: 600; }
+.exec-aperture .exec-ap-kpi .value {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ap-ink);
+}
+.exec-aperture .exec-ap-kpi .hint { margin-top: 4px; font-size: 12px; color: var(--ap-ink-dim); }
+
+/* Dentro do mundo Aperture, superfícies herdadas (StatCard, AreaDetail, tabelas)
+   passam a falar a mesma linguagem — sem redesenhar cada filho. */
+.exec-aperture .rounded-xl,
+.exec-aperture .rounded-lg {
+  background: var(--ap-glass) !important;
+  border-color: var(--ap-line) !important;
+  box-shadow: none !important;
+  color: var(--ap-ink);
+}
+.exec-aperture [style*="color: var(--text)"],
+.exec-aperture [style*="color:var(--text)"] { color: var(--ap-ink) !important; }
+.exec-aperture [style*="color: var(--text-dim)"],
+.exec-aperture [style*="color:var(--text-dim)"],
+.exec-aperture [style*="color: var(--text-faint)"],
+.exec-aperture [style*="color:var(--text-faint)"] { color: var(--ap-ink-dim) !important; }
+.exec-aperture [style*="border-color: var(--border)"],
+.exec-aperture [style*="border-color:var(--border)"] { border-color: var(--ap-line) !important; }
+.exec-aperture [style*="background: var(--surface)"],
+.exec-aperture [style*="background:var(--surface)"],
+.exec-aperture [style*="background: var(--surface-alt)"],
+.exec-aperture [style*="background:var(--surface-alt)"] { background: var(--ap-glass) !important; }
+
+.exec-aperture .polish-stagger > * {
+  animation-name: exec-ap-rise;
+}
+@keyframes exec-ap-rise {
+  from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .exec-aperture .exec-ap-pulse { transition: none; }
+  .exec-aperture .polish-stagger > * {
+    animation: none !important;
+    filter: none !important;
+  }
+}
