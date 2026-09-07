@@ -15,6 +15,11 @@ vite.config.ts.timestamp-*.mjs
 # existiam em lugar nenhum.
 .claude/*
 !.claude/agents/
+# ...e o settings.json, pelo mesmo motivo: ele declara os marketplaces de
+# plugin do projeto (extraKnownMarketplaces/enabledPlugins). Ignorado, cada
+# máquina teria que redescobrir quais plugins este repo espera — a mesma
+# armadilha dos sub-agentes acima, só que uma camada acima.
+!.claude/settings.json
 /screenshots/
 
 # Rascunho da CLI do Supabase — guarda a ultima versao vista da CLI e muda
