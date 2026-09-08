@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "extraKnownMarketplaces": {
+    "impeccable": {
+      "source": {
+        "source": "github",
+        "repo": "pbakaus/impeccable"
+      }
+    },
+    "orban": {
+      "source": {
+        "source": "github",
+        "repo": "orban/intent-layer"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "impeccable@impeccable": true,
+    "intent-layer@orban": true
+  }
+}
