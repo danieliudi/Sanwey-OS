@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.8",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Em Compras, o aviso de \"Execução da compra\" agora diz onde aprovar e oferece o atalho \"Aprovar agora\" — sem precisar caçar o botão na coluna da direita.",
+        roles: ["marketing", "gerente_marketing", "admin"],
+      },
+    ],
+  },
+  {
     version: "4.97.7",
     items: [
       {
