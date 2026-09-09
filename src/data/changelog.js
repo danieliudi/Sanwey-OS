@@ -38,7 +38,7 @@
 
 export const CHANGELOG = [
   {
-    version: "4.97.8",
+    version: "4.97.9",
     items: [
       {
         kind: "ajuste",
