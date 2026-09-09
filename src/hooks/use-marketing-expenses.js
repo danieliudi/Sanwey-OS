@@ -18,6 +18,8 @@ function rowToExpense(r) {
     invoiceDate: r.invoice_date ?? null,
     notes:       r.notes ?? null,
     receiptUrl:  r.receipt_url ?? null,
+    costCenter:  r.centro_custo ?? null,
+    creditCard:  r.cartao ?? null,
     createdBy:   r.created_by ?? null,
     createdAt:   r.created_at ?? null,
     updatedAt:   r.updated_at ?? null,
@@ -46,6 +48,8 @@ function expenseToRow(e, extras = {}) {
     invoice_date: e.invoiceDate ?? null,
     notes:        e.notes ?? null,
     receipt_url:  e.receiptUrl ?? null,
+    centro_custo: e.costCenter ?? null,
+    cartao:       e.creditCard ?? null,
     ...extras,
   };
 }

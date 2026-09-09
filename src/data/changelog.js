@@ -38,6 +38,17 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.12",
+    items: [
+      {
+        kind: "novo",
+        text: "Em Viagens e em Marketing → Despesas, o lançamento pede centro de custo (Matriz SP comercial: 701–722, sem filial SC) e cartão. Na viagem dá pra tirar foto da nota e a IA sugere valor/data pra você conferir.",
+        roles: ["vendedor", "gerente", "marketing", "gerente_marketing", "admin"],
+      },
+    ],
+  },
+
+  {
     version: "4.97.11",
     items: [
       {
