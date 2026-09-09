@@ -18,7 +18,7 @@ import { Button } from "../ui/Button";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { formatK, formatBRL } from "../../utils/currency";
 import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
-import { formatDateBR, closeDateUrgencyStyle, toLocalISODate, localDateInputToISOString } from "../../utils/date";
+import { formatDateBR, toLocalISODate, localDateInputToISOString } from "../../utils/date";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
@@ -42,7 +42,7 @@ import { recentCompetitorMention } from "../../utils/competitor-alert";
 import { computeFitScore } from "../../utils/pipeline-metrics";
 import { evaluateConditionGroups } from "../../utils/condition-operators";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
-import { getInvalidFields, EMAIL_PATTERN } from "../../utils/field-validation";
+import { getInvalidFields } from "../../utils/field-validation";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
@@ -59,12 +59,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
   const [emailPrefill, setEmailPrefill] = useState(null);
-  const [followUpDate, setFollowUpDate] = useState("");
-  const [showFollowUpInput, setShowFollowUpInput] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [editingContactEmail, setEditingContactEmail] = useState(false);
-  const [contactEmailDraft, setContactEmailDraft] = useState("");
-  const [contactEmailError, setContactEmailError] = useState(null);
   const [quickCreateName, setQuickCreateName] = useState(null); // string | null — abre o mini-cadastro (com checagem de duplicata) quando != null
   const [noteText, setNoteText] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
@@ -259,10 +254,6 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   useEffect(() => {
     if (lead) {
       setStage(lead.stage);
-      setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
-      setShowFollowUpInput(false);
-      setEditingContactEmail(false);
-      setContactEmailDraft(lead.contactEmail || "");
       setNoteText("");
     }
   }, [lead?.id, lead?.stage]);
@@ -435,11 +426,6 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   const firstName = (decisionMakerName && decisionMakerName !== "—") ? decisionMakerName.split(" ")[0] : "time";
   const competitorMention = useMemo(() => recentCompetitorMention(lead?.activities), [lead?.activities]);
 
-  // Normalize probability for display (handle both 0–1 and 0–100 formats)
-  const probDisplay = lead
-    ? (lead.probability > 1 ? Math.round(lead.probability) : Math.round(lead.probability * 100))
-    : 0;
-
   const emailDraft = useMemo(() => {
     if (!lead || !company) return "";
     const senderName = currentUser?.name || "[Seu nome]";
@@ -478,12 +464,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
 
   if (!lead || !company) return null;
 
-  // Mesma exclusão de cor em etapa terminal que o Kanban já aplica — um
-  // negócio ganho/perdido não deveria mostrar "vencido" pra uma data de
-  // fechamento passada.
   const currentStageInfo = companyStages.find(s => s.id === lead.stage);
-  const isTerminalStage = Boolean(currentStageInfo?.terminal);
-  const closeStyle = (lead.closeDate && !isTerminalStage) ? closeDateUrgencyStyle(lead.closeDate) : null;
 
   // Negócio Ganho -> Pós-venda: mesmo padrão de Recrutamento -> Onboarding
   // (ação explícita, só disponível numa etapa flag específica, ver
@@ -534,32 +515,9 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
     setSideTab("email");
   };
 
-  const handleSaveFollowUp = () => {
-    if (!followUpDate) return;
-    const [yyyy, mm, dd] = followUpDate.split("-");
-    const d = new Date(+yyyy, +mm - 1, +dd);
-    if (Number.isNaN(d.getTime())) return;
-    onUpdate(lead.id, { nextFollowUp: d.toISOString() });
-    if (onAddActivity) {
-      onAddActivity(lead.id, {
-        type: 'follow_up_set',
-        userId: currentUser?.id || null,
-        userName: currentUser?.name || null,
-        body: `Follow-up agendado para ${d.toLocaleDateString('pt-BR')}`,
-        meta: { date: d.toISOString() },
-      });
-    }
-    setShowFollowUpInput(false);
-  };
-
-  const handleCancelFollowUp = () => {
-    setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
-    setShowFollowUpInput(false);
-  };
-
   // "Já está negociando com esse cliente?" (Formulário Inicial) — campo comum,
-  // editável direto (sem toggle "Alterar", diferente do follow-up acima) —
-  // spec aprovada com o Daniel. Vazio grava NULL (volta a usar createdAt).
+  // editável direto (sem toggle "Alterar") — spec aprovada com o Daniel.
+  // Vazio grava NULL (volta a usar createdAt).
   const handleNegotiationStartedAtChange = (val) => {
     onUpdate(lead.id, { negotiationStartedAt: val ? localDateInputToISOString(val) : null });
   };
@@ -577,29 +535,6 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
       // senão o CSV exportaria uma feira que o negócio não tem mais.
       triggerLabel: campaign ? campaign.name : null,
     });
-  };
-
-  const handleStartEditContactEmail = () => {
-    setContactEmailDraft(lead.contactEmail || "");
-    setContactEmailError(null);
-    setEditingContactEmail(true);
-  };
-
-  const handleSaveContactEmail = () => {
-    const trimmed = contactEmailDraft.trim();
-    if (trimmed && !new RegExp(EMAIL_PATTERN).test(trimmed)) {
-      setContactEmailError("E-mail inválido.");
-      return;
-    }
-    setContactEmailError(null);
-    onUpdate(lead.id, { contactEmail: trimmed || null });
-    setEditingContactEmail(false);
-  };
-
-  const handleCancelContactEmail = () => {
-    setContactEmailDraft(lead.contactEmail || "");
-    setContactEmailError(null);
-    setEditingContactEmail(false);
   };
 
   const handleSendToPosvenda = async () => {
@@ -700,53 +635,6 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                 </div>
               )}
 
-              {/* E-mail do contato — linha compacta (era card com label +
-                  botão "Adicionar"/"Alterar"). Bloco "E-mails vinculados"
-                  removido (feature nunca implementada — nada grava
-                  lead.linkedEmails, ver CLAUDE.md). */}
-              <div className="mt-3">
-                {!editingContactEmail && (
-                  <button
-                    onClick={handleStartEditContactEmail}
-                    className="w-full flex items-center gap-1.5 text-sm py-1.5 rounded-lg transition-colors cursor-pointer"
-                    style={{ color: lead.contactEmail ? "var(--text)" : "var(--text-dim)", background: "transparent", border: "none" }}
-                  >
-                    <Mail size={13} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
-                    <span className={`flex-1 min-w-0 truncate ${lead.contactEmail ? "" : "italic"}`}>
-                      {lead.contactEmail || "Adicionar e-mail"}
-                    </span>
-                  </button>
-                )}
-
-                {editingContactEmail && (
-                  <div className="mt-1">
-                    <input
-                      type="email"
-                      value={contactEmailDraft}
-                      onChange={e => { setContactEmailDraft(e.target.value); setContactEmailError(null); }}
-                      placeholder="contato@empresa.com.br"
-                      className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
-                      style={{ borderColor: contactEmailError ? "var(--danger)" : "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-                      onFocus={e => { if (!contactEmailError) e.currentTarget.style.borderColor = company.primary; }}
-                      onBlur={e => { if (!contactEmailError) e.currentTarget.style.borderColor = "var(--border)"; }}
-                      onKeyDown={e => { if (e.key === "Enter") handleSaveContactEmail(); if (e.key === "Escape") handleCancelContactEmail(); }}
-                      autoFocus
-                    />
-                    <div className="flex items-center gap-2 mt-2">
-                      <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveContactEmail}>
-                        Salvar
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={handleCancelContactEmail}>
-                        Cancelar
-                      </Button>
-                    </div>
-                    {contactEmailError && (
-                      <div className="text-xs mt-1" style={{ color: "var(--danger)" }}>{contactEmailError}</div>
-                    )}
-                  </div>
-                )}
-              </div>
-
               {/* Pesquisar empresa — junto do bloco Cliente, não mais no
                   painel central da etapa. Item 4 aprovado no mockup de
                   27/08/2026 (Opção A): 4 ícones soltos viravam poluição visual
@@ -768,70 +656,6 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                 placeholder="Selecionar responsáveis…"
               />
             </div>
-
-            {/* Métricas compactas — Prob. / Fechamento / Follow-up.
-                "Unidades" removida (duplicava "Produto vinculado" abaixo).
-                "Prob." perdeu o fundo tingido de company.primary (passava
-                impressão de alerta sem motivo — CLAUDE.md); fundo neutro
-                igual ao de "Fechamento". Follow-up vira o 3º mini-card no
-                lugar de "Unidades", clicável, abrindo o mesmo fluxo de
-                edição de antes (input de data + salvar/cancelar) fora do
-                grid, logo abaixo. */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Prob.</div>
-                <div className="text-sm font-bold mt-0.5" style={{ color: company.primary }}>
-                  {probDisplay}%
-                </div>
-              </div>
-              <div
-                className="rounded-lg p-2"
-                style={{
-                  background: closeStyle ? closeStyle.bg : "var(--surface)",
-                  border: `1px solid ${closeStyle ? closeStyle.border : "var(--border)"}`,
-                }}
-              >
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Fechamento</div>
-                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: closeStyle ? closeStyle.text : "var(--text)" }}>
-                  {lead.closeDate ? formatDateBR(lead.closeDate).replace(/(\d{2}\/\d{2}\/)\d{2}(\d{2})$/, "$1$2") : "—"}
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFollowUpInput(true)}
-                className="rounded-lg p-2 text-left cursor-pointer transition-all duration-150"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
-              >
-                <div className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
-                  <Calendar size={9} />Follow-up
-                </div>
-                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>
-                  {lead.nextFollowUp ? formatDateBR(lead.nextFollowUp) : "Agendar"}
-                </div>
-              </button>
-            </div>
-
-            {showFollowUpInput && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={followUpDate}
-                  onChange={e => setFollowUpDate(e.target.value)}
-                  className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors cursor-pointer"
-                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-                  onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
-                  autoFocus
-                />
-                <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveFollowUp}>
-                  Salvar
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleCancelFollowUp}>
-                  Cancelar
-                </Button>
-              </div>
-            )}
 
             {/* Contato inicial (histórico) — era rotulado "Decisor", mas
                 virou snapshot congelado do que foi digitado na captação
@@ -2813,7 +2637,7 @@ function CaptureRow({ label, value, mono, link, badge, hint }) {
 // "Já está negociando com esse cliente?" — mesmo padrão dt/dd de CaptureRow,
 // mas editável (campo comum do Formulário Inicial, não um bloco novo/
 // chamativo — spec aprovada com o Daniel). Mesmo <input type="date"> já
-// usado no drawer (follow-up).
+// usado no drawer em outros campos de data.
 function OriginCampaignRow({ value, campaigns, lead, onChange }) {
   // Só campanhas de origem rastreável (feira ou conteúdo). Sem esse filtro
   // dava pra escolher "Newsletter de Julho" como origem: o negócio saía do

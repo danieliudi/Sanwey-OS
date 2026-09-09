@@ -38,6 +38,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.8",
+    items: [
+      {
+        kind: "ajuste",
+        text: "No Funil de Vendas, o detalhe do negócio deixou de mostrar o atalho \"Adicionar e-mail\" e os cards de Probabilidade, Fechamento e Follow-up na coluna esquerda.",
+      },
+    ],
+  },
+  {
     version: "4.97.7",
     items: [
       {
