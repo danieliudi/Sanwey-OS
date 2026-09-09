@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.97.11",
+    items: [
+      {
+        kind: "correcao",
+        text: "Na conta da Agência (Beehave), Entregas deixa de oferecer \"Revisão e Aprovação\" e outras etapas internas no mover/arrastar — só Encaminhado e Em Produção, que é o que o sistema permite. Se tentar, aparece aviso claro em vez do erro técnico.",
+        roles: ["agencia", "marketing", "gerente_marketing", "admin"],
+      },
+    ],
+  },
+  {
     version: "4.97.10",
     items: [
       {

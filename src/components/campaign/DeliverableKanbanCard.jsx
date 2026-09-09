@@ -1,6 +1,6 @@
 import React, { memo, useMemo, useRef, useState } from "react";
 import { Star, Calendar, MessageCircle } from "lucide-react";
-import { DELIVERABLE_STAGES, CHANNEL_COLORS } from "../../constants/marketing-pipelines";
+import { DELIVERABLE_STAGES, CHANNEL_COLORS, filterDeliverableMoveTargets } from "../../constants/marketing-pipelines";
 import { formatDateBR, formatDateShortBR, daysSince } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
@@ -28,7 +28,7 @@ function deadlineTone(deadline) {
 function DeliverableKanbanCardImpl({
   item, users, onClick, onDragStart, onDragEnd,
   stages, onMoveToStage, onDeleteCard, onDuplicateCard, canWrite, onToggleStar, completeness, unread,
-  campaignsById, showMoveOptions = true,
+  campaignsById, showMoveOptions = true, isAgenciaWriter = false,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
@@ -54,8 +54,13 @@ function DeliverableKanbanCardImpl({
   // o card então só oferece excluir, com um ícone de lixeira direto no lugar
   // dos "3 pontinhos" (ver MoveStageMenu). O acordeão mobile (sem drag)
   // continua com showMoveOptions=true (default), único jeito de mover lá.
+  // Agência: só Encaminhado/Em Produção (espelha md_update / 20260828b).
   const moveTargets = showMoveOptions
-    ? (stages || DELIVERABLE_STAGES).filter(s => s.id !== item.stage && !s.terminal)
+    ? filterDeliverableMoveTargets(stages || DELIVERABLE_STAGES, {
+      fromStage: item.stage,
+      isAgenciaWriter,
+      includeTerminal: false,
+    })
     : [];
 
   // Comentário não lido vira ponto na quina do avatar (ver AvatarStack). Sem

@@ -14,6 +14,40 @@ export const DELIVERABLE_STAGES = [
   { id: "entregue",    name: "Entregue",     color: "#16A34A", sla: null, terminal: true },
 ];
 
+// Espelha a policy md_update (migration 20260828b): agência pura só grava
+// nestas duas etapas. Avançar pra Revisão/Entregue é do time interno —
+// sem este filtro o front oferecia o destino e o Postgres devolvia
+// "new row violates row-level security policy".
+export const AGENCIA_DELIVERABLE_WRITE_STAGES = ["encaminhado_para_agencia", "em_producao"];
+
+/** Agência sem cargo de marketing/admin — quem de fato cai no WITH CHECK restrito. */
+export function isAgenciaDeliverableWriter(rolesOrUser) {
+  const roles = Array.isArray(rolesOrUser)
+    ? rolesOrUser
+    : (rolesOrUser?.roles?.length
+      ? rolesOrUser.roles
+      : (rolesOrUser?.role ? [rolesOrUser.role] : []));
+  if (!roles.includes("agencia")) return false;
+  if (roles.some(r => ["admin", "marketing", "gerente_marketing"].includes(r))) return false;
+  return true;
+}
+
+export function canAgenciaWriteDeliverableStage(stageId) {
+  return AGENCIA_DELIVERABLE_WRITE_STAGES.includes(stageId);
+}
+
+/** Destinos de "Mover para" / menu do card — filtra o que a agência não pode gravar. */
+export function filterDeliverableMoveTargets(stages, { fromStage, isAgenciaWriter, includeTerminal = false } = {}) {
+  let list = (stages || []).filter(s => s.id !== fromStage && (includeTerminal || !s.terminal));
+  if (isAgenciaWriter) {
+    list = list.filter(s => AGENCIA_DELIVERABLE_WRITE_STAGES.includes(s.id));
+  }
+  return list;
+}
+
+export const AGENCIA_STAGE_MOVE_BLOCKED_MSG =
+  "Agência só move entre Encaminhado à Agência e Em Produção. Revisão e as etapas seguintes ficam com o time interno de Marketing.";
+
 export const DELIVERABLE_DEPARTMENTS = [
   "Vendas", "Marketing", "Operações", "Financeiro", "RH", "TI", "Diretoria", "Outro",
 ];

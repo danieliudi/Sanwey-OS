@@ -18,6 +18,8 @@ import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
+  isAgenciaDeliverableWriter, canAgenciaWriteDeliverableStage,
+  AGENCIA_STAGE_MOVE_BLOCKED_MSG,
 } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatDateBR, localDateInputToISOString, parseDateInput, daysSince } from "../../utils/date";
@@ -673,6 +675,14 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
     changeStage, sendCompleteEmail, sendSupplierNotifyEmail, toggleStar,
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
 
+  // Agência pura: UI não oferece destinos que o md_update recusa (Revisão etc.).
+  const isAgenciaWriter = useMemo(() => isAgenciaDeliverableWriter(user), [user]);
+  const canWriteItem = useCallback((item) => {
+    if (!canWrite || !item) return false;
+    if (isAgenciaWriter && !canAgenciaWriteDeliverableStage(item.stage)) return false;
+    return true;
+  }, [canWrite, isAgenciaWriter]);
+
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
   const campaignsById = useMemo(() => new Map(campaigns.map(c => [c.id, c])), [campaigns]);
   const stageFields = useRHStageFields("marketing_deliverables");
@@ -844,6 +854,11 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
   const attemptStageChange = useCallback(async (itemId, toStage) => {
     const item = deliverables.find(d => d.id === itemId);
     if (!item) return false;
+    // Espelha md_update: agência não grava stage fora do par Encaminhado/Em Produção.
+    if (isAgenciaWriter && !canAgenciaWriteDeliverableStage(toStage)) {
+      setStageError(AGENCIA_STAGE_MOVE_BLOCKED_MSG);
+      return false;
+    }
     // Campo obrigatório trava AVANÇAR, não VOLTAR — devolver uma arte pra
     // agência não conclui a etapa de Revisão, então não cobra a ficha de
     // aprovação dela (decidido com o Daniel 11/08/2026).
@@ -874,7 +889,7 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
       sendCompleteEmail(itemId);
     }
     return true;
-  }, [deliverables, stageFields, kanbanStages, changeStage, sendCompleteEmail, fireAutomations]);
+  }, [deliverables, stageFields, kanbanStages, changeStage, sendCompleteEmail, fireAutomations, isAgenciaWriter]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
   const getItemCompleteness = useCallback((item) => {
@@ -887,10 +902,10 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
   useEffect(() => { if (selected?.id) markItemViewed(selected.id); }, [selected?.id]);
 
   const handleDrop = useCallback(async (toStage) => {
-    if (!draggedItem || !canWrite) return;
+    if (!draggedItem || !canWriteItem(draggedItem)) return;
     if (draggedItem.stage !== toStage) await attemptStageChange(draggedItem.id, toStage);
     setDraggedItem(null); setDragOverStage(null);
-  }, [draggedItem, canWrite, attemptStageChange]);
+  }, [draggedItem, canWriteItem, attemptStageChange]);
 
   // Reordenar colunas arrastando o cabeçalho — canal de drag separado do
   // drag-and-drop de cards acima (draggedItem), pra um não interferir no
@@ -1164,13 +1179,14 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
               users={users}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
-              canWrite={canWrite}
+              canWrite={canWriteItem(item)}
               onClick={setSelected}
               stages={kanbanStages}
-              onMoveToStage={canWrite ? attemptStageChange : null}
+              isAgenciaWriter={isAgenciaWriter}
+              onMoveToStage={canWriteItem(item) ? attemptStageChange : null}
               onDeleteCard={canManage ? handleDelete : null}
               onDuplicateCard={canManage ? handleDuplicate : null}
-              onToggleStar={canWrite ? toggleStar : null}
+              onToggleStar={canWriteItem(item) ? toggleStar : null}
               completeness={getItemCompleteness(item)}
               unread={getItemUnread(item)}
               campaignsById={campaignsById}
@@ -1292,13 +1308,14 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
                             users={users}
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
-                            canWrite={canWrite}
+                            canWrite={canWriteItem(item)}
                             onClick={setSelected}
                             stages={kanbanStages}
-                            onMoveToStage={canWrite ? attemptStageChange : null}
+                            isAgenciaWriter={isAgenciaWriter}
+                            onMoveToStage={canWriteItem(item) ? attemptStageChange : null}
                             onDeleteCard={canManage ? handleDelete : null}
                             onDuplicateCard={canManage ? handleDuplicate : null}
-                            onToggleStar={canWrite ? toggleStar : null}
+                            onToggleStar={canWriteItem(item) ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
                             unread={getItemUnread(item)}
                             campaignsById={campaignsById}
@@ -1399,7 +1416,8 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
         stages={kanbanStages}
         campaigns={campaigns}
         users={Array.from(usersById.values())}
-        canWrite={canWrite}
+        canWrite={canWriteItem(syncSelected)}
+        isAgenciaWriter={isAgenciaWriter}
         userId={user?.id}
         currentUser={user}
         notifyMentions={notifyMentions}

@@ -7,7 +7,7 @@ import {
   Check, Loader2, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { NEUTRAL, marketingUnitLabel } from "../../constants/companies";
-import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
+import { DELIVERABLE_STAGES, filterDeliverableMoveTargets } from "../../constants/marketing-pipelines";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { isOverdueDeliverable } from "../../utils/deliverable-status";
 import { stageTextColor } from "../../utils/stage-colors";
@@ -386,13 +386,22 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
 }
 
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], stages = [], canWrite, userId, currentUser, notifyMentions, onEditFields, stageError = null }) {
+export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], stages = [], canWrite, isAgenciaWriter = false, userId, currentUser, notifyMentions, onEditFields, stageError = null }) {
   // Etapas reais (rh_pipeline_stages, domain="marketing_deliverables"), com
   // fallback pro catálogo fixo só enquanto o fetch não resolveu — sem isso,
   // etapa custom criada pelo usuário (ex.: "Encaminhado à Agência") nunca
   // aparecia em "Mover entrega para fase" nem no Histórico, porque os dois
   // liam direto DELIVERABLE_STAGES (hardcoded, nunca atualizado).
   const effectiveStages = stages?.length ? stages : DELIVERABLE_STAGES;
+  const moveTargets = useMemo(
+    () => filterDeliverableMoveTargets(effectiveStages, {
+      fromStage: item.stage,
+      isAgenciaWriter,
+      // Drawer histórico já listava terminais (Entregue) pro time interno.
+      includeTerminal: !isAgenciaWriter,
+    }),
+    [effectiveStages, item.stage, isAgenciaWriter],
+  );
   const [sideTab,      setSideTab]     = useState("form");
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,    setMoveError]   = useState(null);
@@ -926,9 +935,9 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
             )}
           </div>
         )}
-        {canWrite && (
+        {canWrite && moveTargets.length > 0 && (
           <StageNavigator
-            targets={effectiveStages.filter(s => s.id !== item.stage)}
+            targets={moveTargets}
             onMove={handleMoveStage}
             getKey={(s) => s.id}
             currentStageKey={item.stage}
