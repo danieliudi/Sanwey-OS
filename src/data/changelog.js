@@ -38,6 +38,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.98.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Aviso de reembolso ou contrato que já foi apagado some sozinho do sino, em vez de ficar para sempre.",
+      },
+      {
+        kind: "correcao",
+        text: "Ao criar um campo com nome repetido em \"Editar etapas\", a tela diz qual campo já existe — antes mostrava uma mensagem técnica do banco. Vale para os 12 quadros que usam esse editor.",
+      },
+    ],
+  },
+  {
     version: "4.98.0",
     items: [
       {

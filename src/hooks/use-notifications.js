@@ -91,6 +91,26 @@ export function useNotifications({ currentUser, leads = [], personalTasks = [], 
     setNotifications([]);
   }, [setNotifications]);
 
+  // Poda notificações que apontam pra um registro que não existe mais.
+  //
+  // Existe porque as notificações vivem no localStorage do navegador, não no
+  // banco: os geradores só ACRESCENTAM, e apagar a despesa/o contrato/o lead
+  // que originou o aviso não toca na cópia local. O Daniel reportou isso em
+  // 10/09/2026 — deletou um reembolso e o aviso "pendente há 30 dias"
+  // continuou aparecendo, porque nada nunca o removeu.
+  //
+  // `tipo` limita a poda a uma família de aviso, e `idsVivos` é o conjunto de
+  // ids que ainda existem NAQUELE momento. Só poda quando `idsVivos` foi de
+  // fato carregado (Set não-vazio ou flag explícita): com a lista ainda
+  // vazia por carregamento, tudo pareceria morto e a caixa esvaziaria sozinha.
+  const dropOrfas = useCallback((tipo, idsVivos) => {
+    if (!(idsVivos instanceof Set)) return;
+    setNotifications(prev => {
+      const podadas = prev.filter(n => n.type !== tipo || !n.link?.id || idsVivos.has(n.link.id));
+      return podadas.length === prev.length ? prev : podadas;
+    });
+  }, [setNotifications]);
+
   // Check for follow-ups due today for this user
   useEffect(() => {
     if (!currentUser || !leads.length) return;
@@ -172,6 +192,7 @@ export function useNotifications({ currentUser, leads = [], personalTasks = [], 
     markAllRead,
     markRead,
     clearAll,
+    dropOrfas,
     desktopPermission,
     requestDesktopPermission,
   };

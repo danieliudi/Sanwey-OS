@@ -435,6 +435,7 @@ export default function App() {
     markAllRead: markAllNotificationsRead,
     markRead: markNotificationRead,
     clearAll: clearAllNotifications,
+    dropOrfas: dropNotificacoesOrfas,
     desktopPermission,
     requestDesktopPermission,
   } = useNotifications({ currentUser, leads, personalTasks, notificationPrefs: settings.notifications });
@@ -798,7 +799,11 @@ export default function App() {
         }, { contratoId: c.id });
       }
     }
-  }, [contratosParaLembretes, isRHManager, users, pushNotification, notifications]);
+    // Mesma poda do reembolso — contrato apagado deixava o aviso órfão.
+    if (contratosParaLembretes.length > 0) {
+      dropNotificacoesOrfas("contrato_fornecedor_vencendo", new Set(contratosParaLembretes.map(c => c.id)));
+    }
+  }, [contratosParaLembretes, isRHManager, users, pushNotification, notifications, dropNotificacoesOrfas]);
 
   // Lembrete de bem-estar chegando perto — reunião com o RH (20/07): "recebe
   // e-mail avisando... e quando estiver próximo". Roda enquanto um RH tem a
@@ -864,7 +869,19 @@ export default function App() {
         link: { module: "crm_despesas", id: d.id },
       });
     }
-  }, [despesasParaLembretes, isManagerRole, pushNotification, notifications]);
+
+    // Poda o inverso do laço acima. As notificações vivem no localStorage do
+    // navegador e os geradores só acrescentam: apagar a despesa não tocava na
+    // cópia local, e o aviso ficava para sempre apontando pra um registro que
+    // não existe mais (Daniel, 10/09/2026 — deletou o reembolso e continuou
+    // recebendo). Só poda com a lista já carregada, senão o primeiro render
+    // (array vazio) esvaziaria a caixa sozinho.
+    if (despesasParaLembretes.length > 0) {
+      dropNotificacoesOrfas("reembolso_pendente_ha_dias", new Set(
+        despesasParaLembretes.filter(d => d.status_reembolso === "pendente").map(d => d.id)
+      ));
+    }
+  }, [despesasParaLembretes, isManagerRole, pushNotification, notifications, dropNotificacoesOrfas]);
 
   // Geradores de notificação — stale_lead, cross_sell, weekly_digest,
   // new_candidato: toggles existiam em Configurações > Notificações desde a
