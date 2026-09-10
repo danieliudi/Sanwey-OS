@@ -6,6 +6,7 @@ import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
 import { useMarketingBudgets } from "../../hooks/use-marketing-budgets";
 import { useMarketingPurchaseRequests } from "../../hooks/use-marketing-purchase-requests";
 import { EXPENSE_CATEGORIES, MANUAL_EXPENSE_CATEGORIES, SYSTEM_EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
+import { COMMERCIAL_COST_CENTERS, COMMERCIAL_CREDIT_CARDS, costCenterLabel } from "../../constants/cost-centers";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK, formatBRL } from "../../utils/currency";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -53,6 +54,8 @@ const EMPTY_FORM = {
   taskIds:     [],
   notes:       "",
   receiptUrl:  null,
+  costCenter:  "",
+  creditCard:  "",
 };
 
 function StatusBadge({ status }) {
@@ -248,6 +251,7 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
     e.preventDefault();
     if (!form.description.trim()) { setError("Descrição obrigatória."); return; }
     if (form.companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
+    if (!form.costCenter) { setError("Selecione o centro de custo."); return; }
     // Sem vencimento E sem data de nota, a despesa não pertence a ano nenhum:
     // ela some do filtro "Ano", do teto por categoria e do burn rate, mas
     // continua no total da tabela — dois números contraditórios na mesma tela.
@@ -429,6 +433,32 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
             >
               <option value="pendente">Pendente</option>
               <option value="pago">Pago</option>
+            </select>
+          </div>
+
+          <div className="flex gap-2">
+            <select
+              value={form.costCenter}
+              onChange={e => set("costCenter", e.target.value)}
+              className="flex-1 text-sm rounded-xl border outline-none px-3 py-2"
+              style={{ borderColor: "var(--border-strong)", color: form.costCenter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)" }}
+              required
+            >
+              <option value="">Centro de custo *</option>
+              {COMMERCIAL_COST_CENTERS.map(c => (
+                <option key={c.code} value={c.code}>{costCenterLabel(c.code)}</option>
+              ))}
+            </select>
+            <select
+              value={form.creditCard}
+              onChange={e => set("creditCard", e.target.value)}
+              className="flex-1 text-sm rounded-xl border outline-none px-3 py-2"
+              style={{ borderColor: "var(--border-strong)", color: form.creditCard ? "var(--text)" : "var(--text-dim)", background: "var(--surface)" }}
+            >
+              <option value="">Cartão (opcional)</option>
+              {COMMERCIAL_CREDIT_CARDS.map(c => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
             </select>
           </div>
 
@@ -1738,7 +1768,10 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                     <LinkedChips items={(expense.taskIds || []).map(id => taskMap[id]).filter(Boolean).map(t => ({ id: t.id, label: t.title }))} />
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
-                    {expense.category}
+                    <div>{expense.category}</div>
+                    {expense.costCenter && (
+                      <div className="text-[10px]" style={{ color: "var(--text-faint)", marginTop: 2 }}>{costCenterLabel(expense.costCenter)}</div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
