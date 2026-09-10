@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.99.4",
+    items: [
+      {
+        kind: "correcao",
+        text: "Banco de talentos: se o currículo não subir, a pessoa é avisada de que os dados dela foram salvos e para onde mandar o arquivo, em vez de uma mensagem genérica de erro.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "4.99.3",
     items: [
       {

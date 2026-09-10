@@ -112,10 +112,20 @@ export default function TalentPoolForm() {
         // pessoa via "não foi possível enviar" e reenviava, criando token novo
         // a cada tentativa — enquanto o RH via um candidato sem currículo e
         // sem nenhuma pista do motivo.
-        throw new Error(
-          `Seus dados foram registrados, mas o currículo não subiu (${uploadErr.message || "erro no envio do arquivo"}). ` +
-          "Responda este e-mail ou escreva para rh@sanwey.com.br anexando o arquivo."
+        //
+        // NÃO passa por friendlyError de propósito, e não embute o erro cru:
+        // (a) friendlyError reconhece "permission denied"/"row-level security"
+        // e devolveria a frase genérica, apagando o que importa aqui — que os
+        // dados FORAM salvos; (b) o próprio arquivo do friendlyError existe pra
+        // não vazar detalhe técnico em formulário público. O detalhe vai pro
+        // console, que é onde se diagnostica.
+        try { console.error("[erro] upload do currículo", uploadErr); } catch { /* noop */ }
+        setError(
+          "Seus dados foram registrados, mas o currículo não subiu. " +
+          "Envie o arquivo para rh@sanwey.com.br que anexamos na sua candidatura."
         );
+        setSubmitting(false);
+        return;
       }
 
       setDone(true);
