@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.99.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Banco de talentos: o currículo passou a ser aceito mesmo quando o navegador não informa o tipo do arquivo, e se o envio falhar a pessoa vê o motivo e para onde mandar o arquivo — antes o cadastro entrava sem currículo e sem aviso.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "4.99.0",
     items: [
       {
