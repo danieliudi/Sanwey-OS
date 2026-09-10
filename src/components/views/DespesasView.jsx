@@ -220,10 +220,14 @@ function ExpenseModal({ initial, campaigns = [], deliverables = [], tasks = [], 
     () => form.campaignId ? deliverables.filter(d => d.campaignId === form.campaignId) : deliverables,
     [deliverables, form.campaignId]
   );
-  const filteredTasks = useMemo(
-    () => form.campaignId ? tasks.filter(t => t.campaignId === form.campaignId) : tasks,
-    [tasks, form.campaignId]
-  );
+  // Arquivada não é oferecida pra vincular — mas a que JÁ está vinculada nesta
+  // despesa continua na lista, senão editar a despesa apagaria o vínculo sem
+  // ninguém pedir.
+  const filteredTasks = useMemo(() => {
+    const jaVinculadas = new Set(form.taskIds || []);
+    const base = tasks.filter(t => !t.archivedAt || jaVinculadas.has(t.id));
+    return form.campaignId ? base.filter(t => t.campaignId === form.campaignId) : base;
+  }, [tasks, form.campaignId, form.taskIds]);
 
   const handleUploadReceipt = async (file) => {
     setUploading(true);
@@ -1379,6 +1383,9 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
 
   const campaignMap = useMemo(() => Object.fromEntries(campaigns.map(c => [c.id, c])), [campaigns]);
   const deliverableMap = useMemo(() => Object.fromEntries(deliverables.map(d => [d.id, d])), [deliverables]);
+  // `taskMap` fica com TODAS, arquivadas incluídas: uma despesa antiga tem
+  // que continuar mostrando o nome da tarefa a que está vinculada, mesmo
+  // depois de a tarefa sair do quadro.
   const taskMap = useMemo(() => Object.fromEntries(tasks.map(t => [t.id, t])), [tasks]);
 
   const [filterCategory, setFilterCategory] = useState("all");

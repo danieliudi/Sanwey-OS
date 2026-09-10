@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom";
 import {
   Plus, X, ListTodo, Star, Filter, Settings2, AlertCircle, LayoutGrid, TrendingUp,
-  List, CalendarDays, ChevronLeft, ChevronRight, Download,
+  List, CalendarDays, ChevronLeft, ChevronRight, Download, Archive,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
@@ -28,6 +28,7 @@ import { getMentionableUsers } from "../../utils/mentionable-users";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AppToast } from "../shared/AppToast";
+import { Modal } from "../ui/Modal";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
@@ -626,7 +627,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const {
     tasks, loading, canWrite,
     createTask, updateTask, deleteTask, duplicateTask,
-    changeStage, toggleStar,
+    changeStage, toggleStar, setArchived, setArchivedBulk,
   } = useMarketingTasks({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
@@ -655,6 +656,8 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const [draggedItem,   setDraggedItem]   = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [stageError,    setStageError]    = useState(null);
+  const [archiveToast,  setArchiveToast]  = useState(null);
+  const [bulkArchive,   setBulkArchive]   = useState(null);
   const [quickAddStage, setQuickAddStage] = useState(null);
   const [selected,      setSelected]      = useState(null);
   const [viewMode,      setViewMode]      = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
@@ -669,6 +672,11 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const [search,         setSearch]         = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
   const [deadlineFilter, setDeadlineFilter] = useState("");
+  // "ativas" | "arquivadas" | "todas". NÃO persiste entre sessões de
+  // propósito: densidade de tabela é preferência, isto é recorte de dado —
+  // abrir a plataforma na segunda em modo "Arquivadas" leria como quadro
+  // quebrado.
+  const [archiveFilter,  setArchiveFilter]  = useState("ativas");
 
   // roles[] cobre cargo adicional — user.role sozinho fica só de fallback.
   const userRoleList = user?.roles?.length ? user.roles : (user?.role ? [user.role] : []);
@@ -677,10 +685,14 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const toggleCompanyFilter = (id) =>
     setCompanyFilter(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
-  const activeFilterCount = (ownerFilter ? 1 : 0) + (priorityFilter ? 1 : 0) + companyFilter.length + (starredOnly ? 1 : 0) + (campaignFilter ? 1 : 0) + (deadlineFilter ? 1 : 0);
+  const activeFilterCount = (ownerFilter ? 1 : 0) + (priorityFilter ? 1 : 0) + companyFilter.length + (starredOnly ? 1 : 0) + (campaignFilter ? 1 : 0) + (deadlineFilter ? 1 : 0) + (archiveFilter !== "ativas" ? 1 : 0);
 
   /* Filtered tasks */
-  const filtered = useMemo(() => {
+  // `baseFiltered` = TODOS os filtros menos arquivamento. É o que o CSV
+  // consome: arquivado sai do quadro, nunca do relatório. `filtered`
+  // deriva dele — assim a condição de arquivamento existe num lugar só, e
+  // não repetida por view (que é o bug que a regra 11 documenta).
+  const baseFiltered = useMemo(() => {
     let list = tasks;
     // Busca primeiro — vale pras 4 views, que consomem este mesmo array
     // (CLAUDE.md, regra 11).
@@ -707,6 +719,30 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
     if (deadlineFilter === "no_deadline") list = list.filter(t => !t.deadline);
     return list;
   }, [tasks, search, campaignsById, ownerFilter, priorityFilter, companyFilter, starredOnly, campaignFilter, deadlineFilter]);
+
+  const filtered = useMemo(() => {
+    if (archiveFilter === "arquivadas") return baseFiltered.filter(t => t.archivedAt);
+    if (archiveFilter === "todas")      return baseFiltered;
+    return baseFiltered.filter(t => !t.archivedAt);
+  }, [baseFiltered, archiveFilter]);
+
+  // Quantas o recorte escondeu — a tela declara isso numa faixa, porque
+  // número que esconde linha sem dizer quantas não sustenta decisão (regra 14).
+  const hiddenArchivedCount = useMemo(
+    () => baseFiltered.filter(t => t.archivedAt).length,
+    [baseFiltered]
+  );
+
+  // Arquivadas por etapa: só pro estado vazio de coluna dizer "cadê?" no lugar
+  // onde a pessoa pergunta.
+  const archivedByStage = useMemo(() => {
+    const bucket = Object.create(null);
+    for (const t of baseFiltered) {
+      if (!t.archivedAt) continue;
+      bucket[t.stage] = (bucket[t.stage] || 0) + 1;
+    }
+    return bucket;
+  }, [baseFiltered]);
 
   // Ordenar cards dentro de cada coluna — cada etapa guarda seu próprio
   // critério (ver KanbanColumnSortMenu).
@@ -741,8 +777,18 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
       { label: "Prioridade média", value: String(byPriority.media) },
       { label: "Prioridade alta", value: String(byPriority.alta), color: byPriority.alta > 0 ? "var(--danger)" : undefined },
       { label: "Atrasadas", value: String(overdue), color: overdue > 0 ? "var(--danger)" : undefined },
+      // Regra 14: a Análise passa a ignorar arquivadas — ganho real, porque
+      // hoje um card morto parado numa etapa terminal envenena o tempo médio
+      // e o SLA. Mas número que descarta linha declara quantas descartou.
+      ...(archiveFilter === "ativas" && hiddenArchivedCount > 0
+        ? [{
+            label: "Arquivadas (fora do cálculo)",
+            value: String(hiddenArchivedCount),
+            title: "Tarefa arquivada não entra em tempo médio por etapa nem em SLA. Fonte: marketing_tasks.archived_at.",
+          }]
+        : []),
     ];
-  }, [filtered]);
+  }, [filtered, archiveFilter, hiddenArchivedCount]);
 
   const handleDragStart = useCallback((item) => setDraggedItem(item), []);
   const handleDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
@@ -816,6 +862,36 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
 
   const handleDelete = useCallback(async (id) => { await deleteTask(id); }, [deleteTask]);
 
+  // O card NÃO some otimista: `setArchived` só mexe no estado local depois
+  // que o banco confirma com linha, mesmo contrato dos outros writes daqui.
+  const handleArchive = useCallback(async (id, archived) => {
+    try {
+      await setArchived(id, archived);
+      setArchiveToast({ ids: [id], archived });
+    } catch (e) {
+      setStageError(e?.message || "Não foi possível arquivar — tente de novo.");
+    }
+  }, [setArchived]);
+
+  // Lote da etapa terminal. Age SÓ sobre o que está visível com o filtro
+  // atual — filtrar por campanha e clicar é a limpeza pós-feira exata, sem
+  // encostar em nada de outra campanha.
+  const handleArchiveBulk = useCallback(async (ids) => {
+    try {
+      const afetados = await setArchivedBulk(ids, true);
+      setArchiveToast({ ids: afetados, archived: true });
+    } catch (e) {
+      setStageError(e?.message || "Não foi possível arquivar — tente de novo.");
+    }
+  }, [setArchivedBulk]);
+
+  // O aviso se apaga sozinho — o AppToast não tem timer próprio.
+  useEffect(() => {
+    if (!archiveToast) return undefined;
+    const t = setTimeout(() => setArchiveToast(null), 6000);
+    return () => clearTimeout(t);
+  }, [archiveToast]);
+
   const handleDuplicate = useCallback(async (id) => {
     const source = tasks.find(t => t.id === id);
     if (!source) return;
@@ -842,6 +918,55 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         {stageError}
       </AppToast>
     )}
+    <Modal open={Boolean(bulkArchive)} onClose={() => setBulkArchive(null)} title="Arquivar tarefas desta etapa" width={460}>
+      {bulkArchive && (
+        <div>
+          <p style={{ fontSize: 13, color: "var(--text-dim)", margin: "0 0 16px", lineHeight: 1.55 }}>
+            Arquivar <strong style={{ color: "var(--text)" }}>{bulkArchive.ids.length} {bulkArchive.ids.length === 1 ? "tarefa" : "tarefas"}</strong> de “{bulkArchive.stage.name}”?
+            {" "}Só as que estão visíveis com o filtro atual. Elas somem do quadro e continuam no CSV.
+          </p>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <button onClick={() => setBulkArchive(null)}
+              style={{ padding: "7px 14px", borderRadius: 8, fontSize: 13, background: "var(--surface)", border: "1px solid var(--border-strong)", color: "var(--text-dim)", cursor: "pointer" }}>
+              Cancelar
+            </button>
+            {/* Cinza, NÃO --danger: arquivar não destrói nada e volta com um
+                clique. A cor é o que diz isso antes de a pessoa clicar. */}
+            <button onClick={() => { const alvo = bulkArchive; setBulkArchive(null); handleArchiveBulk(alvo.ids); }}
+              style={{ padding: "7px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "var(--surface-alt)", border: "1px solid var(--border-strong)", color: "var(--text)", cursor: "pointer" }}>
+              Arquivar
+            </button>
+          </div>
+        </div>
+      )}
+    </Modal>
+    {archiveToast && (
+      <AppToast
+        variant="default"
+        position="bottom-right"
+        icon={Archive}
+        onDismiss={() => setArchiveToast(null)}
+        action={{
+          label: "Desfazer",
+          onClick: async () => {
+            const alvo = archiveToast;
+            setArchiveToast(null);
+            try {
+              if (alvo.ids.length === 1) await setArchived(alvo.ids[0], !alvo.archived);
+              else await setArchivedBulk(alvo.ids, !alvo.archived);
+            } catch (e) {
+              setStageError(e?.message || "Não foi possível desfazer — tente de novo.");
+            }
+          },
+        }}
+      >
+        {archiveToast.archived
+          ? (archiveToast.ids.length === 1
+              ? "Tarefa arquivada — some do quadro, continua no CSV."
+              : `${archiveToast.ids.length} tarefas arquivadas — somem do quadro, continuam no CSV.`)
+          : "Tarefa desarquivada — voltou pro quadro."}
+      </AppToast>
+    )}
     <div>
       <KanbanBoardHeader className="mb-4">
       {/* Header */}
@@ -854,10 +979,14 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" iconOnlyMobile />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
-          {/* Export CSV */}
+          {/* Export CSV — EXCEÇÃO DECLARADA à regra 11 ("exporta o array já
+              filtrado"): aqui vai `baseFiltered`, que tem todos os filtros
+              MENOS o de arquivamento. É a decisão do Daniel que separa arquivo
+              de perda: arquivado sai do quadro, nunca do relatório. Não
+              "corrigir" isso de volta pra `filtered` numa auditoria futura. */}
           <button
-            onClick={() => exportMarketingTasksToCSV(filtered, { stages: kanbanStages, usersById, campaignsById, priorityLabels: DELIVERABLE_PRIORITIES })}
-            title="Exportar CSV"
+            onClick={() => exportMarketingTasksToCSV(baseFiltered, { stages: kanbanStages, usersById, campaignsById, priorityLabels: DELIVERABLE_PRIORITIES })}
+            title="Exportar CSV (inclui as arquivadas)"
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
@@ -893,8 +1022,13 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
             placeholder: "Buscar tarefa…",
           }}
         />
+        {/* data-tour do spotlight do arquivamento fica NESTE botão, não na
+            faixa nem no filtro: os dois só existem sob condição, e o
+            FeatureSpotlight descarta o aviso em silêncio quando o alvo não
+            aparece (FeatureSpotlight.jsx:110). Este botão existe sempre. */}
         <button
           onClick={() => setShowFilters(v => !v)}
+          data-tour="tarefas-arquivo"
           style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "var(--surface-alt)" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
           <Filter size={12} />
           Filtros
@@ -952,6 +1086,20 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                     { value: "no_deadline", label: "Sem prazo" },
                   ],
                 },
+                {
+                  // Por último porque é o mais raro. Como o recorte acontece
+                  // dentro do memo `filtered`, as 4 views herdam o
+                  // comportamento sem uma linha a mais (regra 11).
+                  id: "arquivamento",
+                  label: "Arquivamento",
+                  value: archiveFilter,
+                  onChange: e => setArchiveFilter(e.target.value),
+                  options: [
+                    { value: "ativas",     label: "Ativas" },
+                    { value: "arquivadas", label: hiddenArchivedCount ? `Arquivadas (${hiddenArchivedCount})` : "Arquivadas" },
+                    { value: "todas",      label: "Todas" },
+                  ],
+                },
               ]}
             />
 
@@ -975,7 +1123,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
             </button>
 
             {activeFilterCount > 0 && (
-              <button onClick={() => { setOwnerFilter(""); setPriorityFilter(""); setCompanyFilter([]); setStarredOnly(false); setCampaignFilter(""); setDeadlineFilter(""); }}
+              <button onClick={() => { setOwnerFilter(""); setPriorityFilter(""); setCompanyFilter([]); setStarredOnly(false); setCampaignFilter(""); setDeadlineFilter(""); setArchiveFilter("ativas"); }}
                 style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--danger)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
                 <X size={11} /> Limpar
               </button>
@@ -983,6 +1131,50 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           </>
         )}
       </div>
+
+      {/* Faixa de estado do arquivamento. Fica FORA do bloco condicional de
+          viewMode (regra 11), então aparece igual nas 4 views e no celular, e
+          não muda a largura do header ao trocar de view. Sem ela, o modo
+          "Arquivadas" lê como quadro quebrado, e o modo "Ativas" esconderia
+          linhas sem dizer quantas (regra 14). */}
+      {!loading && (archiveFilter !== "ativas" || hiddenArchivedCount > 0) && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+          fontSize: 12, padding: "6px 10px", borderRadius: 8, marginTop: 8,
+          background: "var(--surface-alt)", border: "1px solid var(--border)", color: "var(--text-dim)",
+        }}>
+          <Archive size={13} style={{ flexShrink: 0, opacity: 0.7 }} />
+          {archiveFilter === "ativas" && (
+            <>
+              <span>
+                <strong>{hiddenArchivedCount} {hiddenArchivedCount === 1 ? "tarefa arquivada" : "tarefas arquivadas"}</strong> fora do quadro · continuam no CSV
+              </span>
+              <button onClick={() => setArchiveFilter("arquivadas")}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--accent)", fontWeight: 550, fontSize: 12 }}>
+                Ver arquivadas
+              </button>
+            </>
+          )}
+          {archiveFilter === "arquivadas" && (
+            <>
+              <span><strong>Mostrando só as arquivadas ({filtered.length})</strong></span>
+              <button onClick={() => setArchiveFilter("ativas")}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--accent)", fontWeight: 550, fontSize: 12 }}>
+                Voltar pras ativas
+              </button>
+            </>
+          )}
+          {archiveFilter === "todas" && (
+            <>
+              <span>Mostrando ativas e arquivadas</span>
+              <button onClick={() => setArchiveFilter("ativas")}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--accent)", fontWeight: 550, fontSize: 12 }}>
+                Só ativas
+              </button>
+            </>
+          )}
+        </div>
+      )}
       </KanbanBoardHeader>
 
       {canWrite && (
@@ -1056,6 +1248,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
               stages={kanbanStages}
               onMoveToStage={canWrite ? attemptStageChange : null}
               onDeleteCard={canWrite ? handleDelete : null}
+              onArchiveCard={canWrite ? handleArchive : null}
               onDuplicateCard={canWrite ? handleDuplicate : null}
               onToggleStar={canWrite ? toggleStar : null}
               completeness={getItemCompleteness(item)}
@@ -1130,6 +1323,16 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                               <Settings2 size={13} />
                             </button>
                           )}
+                          {canWrite && stage.terminal && stageItems.length > 0 && archiveFilter === "ativas" && (
+                            <button onClick={() => setBulkArchive({ stage, ids: stageItems.map(t => t.id) })}
+                              className="flex items-center justify-center rounded-md transition-colors"
+                              style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                              title={`Arquivar as ${stageItems.length} tarefas visíveis desta etapa`}>
+                              <Archive size={13} />
+                            </button>
+                          )}
                           {canWrite && !stage.terminal && (
                             <button onClick={() => setQuickAddStage(stage.id)}
                               className="flex items-center justify-center rounded-md transition-colors"
@@ -1158,6 +1361,14 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                           ) : (
                             <>
                               <span style={{ opacity: 0.5 }}>Nenhuma tarefa nesta etapa</span>
+                              {/* Coluna vazia é onde a pessoa pergunta "cadê?".
+                                  A declaração agregada mora na faixa do topo;
+                                  aqui é a exceção, porque é o lugar da dúvida. */}
+                              {archiveFilter === "ativas" && archivedByStage[stage.id] > 0 && (
+                                <span style={{ opacity: 0.55, fontSize: 10, color: "var(--text-faint)" }}>
+                                  {archivedByStage[stage.id]} {archivedByStage[stage.id] === 1 ? "arquivada" : "arquivadas"} nesta etapa
+                                </span>
+                              )}
                               {!stage.terminal && canWrite && (
                                 <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>
                               )}
@@ -1177,6 +1388,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                             stages={kanbanStages}
                             onMoveToStage={canWrite ? attemptStageChange : null}
                             onDeleteCard={canWrite ? handleDelete : null}
+              onArchiveCard={canWrite ? handleArchive : null}
                             onDuplicateCard={canWrite ? handleDuplicate : null}
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
@@ -1241,6 +1453,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         onUpdate={handleUpdate}
         onMoveToStage={attemptStageChange}
         onDelete={handleDelete}
+        onArchive={canWrite && syncSelected ? () => handleArchive(syncSelected.id, !syncSelected.archivedAt) : undefined}
         users={Array.from(usersById.values())}
         canWrite={canWrite}
         currentUser={user}

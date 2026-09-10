@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MoreVertical, ArrowRight, ArrowLeft, Trash2, Copy } from "lucide-react";
+import { MoreVertical, ArrowRight, ArrowLeft, Trash2, Copy, Archive } from "lucide-react";
 
 function MoveTargetItem({ stage, onMove, setMenuOpen, icon: Icon, faded = false }) {
   return (
@@ -47,6 +47,10 @@ function MoveTargetItem({ stage, onMove, setMenuOpen, icon: Icon, faded = false 
 export function MoveStageMenu({
   targets = [], onMove, onOpenChange, onDelete, deleteLabel = "Excluir card",
   onDuplicate, duplicateLabel = "Duplicar card",
+  // Arquivar: opcional, e por isso inerte nos chamadores que não passam.
+  // Cinza, sem passo de confirmação — arquivar volta, e o desfazer mora no
+  // aviso que o board mostra depois. Confirmação é pro que não volta.
+  onArchive, archiveLabel = "Arquivar card",
   // Mensagem do passo de confirmação (2º clique) — sobrescrevível por chamador
   // que precisa deixar claro que "Excluir" aqui não é uma exclusão física
   // (ex.: Onboarding de RH, ver RHOnboardingView). Default cobre o caso comum
@@ -105,13 +109,14 @@ export function MoveStageMenu({
 
   const hasMoveTargets = Boolean(targets?.length && onMove);
   const hasDuplicate = Boolean(onDuplicate);
-  if (!hasMoveTargets && !onDelete && !hasDuplicate) return null;
+  const hasArchive = Boolean(onArchive);
+  if (!hasMoveTargets && !onDelete && !hasDuplicate && !hasArchive) return null;
 
   // Sem opções de "mover para" e sem duplicar (board desktop, drag-and-drop já
   // cobre mover): o gatilho vira direto a lixeira, e o clique já abre no
   // passo de confirmação — sem dropdown de uma linha só no meio do caminho.
   // Some com esse atalho assim que houver 2+ ações no menu.
-  const deleteOnly = !hasMoveTargets && !hasDuplicate && Boolean(onDelete);
+  const deleteOnly = !hasMoveTargets && !hasDuplicate && !hasArchive && Boolean(onDelete);
 
   const handleDuplicate = async (e) => {
     e.stopPropagation();
@@ -262,9 +267,27 @@ export function MoveStageMenu({
                   </button>
                 </>
               )}
-              {onDelete && (
+              {hasArchive && (
                 <>
                   {(hasMoveTargets || hasDuplicate) && <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />}
+                  <button
+                    onClick={e => { e.stopPropagation(); setMenuOpen(false); onArchive(); }}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+                      background: "transparent", border: "none", cursor: "pointer",
+                      fontSize: 13, color: "var(--text)", textAlign: "left",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <Archive size={13} style={{ flexShrink: 0 }} />
+                    {archiveLabel}
+                  </button>
+                </>
+              )}
+              {onDelete && (
+                <>
+                  {(hasMoveTargets || hasDuplicate || hasArchive) && <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />}
                   <button
                     onClick={e => { e.stopPropagation(); setConfirmingDelete(true); }}
                     style={{

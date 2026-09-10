@@ -316,7 +316,12 @@ export function ExecutiveDashboard({
   // Marketing
   const campanhasAtivas   = loadingCampaigns ? dash : campaigns.filter(c => c.stage !== "encerrado").length;
   const entregasAbertas   = loadingDeliverables ? dash : countOpen(deliverables, deliverableStages);
-  const tarefasAtrasadas  = loadingTasks ? dash : tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && isOpenStage(t, taskStages)).length;
+  // `!t.archivedAt`: tarefa arquivada NÃO é tarefa atrasada. Sem isso, a
+  // faixa de saúde do Grupo passaria a contar cadáver de feira antiga como
+  // alerta ativo — e o número que a diretoria olha ficaria inflado por
+  // exatamente o que alguém acabou de tirar da frente.
+  const tarefasAtrasadas  = loadingTasks ? dash : tasks.filter(t => !t.archivedAt && t.deadline && new Date(t.deadline) < new Date() && isOpenStage(t, taskStages)).length;
+  const tarefasArquivadas = loadingTasks ? 0 : tasks.filter(t => t.archivedAt).length;
   // Mês de uma despesa/compra = data fiscal (nota → vencimento → criação, o
   // helper único de src/utils/marketing-budget.js), NUNCA createdAt: com a data
   // de digitação, uma nota de dezembro lançada em janeiro entrava em "Despesas
@@ -401,7 +406,7 @@ export function ExecutiveDashboard({
         ? <span style={{ color: marketingBudgetColor, fontWeight: 700 }}>
             Orçamento {marketingPctConsumido} consumido
           </span>
-        : `${tarefasAtrasadas} tarefa${tarefasAtrasadas !== 1 ? "s" : ""} atrasada${tarefasAtrasadas !== 1 ? "s" : ""}`,
+        : `${tarefasAtrasadas} tarefa${tarefasAtrasadas !== 1 ? "s" : ""} atrasada${tarefasAtrasadas !== 1 ? "s" : ""}${tarefasArquivadas > 0 ? ` · ${tarefasArquivadas} arquivadas fora` : ""}`,
     },
     showRHArea && {
       id: "rh", label: "RH", color: "#0EA5E9",

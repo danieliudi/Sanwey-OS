@@ -24,6 +24,13 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  {
+    id: "tarefas-arquivo",
+    route: "marketing-tarefas",
+    target: '[data-tour="tarefas-arquivo"]',
+    text: "Novo: tarefa antiga pode ser arquivada. Ela sai do quadro e continua no CSV — o filtro \"Arquivamento\" traz de volta quando você precisar.",
+    version: "4.99.0",
+  },
   // 4.98.0 (campo Gestor na ficha) — decisão de PULAR o spotlight, registrada
   // aqui como a regra 12 pede. O elemento que representa a novidade é um
   // campo dentro do drawer, em modo de edição: não existe na rota quando a

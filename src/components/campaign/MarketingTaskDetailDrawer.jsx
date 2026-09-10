@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, FileText, Activity, Paperclip, ListChecks, History, Sparkles, Layers } from "lucide-react";
+import { AlertCircle, FileText, Activity, Paperclip, ListChecks, History, Sparkles, Layers, Archive } from "lucide-react";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
-import { localDateInputToISOString } from "../../utils/date";
+import { localDateInputToISOString, formatDateBR } from "../../utils/date";
 import { stageTextColor } from "../../utils/stage-colors";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -80,7 +80,7 @@ function dateInputValue(iso) {
 }
 
 export function MarketingTaskDetailDrawer({
-  item, stages, campaigns = [], onClose, onStageMoved, onUpdate, onMoveToStage, onDelete,
+  item, stages, campaigns = [], onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onArchive,
   users = [], canWrite, currentUser, notifyMentions,
 }) {
   const [formDraft,  setFormDraft]  = useState({});
@@ -290,6 +290,14 @@ export function MarketingTaskDetailDrawer({
           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
             style={{ background: priorityColor + "18", color: priorityColor, border: `1px solid ${priorityColor}40` }}>
             {priorityLabel}
+          </span>
+        )}
+        {item.archivedAt && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold inline-flex items-center gap-1"
+            style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+            title="Fora do quadro, ainda no CSV">
+            <Archive size={10} />
+            Arquivada em {formatDateBR(item.archivedAt)}
           </span>
         )}
       </div>
@@ -532,6 +540,12 @@ export function MarketingTaskDetailDrawer({
       right={right}
       onDelete={canWrite && onDelete ? () => onDelete(item.id) : undefined}
       deleteLabel="Excluir tarefa"
+      // Arquivar pelo drawer NÃO fecha o drawer: o chip aparece no header e o
+      // botão vira "Desarquivar". Fechar depois de arquivar tiraria a única
+      // pista de que deu certo.
+      onArchive={onArchive}
+      archived={Boolean(item.archivedAt)}
+      archiveLabel={item.archivedAt ? "Desarquivar tarefa" : "Arquivar tarefa"}
     />
   );
 }

@@ -38,6 +38,20 @@
 
 export const CHANGELOG = [
   {
+    version: "4.99.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Tarefas de Marketing: dá pra arquivar tarefa antiga. Ela sai do quadro e continua no CSV — pra achar de novo, o filtro \"Arquivamento\". Na coluna final dá pra arquivar todas as visíveis de uma vez.",
+        roles: ["marketing", "gerente_marketing"],
+      },
+      {
+        kind: "ajuste",
+        text: "Meu To-do: o quadro passa a mostrar só o que está aberto, igual ao número da bolinha no menu. As concluídas ficam a um clique, no aviso acima do quadro.",
+      },
+    ],
+  },
+  {
     version: "4.98.1",
     items: [
       {
