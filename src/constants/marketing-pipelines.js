@@ -28,8 +28,10 @@ export const DELIVERABLE_STAGES = [
 export const AGENCIA_DELIVERABLE_WRITE_STAGES = ["encaminhado_para_agencia", "em_producao"];
 
 /** Para onde a agência pode mandar um card (espelha o WITH CHECK).
- *  Inclui `revisao`: ela encaminha pra revisão e, a partir daí, o card sai das
- *  mãos dela — quem revisa é o time interno, e não muda debaixo do revisor. */
+ *  Inclui `revisao`: ela encaminha pra revisão e, a partir daí, a LINHA da
+ *  entrega sai das mãos dela. Ressalva registrada na revisão de segurança: a
+ *  policy de anexos ainda deixa a agência apagar anexo de card em revisão —
+ *  buraco pré-existente, aberto para decisão, não coberto por esta lista. */
 export const AGENCIA_DELIVERABLE_MOVE_TARGETS = ["encaminhado_para_agencia", "em_producao", "revisao"];
 
 /** Agência sem cargo de marketing/admin — quem de fato cai no WITH CHECK restrito. */
