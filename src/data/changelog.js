@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.99.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "Entregas: a agência voltou a poder encaminhar um card para Revisão. Depois de encaminhado, ele fica com o time interno — a agência não mexe mais nele.",
+        toast: true,
+      },
+    ],
+  },
+  {
     version: "4.99.1",
     items: [
       {

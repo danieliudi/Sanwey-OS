@@ -18,7 +18,7 @@ import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
-  isAgenciaDeliverableWriter, canAgenciaWriteDeliverableStage,
+  isAgenciaDeliverableWriter, canAgenciaWriteDeliverableStage, canAgenciaMoveDeliverableTo,
   AGENCIA_STAGE_MOVE_BLOCKED_MSG,
 } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
@@ -855,7 +855,9 @@ export function EntregasView({ user, users = [], notifyMentions, initialSelected
     const item = deliverables.find(d => d.id === itemId);
     if (!item) return false;
     // Espelha md_update: agência não grava stage fora do par Encaminhado/Em Produção.
-    if (isAgenciaWriter && !canAgenciaWriteDeliverableStage(toStage)) {
+    // DESTINO, não etapa atual: a agência encaminha pra Revisão, e é só a
+    // partir dali que o card sai das mãos dela.
+    if (isAgenciaWriter && !canAgenciaMoveDeliverableTo(toStage)) {
       setStageError(AGENCIA_STAGE_MOVE_BLOCKED_MSG);
       return false;
     }
