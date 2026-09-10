@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.99.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "Entregas: a agência voltou a ver e a subir anexo. Antes a permissão dependia de a campanha ter fornecedor cadastrado, o que não valia para nenhuma entrega — ela não conseguia nem baixar o briefing.",
+        toast: true,
+      },
+    ],
+  },
+  {
     version: "4.99.2",
     items: [
       {
