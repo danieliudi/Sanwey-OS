@@ -9,7 +9,7 @@ import {
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
   FlaskConical, PackageSearch, ClipboardList, Bug, BookOpen, Newspaper,
 } from "lucide-react";
-import { supabase } from "./lib/supabase";
+import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { usePipelines } from "./hooks/use-pipelines";
 import { DEFAULT_PIPELINE_STAGES } from "./constants/pipelines";
@@ -755,7 +755,7 @@ export default function App() {
   // acabar (ou já acabou). Reunião com o RH (20/07): "colocar notificação/
   // lembrete pro usuário responsável receber email e notificação de
   // vencimento do contrato".
-  const { contratos: contratosParaLembretes } = useRHSuppliers({ enabled: Boolean(currentUser) && isRHManager });
+  const { contratos: contratosParaLembretes, loading: contratosCarregando } = useRHSuppliers({ enabled: Boolean(currentUser) && isRHManager });
   const contratoVistoRef = useRef(new Set());
   useEffect(() => {
     if (!isRHManager) return;
@@ -800,10 +800,13 @@ export default function App() {
       }
     }
     // Mesma poda do reembolso — contrato apagado deixava o aviso órfão.
-    if (contratosParaLembretes.length > 0) {
+    // Guarda por `loading`, NÃO por lista vazia: apagar o último contrato
+    // deixa a lista em [], e um guard de tamanho pularia justamente o caso
+    // que a poda existe pra resolver.
+    if (isSupabaseConfigured && !contratosCarregando) {
       dropNotificacoesOrfas("contrato_fornecedor_vencendo", new Set(contratosParaLembretes.map(c => c.id)));
     }
-  }, [contratosParaLembretes, isRHManager, users, pushNotification, notifications, dropNotificacoesOrfas]);
+  }, [contratosParaLembretes, contratosCarregando, isRHManager, users, pushNotification, notifications, dropNotificacoesOrfas]);
 
   // Lembrete de bem-estar chegando perto — reunião com o RH (20/07): "recebe
   // e-mail avisando... e quando estiver próximo". Roda enquanto um RH tem a
@@ -833,7 +836,7 @@ export default function App() {
   // Lembrete de reembolso de Viagens pendente há muito tempo — mesma ideia
   // de "approval-queue timeout" do Concur/TravelPerk: sem isso, uma despesa
   // fica esquecida na fila do gestor sem ninguém notar.
-  const { despesas: despesasParaLembretes } = useCRMDespesas({
+  const { despesas: despesasParaLembretes, loading: despesasCarregando } = useCRMDespesas({
     enabled: Boolean(currentUser) && isManagerRole,
   });
   const despesaPendenteVistaRef = useRef(new Set());
@@ -874,14 +877,27 @@ export default function App() {
     // navegador e os geradores só acrescentam: apagar a despesa não tocava na
     // cópia local, e o aviso ficava para sempre apontando pra um registro que
     // não existe mais (Daniel, 10/09/2026 — deletou o reembolso e continuou
-    // recebendo). Só poda com a lista já carregada, senão o primeiro render
-    // (array vazio) esvaziaria a caixa sozinho.
-    if (despesasParaLembretes.length > 0) {
+    // recebendo).
+    //
+    // O guard é `loading`, NÃO `length > 0`. A primeira versão desta correção
+    // usava tamanho e por isso NÃO resolvia o caso relatado: quem tinha uma
+    // despesa pendente e apagou fica com a lista em [], e a poda era pulada
+    // justamente aí (achado do QA). `isSupabaseConfigured` cobre o caminho
+    // mock, onde loading vira false com a lista vazia por não haver banco.
+    //
+    // O conjunto é o das PENDENTES, não o de todas: o aviso diz "pendente há
+    // N dias", então ele deixa de ser verdade também quando a despesa é
+    // aprovada — some nos dois casos, apagada ou aprovada.
+    //
+    // LACUNA CONHECIDA: os outros geradores com link (férias, avaliação,
+    // funcionários, solicitações de marketing) seguem sem poda. Se um deles
+    // for reportado, a ferramenta pra resolver já é esta.
+    if (isSupabaseConfigured && !despesasCarregando) {
       dropNotificacoesOrfas("reembolso_pendente_ha_dias", new Set(
         despesasParaLembretes.filter(d => d.status_reembolso === "pendente").map(d => d.id)
       ));
     }
-  }, [despesasParaLembretes, isManagerRole, pushNotification, notifications, dropNotificacoesOrfas]);
+  }, [despesasParaLembretes, despesasCarregando, isManagerRole, pushNotification, notifications, dropNotificacoesOrfas]);
 
   // Geradores de notificação — stale_lead, cross_sell, weekly_digest,
   // new_candidato: toggles existiam em Configurações > Notificações desde a

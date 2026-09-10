@@ -520,10 +520,13 @@ export function StageFieldsPanel({
       await fn();
       if (onRefetch) await onRefetch();
     } catch (e) {
-      // Rede de segurança pro que a checagem antes do envio não cobre:
-      // renomear um campo existente pra um nome que colide, e edição
-      // concorrente de duas abas. Sem isto, o usuário via a mensagem crua do
-      // Postgres com o nome da constraint.
+      // Rede de segurança pro caso que a checagem antes do envio não cobre:
+      // duas abas criando o mesmo campo ao mesmo tempo. (Renomear um campo
+      // existente NÃO passa por aqui — `mergePatch` preserva o fieldKey
+      // original e nunca o recalcula a partir do label novo, então renomear
+      // pra um nome que colide não viola unicidade nenhuma. Achado do QA.)
+      // Sem isto, o usuário via a mensagem crua do Postgres com o nome da
+      // constraint.
       const msg = e?.message || "";
       setOpError(
         /duplicate key value|unique constraint/i.test(msg)
@@ -679,7 +682,7 @@ export function StageFieldsPanel({
                   return (
                     <button
                       key={t.value}
-                      onClick={() => setAddingType(active ? null : t.value)}
+                      onClick={() => { setOpError(null); setAddingType(active ? null : t.value); }}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg border text-left cursor-pointer shrink-0 transition-colors"
                       style={{
                         fontSize: 12, fontWeight: 600,
@@ -778,7 +781,7 @@ export function StageFieldsPanel({
                       accent={accent}
                       busy={busy}
                       onAdd={handleAdd}
-                      onCancel={() => setAddingType(null)}
+                      onCancel={() => { setOpError(null); setAddingType(null); }}
                     />
                   </div>
                 )}

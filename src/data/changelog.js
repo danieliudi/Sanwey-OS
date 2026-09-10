@@ -42,7 +42,7 @@ export const CHANGELOG = [
     items: [
       {
         kind: "correcao",
-        text: "Aviso de reembolso ou contrato que já foi apagado some sozinho do sino, em vez de ficar para sempre.",
+        text: "Aviso de reembolso que já foi apagado ou aprovado, e de contrato que já foi apagado, some sozinho do sino em vez de ficar para sempre.",
       },
       {
         kind: "correcao",
