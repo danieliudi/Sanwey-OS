@@ -12,6 +12,7 @@ import { periodoExperienciaInfo } from "../../utils/rh-compliance-dates";
 import { DocumentCaptureModal } from "../shared/DocumentCaptureModal";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
+import { descendentesDe, podeSerGestor } from "../../utils/rh-hierarquia";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -34,6 +35,7 @@ const EMPTY_FORM = {
   addressStreet: "", addressNumber: "", addressComplement: "", addressNeighborhood: "",
   addressCity: "", addressState: "", addressZip: "",
   jobTitle: "", department: "", frente: "", contractType: "", admissionDate: "",
+  gestorId: "",
   employeeStatus: "ativo", salary: "", asoVencimento: "", contratoFim: "",
   periodoExperienciaDias: "",
   aprendizInicio: "", aprendizFim: "",
@@ -54,10 +56,29 @@ function parseExtraction(text) {
   return JSON.parse(match[0]);
 }
 
-export function NovoColaboradorModal({ currentUser, initialData, hireContext, contextNote, stageId, users, onSave, onClose, onDelete }) {
+export function NovoColaboradorModal({ currentUser, initialData, hireContext, contextNote, stageId, users, colaboradores = [], onSave, onClose, onDelete }) {
   const { complete, isConfigured, provider } = useAI(currentUser);
   const { cargos: cargoTemplates } = useRHCargoTemplates({ userId: currentUser?.id });
   const [form, setForm] = useState(() => initialData ? { ...EMPTY_FORM, ...initialData } : EMPTY_FORM);
+  // Mesma regra da ficha (RHFuncionariosView): a própria pessoa e os
+  // descendentes ficam desabilitados com o motivo. `colaboradores` só é
+  // passado pela tela de Funcionários — nos fluxos de criação (conversão de
+  // candidato, Onboarding) o campo não aparece, e o gestor se define depois
+  // na ficha, que é onde a hierarquia é gerida.
+  const gestorOptions = useMemo(() => {
+    const eu = initialData?.id;
+    const descendentes = descendentesDe(colaboradores, eu);
+    return colaboradores
+      .filter(podeSerGestor)
+      .map((c) => ({
+        id: c.id,
+        nome: c.fullName,
+        bloqueio: c.id === eu
+          ? "é a própria pessoa"
+          : descendentes.has(c.id) ? "já reporta a esta pessoa" : null,
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [colaboradores, initialData?.id]);
   // Cargo virou select ligado ao catálogo de Cargos & Salários (rh_cargo_templates)
   // — antes era texto livre, sem nenhuma relação com o catálogo (achado #6 do
   // roteiro de treinamento de RH, 31/07/2026). Filtra por departamento quando
@@ -447,6 +468,19 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
                   {RH_DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
+              {colaboradores.length > 0 && (
+                <div>
+                  <label style={labelSt}>Gestor</label>
+                  <select value={form.gestorId} onChange={(e) => set("gestorId", e.target.value)} className={inputCls} style={fieldSt("gestorId")}>
+                    <option value="">Sem gestor definido</option>
+                    {gestorOptions.map((g) => (
+                      <option key={g.id} value={g.id} disabled={!!g.bloqueio}>
+                        {g.bloqueio ? `${g.nome} — ${g.bloqueio}` : g.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label style={labelSt}>Tipo de contrato *</label>
                 <select ref={registerField("contractType")} value={form.contractType} onChange={(e) => set("contractType", e.target.value)} className={inputCls} style={fieldSt("contractType")}>

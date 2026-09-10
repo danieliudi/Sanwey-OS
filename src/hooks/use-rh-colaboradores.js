@@ -71,7 +71,12 @@ function colaboradorToRow(c, extras = {}) {
     address_zip: c.addressZip || null,
     job_title: c.jobTitle || null,
     department: c.department || null,
-    gestor_id: c.gestorId || null,
+    // Omitido quando a chave nem existe no objeto — mesmo idioma dos
+    // desligamento_* abaixo. Protege os chamadores que montam o objeto do
+    // zero (NovoColaboradorModal, conversão de candidato): se o front subir
+    // antes da migration, o PostgREST recusaria TODO insert em
+    // rh_colaboradores com PGRST204, não só a tela de Funcionários.
+    ...(c.gestorId !== undefined ? { gestor_id: c.gestorId || null } : {}),
     frente: c.frente || null,
     contract_type: c.contractType || null,
     admission_date: c.admissionDate || null,

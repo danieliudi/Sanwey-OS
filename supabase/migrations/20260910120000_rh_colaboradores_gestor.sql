@@ -32,6 +32,15 @@ create index if not exists rh_colaboradores_gestor_id_idx
 -- Trava de ciclo. Sem ela, A→B→A faz "Lidera N pessoas" e qualquer subida de
 -- cadeia entrarem em recursão infinita. Barrado no banco e não só na tela
 -- porque a tela não é o único caminho de escrita (import, SQL, agente).
+--
+-- POR QUE INVOKER e não SECURITY DEFINER: a travessia lê rh_colaboradores sob
+-- a RLS de quem está escrevendo, e isso só é seguro porque as duas policies da
+-- tabela são por CARGO e não por linha — quem pode dar UPDATE enxerga todas as
+-- linhas, então a subida nunca para no meio por falta de visibilidade. Essa
+-- garantia DEPENDE de MD-10 (escopo de rh_colaboradores é o Grupo inteiro).
+-- No dia em que entrar uma policy por linha nesta tabela (ex.: "colaborador lê
+-- só a própria ficha"), esta função precisa virar SECURITY DEFINER no MESMO
+-- commit, senão a trava passa a ter ponto cego em silêncio.
 create or replace function public.rh_colaboradores_check_gestor_cycle()
 returns trigger
 language plpgsql
@@ -41,6 +50,15 @@ declare
   v_cursor uuid := new.gestor_id;
   v_saltos int := 0;
 begin
+  -- `update of gestor_id` dispara sempre que a coluna aparece no SET, mudando
+  -- de valor ou não — e o front grava a linha inteira a cada save. Sem esta
+  -- saída, mudar status em massa ou salvar uma atividade percorreria a cadeia
+  -- à toa, e numa base com ciclo pré-existente seria RECUSADA com "provável
+  -- ciclo" por uma edição que não tem nada a ver com hierarquia.
+  if tg_op = 'UPDATE' and new.gestor_id is not distinct from old.gestor_id then
+    return new;
+  end if;
+
   if new.gestor_id is null then
     return new;
   end if;
@@ -49,19 +67,27 @@ begin
     raise exception 'Um colaborador não pode ser o próprio gestor.';
   end if;
 
+  -- Serializa só quem está mexendo em hierarquia. Sem isto a validação é
+  -- TOCTOU: duas transações simultâneas (A.gestor:=B e B.gestor:=A) leem o
+  -- estado antigo, as duas aprovam, e o ciclo entra. Import em lote é
+  -- exatamente onde escrita concorrente acontece — que é um dos motivos de a
+  -- trava estar aqui e não na tela.
+  perform pg_advisory_xact_lock(hashtext('rh_colaboradores_gestor_id'));
+
   -- Sobe a cadeia a partir do gestor proposto. Se reencontrar o próprio
-  -- colaborador, o vínculo fecharia um laço. O teto de 50 saltos é rede de
-  -- segurança contra laço pré-existente que a trava não tenha visto.
+  -- colaborador, o vínculo fecharia um laço.
   while v_cursor is not null and v_saltos < 50 loop
     if v_cursor = new.id then
-      raise exception 'Esse vínculo criaria um ciclo na hierarquia (% já reporta, direta ou indiretamente, a %).',
-        new.gestor_id, new.id;
+      raise exception 'Esse vínculo criaria um ciclo na hierarquia.';
     end if;
     select gestor_id into v_cursor from public.rh_colaboradores where id = v_cursor;
     v_saltos := v_saltos + 1;
   end loop;
 
-  if v_saltos >= 50 then
+  -- Testa o CURSOR, não a contagem: uma cadeia legítima de exatamente 50
+  -- ancestrais termina com v_cursor nulo e v_saltos = 50, e seria recusada
+  -- por engano. Só interessa o caso em que a subida foi interrompida.
+  if v_cursor is not null then
     raise exception 'Cadeia de gestores profunda demais — provável ciclo pré-existente.';
   end if;
 

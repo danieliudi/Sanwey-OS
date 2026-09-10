@@ -34,6 +34,7 @@ import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
+import { descendentesDe, equipeDe, podeSerGestor } from "../../utils/rh-hierarquia";
 import { useRHBeneficios } from "../../hooks/use-rh-beneficios";
 import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
 import { useColaboradorConnections } from "../../hooks/use-colaborador-connections";
@@ -910,29 +911,19 @@ function EmployeeDetailModal({
     return [...base].sort((a, b) => a.name.localeCompare(b.name));
   }, [cargoTemplates, form.department]);
 
-  // Opções de Gestor: colaboradores ativos, menos a própria pessoa e menos
-  // quem já está abaixo dela na cadeia — os dois vínculos que fechariam ciclo.
-  // A trava de verdade é no banco (trigger rh_colaboradores_gestor_cycle,
-  // migration 20260910120000); aqui é só pra não oferecer o que seria
-  // recusado. Aparecem desabilitados com o motivo, em vez de sumirem — quem
-  // procura um nome que não está na lista precisa saber por quê.
+  // Opções de Gestor. Férias e afastamento continuam na lista de propósito —
+  // quem está de férias segue sendo gestor de alguém; só desligado sai. (O
+  // mockup dizia "ativos"; corrigido aqui pro que faz sentido na operação,
+  // decisão registrada no commit em vez de interpretada em silêncio.)
+  //
+  // A própria pessoa e os descendentes aparecem DESABILITADOS com o motivo,
+  // em vez de sumirem — quem procura um nome que não está na lista precisa
+  // saber por quê. A trava de verdade é o trigger no banco.
   const gestorOptions = useMemo(() => {
     const eu = colaboradorRow?.id;
-    const descendentes = new Set();
-    if (eu) {
-      let fronteira = [eu];
-      // Teto de 50 voltas: mesma rede de segurança do trigger, pro caso de um
-      // ciclo pré-existente ter escapado (linha gravada antes desta versão).
-      for (let volta = 0; volta < 50 && fronteira.length; volta += 1) {
-        const proxima = colaboradores
-          .filter((c) => fronteira.includes(c.gestorId) && !descendentes.has(c.id))
-          .map((c) => c.id);
-        proxima.forEach((id) => descendentes.add(id));
-        fronteira = proxima;
-      }
-    }
+    const descendentes = descendentesDe(colaboradores, eu);
     return colaboradores
-      .filter((c) => c.employeeStatus !== "desligado")
+      .filter(podeSerGestor)
       .map((c) => ({
         id: c.id,
         nome: c.fullName,
@@ -946,11 +937,21 @@ function EmployeeDetailModal({
       .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [colaboradores, colaboradorRow?.id]);
 
+  // Gestor que foi DESLIGADO sai de `gestorOptions` — e um <select> controlado
+  // com value sem <option> correspondente renderiza EM BRANCO, enquanto a
+  // leitura logo ao lado mostra o nome. A tela afirmaria duas coisas opostas,
+  // e salvar preservaria o vínculo que o RH acabou de ver como vazio. Mesma
+  // saída que o campo Cargo já usa pro cargo fora do catálogo, 40 linhas acima.
+  const gestorForaDaLista = useMemo(() => {
+    if (!form.gestor_id) return null;
+    if (gestorOptions.some((g) => g.id === form.gestor_id)) return null;
+    const c = colaboradores.find((x) => x.id === form.gestor_id);
+    return c ? { id: c.id, nome: c.fullName } : null;
+  }, [form.gestor_id, gestorOptions, colaboradores]);
+
   // O recíproco do campo — ninguém digita "quem eu lidero", isso se deduz.
   const liderados = useMemo(
-    () => colaboradores.filter(
-      (c) => colaboradorRow?.id && c.gestorId === colaboradorRow.id && c.employeeStatus !== "desligado"
-    ),
+    () => equipeDe(colaboradores, colaboradorRow?.id),
     [colaboradores, colaboradorRow?.id]
   );
   const gestorAtual = useMemo(
@@ -1332,6 +1333,9 @@ function EmployeeDetailModal({
                     disabled={!colaboradorRow}
                   >
                     <option value="">Sem gestor definido</option>
+                    {gestorForaDaLista && (
+                      <option value={gestorForaDaLista.id}>{gestorForaDaLista.nome} — desligado</option>
+                    )}
                     {gestorOptions.map((g) => (
                       <option key={g.id} value={g.id} disabled={!!g.bloqueio}>
                         {g.bloqueio
@@ -1695,9 +1699,16 @@ export function RHFuncionariosView({
   // ordem: se a conta falhar por permissão, nada mais é tocado — nunca
   // apaga o registro de RH e deixa a conta viva por trás sem explicar por quê.
   const handleDeleteRow = useCallback((id, name, hasAccess, colaboradorId) => {
-    const message = hasAccess
+    const base = hasAccess
       ? `Excluir ${name || "este funcionário"}? Isso remove o registro de RH E a conta de acesso à plataforma — a pessoa não vai mais conseguir entrar. Não pode ser desfeito.`
       : `Excluir o registro de ${name || "este funcionário"}? Não tem login vinculado — a exclusão é definitiva e não pode ser desfeita.`;
+    // O `on delete set null` da migration do gestor deixa os liderados sem
+    // gestor em silêncio. Mesmo princípio já usado nos modais de Fornecedores
+    // (regra 1): o texto reflete o que de fato se perde nesta página.
+    const equipe = equipeDe(colaboradores, hasAccess ? colaboradorId : id);
+    const message = equipe.length > 0
+      ? `${base}\n\n${equipe.length} ${equipe.length === 1 ? "pessoa fica" : "pessoas ficam"} sem gestor: ${equipe.map((c) => c.fullName).join(", ")}.`
+      : base;
     setConfirmDelete({
       message,
       onConfirm: async () => {
@@ -1716,7 +1727,7 @@ export function RHFuncionariosView({
         }
       },
     });
-  }, [deleteColaborador, onDeleteUser]);
+  }, [deleteColaborador, onDeleteUser, colaboradores]);
 
   // rh_colaboradores agora tem uma linha sincronizada pra cada profile (ver
   // sync_profile_to_colaborador), então quem já aparece em `users` também
@@ -1738,7 +1749,7 @@ export function RHFuncionariosView({
   // O botão "Minha equipe" só existe pra quem de fato lidera alguém — filtro
   // que sempre devolve lista vazia é controle morto na barra.
   const lideroAlguem = useMemo(
-    () => !!meuColaboradorId && colaboradores.some((c) => c.gestorId === meuColaboradorId),
+    () => equipeDe(colaboradores, meuColaboradorId).length > 0,
     [colaboradores, meuColaboradorId]
   );
 
@@ -1818,7 +1829,9 @@ export function RHFuncionariosView({
       if (filterFrente !== "all" && u.frente !== filterFrente) return false;
       if (filterStatus !== "all" && u.employee_status !== filterStatus) return false;
       if (filterContract !== "all" && u.contract_type !== filterContract) return false;
-      if (soMinhaEquipe && u._gestorId !== meuColaboradorId) return false;
+      // Sem `meuColaboradorId`, `null !== null` é false e a linha PASSARIA —
+      // o filtro viraria "quem não tem gestor", ou seja, a lista inteira.
+      if (soMinhaEquipe && (!meuColaboradorId || u._gestorId !== meuColaboradorId)) return false;
       return true;
     });
     arr.sort((a, b) => {
@@ -2448,6 +2461,12 @@ export function RHFuncionariosView({
       {/* Detail Modal */}
       {selected && (
         <EmployeeDetailModal
+          // O `form` do modal é useState inicializado UMA vez. O deep link do
+          // Cmd-K abre a ficha antes de `colaboradores` terminar de carregar,
+          // então sem esta key o form nasceria com gestor/ASO/contrato vazios
+          // e um "Salvar" gravaria null por cima do que estava lá. Trocar a
+          // key remonta o modal quando a linha de RH finalmente chega.
+          key={`${selected.id}:${colaboradores.find((c) => c.profileId === selected.id)?.id || "sem-ficha"}`}
           user={selected}
           leads={leads}
           canWrite={canWrite}
@@ -2470,6 +2489,7 @@ export function RHFuncionariosView({
 
       {novoColaboradorOpen && (
         <NovoColaboradorModal
+          colaboradores={colaboradores}
           currentUser={currentUser}
           onSave={createColaborador}
           onClose={() => setNovoColaboradorOpen(false)}
@@ -2478,6 +2498,7 @@ export function RHFuncionariosView({
 
       {editingColaborador && (
         <NovoColaboradorModal
+          colaboradores={colaboradores}
           currentUser={currentUser}
           initialData={editingColaborador}
           onSave={(patch) => updateColaborador(editingColaborador.id, patch)}
