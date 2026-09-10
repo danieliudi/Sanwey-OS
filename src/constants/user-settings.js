@@ -130,6 +130,7 @@ export const NOTIFICATION_GROUPS = [
     items: [
       { id: "aso_vencendo",           label: "ASO vencendo", defaultOn: true },
       { id: "contrato_vencendo",      label: "Contrato de experiência vencendo", defaultOn: true },
+      { id: "treinamento_vencendo",   label: "Treinamento vencendo", defaultOn: true },
       { id: "aniversario_colaborador",label: "Aniversário de colaborador", defaultOn: false },
     ],
   },
@@ -178,6 +179,7 @@ export const NOTIFICATION_TYPE_TO_PREF = {
   aniversario:            "aniversario_colaborador",
   compliance_aso:         "aso_vencendo",
   compliance_experiencia: "contrato_vencendo",
+  treinamento_vencendo:   "treinamento_vencendo",
   stale_lead:             "stale_lead",
   cross_sell:             "cross_sell",
   weekly_digest:          "weekly_digest",

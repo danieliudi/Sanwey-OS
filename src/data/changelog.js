@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "5.0.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Treinamento com validade agora avisa. O aviso chega a partir de 30 dias antes e continua enquanto estiver vencido — e dá pra desligar em Configurações › Notificações › Conformidade.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "4.99.4",
     items: [
       {

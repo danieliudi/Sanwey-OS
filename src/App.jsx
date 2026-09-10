@@ -44,6 +44,7 @@ import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
 import { useMyColaborador } from "./hooks/use-my-colaborador";
 import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
+import { useRHTreinamentos, vencimentoDate } from "./hooks/use-rh-treinamentos";
 import { useCRMDespesas } from "./hooks/use-crm-despesas";
 import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim, contratoFornecedorDiasParaVencer } from "./utils/rh-compliance-dates";
 import { avaliacaoDiasParaProxima, cicloTipoLabel } from "./utils/rh-feedback-cycles";
@@ -630,6 +631,16 @@ export default function App() {
     enabled: Boolean(currentUser) && isRHManager,
   });
   const complianceVistoRef = useRef(new Set());
+
+  // Treinamento com validade vencendo. A plataforma já avisava ASO, contrato,
+  // período de experiência e aprendiz — treinamento tinha o campo de validade
+  // e ninguém era avisado (levantado na reunião de RH de 10/09/2026).
+  // Carrega só pra quem é RH, senão toda sessão abriria uma assinatura de
+  // Realtime que a maioria não usa.
+  const { treinamentos: treinamentosParaLembretes, atribuicoes: atribuicoesParaLembretes } = useRHTreinamentos({
+    enabled: Boolean(currentUser) && isRHManager,
+  });
+  const treinamentoVistoRef = useRef(new Set());
   useEffect(() => {
     if (!isRHManager) return;
     const hoje = new Date();
@@ -702,6 +713,50 @@ export default function App() {
       }
     }
   }, [colaboradoresParaLembretes, isRHManager, pushNotification]);
+
+  // Treinamento vencendo — mesmo formato dos avisos de compliance acima:
+  // uma vez por dia por atribuição enquanto a janela estiver aberta, e a
+  // conta do vencimento vem de `vencimentoDate` do próprio hook, nunca
+  // recalculada aqui (regra 1: duas contas iguais em dois lugares divergem).
+  useEffect(() => {
+    if (!isRHManager) return;
+    if (!treinamentosParaLembretes.length || !atribuicoesParaLembretes.length) return;
+    const hoje = new Date();
+    const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    const porId = new Map(treinamentosParaLembretes.map(t => [t.id, t]));
+
+    for (const a of atribuicoesParaLembretes) {
+      const t = porId.get(a.treinamento_id);
+      const venc = vencimentoDate(a, t);
+      if (!venc) continue;
+      const dias = Math.floor((venc.getTime() - hoje.getTime()) / 86400000);
+      // Janela igual à do ASO: avisa a partir de 30 dias antes, e segue
+      // avisando depois de vencido — treinamento vencido é o caso que mais
+      // importa numa auditoria.
+      if (dias > 30) continue;
+      const chave = `${a.id}:${hojeISO}`;
+      if (treinamentoVistoRef.current.has(chave)) continue;
+      // Guard contra o array JÁ persistido no localStorage, não só o ref em
+      // memória — o ref zera a cada reload e o aviso seria reinserido em lote.
+      const jaExiste = notifications.some(n =>
+        n.type === "treinamento_vencendo" &&
+        n.link?.id === a.id &&
+        new Date(n.createdAt).toDateString() === hoje.toDateString()
+      );
+      if (jaExiste) { treinamentoVistoRef.current.add(chave); continue; }
+      treinamentoVistoRef.current.add(chave);
+
+      const colab = colaboradoresParaLembretes.find(c => c.id === a.colaborador_id);
+      const quem = colab?.fullName || "Colaborador";
+      pushNotification({
+        type: "treinamento_vencendo",
+        title: dias < 0 ? "Treinamento vencido" : "Treinamento vencendo",
+        body: `${quem} — ${t.titulo}: ${dias < 0 ? `venceu há ${Math.abs(dias)} dia(s)` : `vence em ${dias} dia(s)`}.`,
+        link: { module: "rh_treinamentos", id: a.id },
+      });
+    }
+  }, [treinamentosParaLembretes, atribuicoesParaLembretes, colaboradoresParaLembretes, isRHManager, pushNotification, notifications]);
+
 
   // Lembrete de avaliação de desempenho se aproximando — avisa RH/gestor
   // (in-app + e-mail) quando o próximo ciclo de um colaborador ativo está a
