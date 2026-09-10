@@ -23,6 +23,9 @@ function rowToColaborador(r) {
     addressZip: r.address_zip,
     jobTitle: r.job_title,
     department: r.department,
+    // Gestor direto de RH. NÃO é profiles.supervisor_id — aquele é o
+    // supervisor comercial e controla escopo de lead (CRMView.jsx:386).
+    gestorId: r.gestor_id || null,
     frente: r.frente,
     contractType: r.contract_type,
     admissionDate: r.admission_date,
@@ -68,6 +71,7 @@ function colaboradorToRow(c, extras = {}) {
     address_zip: c.addressZip || null,
     job_title: c.jobTitle || null,
     department: c.department || null,
+    gestor_id: c.gestorId || null,
     frente: c.frente || null,
     contract_type: c.contractType || null,
     admission_date: c.admissionDate || null,

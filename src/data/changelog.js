@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.98.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Ficha do funcionário agora tem Gestor. Quem lidera alguém vê \"Lidera N pessoas\" na própria ficha e ganha o filtro \"Minha equipe\" na tabela.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "4.97.12",
     items: [
       {

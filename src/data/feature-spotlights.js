@@ -24,6 +24,18 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 4.98.0 (campo Gestor na ficha) — decisão de PULAR o spotlight, registrada
+  // aqui como a regra 12 pede. O elemento que representa a novidade é um
+  // campo dentro do drawer, em modo de edição: não existe na rota quando a
+  // pessoa chega. O FeatureSpotlight tem um timer de órfão que marca o aviso
+  // como visto quando o alvo não aparece (FeatureSpotlight.jsx:110) — um
+  // spotlight apontado pra lá seria consumido em silêncio por todo mundo que
+  // abrisse Funcionários sem editar ninguém, inclusive por quem precisava
+  // dele. Ancorar no botão "Minha equipe" tem o mesmo problema: ele só
+  // renderiza pra quem já lidera alguém, e hoje ninguém lidera. A novidade
+  // vai pelo toast do changelog (com `roles` de RH) e pelo passo novo no
+  // tutorial "Gerenciando funcionários". Se um dia o mecanismo souber
+  // esperar por alvo dentro de drawer, isto vira uma entrada de verdade.
   {
     id: "abm-tabela",
     route: "abm",

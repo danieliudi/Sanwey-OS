@@ -872,7 +872,7 @@ function StatusBadge({ statusId }) {
 // ── Employee Detail Modal ─────────────────────────────────────────────────────
 
 function EmployeeDetailModal({
-  user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, onClose, onDelete, currentUser,
+  user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, colaboradores = [], onClose, onDelete, currentUser,
   onOpenAvaliacao, onOpenMovimentacao, onOpenTreinamento, onOpenFerias,
 }) {
   const [activeTab, setActiveTab] = useState("dados");
@@ -889,6 +889,7 @@ function EmployeeDetailModal({
     admission_date:  user.admission_date  ? user.admission_date.slice(0, 10) : "",
     employee_status: user.employee_status || "ativo",
     salary:          user.salary          != null ? String(user.salary) : "",
+    gestor_id:       colaboradorRow?.gestorId || "",
     aso_vencimento:  colaboradorRow?.asoVencimento || "",
     contrato_fim:    colaboradorRow?.contratoFim || "",
     aprendiz_inicio: colaboradorRow?.aprendizInicio || "",
@@ -908,6 +909,54 @@ function EmployeeDetailModal({
       : cargoTemplates;
     return [...base].sort((a, b) => a.name.localeCompare(b.name));
   }, [cargoTemplates, form.department]);
+
+  // Opções de Gestor: colaboradores ativos, menos a própria pessoa e menos
+  // quem já está abaixo dela na cadeia — os dois vínculos que fechariam ciclo.
+  // A trava de verdade é no banco (trigger rh_colaboradores_gestor_cycle,
+  // migration 20260910120000); aqui é só pra não oferecer o que seria
+  // recusado. Aparecem desabilitados com o motivo, em vez de sumirem — quem
+  // procura um nome que não está na lista precisa saber por quê.
+  const gestorOptions = useMemo(() => {
+    const eu = colaboradorRow?.id;
+    const descendentes = new Set();
+    if (eu) {
+      let fronteira = [eu];
+      // Teto de 50 voltas: mesma rede de segurança do trigger, pro caso de um
+      // ciclo pré-existente ter escapado (linha gravada antes desta versão).
+      for (let volta = 0; volta < 50 && fronteira.length; volta += 1) {
+        const proxima = colaboradores
+          .filter((c) => fronteira.includes(c.gestorId) && !descendentes.has(c.id))
+          .map((c) => c.id);
+        proxima.forEach((id) => descendentes.add(id));
+        fronteira = proxima;
+      }
+    }
+    return colaboradores
+      .filter((c) => c.employeeStatus !== "desligado")
+      .map((c) => ({
+        id: c.id,
+        nome: c.fullName,
+        cargo: c.jobTitle || "",
+        bloqueio: c.id === eu
+          ? "é a própria pessoa"
+          : descendentes.has(c.id)
+            ? "já reporta a esta pessoa"
+            : null,
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [colaboradores, colaboradorRow?.id]);
+
+  // O recíproco do campo — ninguém digita "quem eu lidero", isso se deduz.
+  const liderados = useMemo(
+    () => colaboradores.filter(
+      (c) => colaboradorRow?.id && c.gestorId === colaboradorRow.id && c.employeeStatus !== "desligado"
+    ),
+    [colaboradores, colaboradorRow?.id]
+  );
+  const gestorAtual = useMemo(
+    () => colaboradores.find((c) => c.id === colaboradorRow?.gestorId) || null,
+    [colaboradores, colaboradorRow?.gestorId]
+  );
 
   // Snapshot dos valores originais — usado só pra não travar retroativamente
   // um campo que esse registro já tinha vazio antes de virar obrigatório
@@ -1070,6 +1119,7 @@ function EmployeeDetailModal({
         } : {};
         await onUpdateColaborador(colaboradorRow.id, {
           frente: form.frente || null,
+          gestorId: form.gestor_id || null,
           asoVencimento: form.aso_vencimento || null,
           contratoFim: form.contrato_fim || null,
           aprendizInicio: form.aprendiz_inicio || null,
@@ -1273,6 +1323,30 @@ function EmployeeDetailModal({
                   </select>
                 </div>
                 <div>
+                  <label style={labelSt}>Gestor</label>
+                  <select
+                    value={form.gestor_id}
+                    onChange={(e) => set("gestor_id", e.target.value)}
+                    className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+                    style={inputSt}
+                    disabled={!colaboradorRow}
+                  >
+                    <option value="">Sem gestor definido</option>
+                    {gestorOptions.map((g) => (
+                      <option key={g.id} value={g.id} disabled={!!g.bloqueio}>
+                        {g.bloqueio
+                          ? `${g.nome} — ${g.bloqueio}`
+                          : g.cargo ? `${g.nome} · ${g.cargo}` : g.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
+                    {colaboradorRow
+                      ? "Opcional — quem responde à presidência fica sem gestor."
+                      : "Disponível depois que a ficha de RH deste usuário existir."}
+                  </div>
+                </div>
+                <div>
                   <label style={labelSt}>Tipo de Contrato *</label>
                   <select
                     value={form.contract_type}
@@ -1416,6 +1490,7 @@ function EmployeeDetailModal({
                 {[
                   { label: "Cargo",            value: user.job_title || "—" },
                   { label: "Departamento",      value: user.department || "—" },
+                  { label: "Gestor",            value: gestorAtual?.fullName || "Sem gestor definido" },
                   { label: "Tipo de Contrato",  value: contractLabel(user.contract_type) },
                   { label: "Data de Admissão",  value: fmt(user.admission_date) },
                   { label: "Status",            value: statusInfo(user.employee_status).label },
@@ -1432,6 +1507,24 @@ function EmployeeDetailModal({
                     <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {!editing && liderados.length > 0 && (
+              <div style={{ marginTop: 16, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ ...labelSt, marginBottom: 8 }}>
+                  Lidera {liderados.length} {liderados.length === 1 ? "pessoa" : "pessoas"}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {liderados.map((c) => (
+                    <span
+                      key={c.id}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 10px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 12, color: "var(--text)" }}
+                    >
+                      {c.fullName}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1566,6 +1659,7 @@ export function RHFuncionariosView({
   const [filterFrente, setFilterFrente] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterContract, setFilterContract] = useState("all");
+  const [soMinhaEquipe, setSoMinhaEquipe] = useState(false);
   const [selected, setSelected]     = useState(null);
 
   // Vem do Cmd-K (App.jsx) — funcionário buscado já veio de `users`, que é
@@ -1634,6 +1728,20 @@ export function RHFuncionariosView({
     [colaboradores]
   );
 
+  // Declarados AQUI, acima do useMemo de `filtered` que os usa no array de
+  // dependência — regra 3.2 do CLAUDE.md: const usada em dependência de um
+  // useMemo declarado antes dela compila sem ruído e mata a tela em produção.
+  const meuColaboradorId = useMemo(
+    () => colaboradores.find((c) => c.profileId === currentUser?.id)?.id || null,
+    [colaboradores, currentUser?.id]
+  );
+  // O botão "Minha equipe" só existe pra quem de fato lidera alguém — filtro
+  // que sempre devolve lista vazia é controle morto na barra.
+  const lideroAlguem = useMemo(
+    () => !!meuColaboradorId && colaboradores.some((c) => c.gestorId === meuColaboradorId),
+    [colaboradores, meuColaboradorId]
+  );
+
   // Visitante (role "agencia") não é funcionário — não deve ser listado nem
   // contado aqui, mesmo tendo profile/acesso.
   const employeeUsers = useMemo(
@@ -1659,9 +1767,16 @@ export function RHFuncionariosView({
   // Lista única com todo mundo — colaborador sem login carrega _hasAccess:
   // false e um selo inline na tabela, em vez de uma seção separada.
   const unifiedRows = useMemo(() => {
+    // O gestor vive em rh_colaboradores, e metade das linhas da tabela vem de
+    // `profiles` — sem este índice, a linha de quem tem login não saberia
+    // quem é o gestor dela.
+    const colabPorProfile = new Map(
+      colaboradores.filter((c) => c.profileId).map((c) => [c.profileId, c])
+    );
     const withAccess = employeeUsers.map((u) => ({
       _hasAccess: true,
       _raw: u,
+      _gestorId: colabPorProfile.get(u.id)?.gestorId || null,
       id: u.id,
       name: u.name,
       email: u.email,
@@ -1675,6 +1790,7 @@ export function RHFuncionariosView({
     const withoutAccess = colaboradoresSemAcesso.map((c) => ({
       _hasAccess: false,
       _raw: c,
+      _gestorId: c.gestorId || null,
       id: c.id,
       name: c.fullName,
       email: c.email,
@@ -1686,7 +1802,7 @@ export function RHFuncionariosView({
       admission_date: c.admissionDate,
     }));
     return [...withAccess, ...withoutAccess];
-  }, [employeeUsers, colaboradoresSemAcesso]);
+  }, [employeeUsers, colaboradoresSemAcesso, colaboradores]);
 
   const filtered = useMemo(() => {
     const arr = unifiedRows.filter((u) => {
@@ -1702,6 +1818,7 @@ export function RHFuncionariosView({
       if (filterFrente !== "all" && u.frente !== filterFrente) return false;
       if (filterStatus !== "all" && u.employee_status !== filterStatus) return false;
       if (filterContract !== "all" && u.contract_type !== filterContract) return false;
+      if (soMinhaEquipe && u._gestorId !== meuColaboradorId) return false;
       return true;
     });
     arr.sort((a, b) => {
@@ -1712,11 +1829,11 @@ export function RHFuncionariosView({
       return 0;
     });
     return arr;
-  }, [unifiedRows, search, filterDept, filterFrente, filterStatus, filterContract, sortCol, sortDir]);
+  }, [unifiedRows, search, filterDept, filterFrente, filterStatus, filterContract, soMinhaEquipe, meuColaboradorId, sortCol, sortDir]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, filterDept, filterFrente, filterStatus, filterContract]);
+  }, [search, filterDept, filterFrente, filterStatus, filterContract, soMinhaEquipe]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -1828,6 +1945,7 @@ export function RHFuncionariosView({
     setFilterFrente("all");
     setFilterStatus("all");
     setFilterContract("all");
+    setSoMinhaEquipe(false);
   };
 
   const selectSt = {
@@ -2046,6 +2164,23 @@ export function RHFuncionariosView({
             <option key={c.id} value={c.id}>{c.label}</option>
           ))}
         </select>
+
+        {lideroAlguem && (
+          <button
+            type="button"
+            onClick={() => setSoMinhaEquipe((v) => !v)}
+            aria-pressed={soMinhaEquipe}
+            className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+            style={{
+              cursor: "pointer",
+              background: soMinhaEquipe ? "var(--accent)" : "var(--surface)",
+              borderColor: soMinhaEquipe ? "var(--accent)" : "var(--border-strong)",
+              color: soMinhaEquipe ? "var(--on-accent)" : "var(--text-dim)",
+            }}
+          >
+            Minha equipe
+          </button>
+        )}
       </div>
 
       {/* Barra de ação em massa */}
@@ -2322,6 +2457,7 @@ export function RHFuncionariosView({
           }}
           colaboradorRow={colaboradores.find((c) => c.profileId === selected.id)}
           onUpdateColaborador={updateColaborador}
+          colaboradores={colaboradores}
           onClose={() => setSelected(null)}
           onDelete={canWrite ? () => handleDeleteRow(selected.id, selected.name, true, colaboradores.find((c) => c.profileId === selected.id)?.id) : undefined}
           currentUser={currentUser}
