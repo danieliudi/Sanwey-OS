@@ -190,6 +190,10 @@ export function useRHComunicacao({ userId } = {}) {
     return {
       total: Number(row?.total || 0),
       respostas: Array.isArray(row?.respostas) ? row.respostas : [],
+      // Nomes na MESMA ordem das respostas (o banco ordena os dois agregados
+      // igual). Vem vazio pra pesquisa anônima — e vazio porque o banco não
+      // devolve, não porque a tela não pede.
+      respondentes: Array.isArray(row?.respondentes) ? row.respondentes : [],
       minimo: Number(row?.minimo || 0),
       liberado: row?.liberado !== false,
     };

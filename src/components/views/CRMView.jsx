@@ -375,6 +375,15 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // Mesma regra de permissão do botão de excluir dentro do LeadDetailDrawer
   // (canDelete) — reaproveitada aqui pro atalho de excluir direto no "..."
   // do card, sem precisar abrir o detalhe primeiro.
+  // Reaproveita o toast de erro que já existe nesta tela (stageError) em vez
+  // de criar um segundo: exclusão barrada pela RLS volta `{ ok: false }` do
+  // use-leads, e antes disso o card sumia da tela e voltava no refetch, sem
+  // ninguém dizer por quê.
+  const handleDeleteLead = useCallback(async (id) => {
+    const r = await onDeleteLead(id);
+    if (r && r.ok === false) setStageError(r.motivo || "Não foi possível excluir o lead.");
+  }, [onDeleteLead]);
+
   const canDeleteLead = useCallback((lead) => Boolean(onDeleteLead && (
     isManager ||
     ((lead.ownerIds || []).includes(user.id) || lead.owner === user.id || lead.createdBy === user.id)
@@ -976,7 +985,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             onDragEnd={handleDragEnd}
             stages={stages}
             onMoveToStage={attemptStageChange}
-            onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
+            onDeleteCard={canDeleteLead(lead) ? () => handleDeleteLead(lead.id) : undefined}
             onDuplicateCard={onDuplicateLead ? () => onDuplicateLead(lead.id) : undefined}
             completeness={getLeadCompleteness(lead)}
             unread={getLeadUnread(lead)}
@@ -1100,7 +1109,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         onDragEnd={handleDragEnd}
                         stages={stages}
                         onMoveToStage={attemptStageChange}
-                        onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
+                        onDeleteCard={canDeleteLead(lead) ? () => handleDeleteLead(lead.id) : undefined}
                         onDuplicateCard={onDuplicateLead ? () => onDuplicateLead(lead.id) : undefined}
                         completeness={getLeadCompleteness(lead)}
                         unread={getLeadUnread(lead)}

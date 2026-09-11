@@ -1442,8 +1442,11 @@ export default function App() {
   }, []);
 
   const clearAllLeads = useCallback(async () => {
-    await clearAllLeadsRemote();
+    // Devolve o resultado pra SettingsView: exclusão barrada pela RLS não é
+    // erro, é zero linha — quem chamou precisa saber pra não dizer que apagou.
+    const r = await clearAllLeadsRemote();
     setSelectedLead(null);
+    return r;
   }, [clearAllLeadsRemote]);
 
   // FIX B5: track the previous user id via a ref so this effect only reacts

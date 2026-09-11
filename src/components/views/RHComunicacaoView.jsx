@@ -497,7 +497,7 @@ function NovaPesquisaModal({ onSave, onClose }) {
 
 function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ total: 0, respostas: [], minimo: 0, liberado: true });
+  const [data, setData] = useState({ total: 0, respostas: [], respondentes: [], minimo: 0, liberado: true });
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -522,6 +522,7 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
   }, [pesquisa.id, carregarRespostas]);
 
   const perguntas = Array.isArray(pesquisa.perguntas) ? pesquisa.perguntas : [];
+  const identificada = pesquisa.modo === "identificada";
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
@@ -557,8 +558,20 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              {identificada && (
+                // Diz ao RH POR QUE tem nome aqui. Sem esta linha, quem abre a
+                // tela não sabe se está vendo algo que não deveria.
+                <div style={{ background: "var(--amber-bg)", color: "var(--amber)", borderRadius: 9, padding: "9px 11px", fontSize: 11.5, lineHeight: 1.55 }}>
+                  Pesquisa anunciada como identificada — quem respondeu viu, antes de escrever, que a resposta ficaria
+                  associada ao perfil. Não há piso de respondentes: identificada não promete anonimato.
+                </div>
+              )}
               {perguntas.map((q) => {
-                const vals = data.respostas.map((r) => r?.[q.key]).filter((v) => v !== undefined && v !== null && v !== "");
+                // Mantém o índice pra casar com `respondentes`, que vem na
+                // mesma ordem — por isso o filtro não pode colapsar o array.
+                const brutas = data.respostas.map((r, i) => ({ v: r?.[q.key], quem: data.respondentes[i] }));
+                const comValor = brutas.filter((x) => x.v !== undefined && x.v !== null && x.v !== "");
+                const vals = comValor.map((x) => x.v);
                 if (q.tipo === "escala") {
                   const nums = vals.map(Number).filter((n) => !Number.isNaN(n));
                   const avg = nums.length ? (nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
@@ -583,8 +596,15 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
                   <div key={q.key}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>{q.label}</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {vals.length === 0 ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Sem respostas.</div> : vals.map((v, idx) => (
-                        <div key={idx} style={{ fontSize: 12, color: "var(--text)", background: "var(--surface-alt)", borderRadius: 8, padding: "6px 10px" }}>{String(v)}</div>
+                      {comValor.length === 0 ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Sem respostas.</div> : comValor.map((x, idx) => (
+                        <div key={idx} style={{ fontSize: 12, color: "var(--text)", background: "var(--surface-alt)", borderRadius: 8, padding: "6px 10px", display: "flex", gap: 9, alignItems: "flex-start" }}>
+                          {identificada && x.quem && (
+                            <span style={{ flex: "0 0 auto", fontSize: 11, fontWeight: 700, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, padding: "2px 9px", whiteSpace: "nowrap" }}>
+                              {x.quem}
+                            </span>
+                          )}
+                          <span>{String(x.v)}</span>
+                        </div>
                       ))}
                     </div>
                   </div>

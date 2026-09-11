@@ -7,6 +7,7 @@ import { Download, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK } from "../../utils/currency";
 import { exportLeadsToCSV } from "../../utils/export-csv";
+import { razaoHonesta } from "../../utils/proporcao";
 
 // ── Period helpers ────────────────────────────────────────────────────────────
 
@@ -66,10 +67,12 @@ function computeKpis(leads) {
     }
   }
   const decided = wonCount + lostCount;
-  const winRate = decided > 0 ? Math.round((wonCount / decided) * 100) : 0;
+  // `null` e não 0 quando não há decisão nenhuma: "0%" afirma que se perdeu
+  // tudo, e o que houve foi não ter o que medir (regra 14).
+  const winRate = decided > 0 ? Math.round((wonCount / decided) * 100) : null;
   const avgTicket = wonCount > 0 ? wonValue / wonCount : 0;
   const avgCycle = daysCount > 0 ? Math.round(totalDays / daysCount) : null;
-  return { pipeline, wonValue, wonCount, lostCount, winRate, avgTicket, avgCycle };
+  return { pipeline, wonValue, wonCount, lostCount, decided, winRate, avgTicket, avgCycle };
 }
 
 function pctDelta(curr, prev) {
@@ -303,7 +306,15 @@ export function AnalyticsTab({ allLeads, period, users }) {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
             <CompareCard label="Funil de Vendas" curr={curr.pipeline} prev={prev.pipeline} fmt={formatK} />
             <CompareCard label="Receita realizada" curr={curr.wonValue} prev={prev.wonValue} fmt={formatK} />
-            <CompareCard label="Win rate" curr={curr.winRate} prev={prev.winRate} fmt={v => `${v}%`} />
+            {/* O denominador vai junto: win rate é ganhos ÷ decididos, e
+                abaixo do piso a fração diz mais que a porcentagem. */}
+            <CompareCard
+              label="Win rate"
+              curr={curr.winRate}
+              prev={prev.winRate}
+              fmt={() => razaoHonesta(curr.wonCount, curr.decided).valor}
+              sublabel={razaoHonesta(curr.wonCount, curr.decided).nota}
+            />
             <CompareCard label="Ticket médio" curr={curr.avgTicket} prev={prev.avgTicket} fmt={formatK} />
           </div>
         </section>
@@ -549,7 +560,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function CompareCard({ label, curr, prev, fmt }) {
+function CompareCard({ label, curr, prev, fmt, sublabel }) {
   const d = pctDelta(curr, prev);
   const Icon = d === null ? Minus : d > 0 ? TrendingUp : TrendingDown;
   const color = d === null ? "var(--text-dim)" : d > 0 ? "var(--color-resibag)" : "var(--color-industria)";
@@ -572,6 +583,10 @@ function CompareCard({ label, curr, prev, fmt }) {
       >
         {fmt(curr)}
       </div>
+      {/* Denominador logo abaixo do número, quando o cartão é uma razão. */}
+      {sublabel && (
+        <div className="text-xs mb-2" style={{ color: "var(--text-dim)", marginTop: -4 }}>{sublabel}</div>
+      )}
       <div className="flex items-center gap-1 text-xs">
         <Icon size={12} style={{ color, flexShrink: 0 }} />
         {d !== null ? (

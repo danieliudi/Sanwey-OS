@@ -38,6 +38,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
   useEscToClose(onClose);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteErro, setDeleteErro] = useState(null);
   const [leftOpen, setLeftOpen] = useState(false);
   const [moveSheetOpen, setMoveSheetOpen] = useState(false);
   const [moveSources, setMoveSources] = useState([]);
@@ -49,11 +50,21 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
     },
   }), []);
 
+  // `onDelete` pode devolver `{ ok: false, motivo }` quando a exclusão não
+  // aconteceu — tipicamente RLS barrando, que volta sem erro e com zero linha
+  // (ver use-leads.js). Nesse caso o drawer NÃO fecha e mostra o motivo:
+  // fechar dava a impressão de que apagou. Chamador que não devolve nada
+  // segue fechando como antes — os outros 12 usos deste shell não mudam.
   const handleDeleteConfirmed = async () => {
     if (!onDelete) return;
     setDeleting(true);
+    setDeleteErro(null);
     try {
-      await onDelete();
+      const r = await onDelete();
+      if (r && r.ok === false) {
+        setDeleteErro(r.motivo || "Não foi possível excluir.");
+        return;
+      }
       onClose();
     } finally {
       setDeleting(false);
@@ -115,7 +126,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
                   {deleting ? "Excluindo…" : "Confirmar exclusão"}
                 </button>
                 <button
-                  onClick={() => setConfirmDelete(false)}
+                  onClick={() => { setConfirmDelete(false); setDeleteErro(null); }}
                   className="px-3 min-h-10 flex items-center justify-center rounded-lg text-xs cursor-pointer transition-colors"
                   style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
@@ -123,6 +134,14 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
                 >
                   Cancelar
                 </button>
+                {deleteErro && (
+                  <span
+                    role="alert"
+                    style={{ fontSize: 11, fontWeight: 600, color: "var(--danger)", background: "var(--danger-bg)", borderRadius: 8, padding: "4px 8px", maxWidth: 260 }}
+                  >
+                    {deleteErro}
+                  </span>
+                )}
               </div>
             )}
             <button

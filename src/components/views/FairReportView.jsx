@@ -16,6 +16,7 @@ import {
 } from "../../utils/fair-report";
 import { contentCampaignPairKey } from "../../utils/campaign-name";
 import { collapseLeadsToAccounts, accountMetrics, metricsForCampaignLeads } from "../../utils/account-collapse";
+import { pct, razaoHonesta } from "../../utils/proporcao";
 
 // Relatório de origem por campanha — motor = computeFairMetrics (fair-report.js).
 // Feiras (canal Evento) e Conteúdo/Digital compartilham esta tela; o filtro de
@@ -23,9 +24,7 @@ import { collapseLeadsToAccounts, accountMetrics, metricsForCampaignLeads } from
 
 const LOST_STAGES = ["perdido"];
 
-function pct(v) {
-  return v == null ? "—" : `${Math.round(v * 100)}%`;
-}
+
 
 function DeltaBadge({ value, invert = false }) {
   if (value == null) return null;
@@ -42,7 +41,7 @@ function DeltaBadge({ value, invert = false }) {
   );
 }
 
-function MetricCell({ label, value, delta, invertDelta }) {
+function MetricCell({ label, value, delta, invertDelta, nota }) {
   return (
     <div>
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-faint)" }}>
@@ -54,6 +53,11 @@ function MetricCell({ label, value, delta, invertDelta }) {
         </span>
         <DeltaBadge value={delta} invert={invertDelta} />
       </div>
+      {/* O denominador mora aqui: percentual sem `n` não sustenta decisão de
+          investimento, que é pra isso que este relatório é olhado. */}
+      {nota && (
+        <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 1, lineHeight: 1.3 }}>{nota}</div>
+      )}
     </div>
   );
 }
@@ -222,6 +226,20 @@ export function FairReportView({
     [leads]
   );
 
+  // Regra 14, item 3: o que o filtro descarta aparece CONTADO. Antes disto os
+  // dois descartes saíam em silêncio — lead de demonstração era removido em
+  // reportLeads, e lead sem campanha simplesmente não entrava em métrica
+  // nenhuma (no Conteúdo, `unlinkedTrigger` é null por decisão documentada).
+  // Sem os dois contadores não dá pra saber se o relatório cobre 90% ou 40%
+  // do que entrou no período, e é isso que decide investimento.
+  const descartados = useMemo(() => {
+    const naFrente = (l) => !activeCompany || activeCompany === "all" || l.companyId === activeCompany;
+    const todos = (leads || []).filter(naFrente);
+    const demo = todos.filter(l => l.isDemo || l.is_demo).length;
+    const semCampanha = todos.filter(l => !(l.isDemo || l.is_demo) && !(l.campaignId || l.campaign_id)).length;
+    return { demo, semCampanha, base: todos.length };
+  }, [leads, activeCompany]);
+
   const scoped = useMemo(() => {
     const channelSet = new Set(channels);
     let list = (campaigns || []).filter(c => channelSet.has(c.channel));
@@ -332,6 +350,28 @@ export function FairReportView({
         />
       ) : (
         <>
+          {/* O que ficou de fora, contado — antes de qualquer número, pra
+              ninguém ler a faixa de cima achando que ela cobre tudo. */}
+          {(descartados.demo > 0 || descartados.semCampanha > 0) && (
+            <div
+              className="rounded-xl border px-4 py-3"
+              style={{ borderColor: "var(--border)", background: "var(--surface-alt)", fontSize: 12, color: "var(--text-dim)", lineHeight: 1.6 }}
+            >
+              <strong style={{ color: "var(--text)" }}>Fora destes números:</strong>{" "}
+              {[
+                descartados.semCampanha > 0
+                  ? `${descartados.semCampanha} ${descartados.semCampanha === 1 ? "lead sem campanha vinculada" : "leads sem campanha vinculada"}`
+                  : null,
+                descartados.demo > 0
+                  ? `${descartados.demo} de demonstração`
+                  : null,
+              ].filter(Boolean).join(" · ")}
+              {descartados.base > 0 && (
+                <> — de {descartados.base} {descartados.base === 1 ? "lead" : "leads"} no recorte.</>
+              )}
+            </div>
+          )}
+
           <StatCardGrid desktopClassName={contentAccounts ? "md:grid-cols-5" : "md:grid-cols-4"}>
             <StatCard icon={HeaderIcon} value={metrics.length} label={entityPlural} />
             <StatCard icon={TrendingUp} value={totals.leadCount} label="Leads captados" sublabel={`${totals.wonCount} viraram negócio`} />
@@ -406,14 +446,37 @@ export function FairReportView({
                 <MetricCell label="Custo" value={selected.cost > 0 ? formatBRL(selected.cost) : "—"} />
                 <MetricCell label="Leads" value={selected.leadCount} />
                 <MetricCell label="Custo/lead" value={selected.costPerLead == null ? "—" : formatBRL(selected.costPerLead)} />
-                <MetricCell label="Conversão" value={pct(selected.conversion)} />
+                <MetricCell
+                  label="Conversão"
+                  {...(() => {
+                    const r = razaoHonesta(selected.wonCount, selected.decidedCount, {
+                      fora: selected.openCount > 0
+                        ? `${selected.openCount} em aberto fora da conta`
+                        : "",
+                    });
+                    return { value: r.valor, nota: r.nota };
+                  })()}
+                />
                 <MetricCell label="Em aberto" value={selected.openCount} />
                 <MetricCell label="Receita" value={selected.revenue > 0 ? formatBRL(selected.revenue) : "—"} />
               </div>
               {accountByCampaign[selected.campaign.id] && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
                   <MetricCell label="Contas" value={accountByCampaign[selected.campaign.id].accountCount} />
-                  <MetricCell label="Conversão conta" value={pct(accountByCampaign[selected.campaign.id].accountConversion)} />
+                  <MetricCell
+                    label="Conversão conta"
+                    {...(() => {
+                      const a = accountByCampaign[selected.campaign.id];
+                      const decididas = (a.wonAccountCount || 0) + (a.lostAccountCount || 0);
+                      const r = razaoHonesta(a.wonAccountCount || 0, decididas, {
+                        singular: "conta decidida", plural: "contas decididas",
+                        fora: a.openAccountCount > 0
+                          ? `${a.openAccountCount} em aberto fora da conta`
+                          : "",
+                      });
+                      return { value: r.valor, nota: r.nota };
+                    })()}
+                  />
                   <MetricCell label="Toques" value={accountByCampaign[selected.campaign.id].touchCount} />
                 </div>
               )}

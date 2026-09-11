@@ -465,41 +465,78 @@ export function useLeads({ userId, role, companies } = {}) {
     await fetchAll();
   }, [setFallbackLeads, userId, fetchAll]);
 
+  // DELETE barrado pela RLS volta `error: null` e ZERO linha — não é erro, é
+  // "nenhuma linha afetada". Sem `.select()` e sem conferir a contagem, a tela
+  // some com o lead e o banco continua com ele: a pessoa acha que apagou.
+  // Mesma classe do UPDATE otimista que já mordeu em use-pipelines.js e em
+  // use-rh-comunicacao.js, e aqui não é borda rara — excluir lead que não é de
+  // demonstração é só pra admin, então "zero linha" é o caminho comum de quem
+  // clicou sem ter permissão.
+  //
+  // As três funções abaixo devolvem `{ ok, motivo }` em vez de lançar: todos
+  // os chamadores (CRMView.jsx:979 e :1103, LeadDetailDrawer.jsx:568,
+  // SettingsView.jsx:998) chamam sem catch, então um throw viraria rejeição
+  // sem dono e ninguém veria nada — que é exatamente o silêncio que estamos
+  // corrigindo.
   const clearAllLeads = useCallback(async () => {
     if (!isSupabaseConfigured) {
       setFallbackLeads([]);
-      return;
+      return { ok: true, removidos: 0 };
     }
-    // Delete demo first (allowed for gerente+admin); other rows only admin can delete.
-    const { error: err } = await supabase.from("leads").delete().not("id", "is", null);
-    if (err) { setError(err); throw err; }
-    setRemoteLeads([]);
-  }, [setFallbackLeads]);
+    // Demo é apagável por gerente+admin; o resto, só admin. Um gerente rodando
+    // "limpar tudo" apaga parte e o `setRemoteLeads([])` de antes limpava a
+    // tela inteira — sumia da vista o que continuava no banco.
+    const { data, error: err } = await supabase.from("leads").delete().not("id", "is", null).select("id");
+    if (err) {
+      setError(err);
+      await fetchAll();
+      return { ok: false, motivo: err.message, removidos: 0 };
+    }
+    const removidos = data?.length || 0;
+    // Refaz o fetch em vez de assumir lista vazia: o que sobrou (porque a RLS
+    // barrou) tem que voltar pra tela.
+    await fetchAll();
+    if (removidos === 0) {
+      return { ok: false, removidos: 0, motivo: "Nenhum lead foi excluído — você não tem permissão para isso." };
+    }
+    return { ok: true, removidos };
+  }, [setFallbackLeads, fetchAll]);
 
   const clearDemoLeads = useCallback(async () => {
     if (!isSupabaseConfigured) {
       setFallbackLeads(prev => prev.filter(l => !l.isDemo));
-      return;
+      return { ok: true, removidos: 0 };
     }
-    const { error: err } = await supabase.from("leads").delete().eq("is_demo", true);
-    if (err) { setError(err); throw err; }
-    setRemoteLeads(prev => prev.filter(l => !l.isDemo));
-  }, [setFallbackLeads]);
+    const { data, error: err } = await supabase.from("leads").delete().eq("is_demo", true).select("id");
+    if (err) {
+      setError(err);
+      await fetchAll();
+      return { ok: false, motivo: err.message, removidos: 0 };
+    }
+    const removidos = data?.length || 0;
+    const apagados = new Set((data || []).map(r => r.id));
+    setRemoteLeads(prev => prev.filter(l => !apagados.has(l.id)));
+    return { ok: true, removidos };
+  }, [setFallbackLeads, fetchAll]);
 
   const deleteLead = useCallback(async (id) => {
     if (!isSupabaseConfigured) {
       setFallbackLeads(prev => prev.filter(l => l.id !== id));
-      return;
+      return { ok: true };
     }
     const removed = leads.find(l => l.id === id);
     setRemoteLeads(prev => prev.filter(l => l.id !== id));
-    const { error: err } = await supabase.from("leads").delete().eq("id", id);
-    if (err) {
-      setError(err);
+    const { data, error: err } = await supabase.from("leads").delete().eq("id", id).select("id");
+    if (err || !data || data.length === 0) {
+      if (err) setError(err);
       if (removed) setRemoteLeads(prev => [removed, ...prev]);
       fetchAll().catch(() => {});
-      throw err;
+      return {
+        ok: false,
+        motivo: err ? err.message : "Você não tem permissão para excluir este lead.",
+      };
     }
+    return { ok: true };
   }, [leads, setFallbackLeads, fetchAll]);
 
   return useMemo(() => ({
