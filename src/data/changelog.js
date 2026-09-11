@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "5.2.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Novo cargo Departamento Pessoal: vê Funcionários e Férias, e edita Cargos & Salários — sem Recrutamento, Avaliação de Desempenho nem Pesquisa de clima. Atribuível em Configurações › Usuários.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.1.0",
     items: [
       {

@@ -255,6 +255,12 @@ export default function App() {
   const isPureSuporte      = rolesSubsetOf(["suporte"]);
   // RH roles (isRHManager já foi hoisted acima)
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
+  // Departamento Pessoal (decidido com o Daniel 11/09/2026): vê Funcionários,
+  // Férias e Cargos & Salários — e EDITA Cargos & Salários. NÃO vê
+  // Recrutamento, Avaliação de Desempenho nem Pesquisa de clima. Por isso
+  // `dp` NÃO entra em isRHUser nem em current_user_is_rh() no banco: entrar
+  // ali daria a ele o módulo inteiro de RH de uma vez.
+  const isDP               = hasAnyRole(["dp"]);
   const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
   // Comex (Importação/Exportação Direta): cargo dedicado, sem carve-out pro
   // time comercial geral — vendedor/gerente não enxergam por padrão.
@@ -264,6 +270,10 @@ export default function App() {
   // (RLS bloqueia toda escrita — ver migration 20260756_papel_diretoria.sql).
   // A única exceção pedida é interação mais rica no Painel Executivo.
   const isDiretoria        = hasAnyRole(["diretoria"]);
+  // Declarado AQUI e não junto de `isDP` lá em cima: depende de
+  // `isDiretoria`, e const usada antes da própria declaração é TDZ —
+  // compila sem ruído e mata a tela (regra 3.2 do CLAUDE.md).
+  const isDPOnly           = isDP && !isRHUser && !isDiretoria;
   // Painel Executivo deixou de ser exclusivo do gerente Comercial: cada
   // gerente de departamento acessa pra ver (só) a área do próprio setor —
   // Comex incluído desde que a aba própria existe (regra 8 do CLAUDE.md).
@@ -1841,6 +1851,20 @@ export default function App() {
       groups.push({ label: "Marketing", items: mktItems });
     }
 
+    // Departamento Pessoal puro: grupo próprio, com os três módulos que o
+    // Daniel definiu. Fica ANTES do bloco de RH e é excludente — quem acumula
+    // `dp` com `rh` cai no grupo de RH completo, que já contém estes três.
+    if (isDPOnly) {
+      groups.push({
+        label: "Departamento Pessoal",
+        items: [
+          { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
+          { id: "rh-cargos",       label: "Cargos & Salários", icon: Briefcase },
+          { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
+        ],
+      });
+    }
+
     if (isRHUser || isDiretoria) {
       groups.push({
         label: "Recursos Humanos",
@@ -1961,7 +1985,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isPureSuporte, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled, filaIA.total]);
+  }, [isManager, isRHManager, isDPOnly, isDP, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isPureSuporte, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled, filaIA.total]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -2722,7 +2746,7 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-funcionarios"]} element={
-            (isRHUser || isDiretoria)
+            (isRHUser || isDiretoria || isDP)
               ? <RHFuncionariosView
                   users={users}
                   leads={leads}
@@ -2781,7 +2805,7 @@ export default function App() {
             />
           } />
           <Route path={ROUTES["rh-ferias"]} element={
-            (isRHUser || isDiretoria)
+            (isRHUser || isDiretoria || isDP)
               ? <RHFeriasView
                   currentUser={currentUser}
                   users={users}
@@ -2793,10 +2817,12 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-cargos"]} element={
-            (isRHManager || isDiretoria)
+            // DP entra aqui com canWrite: "ver e editar Cargos & Salários" foi
+            // a única permissão que o Daniel qualificou com o verbo editar.
+            (isRHManager || isDiretoria || isDP)
               ? <RHCargosView
                   currentUser={currentUser}
-                  canWrite={isRHManager}
+                  canWrite={isRHManager || isDP}
                   isDirector={isAdmin}
                   users={users}
                   notifyMentions={notifyMentions}

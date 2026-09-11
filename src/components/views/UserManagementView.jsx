@@ -40,6 +40,10 @@ const ROLE_OPTIONS_BASE = [
   { value: "agencia",           label: "Agência (Visitante)" },
   { value: "rh",                label: "RH" },
   { value: "gerente_rh",        label: "Gerente de RH" },
+  // Departamento Pessoal (11/09/2026): Funcionários, Férias e Cargos &
+  // Salários — este último com edição. Não vê Recrutamento, Avaliação de
+  // Desempenho nem Pesquisa de clima. Quem acumula dp+rh cai no RH completo.
+  { value: "dp",                label: "Departamento Pessoal" },
 ];
 
 const ROLE_OPTIONS_ADMIN = [
@@ -75,6 +79,7 @@ function roleLabel(role) {
   if (role === "agencia")           return "Agência";
   if (role === "rh")                return "RH";
   if (role === "gerente_rh")        return "Ger. RH";
+  if (role === "dp")                return "DP";
   if (role === "diretoria")         return "Diretoria";
   if (role === "comex")             return "Comex";
   return "Vendedor";
@@ -88,6 +93,7 @@ function roleBadgeVariant(role) {
   if (role === "agencia")           return "secondary";
   if (role === "rh")                return "secondary";
   if (role === "gerente_rh")        return "dark";
+  if (role === "dp")                return "secondary";
   if (role === "diretoria")         return "admin";
   if (role === "comex")             return "primary";
   return "default";
