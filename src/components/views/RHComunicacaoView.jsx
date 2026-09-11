@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Megaphone, Plus, X, Send, ClipboardList, BarChart3, Check,
   Loader2, Lock, AlertTriangle, Search, UserCheck, BellRing,
-  Mail, MonitorSmartphone, MessageCircle, History,
+  Mail, MonitorSmartphone, MessageCircle, History, RefreshCw,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHComunicacao } from "../../hooks/use-rh-comunicacao";
@@ -191,16 +191,28 @@ function ComunicadoComposer({ onSend, onPreview }) {
         {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
         {result != null && (
           <div style={{ borderRadius: 8, padding: "10px 12px", fontSize: 12, lineHeight: 1.6, background: result.emailErro ? "var(--warning-bg)" : "var(--success-bg)", color: result.emailErro ? "var(--warning)" : "var(--success)" }}>
+            {/* A causa do zero é decidida pelo CANAL escolhido, não pelo
+                número: antes isto dizia "canal não selecionado" sempre que o
+                alcance dava 0, inclusive quando o canal FOI escolhido e não
+                havia ninguém pra alcançar (departamento vazio, ou todos com o
+                sino desligado e sem "Importante"). Número certo pra pergunta
+                errada é o defeito que a regra 14 existe pra evitar. */}
             <div style={{ fontWeight: 700 }}>
-              {result.alcancePlataforma > 0
-                ? `Notificação na plataforma: ${result.alcancePlataforma} ${result.alcancePlataforma === 1 ? "pessoa" : "pessoas"}.`
-                : "Sem envio pela plataforma (canal não selecionado)."}
+              {!result.canais.includes("plataforma")
+                ? "Sem envio pela plataforma (canal não selecionado)."
+                : result.alcancePlataforma > 0
+                  ? `Notificação na plataforma: ${result.alcancePlataforma} ${result.alcancePlataforma === 1 ? "pessoa" : "pessoas"}.`
+                  : "Plataforma: não alcançou ninguém — ou o escopo está vazio, ou todos desligaram o sino (marque “Importante” pra passar por cima disso)."}
             </div>
             {/* Canal por canal, com o número de cada um: "enviado" sozinho não
                 diz se o e-mail saiu — e ele pode falhar depois da notificação
                 já estar gravada. */}
+            {/* Não afirma em que status o registro ficou: o servidor pode nem
+                ter chegado a marcar nada (queda de rede, função fora do ar), e
+                o histórico logo abaixo é a fonte real — dizer "ficou como
+                falhou" e o selo mostrar "pendente" seria a tela mentindo. */}
             {result.emailErro
-              ? <div style={{ fontWeight: 600 }}>E-mail NÃO saiu: {result.emailErro} O comunicado ficou registrado no histórico como falhou.</div>
+              ? <div style={{ fontWeight: 600 }}>E-mail NÃO saiu: {result.emailErro} Confira o status na lista “Enviados” abaixo — de lá dá pra tentar de novo.</div>
               : result.emailEnviado > 0
                 ? <div style={{ fontWeight: 600 }}>E-mail: {result.emailEnviado} {result.emailEnviado === 1 ? "pessoa" : "pessoas"} (em cópia oculta).</div>
                 : null}
@@ -219,7 +231,7 @@ function ComunicadoComposer({ onSend, onPreview }) {
         </div>
         <p style={{ fontSize: 11, color: "var(--text-dim)" }}>
           Ninguém vê a lista de destinatários: na plataforma cada pessoa recebe a própria notificação, e no e-mail todos vão em cópia oculta.
-          {" "}Agência, cliente e fornecedor nunca entram em comunicado interno, mesmo no escopo “Todos”.
+          {" "}Quem é de fora do Grupo — hoje a agência — nunca entra em comunicado interno, mesmo no escopo “Todos”.
           {" "}Quem não tem login nem e-mail cadastrado não é alcançado por nenhum dos dois canais.
         </p>
       </div>
@@ -230,7 +242,10 @@ function ComunicadoComposer({ onSend, onPreview }) {
 // Histórico. Antes disto o comunicado não ficava em lugar nenhum: virava
 // notificação e sumia quando a pessoa lia. O RH não conseguia responder "o que
 // foi comunicado em agosto" nem conferir se o e-mail saiu.
-function HistoricoComunicados({ comunicados, loading }) {
+function HistoricoComunicados({ comunicados, loading, onReenviar }) {
+  const [reenviando, setReenviando] = useState(null);
+  const [reenvioResult, setReenvioResult] = useState(null); // { id, enviados, erro }
+
   const rotuloEscopo = (c) => {
     if (c.scope_type === "frente") return c.scope_value ? rhFrenteLabel(c.scope_value) : "—";
     if (c.scope_type === "departamento") return c.scope_value || "—";
@@ -244,6 +259,14 @@ function HistoricoComunicados({ comunicados, loading }) {
     return { texto: "E-mail pendente", cor: "var(--amber)", bg: "var(--amber-bg)" };
   };
 
+  const handleReenviar = async (id) => {
+    setReenviando(id);
+    setReenvioResult(null);
+    const r = await onReenviar(id);
+    setReenvioResult({ id, ...r });
+    setReenviando(null);
+  };
+
   if (loading) return <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>;
   if (!comunicados.length) {
     return <EmptyState icon={History} title="Nenhum comunicado enviado ainda" description="O que for enviado acima fica registrado aqui, com o alcance de cada canal." />;
@@ -253,6 +276,12 @@ function HistoricoComunicados({ comunicados, loading }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {comunicados.map((c) => {
         const email = statusEmail(c);
+        // Só 'pendente' e 'falhou' são retomáveis — é exatamente o que a edge
+        // function aceita reivindicar. 'enviado' fica travado de propósito
+        // (inclusive quando cobre um envio parcial), pra ninguém receber o
+        // mesmo comunicado duas vezes.
+        const podeReenviar = onReenviar && ["pendente", "falhou"].includes(c.email_status);
+        const res = reenvioResult?.id === c.id ? reenvioResult : null;
         return (
           <div key={c.id} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", background: "var(--surface)" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
@@ -290,10 +319,37 @@ function HistoricoComunicados({ comunicados, loading }) {
               )}
               {c.sem_email > 0 && (
                 <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
-                  {c.sem_email} sem e-mail cadastrado
+                  {c.sem_email} sem e-mail válido cadastrado
                 </span>
               )}
+              {podeReenviar && (
+                <button
+                  type="button"
+                  onClick={() => handleReenviar(c.id)}
+                  disabled={reenviando === c.id}
+                  title="Tenta o envio por e-mail de novo. Não reenvia a notificação da plataforma, que já foi entregue."
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    fontSize: 11, fontWeight: 600, borderRadius: 999, padding: "3px 10px",
+                    border: "1px solid var(--border-strong)", background: "var(--surface)",
+                    color: "var(--text)", cursor: reenviando === c.id ? "default" : "pointer",
+                    opacity: reenviando === c.id ? 0.6 : 1,
+                  }}
+                >
+                  {reenviando === c.id
+                    ? <><Loader2 size={11} className="animate-spin" /> Enviando…</>
+                    : <><RefreshCw size={11} /> Tentar e-mail de novo</>}
+                </button>
+              )}
             </div>
+
+            {res && (
+              <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, borderRadius: 8, padding: "6px 10px", background: res.erro ? "var(--danger-bg)" : "var(--success-bg)", color: res.erro ? "var(--danger)" : "var(--success)" }}>
+                {res.erro
+                  ? `Continuou falhando: ${res.erro}`
+                  : `E-mail enviado agora para ${res.enviados} ${res.enviados === 1 ? "pessoa" : "pessoas"}.`}
+              </div>
+            )}
           </div>
         );
       })}
@@ -545,7 +601,7 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHComunicacaoView({ currentUser, canWrite }) {
-  const { pesquisas, comunicados, loading, enviarComunicado, carregarAlcance, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao } = useRHComunicacao({ userId: currentUser?.id });
+  const { pesquisas, comunicados, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao } = useRHComunicacao({ userId: currentUser?.id });
   const [tab, setTab] = useState("comunicados");
   const [novaOpen, setNovaOpen] = useState(false);
   const [resultadosDe, setResultadosDe] = useState(null);
@@ -607,19 +663,36 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
         ))}
       </div>
 
+      {/* Escrever e LER são coisas diferentes aqui. A aba inteira ficava atrás
+          de `canWrite` (gerente_rh/admin), então a diretoria — que App.jsx
+          deixa entrar na rota e que a policy rh_comunicados_diretoria_read
+          autoriza a ler — caía num "Sem permissão" e nunca via o histórico.
+          Quem não escreve vê "Enviados" (a RLS decide o que vem) e não vê o
+          formulário nem o botão de reenvio.
+
+          Regra 9 (Painel Executivo), decisão registrada: NÃO abre aba nova lá.
+          Comunicado não é departamento nem Kanban novo — é uma função dentro
+          de RH, que já tem sua entrada na faixa de saúde. Alcance de
+          comunicado também não é métrica de decisão de diretoria; o que
+          interessa a ela é O QUE foi comunicado, e isso está aqui, na rota
+          que ela já acessa. */}
       {tab === "comunicados" ? (
-        canWrite ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            <ComunicadoComposer onSend={enviarComunicado} onPreview={carregarAlcance} />
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-                <History size={15} style={{ color: "var(--text-dim)" }} />
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", margin: 0 }}>Enviados</h2>
-              </div>
-              <HistoricoComunicados comunicados={comunicados} loading={loading} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {canWrite
+            ? <ComunicadoComposer onSend={enviarComunicado} onPreview={carregarAlcance} />
+            : <EmptyState icon={Megaphone} title="Só leitura" description="Você acompanha o que o RH comunicou, mas não envia comunicados." />}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+              <History size={15} style={{ color: "var(--text-dim)" }} />
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", margin: 0 }}>Enviados</h2>
             </div>
+            <HistoricoComunicados
+              comunicados={comunicados}
+              loading={loading}
+              onReenviar={canWrite ? reenviarEmailComunicado : null}
+            />
           </div>
-        ) : <EmptyState icon={Megaphone} title="Sem permissão" description="Só a gestão de RH envia comunicados." />
+        </div>
       ) : loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : (

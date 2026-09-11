@@ -35,9 +35,18 @@ alter table public.rh_comunicados enable row level security;
 -- Mesmo público que já podia ENVIAR comunicado (broadcast_announcement exige
 -- admin ou gerente_rh) — não amplio quem envia ao criar o registro.
 drop policy if exists rh_comunicados_rh_all on public.rh_comunicados;
+-- `enviado_por = auth.uid()` no WITH CHECK: sem isso, um gerente_rh podia
+-- inserir a linha direto pelo PostgREST com o nome de OUTRA pessoa no
+-- "enviado por", pulando as validações do broadcast_announcement. Não vaza
+-- nada (destinatário continua derivado no servidor), mas esta tabela existe
+-- justamente pra responder "quem comunicou o quê" — trilha que se pode forjar
+-- não é trilha. A RPC insere como dona da tabela e não passa por aqui.
 create policy rh_comunicados_rh_all on public.rh_comunicados
   for all using (current_user_is_admin() or current_user_has_role('gerente_rh'))
-  with check (current_user_is_admin() or current_user_has_role('gerente_rh'));
+  with check (
+    (current_user_is_admin() or current_user_has_role('gerente_rh'))
+    and enviado_por = (select auth.uid())
+  );
 
 drop policy if exists rh_comunicados_diretoria_read on public.rh_comunicados;
 create policy rh_comunicados_diretoria_read on public.rh_comunicados
@@ -45,6 +54,17 @@ create policy rh_comunicados_diretoria_read on public.rh_comunicados
 
 create index if not exists rh_comunicados_enviado_em_idx
   on public.rh_comunicados (enviado_em desc);
+
+-- A publicação do Realtime é uma LISTA de tabelas, não `for all tables` (ver
+-- _historico/20260750_enable_realtime_publication_all_tables.sql) — tabela nova
+-- nasce de fora dela. O hook assina `postgres_changes` em rh_comunicados; sem
+-- esta linha a assinatura existe e nunca dispara, e o histórico só atualiza
+-- com F5. Toda tabela nova que a tela assina precisa disto.
+do $$
+begin
+  alter publication supabase_realtime add table public.rh_comunicados;
+exception when duplicate_object then null;
+end $$;
 
 -- Destinatários de um escopo, em UM lugar só.
 --
@@ -106,6 +126,25 @@ $$;
 revoke all on function public.comunicado_destinatarios(text, text, uuid) from public, anon, authenticated;
 grant execute on function public.comunicado_destinatarios(text, text, uuid) to service_role;
 
+-- Critério de "e-mail utilizável", em um lugar só.
+--
+-- A prévia contava `trim(email) <> ''` e o envio contava regex-válido e
+-- deduplicado — endereço torto ou repetido sumia ENTRE os dois, sem aparecer
+-- em contador nenhum. Pela regra 14, o que o filtro descarta tem que aparecer
+-- contado; aqui o caminho mais honesto é os dois usarem o mesmo critério.
+-- A regex é a mesma da edge function (`EMAIL_RE`), traduzida pra POSIX.
+create or replace function public.email_utilizavel(p_email text)
+returns boolean
+language sql
+immutable
+-- `set search_path` mesmo não sendo SECURITY DEFINER: sem ele o get_advisors
+-- acusa function_search_path_mutable, e o padrão desta base é toda função
+-- nova fixar o caminho.
+set search_path to 'public', 'pg_temp'
+as $$
+  select coalesce(trim(p_email), '') ~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$';
+$$;
+
 -- Prévia de alcance pra tela mostrar ANTES de enviar. Conta, nunca devolve a
 -- lista: quem manda comunicado não precisa da relação de e-mails na mão.
 create or replace function public.comunicado_alcance(p_scope_type text, p_scope_value text)
@@ -123,10 +162,13 @@ begin
     raise exception 'Escopo inválido';
   end if;
   return query
+    -- `distinct lower(trim(...))` porque o BCC do envio é deduplicado: dois
+    -- perfis com o mesmo endereço recebem UM e-mail, e a prévia precisa dizer
+    -- a mesma coisa que vai acontecer.
     select count(*)::int,
            count(*) filter (where d.aceita_notificacao)::int,
-           count(*) filter (where coalesce(trim(d.email),'') <> '')::int,
-           count(*) filter (where coalesce(trim(d.email),'') =  '')::int
+           count(distinct lower(trim(d.email))) filter (where public.email_utilizavel(d.email))::int,
+           count(*) filter (where not public.email_utilizavel(d.email))::int
     from public.comunicado_destinatarios(p_scope_type, p_scope_value, (select auth.uid())) d;
 end;
 $$;
@@ -182,8 +224,8 @@ begin
     get diagnostics v_count = row_count;
   end if;
 
-  select count(*) filter (where coalesce(trim(d.email),'') <> ''),
-         count(*) filter (where coalesce(trim(d.email),'') =  '')
+  select count(distinct lower(trim(d.email))) filter (where public.email_utilizavel(d.email)),
+         count(*) filter (where not public.email_utilizavel(d.email))
     into v_com_email, v_sem_email
   from public.comunicado_destinatarios(p_scope_type, p_scope_value, v_uid) d;
 

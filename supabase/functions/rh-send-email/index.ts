@@ -763,7 +763,7 @@ async function hardenBemEstarLembrete(
 async function enviarViaResend(
   { to, bcc, subject, html, tipo }:
   { to: string; bcc: string[]; subject: string; html: string; tipo: string },
-): Promise<{ ok: true; enviados: number; simulado: boolean } | { ok: false; error: string }> {
+): Promise<{ ok: true; enviados: number; simulado: boolean } | { ok: false; error: string; enviadosAntes: number }> {
   const resendKey = Deno.env.get("RESEND_API_KEY");
 
   // O Resend limita ~50 destinatários por chamada — quebra o BCC em blocos.
@@ -784,6 +784,11 @@ async function enviarViaResend(
     return { ok: true, enviados: 0, simulado: true };
   }
 
+  // Quantos destinatários já saíram quando um bloco falha no meio. Sem este
+  // número o chamador não sabe distinguir "não saiu nada" de "saiu metade", e
+  // um reenvio manda de novo pra quem já recebeu.
+  let enviadosAntes = 0;
+
   for (const chunk of bccChunks) {
     const payload: Record<string, unknown> = { from: "noreply@sanwey.com.br", to, subject, html };
     if (chunk.length > 0) payload.bcc = chunk;
@@ -797,10 +802,11 @@ async function enviarViaResend(
     if (!resendRes.ok) {
       const errBody = await resendRes.text();
       console.error("[rh-send-email] Resend error:", resendRes.status, errBody);
-      return { ok: false, error: `Falha ao enviar e-mail: ${resendRes.status}` };
+      return { ok: false, error: `Falha ao enviar e-mail: ${resendRes.status}`, enviadosAntes };
     }
 
     const resendData = await resendRes.json();
+    enviadosAntes += chunk.length || 1;
     console.log("[rh-send-email] Sent via Resend:", resendData?.id, "bcc:", chunk.length);
   }
   return { ok: true, enviados: bcc.length || 1, simulado: false };
@@ -854,7 +860,12 @@ async function handleComunicado(
     p_scope_value: com.scope_value,
     p_excluir: com.enviado_por,
   });
-  if (destErr) return falha(`Não foi possível montar a lista de destinatários: ${destErr.message}`, 500);
+  if (destErr) {
+    // Mensagem crua do Postgres fica no log, não na tela: quem lê aqui é RH,
+    // não quem depura o banco, e o texto pode carregar nome de função/coluna.
+    console.error("[rh-send-email] comunicado_destinatarios falhou:", destErr);
+    return falha("Não foi possível montar a lista de destinatários. Tente de novo em alguns minutos.", 500);
+  }
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const bcc = [...new Set(
@@ -894,16 +905,41 @@ async function handleComunicado(
   const envio = await enviarViaResend({
     to: "noreply@sanwey.com.br",   // destinatários reais vão só em BCC — ninguém vê a lista
     bcc,
-    subject: `${com.titulo} — Grupo Sanwey`,
+    // Título vem de campo livre `text`, sem limite na tabela: tira quebra de
+    // linha (que num header de e-mail é injeção clássica) e corta o excesso.
+    subject: `${String(com.titulo || "").replace(/[\r\n]+/g, " ").trim().slice(0, 160)} — Grupo Sanwey`,
     html,
     tipo: "comunicado",
   });
 
   if (!envio.ok) {
+    // Dois desfechos diferentes, e confundi-los é o que faz gente receber o
+    // mesmo comunicado duas vezes:
+    //
+    // - Nada saiu → `falhou`, alcance zero. O reenvio é seguro e a tela
+    //   oferece o botão.
+    // - Saiu parte (>45 destinatários, o Resend quebra em blocos e um bloco
+    //   do meio falhou) → `enviado`, com o alcance REAL do que saiu e o erro
+    //   registrado ao lado. Fica terminal de propósito: o claim de cima só
+    //   aceita 'pendente'/'falhou', então o reenvio não recomeça do bloco 1 e
+    //   não duplica pra quem já recebeu. Quem faltou é assunto de um
+    //   comunicado novo, decidido por gente — não por retry automático.
+    const parcial = envio.enviadosAntes > 0;
     await supabase.from("rh_comunicados")
-      .update({ email_status: "falhou", email_erro: envio.error })
+      .update({
+        email_status: parcial ? "enviado" : "falhou",
+        email_erro: parcial
+          ? `Envio parcial: ${envio.enviadosAntes} receberam antes da falha (${envio.error}). Os demais NÃO receberam e o reenvio está bloqueado pra não duplicar.`
+          : envio.error,
+        alcance_email: envio.enviadosAntes,
+      })
       .eq("id", comunicadoId);
-    return falha(envio.error, 500);
+    return falha(
+      parcial
+        ? `${envio.error} ${envio.enviadosAntes} pessoas já tinham recebido — veja o detalhe no histórico.`
+        : envio.error,
+      500,
+    );
   }
 
   // Sem RESEND_API_KEY o envio é simulado (só log). Desfaz a marca de
@@ -911,7 +947,9 @@ async function handleComunicado(
   // pra N pessoas quando não saiu pra ninguém — número que mente é pior que
   // número que falta (regra 14).
   if (envio.simulado) {
-    const erro = "E-mail não configurado no servidor (RESEND_API_KEY ausente) — nada foi enviado.";
+    // Sem nomear a variável de ambiente: quem lê é RH, e o nome do segredo não
+    // acrescenta nada pra quem não administra o servidor (o log tem o detalhe).
+    const erro = "O envio por e-mail não está configurado no servidor — nada foi enviado. Fale com quem administra a plataforma.";
     await supabase.from("rh_comunicados")
       .update({ email_status: "falhou", email_erro: erro, alcance_email: 0 })
       .eq("id", comunicadoId);
