@@ -42,7 +42,7 @@ export const CHANGELOG = [
     items: [
       {
         kind: "novo",
-        text: "Novo cargo Departamento Pessoal: vê Funcionários e Férias, e edita Cargos & Salários — sem Recrutamento, Avaliação de Desempenho nem Pesquisa de clima. Atribuível em Configurações › Usuários.",
+        text: "Novo cargo Departamento Pessoal: lê Funcionários e Férias, e edita Cargos & Salários — sem Recrutamento, Avaliação de Desempenho nem Pesquisa de clima. Atribuível em Configurações › Usuários.",
         roles: ["rh", "gerente_rh", "admin"],
       },
     ],

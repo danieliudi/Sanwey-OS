@@ -106,6 +106,11 @@ export function computeRoleFlags(roles) {
     isRH:                hasAnyRole(list, ["rh", "gerente_rh", "admin"]),
     isRHManager:         hasAnyRole(list, ["gerente_rh", "admin"]),
     isPureRH:            rolesSubsetOf(list, ["rh", "gerente_rh"]),
+    // Departamento Pessoal (11/09/2026). Cargo próprio, NÃO incluído em
+    // `isRH`: entrar ali daria a ele Recrutamento, Avaliação e Pesquisa de
+    // clima, que são justamente as três que o escopo aprovado exclui.
+    isDP:                hasAnyRole(list, ["dp"]),
+    isPureDP:            rolesSubsetOf(list, ["dp"]),
     isComex:             hasAnyRole(list, ["comex", "admin"]),
     isPureComex:         rolesSubsetOf(list, ["comex"]),
     isAdmin:             hasAnyRole(list, ["admin"]),
@@ -158,7 +163,7 @@ export function defaultModulesForRoles(roles) {
   // de fechar um.
   if (f.isPureSuporte) {
     ["pedidos", "clients", "catalogo"].forEach(m => set.add(m));
-  } else if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {
+  } else if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex && !f.isPureDP) {
     ["commercial-overview", "crm", "posvenda", "pedidos", "clients", "abm", "catalogo", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
     if (f.isManager) set.add("crossref");
   }
@@ -180,6 +185,14 @@ export function defaultModulesForRoles(roles) {
     // Todo colaborador (não só RH) acessa o próprio checklist/treinamentos/
     // avaliação — não é uma tela de gestão de RH.
     ["rh-onboarding", "rh-treinamentos", "rh-feedback"].forEach(m => set.add(m));
+  }
+
+  // Departamento Pessoal: os três módulos aprovados, e só eles. Fica FORA do
+  // `if (f.isRH)` acima de propósito — sem este bloco a migration do cargo não
+  // entrega a feature: o DP cairia no ramo padrão, receberia o menu Comercial
+  // inteiro e NÃO receberia as telas de RH (achado da revisão de segurança).
+  if (f.isDP) {
+    ["rh-funcionarios", "rh-cargos", "rh-ferias"].forEach(m => set.add(m));
   }
 
   if (f.isComex) set.add("comex");

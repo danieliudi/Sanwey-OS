@@ -1196,12 +1196,20 @@ function EmployeeDetailModal({
       .join("")
       .toUpperCase();
 
+  // Conexões fica FORA pro Departamento Pessoal: a RPC que alimenta a aba
+  // (get_colaborador_connections) devolve avaliações com nota final no mesmo
+  // payload, e Avaliação de Desempenho está explicitamente fora do escopo do
+  // DP. Ela não foi afrouxada de propósito — então, sem esconder a aba, o DP
+  // clicaria e receberia "Sem permissão pra ver conexões deste colaborador",
+  // que é erro duro na cara do usuário por uma regra que está certa.
+  const ehDP = (currentUser?.roles || []).includes("dp")
+    && !(currentUser?.roles || []).some(r => ["rh", "gerente_rh", "admin", "diretoria"].includes(r));
   const tabs = [
     { id: "dados", label: "Dados" },
     { id: "beneficios", label: "Benefícios" },
     { id: "assinatura", label: "Assinatura" },
     { id: "solicitacoes", label: "Solicitações" },
-    { id: "conexoes", label: "Conexões" },
+    ...(ehDP ? [] : [{ id: "conexoes", label: "Conexões" }]),
   ];
 
   return (
