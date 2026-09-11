@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "5.1.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pesquisa anônima: o resultado só aparece a partir de 5 respostas, e sempre em conjunto. Em equipe pequena, menos que isso deixava dar nome a quem escreveu — e a página de resposta agora diz isso a quem vai responder.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "5.0.0",
     items: [
       {

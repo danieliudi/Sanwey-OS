@@ -96,7 +96,15 @@ export function useRHComunicacao({ userId } = {}) {
     const { data, error } = await supabase.rpc("pesquisa_respostas_aggregado", { p_pesquisa_id: pesquisaId });
     if (error) throw new Error(error.message);
     const row = Array.isArray(data) ? data[0] : data;
-    return { total: Number(row?.total || 0), respostas: Array.isArray(row?.respostas) ? row.respostas : [] };
+    // `liberado` false = pesquisa anônima que ainda não bateu o mínimo de
+    // respondentes. O banco devolve a contagem e NENHUMA resposta — o piso
+    // vive lá, não aqui, porque a função é chamável direto por quem tem token.
+    return {
+      total: Number(row?.total || 0),
+      respostas: Array.isArray(row?.respostas) ? row.respostas : [],
+      minimo: Number(row?.minimo || 0),
+      liberado: row?.liberado !== false,
+    };
   }, []);
 
   return useMemo(() => ({
