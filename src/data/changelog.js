@@ -38,6 +38,18 @@
 
 export const CHANGELOG = [
   {
+    version: "5.5.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Em Recrutamento → Editar etapas, a lista voltou a mostrar as etapas que já existem quando você abre o editor. Antes ela abria vazia, não dava pra excluir uma etapa criada por engano — e salvar assim apagava o Kanban.",
+        roles: ["rh", "gerente_rh", "admin"],
+        toast: true,
+      },
+    ],
+  },
+
+  {
     version: "5.5.0",
     items: [
       {

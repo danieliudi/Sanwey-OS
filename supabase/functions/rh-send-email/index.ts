@@ -262,7 +262,7 @@ function tplComunicado(vars: Record<string, string>): string {
 
   const botao = confirmUrl
     ? `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:26px;"><tr><td style="background:${accent};border-radius:10px;"><a href="${escapeHtml(confirmUrl)}" style="display:inline-block;padding:13px 26px;font-size:14px;font-weight:700;color:#FFFFFF;text-decoration:none;">Confirmei a leitura</a></td></tr></table>
-       <p style="margin:11px 0 0;font-size:11px;color:#A09A94;line-height:1.5;">Link pessoal, só seu &mdash; n\u00e3o precisa de login e n\u00e3o vale por outra pessoa.</p>`
+       <p style="margin:11px 0 0;font-size:11px;color:#A09A94;line-height:1.5;">Link pessoal, só seu &mdash; não precisa de login e não vale por outra pessoa.</p>`
     : "";
 
   // CONTEÚDO SENSÍVEL: o e-mail vira um AVISO. Sem corpo, sem imagem — só o
@@ -274,7 +274,7 @@ function tplComunicado(vars: Record<string, string>): string {
     const inner = `${selo}
     <h1 style="margin:0 0 14px;font-size:20px;font-weight:700;color:#2C2C2B;line-height:1.3;letter-spacing:-0.01em;">O RH publicou um comunicado</h1>
     <p style="margin:0 0 8px;font-size:15px;color:#2C2C2B;line-height:1.6;"><strong>${titulo}</strong></p>
-    <p style="margin:0 0 22px;font-size:14px;color:#8A8680;line-height:1.6;">O conte\u00fado est\u00e1 s\u00f3 na plataforma, no sino de notifica\u00e7\u00f5es. Entre para ler.</p>
+    <p style="margin:0 0 22px;font-size:14px;color:#8A8680;line-height:1.6;">O conteúdo está só na plataforma, no sino de notificações. Entre para ler.</p>
     <table cellpadding="0" cellspacing="0" border="0"><tr><td style="background:${accent};border-radius:10px;"><a href="https://sanwey-crm.netlify.app" style="display:inline-block;padding:13px 26px;font-size:14px;font-weight:700;color:#FFFFFF;text-decoration:none;">Abrir na plataforma</a></td></tr></table>`;
     return shell(inner, accent);
   }
@@ -286,7 +286,7 @@ function tplComunicado(vars: Record<string, string>): string {
   const inner = `${selo}${imagem}
     <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">${titulo}</h1>
     <p style="margin:0 0 24px;font-size:15px;color:#2C2C2B;line-height:1.7;">${corpo}</p>
-    <p style="margin:0;font-size:13px;color:#8A8680;line-height:1.5;">Este comunicado tamb\u00e9m est\u00e1 no sino de notifica\u00e7\u00f5es da plataforma.</p>${botao}`;
+    <p style="margin:0;font-size:13px;color:#8A8680;line-height:1.5;">Este comunicado também está no sino de notificações da plataforma.</p>${botao}`;
   return shell(inner, accent);
 }
 
@@ -870,7 +870,13 @@ async function handleComunicado(
 
   const { data: com } = await supabase
     .from("rh_comunicados")
-    .select("id, titulo, corpo, scope_type, scope_value, importante, canais, enviado_por, email_status")
+    // `sensivel` e `imagem_path` PRECISAM estar aqui: sem elas o supabase-js
+    // devolve `undefined`, `com.sensivel ? "1" : "0"` vira sempre "0" e o
+    // comunicado marcado como sensível sairia com o corpo inteiro por e-mail —
+    // exatamente o que a marcação existe pra impedir. Pego na releitura antes
+    // de publicar, em 11/09/2026; a coluna faltando não quebra nada em tempo
+    // de compilação, só desliga a proteção em silêncio.
+    .select("id, titulo, corpo, scope_type, scope_value, importante, canais, enviado_por, email_status, sensivel, imagem_path")
     .eq("id", comunicadoId)
     .maybeSingle();
   if (!com) return falha("Comunicado não encontrado.", 404);
