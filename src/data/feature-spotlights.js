@@ -25,6 +25,13 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "comunicado-canais",
+    route: "rh-comunicacao",
+    target: '[data-tour="comunicado-canais"]',
+    text: "Novo: escolha por onde o comunicado vai. E-mail alcança quem desligou o sino, e a prévia mostra quantas pessoas cada canal atinge antes de você enviar.",
+    version: "5.3.0",
+  },
+  {
     id: "tarefas-arquivo",
     route: "marketing-tarefas",
     target: '[data-tour="tarefas-arquivo"]',

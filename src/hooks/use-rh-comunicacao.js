@@ -7,6 +7,7 @@ import { debounce } from "../utils/debounce";
 // só lidas via RPC de agregação, nunca com identidade).
 export function useRHComunicacao({ userId } = {}) {
   const [pesquisas, setPesquisas] = useState([]);
+  const [comunicados, setComunicados] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // `isActive` é a guarda por execução do efeito (não um ref da instância)
@@ -15,9 +16,14 @@ export function useRHComunicacao({ userId } = {}) {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { data } = await supabase.from("rh_pesquisas").select("*").order("created_at", { ascending: false });
+      const [{ data: pesq }, { data: coms }] = await Promise.all([
+        supabase.from("rh_pesquisas").select("*").order("created_at", { ascending: false }),
+        supabase.from("rh_comunicados").select("*").order("enviado_em", { ascending: false }).limit(200),
+      ]);
       if (!isActive()) return;
-      setPesquisas(data || []);
+      setPesquisas(pesq || []);
+      // RLS decide: quem não é gestão de RH/diretoria recebe [] sem erro.
+      setComunicados(coms || []);
     } finally {
       if (isActive()) setLoading(false);
     }
@@ -31,20 +37,102 @@ export function useRHComunicacao({ userId } = {}) {
     const channel = supabase
       .channel(`rh-pesquisas-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_pesquisas" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_comunicados" }, debouncedFetchAll)
       .subscribe();
     return () => { active = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
 
-  // Comunicado: retorna quantos destinatários receberam. `importante` ignora
-  // o opt-out de notificações (mention_notifications_enabled) — só alcança
-  // quem tem login na plataforma.
-  const enviarComunicado = useCallback(async ({ title, body, scopeType = "todos", scopeValue = null, importante = false }) => {
-    const { data, error } = await supabase.rpc("broadcast_announcement", {
-      p_title: title, p_body: body || null, p_scope_type: scopeType, p_scope_value: scopeValue, p_link: null, p_importante: importante,
+  // Prévia de alcance ANTES de enviar. Só contagens — a lista de e-mails não
+  // sai do banco (comunicado_destinatarios não é chamável pelo client).
+  const carregarAlcance = useCallback(async (scopeType = "todos", scopeValue = null) => {
+    const { data, error } = await supabase.rpc("comunicado_alcance", {
+      p_scope_type: scopeType, p_scope_value: scopeType === "todos" ? null : scopeValue,
     });
     if (error) throw new Error(error.message);
-    return data ?? 0;
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      total: Number(row?.total || 0),
+      comNotificacao: Number(row?.com_notificacao || 0),
+      comEmail: Number(row?.com_email || 0),
+      semEmail: Number(row?.sem_email || 0),
+    };
   }, []);
+
+  // Dispara o e-mail de um comunicado já registrado. Devolve quantos foram,
+  // ou lança com a mensagem REAL da edge function.
+  //
+  // O desembrulho de `error.context` não é detalhe: `functions.invoke` devolve
+  // "Edge Function returned a non-2xx status code" pra qualquer 4xx/5xx e não
+  // lê o corpo. Sem isto, toda mensagem que o servidor escreveu em português
+  // ("Nenhum destinatário do escopo tem e-mail cadastrado.") morre no SDK e o
+  // RH lê inglês genérico. Mesmo padrão de use-ai.js:48 e use-lead-emails.js:56.
+  const dispararEmail = useCallback(async (comunicadoId) => {
+    const { data, error } = await supabase.functions.invoke("rh-send-email", {
+      body: { type: "comunicado", comunicadoId },
+    });
+    if (error) {
+      const corpo = await error.context?.json?.().catch(() => null);
+      throw new Error(corpo?.error || error.message);
+    }
+    return Number(data?.sent || 0);
+  }, []);
+
+  // Reenvio do e-mail de um comunicado que ficou pendente ou falhou — sem isso
+  // os dois estados eram terminais na tela (a edge function já aceitava a
+  // retomada: `.in("email_status", ["pendente","falhou"])`), e a única saída
+  // do RH era criar um comunicado novo, duplicando a notificação de quem já
+  // tinha recebido pela plataforma.
+  const reenviarEmailComunicado = useCallback(async (comunicadoId) => {
+    try {
+      const enviados = await dispararEmail(comunicadoId);
+      return { enviados, erro: null };
+    } catch (e) {
+      return { enviados: 0, erro: e?.message || "Falha ao enviar por e-mail." };
+    } finally {
+      await fetchAll();
+    }
+  }, [dispararEmail, fetchAll]);
+
+  // Comunicado. A RPC grava o registro em `rh_comunicados` e devolve o alcance
+  // MEDIDO no envio; o e-mail é um segundo passo, feito pela edge function a
+  // partir do id — o client nunca monta a lista de destinatários.
+  //
+  // `importante` ignora o opt-out de notificações
+  // (mention_notifications_enabled), que vale só pro canal plataforma: quem
+  // desligou o sino continua recebendo o e-mail, que é o motivo do 2º canal.
+  //
+  // O e-mail NÃO derruba o envio: a notificação na plataforma já foi gravada e
+  // não dá pra desfazer. Falha de e-mail volta como `emailErro` pra tela dizer
+  // o que saiu e o que não saiu, em vez de um erro genérico que faria o RH
+  // reenviar tudo e duplicar a notificação.
+  const enviarComunicado = useCallback(async ({ title, body, scopeType = "todos", scopeValue = null, importante = false, canais = ["plataforma"] }) => {
+    const { data, error } = await supabase.rpc("broadcast_announcement", {
+      p_title: title, p_body: body || null, p_scope_type: scopeType, p_scope_value: scopeValue,
+      p_link: null, p_importante: importante, p_canais: canais,
+    });
+    if (error) throw new Error(error.message);
+
+    const res = {
+      canais,
+      comunicadoId: data?.comunicado_id || null,
+      alcancePlataforma: Number(data?.alcance_plataforma || 0),
+      alcanceEmail: Number(data?.alcance_email || 0),
+      semEmail: Number(data?.sem_email || 0),
+      emailEnviado: 0,
+      emailErro: null,
+    };
+
+    if (canais.includes("email") && res.comunicadoId) {
+      try {
+        res.emailEnviado = await dispararEmail(res.comunicadoId);
+      } catch (e) {
+        res.emailErro = e?.message || "Falha ao enviar por e-mail.";
+      }
+    }
+
+    await fetchAll();
+    return res;
+  }, [dispararEmail, fetchAll]);
 
   const criarPesquisa = useCallback(async (data) => {
     const row = {
@@ -108,8 +196,8 @@ export function useRHComunicacao({ userId } = {}) {
   }, []);
 
   return useMemo(() => ({
-    pesquisas, loading,
-    enviarComunicado, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao,
+    pesquisas, comunicados, loading,
+    enviarComunicado, reenviarEmailComunicado, carregarAlcance, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao,
     refetch: fetchAll,
-  }), [pesquisas, loading, enviarComunicado, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao, fetchAll]);
+  }), [pesquisas, comunicados, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao, fetchAll]);
 }

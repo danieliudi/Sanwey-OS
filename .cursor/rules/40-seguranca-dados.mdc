@@ -22,6 +22,12 @@ autenticado** (formulário público).
       `rh_ferias`).
 - [ ] Edge function valida JWT **e** autorização de papel/empresa antes de agir.
 - [ ] Rota pública não grava coluna arbitrária nem permite abuso sem limite.
+- [ ] Função nova que não é pra todo mundo chamar: `revoke` NOMEANDO `anon` e
+      `authenticated`. O Supabase concede EXECUTE a esses dois em toda função
+      nova de `public` via `ALTER DEFAULT PRIVILEGES`, e é grant nominal —
+      `revoke ... from public` não encosta nele. Confira com
+      `has_function_privilege('anon', oid, 'EXECUTE')`. O inverso também vale:
+      função usada em policy de Storage PRECISA do grant a `anon`.
 - [ ] Rodar `get_advisors` (tipo `security`) depois de qualquer migration
       aplicada — nenhum achado novo introduzido.
 

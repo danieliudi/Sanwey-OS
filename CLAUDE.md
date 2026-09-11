@@ -257,6 +257,17 @@ confirmação explícita do Daniel (regra 5). Checklist mínimo:
   (já aconteceu edge function sem essa checagem).
 - Rota pública (formulário sem login) não grava coluna arbitrária nem
   permite abuso sem limite de taxa.
+- Função nova que não é pra todo mundo chamar: o `revoke` precisa NOMEAR
+  `anon` e `authenticated`. O Supabase mantém um `ALTER DEFAULT PRIVILEGES`
+  que concede EXECUTE a esses dois papéis em toda função nova do schema
+  `public`, e esse grant é nominal — `revoke ... from public` não encosta
+  nele e a função continua aberta. Pego em 11/09/2026 numa branch de teste:
+  `comunicado_destinatarios` (nome + e-mail de todo colaborador) estava
+  chamável por visitante ANÔNIMO via `/rest/v1/rpc/`, com o `revoke ... from
+  public` no arquivo parecendo resolver. Confira com
+  `has_function_privilege('anon', oid, 'EXECUTE')` em vez de acreditar no
+  revoke. O contrário também vale e já mordeu: função usada em policy de
+  Storage PRECISA do grant a `anon`, senão quebra todo upload público.
 - Roda `get_advisors` (Supabase MCP, tipo `security`) depois de qualquer
   migration aplicada — nenhum achado novo introduzido pela mudança.
 

@@ -37,8 +37,8 @@ Todos conferidos no código em 03/09/2026:
 | Componentes de view (`src/components/views/`) | **59** |
 | Hooks (`src/hooks/`) | **124** |
 | …que falam com o banco | **99** |
-| Tabelas referenciadas pelo front | **109** |
-| Funções RPC chamadas pelo front | **48** |
+| Tabelas referenciadas pelo front | **110** |
+| Funções RPC chamadas pelo front | **49** |
 | Edge functions **ativas em produção** | **30** |
 | …com fonte versionada no repo | **30** |
 | Buckets de Storage | **13** (2 públicos) |
@@ -189,7 +189,7 @@ abre · dado principal · integração externa (quando tem).
 | `/rh/funcionarios` | `RHFuncionariosView.jsx` | Tabela completa da equipe — **referência canônica do padrão "Tabela com filtro"** e a única tela com o toggle de densidade hoje. Pedido de atualização de dado pelo próprio colaborador (aprova/recusa), benefícios, e assinatura de documento via D4Sign. Guarda o **gestor direto** (`rh_colaboradores.gestor_id`, auto-referência com trava de ciclo no banco) — não confundir com `profiles.supervisor_id`, que é o supervisor **comercial** e controla escopo de lead no Funil/Pós-venda/Dashboard/ABM. |
 | `/rh/fornecedores` | `RHFornecedoresView.jsx` | Convênio médico, seguradora, terceirizada: cadastro, contratos e eventos. Contrato e histórico somem juntos no `ON DELETE CASCADE` — por isso o texto do modal de exclusão é diferente do de Marketing. Piloto do Agent Builder. |
 | `/rh/cargos` | `RHCargosView.jsx` | Cargos & salários: catálogo com faixa salarial, e movimentações. Só gerente_rh/admin/diretoria. |
-| `/rh/comunicacao` | `RHComunicacaoView.jsx` | Comunicados (notificação pra todos, por frente ou por departamento) e pesquisas internas, com link público `/pesquisa/:id` e agregado anônimo. |
+| `/rh/comunicacao` | `RHComunicacaoView.jsx` | Comunicados (pra todos, por frente ou por departamento) em dois canais — notificação na plataforma e e-mail em cópia oculta, com WhatsApp registrado como "em breve" — e pesquisas internas, com link público `/pesquisa/:id` e agregado anônimo. Cada envio vira uma linha em `rh_comunicados` (alcance por canal medido no envio, status do e-mail) que alimenta a lista "Enviados"; antes de enviar, `comunicado_alcance` mostra a prévia. Escopo e destinatários saem de `comunicado_destinatarios`, ponto único que EXCLUI agência, cliente, fornecedor e desligado — é a única função aqui que não é chamável pelo client (só `service_role`, pra edge function montar o BCC). |
 | `/rh/bem-estar` | `RHBemEstarView.jsx` | Sessões (massagem, avaliação física) com fila e inscrição por link público `/bem-estar/:id`. |
 | `/rh/relatorios` | `RHRelatoriosView.jsx` | Montador de relatório: métricas por categoria (Funcionários, Recrutamento, Férias…), presets salvos, export CSV. |
 
@@ -277,7 +277,7 @@ tabela deny-all deliberada). `rh_pesquisa_respostas` também é deny-all: só
 | `places-autocomplete` | endereço em Viagens/Clientes | `GOOGLE_PLACES_API_KEY` |
 | `distance-matrix` | distância/custo em Viagens | idem |
 | `reverse-geocode` | GPS → endereço no check-in de visita | idem |
-| `rh-send-email` | RH (vaga, gestor, colaborador) | `RESEND_API_KEY` |
+| `rh-send-email` | RH (vaga, gestor, colaborador, comunicado interno) | `RESEND_API_KEY` |
 | `send-crm-email` | aba E-mail do negócio, com template | idem |
 | `send-quote-request` | cotação a fornecedor (Compras) | idem |
 | `send-request-status-email` | retorno de solicitação de Marketing | idem |
