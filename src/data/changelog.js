@@ -38,6 +38,30 @@
 
 export const CHANGELOG = [
   {
+    version: "5.5.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Comunicados agora registram quem leu, aceitam imagem no e-mail, têm marcação de conteúdo sensível e podem partir de um modelo pronto.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Onboarding ganhou a relação de documentos de admissão: 17 itens, cada um com o arquivo anexado, quem recebeu e uma observação. O que não se aplica à pessoa (CNH, reservista) sai da conta em vez de ficar pendente pra sempre.",
+        roles: ["rh", "gerente_rh", "admin", "dp"],
+      },
+      {
+        kind: "novo",
+        text: "Bem-estar virou Programas: um programa agora tem várias datas com um link só, você define quantas vagas cabem por horário, e quem chegou com o horário lotado entra numa lista de espera. Datas repetidas (toda segunda, a cada 15 dias) saem de uma vez.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "O balão de novidade que aparecia perto do rodapé ficava cortado e não dava pra ler nem clicar — agora ele abre pra cima quando não cabe embaixo.",
+      },
+    ],
+  },
+  {
     version: "5.4.0",
     items: [
       {

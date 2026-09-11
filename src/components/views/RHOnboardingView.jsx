@@ -32,6 +32,7 @@ import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { MobileTableCards } from "../shared/MobileTableCards";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
+import { DocumentosAdmissao } from "../rh-pipeline/DocumentosAdmissao";
 import { AppToast } from "../shared/AppToast";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
@@ -637,6 +638,17 @@ function OnboardingDrawer({
           </>
         )}
       </div>
+
+      {/* Documentos de admissão (opção B, 11/09/2026) — ao lado do checklist
+          de integração, não em aba própria: o RH trabalha os dois no mesmo
+          momento, e o RHDetailDrawerShell serve 6 telas de RH (regra 4).
+          Aparece em TODAS as etapas, não só na "Documentação" que o mockup
+          citou: as etapas vivem em `rh_pipeline_stages` e são renomeáveis
+          (regra 5), então amarrar a seção a um nome de etapa quebraria no dia
+          em que alguém renomear — e esconderia a pasta de quem já avançou,
+          que é justamente quem o RH consulta depois. */}
+      <div style={{ borderTop: "1px solid var(--border)", margin: "14px 0" }} />
+      <DocumentosAdmissao colaboradorId={colaborador.id} canWrite={canWrite} users={users} />
     </>
   );
 

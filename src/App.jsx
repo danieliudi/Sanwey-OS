@@ -1889,7 +1889,7 @@ export default function App() {
           ...(isRHManager || isDiretoria ? [
             { id: "rh-cargos",       label: "Cargos & Salários", icon: Briefcase },
             { id: "rh-comunicacao",  label: "Comunicação",       icon: Megaphone },
-            { id: "rh-bem-estar",    label: "Bem-estar",         icon: HeartHandshake },
+            { id: "rh-bem-estar",    label: "Programas",         icon: HeartHandshake },
           ] : []),
           { id: "rh-fornecedores", label: "Fornecedores",      icon: Building2 },
           ...(isRHManager || isDiretoria ? [

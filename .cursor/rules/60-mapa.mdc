@@ -23,8 +23,8 @@ propósito: documento defasado não deve travar deploy.
 
 ## Números que orientam a leitura
 
-47 telas em 54 rotas · 8 rotas públicas sem login · 30 edge functions ·
-109 tabelas · 124 hooks (99 falam com o banco) · 2 frentes comerciais
+47 telas em 54 rotas · 9 rotas públicas sem login · 30 edge functions ·
+contagens exatas (telas, rotas, hooks, tabelas, RPCs) só em `docs/mapa-funcional.md` — número repetido aqui envelhece em silêncio, o `doc:check` não confere `.mdc` · 2 frentes comerciais
 (`industria` = Sanwey, `resibag`).
 
 Envelhecem. `npm run doc:check` é quem sabe se ainda valem.

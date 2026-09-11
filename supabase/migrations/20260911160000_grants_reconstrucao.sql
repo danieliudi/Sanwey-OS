@@ -29,6 +29,16 @@
 -- na migration dela (CLAUDE.md 3.1) — e também aqui, senão a reconstrução a
 -- reabre. Duas listas é duplicação conhecida; a saída de verdade é refazer o
 -- baseline a partir de um dump de produção, e isso é decisão à parte.
+--
+-- COMO acrescentar (acrescentado 11/09/2026): a função nova nasce numa
+-- migration de timestamp MAIOR que esta, então numa reconstrução ela ainda
+-- não existe quando este arquivo roda — um `revoke` seco aqui aborta a
+-- reconstrução, que é justamente o que esta migration existe pra consertar.
+-- Por isso a lista de baixo, "funções posteriores", passa por
+-- `to_regprocedure`: revoga se já existir, ignora se ainda não. Na
+-- reconstrução quem garante a negação é a migration da própria função; aqui
+-- a linha serve pra quando esta lista for reexecutada sobre um banco já
+-- completo.
 
 alter default privileges in schema public grant all on tables    to anon, authenticated, service_role;
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
@@ -93,3 +103,19 @@ revoke execute on function public.reject_rh_data_update_request(uuid,text) from 
 revoke execute on function public.reject_rh_movimentacao(uuid,text) from anon;
 revoke execute on function public.rh_submit_self_rating(uuid,numeric) from anon;
 revoke execute on function public.uniform_can_write() from anon;
+
+-- ── Funções criadas DEPOIS desta migration ─────────────────────────────────
+-- Guardadas por `to_regprocedure` pelo motivo explicado no cabeçalho: numa
+-- reconstrução limpa elas ainda não existem quando este arquivo roda.
+do $$
+declare
+  f text;
+begin
+  foreach f in array array[
+    'public.abrir_documentos_admissao(uuid)'
+  ] loop
+    if to_regprocedure(f) is not null then
+      execute format('revoke execute on function %s from anon', f);
+    end if;
+  end loop;
+end $$;

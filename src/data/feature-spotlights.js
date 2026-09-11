@@ -24,6 +24,25 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  {
+    id: "programas-novo",
+    route: "rh-bem-estar",
+    target: '[data-tour="programas-novo"]',
+    text: "Bem-estar virou Programas: um programa agora tem várias datas com um link só, vagas por horário e lista de espera. Dá pra gerar a série inteira de uma vez (toda segunda, a cada 15 dias).",
+    version: "5.5.0",
+  },
+  // 5.5.0 (documentos de admissão no Onboarding) — decisão de PULAR o
+  // spotlight, registrada aqui como a regra 12 pede, e pelo mesmo motivo do
+  // campo Gestor logo abaixo: a seção nova vive DENTRO da aba "Form" do
+  // drawer de um colaborador, que não existe na rota até alguém abrir um
+  // card. Apontado pra um alvo ausente, o FeatureSpotlight se marca como
+  // visto em silêncio (timer de órfão) pra todo mundo que abrir Onboarding —
+  // inclusive pra quem precisava dele. Vai pelo toast do changelog, com
+  // `roles` de RH e DP, e pelo tutorial de Onboarding.
+  //
+  // 5.5.0 (comunicado com leitura/imagem/modelos) — o spotlight de Comunicação
+  // já existe na 5.3.0 apontando pro mesmo bloco de canais; um segundo aviso
+  // na mesma tela, na mesma semana, vira ruído. Novidade vai pelo changelog.
   // 5.4.0 (nome de quem respondeu na pesquisa identificada) — decisão de
   // PULAR o spotlight, registrada aqui como a regra 12 pede. A novidade vive
   // DENTRO do modal de resultados, que só existe depois de clicar em "Ver

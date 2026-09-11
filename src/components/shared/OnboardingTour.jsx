@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 // Tour guiado sequencial da plataforma — decidido com o Daniel 10/08/2026
@@ -18,6 +18,8 @@ const SETTLE_MS = 500;
 
 export function OnboardingTour({ tour }) {
   const { active, step, stepIndex, totalSteps, next, prev, skipTour } = tour;
+  const cardRef = useRef(null);
+  const [cardH, setCardH] = useState(0);
   const [rect, setRect] = useState(null);
 
   useEffect(() => {
@@ -71,6 +73,15 @@ export function OnboardingTour({ tour }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [active, skipTour]);
 
+  // Mesma correção do FeatureSpotlight (11/09/2026): a altura do cartão é
+  // MEDIDA, não estimada. Os números 200/210 que estavam aqui eram chute — o
+  // texto de cada parada tem tamanho diferente, e parada de texto longo
+  // ancorada perto do rodapé saía cortada, sem como rolar (position:fixed).
+  useLayoutEffect(() => {
+    if (!cardRef.current) { setCardH(0); return; }
+    setCardH(cardRef.current.offsetHeight);
+  }, [active, step, stepIndex]);
+
   if (!active || !step || !rect) return null;
 
   const PAD = 4;
@@ -83,9 +94,14 @@ export function OnboardingTour({ tour }) {
   const cardLeft = placeBelow
     ? Math.max(12, Math.min(rect.left, window.innerWidth - cardWidth - 12))
     : Math.min(rect.right + 14, window.innerWidth - cardWidth - 12);
+  const MARGEM = 12;
+  const alturaCard = cardH || 200;
+  // Abaixo do alvo se couber; senão acima; e se não couber de nenhum lado
+  // (cartão mais alto que a viewport), encosta no topo e rola por dentro.
+  const cabeAbaixo = rect.bottom + MARGEM + alturaCard <= window.innerHeight - MARGEM;
   const cardTop = placeBelow
-    ? Math.min(rect.bottom + 12, window.innerHeight - 200)
-    : Math.max(12, Math.min(rect.top - 6, window.innerHeight - 210));
+    ? (cabeAbaixo ? rect.bottom + MARGEM : Math.max(MARGEM, rect.top - MARGEM - alturaCard))
+    : Math.max(MARGEM, Math.min(rect.top - 6, window.innerHeight - MARGEM - alturaCard));
 
   const isFirst = stepIndex === 0;
   const isLast = stepIndex + 1 >= totalSteps;
@@ -107,9 +123,11 @@ export function OnboardingTour({ tour }) {
       <div
         style={{
           position: "fixed", top: cardTop, left: cardLeft, width: cardWidth,
+          maxHeight: `calc(100vh - ${MARGEM * 2}px)`, overflowY: "auto",
           zIndex: 2101, background: "var(--surface)", border: "1px solid var(--border)",
           borderRadius: 12, boxShadow: "var(--shadow-pop)", padding: "16px 18px 14px",
         }}
+        ref={cardRef}
       >
         <div className="flex items-center gap-2" style={{ marginBottom: 8, fontWeight: 700, fontSize: 14, color: "var(--text)" }}>
           <span style={{ fontSize: 16, lineHeight: 1 }}>{step.icon}</span> {step.title}

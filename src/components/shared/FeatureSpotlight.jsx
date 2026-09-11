@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Sparkles } from "lucide-react";
 
@@ -26,6 +26,8 @@ const SETTLE_MS = 900;
 
 export function FeatureSpotlight({ spotlight, onDismiss }) {
   const [rect, setRect] = useState(null);
+  const cardRef = useRef(null);
+  const [cardH, setCardH] = useState(0);
   // NÃO é a guarda de resposta obsoleta que o check-consistencia acusa aqui
   // (regra `guarda-obsoleta`) — conferido no rollout de 28/08/2026 e mantido
   // de propósito. A regra procura `<ref>.current` ligado e desligado no mesmo
@@ -133,12 +135,37 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [spotlight, onDismiss]);
 
+  // Mede a altura real do balão depois de pintar, pra decidir se ele cabe
+  // abaixo do alvo. useLayoutEffect e não useEffect: com useEffect o usuário
+  // veria um quadro com o balão na posição errada antes do ajuste.
+  useLayoutEffect(() => {
+    if (!cardRef.current) { setCardH(0); return; }
+    setCardH(cardRef.current.offsetHeight);
+  }, [spotlight, rect?.top, rect?.bottom]);
+
   if (!spotlight || !rect) return null;
 
   const PAD = 4;
+  const GAP = 10;
+  const MARGEM = 8;
   const cardWidth = 260;
-  const cardLeft = Math.max(8, Math.min(rect.left, window.innerWidth - cardWidth - 8));
-  const cardTop = rect.bottom + PAD + 10; // position:fixed é viewport-relative, rect já vem de getBoundingClientRect
+  const cardLeft = Math.max(MARGEM, Math.min(rect.left, window.innerWidth - cardWidth - MARGEM));
+
+  // position:fixed é viewport-relative, e `rect` já vem de
+  // getBoundingClientRect — mas ficar sempre ABAIXO do alvo cortava o balão
+  // quando o alvo estava no rodapé (reportado pelo Daniel em 11/09/2026, no
+  // item "Central de Bugs", o último da barra lateral). Fixed não rola junto:
+  // o que sai da viewport fica inalcançável, não "mais embaixo".
+  //
+  // Por isso a altura é MEDIDA (`alturaCard`, via useLayoutEffect acima) em
+  // vez de estimada: o texto do spotlight é livre e um chute erra por muito.
+  // Enquanto a medida não chega, o primeiro quadro usa um piso conservador —
+  // é melhor abrir pra cima sem precisar do que abrir pra baixo e cortar.
+  const alturaCard = cardH || 132;
+  const cabeAbaixo = rect.bottom + PAD + GAP + alturaCard <= window.innerHeight - MARGEM;
+  const cardTop = cabeAbaixo
+    ? rect.bottom + PAD + GAP
+    : Math.max(MARGEM, rect.top - PAD - GAP - alturaCard);
 
   return createPortal(
     <>
@@ -158,7 +185,11 @@ export function FeatureSpotlight({ spotlight, onDismiss }) {
           position: "fixed", top: cardTop, left: cardLeft, width: cardWidth,
           zIndex: 2001, background: "var(--surface)", border: "1px solid var(--border)",
           borderRadius: 10, boxShadow: "var(--shadow-pop)", padding: "12px 14px",
+          // Alvo mais alto que a viewport (raro, mas existe no mobile): o
+          // balão rola por dentro em vez de vazar pelas duas pontas.
+          maxHeight: `calc(100vh - ${MARGEM * 2}px)`, overflowY: "auto",
         }}
+        ref={cardRef}
       >
         <div className="flex items-start gap-2" style={{ marginBottom: 10 }}>
           <Sparkles size={14} style={{ color: "var(--accent)", flexShrink: 0, marginTop: 1 }} />

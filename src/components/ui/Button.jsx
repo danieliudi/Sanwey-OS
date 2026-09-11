@@ -9,6 +9,11 @@ const SIZES = {
 export function Button({
   children, onClick, variant = "primary", size = "md", icon: Icon,
   disabled = false, className = "", accent, type = "button", "aria-label": ariaLabel,
+  // `dataTour` existe pro spotlight/tour guiado ancorar num botão real
+  // (CLAUDE.md regra 12). Sem isto o atributo era engolido: `Button` não
+  // espalha props, e um `data-tour="..."` passado de fora nunca chegava ao
+  // DOM — o spotlight ficava órfão e se marcava como visto em silêncio.
+  dataTour,
 }) {
   const a = accent || "var(--accent)";
   const ah = accent ? accent : "var(--accent-hover)";
@@ -29,6 +34,7 @@ export function Button({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
+      data-tour={dataTour}
       className={`
         inline-flex items-center justify-center font-semibold border
         transition-all duration-150 cursor-pointer select-none
