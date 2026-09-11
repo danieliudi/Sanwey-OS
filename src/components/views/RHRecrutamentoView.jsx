@@ -3851,6 +3851,10 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
           domainLabel={viewMode === "vagas" ? "Vagas" : "Candidatos"}
           records={viewMode === "vagas" ? vagas : candidatos}
           stageField="stage"
+          // Passa as etapas já carregadas pelo board — sem isso o modal
+          // montava um hook novo com stages=[] e o "Salvar" apagava o
+          // pipeline (bug de 11/09/2026).
+          stages={viewMode === "vagas" ? vagaStages : candStages}
         />
       )}
 

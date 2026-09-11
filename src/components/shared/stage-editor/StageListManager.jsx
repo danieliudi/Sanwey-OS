@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { X, GripVertical, Save, Plus, Trash2, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useRHPipelineStages } from "../../../hooks/use-rh-pipeline-stages";
 import { StageColorPicker } from "./StageColorPicker";
@@ -49,13 +49,34 @@ export function StageListCore({
   const [dragIdx, setDragIdx] = useState(null);
   const [saving, setSaving] = useState(false);
   const [advIdx, setAdvIdx] = useState(null);
+  // Espelho do draft pra o efeito de "chegou estágio depois do open" sem
+  // colocar `draft` nas deps (evita loop).
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
 
-  // Só semeia o draft quando o modal ABRE — mudanças concorrentes (Realtime)
-  // não podem descartar edições locais ainda não salvas.
+  // Semeia o draft na abertura. Se o hook ainda não trouxe as etapas
+  // (modal montado junto com um fetch novo — caso do Recrutamento), um
+  // segundo efeito abaixo completa o seed quando `stages` chegar.
+  // Mudanças concorrentes (Realtime) NÃO ressemeiam depois do seed
+  // inicial — senão descartam edições locais ainda não salvas.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) setDraft(stages.map(s => ({ ...s, isNew: false })));
   }, [open]);
+
+  // Completa o seed quando as etapas chegam DEPOIS da abertura e o draft
+  // ainda não tem nenhuma etapa existente. Preserva etapas `isNew` que o
+  // usuário já tenha adicionado enquanto a lista carregava.
+  useEffect(() => {
+    if (!open) return;
+    if (stages.length === 0) return;
+    const hasExisting = draftRef.current.some((s) => !s.isNew);
+    if (hasExisting) return;
+    setDraft((prev) => {
+      const news = prev.filter((s) => s.isNew);
+      return [...stages.map((s) => ({ ...s, isNew: false })), ...news];
+    });
+  }, [open, stages]);
 
   useEffect(() => {
     if (!open) return;
@@ -113,6 +134,13 @@ export function StageListCore({
     for (const s of draft) {
       if (!s.name?.trim()) { alert("Toda etapa precisa de um nome."); return; }
       if (showCode && !s.code?.trim()) { alert(`Etapa "${s.name}" precisa de um código (letra).`); return; }
+    }
+    // Trava o save "cego": se o board tinha etapas e o draft só tem
+    // novidades (lista não carregou), salvar apagaria o pipeline. Melhor
+    // abortar do que destruir o Kanban — bug real do Recrutamento/Vagas.
+    if (stages.length > 0 && !draft.some((s) => !s.isNew)) {
+      alert("As etapas ainda não carregaram neste editor. Feche e abra de novo antes de salvar.");
+      return;
     }
     setSaving(true);
     try {
@@ -365,9 +393,20 @@ export function RHStageListManager({
   domainLabel,
   records,
   stageField,
+  // Etapas já carregadas pelo board pai — evita o race do modal montar
+  // com stages=[] (hook novo) e o save apagar o pipeline. Se omitido,
+  // cai no fetch próprio do hook (compatível com outros callers).
+  stages: stagesFromParent = null,
   nonDeletableStageKeys = [],
 }) {
-  const { stages, addStage, updateStage, deleteStage, reorderStages } = useRHPipelineStages(domain);
+  const {
+    stages: stagesFromHook,
+    addStage,
+    updateStage,
+    deleteStage,
+    reorderStages,
+  } = useRHPipelineStages(domain);
+  const stages = stagesFromParent ?? stagesFromHook;
 
   const countsByStage = useMemo(() => {
     const m = {};
@@ -380,6 +419,12 @@ export function RHStageListManager({
   }, [records, stageField]);
 
   const handleSave = async (draft) => {
+    // Segunda trava (além do StageListCore): nunca deletar o pipeline
+    // inteiro porque o draft nasceu vazio.
+    if (stages.length > 0 && !draft.some((s) => !s.isNew)) {
+      throw new Error("As etapas ainda não carregaram neste editor. Feche e abra de novo antes de salvar.");
+    }
+
     const originalById = new Map(stages.map(s => [s.id, s]));
     const idByRef = new Map();
 

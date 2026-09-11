@@ -38,6 +38,18 @@
 
 export const CHANGELOG = [
   {
+    version: "5.4.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Em Recrutamento → Editar etapas, a lista volta a mostrar as etapas existentes ao abrir o editor — e salvar não apaga mais o Kanban. As etapas padrão de Vagas (Rascunho, Publicada, Em Triagem, Encerrada) foram restauradas.",
+        roles: ["rh", "gerente_rh", "admin"],
+        toast: true,
+      },
+    ],
+  },
+
+  {
     version: "5.4.0",
     items: [
       {
