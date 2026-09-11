@@ -85,11 +85,28 @@ export function useRHPipelineStages(domain) {
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
         if (!active) return;
+
+        // DELETE vem ANTES da checagem de domínio, e não depois — de
+        // propósito. Com a REPLICA IDENTITY padrão do Postgres, o registro
+        // `old` de um DELETE carrega SÓ a chave primária: `payload.old.domain`
+        // é sempre undefined, então a checagem abaixo descartava todo evento
+        // de exclusão e a etapa só sumia do quadro depois de um F5. Foi
+        // exatamente o que o Daniel reportou em 11/09/2026, apagando a etapa
+        // "teste" do Onboarding.
+        //
+        // Filtrar por id sem saber o domínio é seguro: se o id não estiver
+        // nesta lista, o filter não remove nada. O risco seria o contrário —
+        // precisar do domínio pra ACRESCENTAR algo, que é o caso de INSERT e
+        // UPDATE, e esses continuam checando.
+        if (payload.eventType === "DELETE") {
+          if (!payload.old?.id) return;
+          setStages(prev => prev.filter(s => s.id !== payload.old.id));
+          return;
+        }
+
         const matches = payload.new?.domain === domain || payload.old?.domain === domain;
         if (!matches) return;
-        if (payload.eventType === "DELETE") {
-          setStages(prev => prev.filter(s => s.id !== payload.old.id));
-        } else if (payload.eventType === "INSERT") {
+        if (payload.eventType === "INSERT") {
           setStages(prev => prev.some(s => s.id === payload.new.id)
             ? prev
             : [...prev, rowToStage(payload.new)].sort((a, b) => a.orderIdx - b.orderIdx));
@@ -136,9 +153,17 @@ export function useRHPipelineStages(domain) {
 
   const deleteStage = useCallback(async (id) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado");
-    const { error: err } = await supabase
-      .from(TABLE).delete().eq("id", id);
+    // `.select()` + checagem de vazio: DELETE barrado pela RLS volta como
+    // `error: null` e lista vazia, ou seja, como sucesso. Sem isto o editor
+    // fechava dizendo que removeu, e a etapa continuava lá no próximo F5.
+    const { data, error: err } = await supabase
+      .from(TABLE).delete().eq("id", id).select("id");
     if (err) throw err;
+    if (!data || data.length === 0) {
+      throw new Error("Não foi possível remover a etapa — verifique suas permissões.");
+    }
+    // Tira da lista local na hora, sem depender do evento de Realtime chegar.
+    setStages(prev => prev.filter(s => s.id !== id));
   }, []);
 
   // Reordenar NÃO lança de propósito: quem chama é handler de drag-and-drop

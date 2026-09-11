@@ -38,6 +38,21 @@
 
 export const CHANGELOG = [
   {
+    version: "5.6.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Ao excluir uma etapa em \"Editar etapas\", ela some do quadro na hora — antes só sumia depois de atualizar a página.",
+        toast: true,
+      },
+      {
+        kind: "correcao",
+        text: "A confirmação antes de excluir uma etapa passou a ser dentro do próprio editor, dizendo qual etapa é. A caixa antiga era a do navegador, que ele pode deixar de mostrar depois de algumas vezes.",
+      },
+    ],
+  },
+
+  {
     version: "5.6.0",
     items: [
       {

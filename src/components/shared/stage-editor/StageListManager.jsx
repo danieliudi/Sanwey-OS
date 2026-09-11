@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { X, GripVertical, Save, Plus, Trash2, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { X, GripVertical, Save, Plus, Trash2, RotateCcw, SlidersHorizontal, AlertTriangle } from "lucide-react";
 import { useRHPipelineStages } from "../../../hooks/use-rh-pipeline-stages";
 import { StageColorPicker } from "./StageColorPicker";
 import { StageAdvancedModal } from "./StageAdvancedModal";
@@ -49,6 +49,12 @@ export function StageListCore({
   const [dragIdx, setDragIdx] = useState(null);
   const [saving, setSaving] = useState(false);
   const [advIdx, setAdvIdx] = useState(null);
+  // Índice da etapa aguardando confirmação de remoção. Substitui o
+  // `window.confirm()` nativo que estava aqui: além de destoar do resto da
+  // plataforma, um diálogo nativo pode ser SUPRIMIDO pelo navegador (o Chrome
+  // oferece "impedir esta página de criar mais diálogos" depois de alguns
+  // seguidos), e aí a etapa sumia da lista sem nada perguntar.
+  const [confirmIdx, setConfirmIdx] = useState(null);
   // Espelho do draft pra o efeito de "chegou estágio depois do open" sem
   // colocar `draft` nas deps (evita loop).
   const draftRef = useRef(draft);
@@ -80,10 +86,14 @@ export function StageListCore({
 
   useEffect(() => {
     if (!open) return;
-    const h = (e) => { if (e.key === "Escape" && advIdx == null) onClose(); };
+    const h = (e) => {
+      if (e.key !== "Escape") return;
+      if (confirmIdx != null) { setConfirmIdx(null); return; }
+      if (advIdx == null) onClose();
+    };
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
-  }, [open, onClose, advIdx]);
+  }, [open, onClose, advIdx, confirmIdx]);
 
   if (!open) return null;
 
@@ -126,7 +136,11 @@ export function StageListCore({
       alert(`Não dá pra remover "${stage.name}": ${count} registro${count !== 1 ? "s" : ""} ainda está${count !== 1 ? "ão" : ""} nessa etapa. Mova esses registros antes.`);
       return;
     }
-    if (!confirm(`Remover a etapa "${stage.name}"?`)) return;
+    setConfirmIdx(idx);
+  };
+
+  const confirmarRemocao = (idx) => {
+    setConfirmIdx(null);
     setDraft(d => d.filter((_, i) => i !== idx));
   };
 
@@ -222,9 +236,9 @@ export function StageListCore({
               const isTerminal = !!stage.terminal;
               const isProtected = protectedKeys.includes(stage.stageKey);
               return (
+                <React.Fragment key={rowKey(stage)}>
                 <div
-                  key={rowKey(stage)}
-                  draggable={!isTerminal}
+                  draggable={!isTerminal && confirmIdx == null}
                   onDragStart={() => handleDragStart(idx)}
                   onDragOver={handleDragOver}
                   onDrop={() => handleDrop(idx)}
@@ -318,6 +332,39 @@ export function StageListCore({
                     </button>
                   )}
                 </div>
+
+                {confirmIdx === idx && (
+                  <div
+                    className="rounded-lg border flex items-center gap-2 flex-wrap"
+                    style={{
+                      borderColor: "var(--danger)", background: "var(--danger-bg)",
+                      padding: "8px 10px", fontSize: 12, color: "var(--text)",
+                    }}
+                  >
+                    <AlertTriangle size={13} style={{ color: "var(--danger)", flexShrink: 0 }} />
+                    <span>
+                      Remover a etapa <strong>{stage.name || "sem nome"}</strong>?
+                      {!stage.isNew && " Ela só sai do quadro quando você salvar."}
+                    </span>
+                    <span style={{ flex: 1 }} />
+                    <button
+                      onClick={() => confirmarRemocao(idx)}
+                      className="cursor-pointer"
+                      style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 7, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}
+                    >
+                      Remover
+                    </button>
+                    <button
+                      onClick={() => setConfirmIdx(null)}
+                      className="cursor-pointer"
+                      style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 7, padding: "4px 12px", fontSize: 12 }}
+                      autoFocus
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+                </React.Fragment>
               );
             })}
 

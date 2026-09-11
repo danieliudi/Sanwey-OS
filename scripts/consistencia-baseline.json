@@ -56,7 +56,6 @@
   "update-sem-select::src/hooks/use-rh-ferias-requests.js": 1,
   "delete-sem-select::src/hooks/use-rh-movimentacoes.js": 1,
   "delete-sem-select::src/hooks/use-rh-onboarding.js": 1,
-  "delete-sem-select::src/hooks/use-rh-pipeline-stages.js": 1,
   "delete-sem-select::src/hooks/use-rh-recrutamento.js": 2,
   "delete-sem-select::src/hooks/use-rh-report-presets.js": 1,
   "delete-sem-select::src/hooks/use-rh-stage-fields.js": 1,
