@@ -5,9 +5,12 @@ import { debounce } from "../utils/debounce";
 // Comunicação interna (Onda 4, item 11): comunicados (broadcast via
 // notifications) + pesquisas anônimas (definição em rh_pesquisas; respostas
 // só lidas via RPC de agregação, nunca com identidade).
+const BUCKET_ANEXOS = "comunicado-anexos";
+
 export function useRHComunicacao({ userId } = {}) {
   const [pesquisas, setPesquisas] = useState([]);
   const [comunicados, setComunicados] = useState([]);
+  const [modelos, setModelos] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // `isActive` é a guarda por execução do efeito (não um ref da instância)
@@ -16,14 +19,16 @@ export function useRHComunicacao({ userId } = {}) {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [{ data: pesq }, { data: coms }] = await Promise.all([
+      const [{ data: pesq }, { data: coms }, { data: mods }] = await Promise.all([
         supabase.from("rh_pesquisas").select("*").order("created_at", { ascending: false }),
         supabase.from("rh_comunicados").select("*").order("enviado_em", { ascending: false }).limit(200),
+        supabase.from("rh_comunicado_modelos").select("*").order("ordem").order("nome"),
       ]);
       if (!isActive()) return;
       setPesquisas(pesq || []);
       // RLS decide: quem não é gestão de RH/diretoria recebe [] sem erro.
       setComunicados(coms || []);
+      setModelos(mods || []);
     } finally {
       if (isActive()) setLoading(false);
     }
@@ -38,6 +43,7 @@ export function useRHComunicacao({ userId } = {}) {
       .channel(`rh-pesquisas-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_pesquisas" }, debouncedFetchAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_comunicados" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_comunicado_modelos" }, debouncedFetchAll)
       .subscribe();
     return () => { active = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
@@ -105,22 +111,54 @@ export function useRHComunicacao({ userId } = {}) {
   // não dá pra desfazer. Falha de e-mail volta como `emailErro` pra tela dizer
   // o que saiu e o que não saiu, em vez de um erro genérico que faria o RH
   // reenviar tudo e duplicar a notificação.
-  const enviarComunicado = useCallback(async ({ title, body, scopeType = "todos", scopeValue = null, importante = false, canais = ["plataforma"] }) => {
+  // Sobe anexo ANTES do comunicado existir, então o caminho usa um id
+  // temporário e o arquivo é movido depois? Não: o caminho leva o id do
+  // comunicado, e por isso o upload acontece DEPOIS do broadcast — a policy de
+  // leitura do destinatário casa a pasta com o id do comunicado, e um arquivo
+  // fora dessa pasta seria invisível pra quem recebeu.
+  const subirAnexo = useCallback(async (comunicadoId, file, prefixo) => {
+    const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    const path = `${comunicadoId}/${prefixo}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from(BUCKET_ANEXOS)
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error) throw new Error(error.message);
+    return path;
+  }, []);
+
+  const enviarComunicado = useCallback(async ({ title, body, scopeType = "todos", scopeValue = null, importante = false, canais = ["plataforma"], sensivel = false, imagem = null, documento = null }) => {
     const { data, error } = await supabase.rpc("broadcast_announcement", {
       p_title: title, p_body: body || null, p_scope_type: scopeType, p_scope_value: scopeValue,
       p_link: null, p_importante: importante, p_canais: canais,
+      p_sensivel: sensivel, p_imagem_path: null, p_documento_path: null,
     });
     if (error) throw new Error(error.message);
 
     const res = {
       canais,
+      sensivel,
       comunicadoId: data?.comunicado_id || null,
+      anexoErro: null,
       alcancePlataforma: Number(data?.alcance_plataforma || 0),
       alcanceEmail: Number(data?.alcance_email || 0),
       semEmail: Number(data?.sem_email || 0),
       emailEnviado: 0,
       emailErro: null,
     };
+
+    // Anexos depois do registro existir (o caminho precisa do id). Falha aqui
+    // NÃO derruba o comunicado: a notificação da plataforma já foi gravada e
+    // não dá pra desfazer — a tela diz o que subiu e o que não.
+    if (res.comunicadoId && (imagem || documento)) {
+      try {
+        const patch = {};
+        if (imagem)    patch.imagem_path    = await subirAnexo(res.comunicadoId, imagem, "imagem");
+        if (documento) patch.documento_path = await subirAnexo(res.comunicadoId, documento, "documento");
+        const { data: upd } = await supabase.from("rh_comunicados").update(patch).eq("id", res.comunicadoId).select("id");
+        if (!upd || upd.length === 0) res.anexoErro = "O anexo subiu mas não ficou vinculado ao comunicado.";
+      } catch (e) {
+        res.anexoErro = e?.message || "Não foi possível anexar o arquivo.";
+      }
+    }
 
     if (canais.includes("email") && res.comunicadoId) {
       try {
@@ -132,7 +170,45 @@ export function useRHComunicacao({ userId } = {}) {
 
     await fetchAll();
     return res;
-  }, [dispararEmail, fetchAll]);
+  }, [dispararEmail, fetchAll, subirAnexo]);
+
+  const carregarLeituras = useCallback(async (comunicadoId) => {
+    const { data, error } = await supabase.rpc("comunicado_leituras", { p_comunicado_id: comunicadoId });
+    if (error) throw new Error(error.message);
+    return (data || []).map(r => ({
+      profileId: r.profile_id,
+      nome: r.nome,
+      confirmadoEm: r.confirmado_em,
+      origem: r.origem,
+      // Quem não tinha canal nenhum não DEIXOU de confirmar — nunca teve como.
+      // É a terceira coluna da tela, e ela existe porque somar essa pessoa com
+      // quem ignorou faria o número mentir (regra 14).
+      semCanal: !r.canal_email && !r.canal_plataforma,
+    }));
+  }, []);
+
+  const salvarModelo = useCallback(async (modelo) => {
+    const row = {
+      nome: modelo.nome, titulo: modelo.titulo || null, corpo: modelo.corpo || null,
+      importante: !!modelo.importante, sensivel: !!modelo.sensivel,
+      icone: modelo.icone || null, created_by: userId,
+    };
+    const q = modelo.id
+      ? supabase.from("rh_comunicado_modelos").update({ ...row, updated_at: new Date().toISOString() }).eq("id", modelo.id).select()
+      : supabase.from("rh_comunicado_modelos").insert(row).select();
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar o modelo — sem permissão.");
+    await fetchAll();
+    return data[0];
+  }, [userId, fetchAll]);
+
+  const deletarModelo = useCallback(async (id) => {
+    const { data, error } = await supabase.from("rh_comunicado_modelos").delete().eq("id", id).select("id");
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("Não foi possível excluir o modelo — sem permissão.");
+    setModelos(prev => prev.filter(m => m.id !== id));
+  }, []);
 
   const criarPesquisa = useCallback(async (data) => {
     const row = {
@@ -200,8 +276,10 @@ export function useRHComunicacao({ userId } = {}) {
   }, []);
 
   return useMemo(() => ({
-    pesquisas, comunicados, loading,
-    enviarComunicado, reenviarEmailComunicado, carregarAlcance, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao,
+    pesquisas, comunicados, modelos, loading,
+    enviarComunicado, reenviarEmailComunicado, carregarAlcance, carregarLeituras,
+    salvarModelo, deletarModelo,
+    criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao,
     refetch: fetchAll,
-  }), [pesquisas, comunicados, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao, fetchAll]);
+  }), [pesquisas, comunicados, modelos, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, carregarLeituras, salvarModelo, deletarModelo, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao, fetchAll]);
 }

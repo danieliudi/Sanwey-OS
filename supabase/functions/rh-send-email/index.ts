@@ -250,16 +250,44 @@ function tplBemEstarLembrete(vars: Record<string, string>): string {
 // sobrevive no corpo. Texto colado de qualquer lugar não vira HTML.
 function tplComunicado(vars: Record<string, string>): string {
   const titulo     = escapeHtml(vars.TITULO || "");
-  const corpo      = escapeHtml(vars.CORPO || "").replace(/\r?\n/g, "<br />");
   const importante = vars.IMPORTANTE === "1";
+  const sensivel   = vars.SENSIVEL === "1";
+  const imagemUrl  = vars.IMAGEM_URL || "";
+  const confirmUrl = vars.CONFIRM_URL || "";
+  const accent = importante ? "#E8920A" : "#C7212B";
+
   const selo = importante
     ? `<div style="display:inline-block;background:#FDF3E2;color:#9A6205;border:1px solid #F0D9A8;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:16px;">Importante</div>`
     : "";
-  const inner = `${selo}
+
+  const botao = confirmUrl
+    ? `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:26px;"><tr><td style="background:${accent};border-radius:10px;"><a href="${escapeHtml(confirmUrl)}" style="display:inline-block;padding:13px 26px;font-size:14px;font-weight:700;color:#FFFFFF;text-decoration:none;">Confirmei a leitura</a></td></tr></table>
+       <p style="margin:11px 0 0;font-size:11px;color:#A09A94;line-height:1.5;">Link pessoal, só seu &mdash; n\u00e3o precisa de login e n\u00e3o vale por outra pessoa.</p>`
+    : "";
+
+  // CONTEÚDO SENSÍVEL: o e-mail vira um AVISO. Sem corpo, sem imagem — só o
+  // título, que é o mínimo pra pessoa saber que existe algo pra ler, e o
+  // caminho pra plataforma. Decidido com o Daniel em 11/09/2026: na maioria
+  // dos comunicados o sensível é o TEXTO, não a imagem; tirar só a imagem
+  // deixaria o marcador decorativo.
+  if (sensivel) {
+    const inner = `${selo}
+    <h1 style="margin:0 0 14px;font-size:20px;font-weight:700;color:#2C2C2B;line-height:1.3;letter-spacing:-0.01em;">O RH publicou um comunicado</h1>
+    <p style="margin:0 0 8px;font-size:15px;color:#2C2C2B;line-height:1.6;"><strong>${titulo}</strong></p>
+    <p style="margin:0 0 22px;font-size:14px;color:#8A8680;line-height:1.6;">O conte\u00fado est\u00e1 s\u00f3 na plataforma, no sino de notifica\u00e7\u00f5es. Entre para ler.</p>
+    <table cellpadding="0" cellspacing="0" border="0"><tr><td style="background:${accent};border-radius:10px;"><a href="https://sanwey-crm.netlify.app" style="display:inline-block;padding:13px 26px;font-size:14px;font-weight:700;color:#FFFFFF;text-decoration:none;">Abrir na plataforma</a></td></tr></table>`;
+    return shell(inner, accent);
+  }
+
+  const corpo = escapeHtml(vars.CORPO || "").replace(/\r?\n/g, "<br />");
+  const imagem = imagemUrl
+    ? `<img src="${escapeHtml(imagemUrl)}" alt="" style="display:block;width:100%;max-width:480px;height:auto;border-radius:10px;border:1px solid #E5E0DA;margin-bottom:22px;" />`
+    : "";
+  const inner = `${selo}${imagem}
     <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">${titulo}</h1>
     <p style="margin:0 0 24px;font-size:15px;color:#2C2C2B;line-height:1.7;">${corpo}</p>
-    <p style="margin:0;font-size:13px;color:#8A8680;line-height:1.5;">Este comunicado também está no sino de notificações da plataforma.</p>`;
-  return shell(inner, importante ? "#E8920A" : "#C7212B");
+    <p style="margin:0;font-size:13px;color:#8A8680;line-height:1.5;">Este comunicado tamb\u00e9m est\u00e1 no sino de notifica\u00e7\u00f5es da plataforma.</p>${botao}`;
+  return shell(inner, accent);
 }
 
 function buildHtml(type: EmailType, vars: Record<string, string>): string {
@@ -855,26 +883,33 @@ async function handleComunicado(
     return new Response(JSON.stringify({ success: true, sent: 0, ja_enviado: true }), { headers: jsonHeaders });
   }
 
-  const { data: dests, error: destErr } = await supabase.rpc("comunicado_destinatarios", {
-    p_scope_type: com.scope_type,
-    p_scope_value: com.scope_value,
-    p_excluir: com.enviado_por,
-  });
-  if (destErr) {
-    // Mensagem crua do Postgres fica no log, não na tela: quem lê aqui é RH,
-    // não quem depura o banco, e o texto pode carregar nome de função/coluna.
-    console.error("[rh-send-email] comunicado_destinatarios falhou:", destErr);
+  // Destinatários saem das LINHAS DE LEITURA, não da função de escopo: elas
+  // foram gravadas no envio, já carregam o token pessoal e já sabem quem tinha
+  // canal de e-mail. Recalcular o escopo aqui daria outro conjunto se alguém
+  // entrou ou saiu no meio.
+  const { data: leituras, error: leiErr } = await supabase
+    .from("rh_comunicado_leituras")
+    .select("token, profile_id, profiles(email)")
+    .eq("comunicado_id", comunicadoId)
+    .eq("canal_email", true);
+  if (leiErr) {
+    console.error("[rh-send-email] leituras do comunicado falharam:", leiErr);
     return falha("Não foi possível montar a lista de destinatários. Tente de novo em alguns minutos.", 500);
   }
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const bcc = [...new Set(
-    (dests || [])
-      .map((d: { email?: string | null }) => (d.email || "").trim())
-      .filter((e: string) => EMAIL_RE.test(e)),
-  )] as string[];
+  const vistos = new Set<string>();
+  type Destino = { email: string; token: string };
+  const destinos: Destino[] = [];
+  for (const l of (leituras || []) as Array<{ token: string; profiles?: { email?: string | null } | null }>) {
+    const email = (l.profiles?.email || "").trim();
+    const chave = email.toLowerCase();
+    if (!EMAIL_RE.test(email) || vistos.has(chave)) continue;
+    vistos.add(chave);
+    destinos.push({ email, token: l.token });
+  }
 
-  if (!bcc.length) {
+  if (!destinos.length) {
     await supabase.from("rh_comunicados")
       .update({ email_status: "falhou", email_erro: "Nenhum destinatário do escopo tem e-mail cadastrado." })
       .eq("id", comunicadoId);
@@ -896,73 +931,70 @@ async function handleComunicado(
     return new Response(JSON.stringify({ success: true, sent: 0, ja_enviado: true }), { headers: jsonHeaders });
   }
 
-  const html = buildHtml("comunicado", {
-    TITULO: com.titulo || "",
-    CORPO: com.corpo || "",
-    IMPORTANTE: com.importante ? "1" : "0",
-  });
-
-  const envio = await enviarViaResend({
-    to: "noreply@sanwey.com.br",   // destinatários reais vão só em BCC — ninguém vê a lista
-    bcc,
-    // Título vem de campo livre `text`, sem limite na tabela: tira quebra de
-    // linha (que num header de e-mail é injeção clássica) e corta o excesso.
-    subject: `${String(com.titulo || "").replace(/[\r\n]+/g, " ").trim().slice(0, 160)} — Grupo Sanwey`,
-    html,
-    tipo: "comunicado",
-  });
-
-  if (!envio.ok) {
-    // Dois desfechos diferentes, e confundi-los é o que faz gente receber o
-    // mesmo comunicado duas vezes:
-    //
-    // - Nada saiu → `falhou`, alcance zero. O reenvio é seguro e a tela
-    //   oferece o botão.
-    // - Saiu parte (>45 destinatários, o Resend quebra em blocos e um bloco
-    //   do meio falhou) → `enviado`, com o alcance REAL do que saiu e o erro
-    //   registrado ao lado. Fica terminal de propósito: o claim de cima só
-    //   aceita 'pendente'/'falhou', então o reenvio não recomeça do bloco 1 e
-    //   não duplica pra quem já recebeu. Quem faltou é assunto de um
-    //   comunicado novo, decidido por gente — não por retry automático.
-    const parcial = envio.enviadosAntes > 0;
-    await supabase.from("rh_comunicados")
-      .update({
-        email_status: parcial ? "enviado" : "falhou",
-        email_erro: parcial
-          ? `Envio parcial: ${envio.enviadosAntes} receberam antes da falha (${envio.error}). Os demais NÃO receberam e o reenvio está bloqueado pra não duplicar.`
-          : envio.error,
-        alcance_email: envio.enviadosAntes,
-      })
-      .eq("id", comunicadoId);
-    return falha(
-      parcial
-        ? `${envio.error} ${envio.enviadosAntes} pessoas já tinham recebido — veja o detalhe no histórico.`
-        : envio.error,
-      500,
-    );
+  // Imagem no e-mail: link ASSINADO de validade longa, não bucket público. Não
+  // é listável nem indexável, e o comunicado SENSÍVEL nunca chega a gerar um —
+  // a imagem dele não sai da plataforma.
+  let imagemUrl = "";
+  if (!com.sensivel && com.imagem_path) {
+    const { data: assinada } = await supabase.storage
+      .from("comunicado-anexos")
+      .createSignedUrl(com.imagem_path, 60 * 60 * 24 * 365);
+    imagemUrl = assinada?.signedUrl || "";
   }
 
-  // Sem RESEND_API_KEY o envio é simulado (só log). Desfaz a marca de
-  // "enviado": senão o histórico do RH diria que o comunicado saiu por e-mail
-  // pra N pessoas quando não saiu pra ninguém — número que mente é pior que
-  // número que falta (regra 14).
-  if (envio.simulado) {
-    // Sem nomear a variável de ambiente: quem lê é RH, e o nome do segredo não
-    // acrescenta nada pra quem não administra o servidor (o log tem o detalhe).
-    const erro = "O envio por e-mail não está configurado no servidor — nada foi enviado. Fale com quem administra a plataforma.";
-    await supabase.from("rh_comunicados")
-      .update({ email_status: "falhou", email_erro: erro, alcance_email: 0 })
-      .eq("id", comunicadoId);
-    return falha(erro, 500);
+  const assunto = `${String(com.titulo || "").replace(/[\r\n]+/g, " ").trim().slice(0, 160)} — Grupo Sanwey`;
+
+  // ENVIO INDIVIDUAL, e não mais em cópia oculta. O botão "Confirmei a leitura"
+  // carrega um token PESSOAL, e um BCC é uma mensagem só — o mesmo link iria
+  // pra todo mundo e confirmaria pela pessoa errada. O efeito colateral é bom:
+  // sem BCC não existe nem a lista de destinatários dentro do e-mail.
+  const APP = "https://sanwey-crm.netlify.app";
+  const falhas: string[] = [];
+  let enviados = 0;
+
+  for (const destino of destinos) {
+    const html = buildHtml("comunicado", {
+      TITULO: com.titulo || "",
+      CORPO: com.corpo || "",
+      IMPORTANTE: com.importante ? "1" : "0",
+      SENSIVEL: com.sensivel ? "1" : "0",
+      IMAGEM_URL: imagemUrl,
+      CONFIRM_URL: `${APP}/comunicado/confirmar/${destino.token}`,
+    });
+
+    const r = await enviarViaResend({ to: destino.email, bcc: [], subject: assunto, html, tipo: "comunicado" });
+    if (r.ok && r.simulado) {
+      const erro = "O envio por e-mail não está configurado no servidor — nada foi enviado. Fale com quem administra a plataforma.";
+      await supabase.from("rh_comunicados")
+        .update({ email_status: "falhou", email_erro: erro, alcance_email: 0 })
+        .eq("id", comunicadoId);
+      return falha(erro, 500);
+    }
+    if (r.ok) enviados++;
+    else falhas.push(destino.email);
   }
 
-  // Regra 14: o alcance gravado é o MEDIDO no envio, não a prévia calculada na
-  // hora de criar o comunicado — entre as duas pode ter entrado ou saído gente.
+  // Falha de um endereço não derruba os outros — cada pessoa é um envio
+  // independente agora, e abortar no primeiro erro deixaria a maioria sem o
+  // comunicado por causa de um e-mail torto.
+  if (enviados === 0) {
+    await supabase.from("rh_comunicados")
+      .update({ email_status: "falhou", alcance_email: 0,
+                email_erro: `Nenhum e-mail saiu (${falhas.length} falharam).` })
+      .eq("id", comunicadoId);
+    return falha("Nenhum e-mail saiu. Veja o status no histórico e tente de novo.", 500);
+  }
+
+  // Regra 14: alcance é o MEDIDO no envio, e o que falhou aparece contado em
+  // vez de sumir dentro do "enviado".
   await supabase.from("rh_comunicados")
-    .update({ alcance_email: bcc.length })
+    .update({
+      alcance_email: enviados,
+      email_erro: falhas.length ? `${falhas.length} endereço(s) falharam e não receberam.` : null,
+    })
     .eq("id", comunicadoId);
 
-  return new Response(JSON.stringify({ success: true, sent: bcc.length }), { headers: jsonHeaders });
+  return new Response(JSON.stringify({ success: true, sent: enviados, falhas: falhas.length }), { headers: jsonHeaders });
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────

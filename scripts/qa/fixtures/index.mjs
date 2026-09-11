@@ -238,5 +238,15 @@ export async function montarDados() {
     rh_treinamentos: treinamentos,
     posvenda_cases: posvenda,
     rh_comunicados: comunicados,
+    rh_comunicado_modelos: [
+      { id: "00000000-0000-4000-a200-000000000001", nome: "Recesso", icone: "recesso",
+        titulo: "Recesso de fim de ano", corpo: "Vamos parar de [data] a [data].",
+        importante: false, sensivel: false, ordem: 0, de_fabrica: true, created_by: QA_USER_ID,
+        created_at: "2026-09-01T12:00:00Z", updated_at: "2026-09-01T12:00:00Z" },
+      { id: "00000000-0000-4000-a200-000000000002", nome: "Aviso de segurança", icone: "seguranca",
+        titulo: "Aviso de segurança — [assunto]", corpo: "O que aconteceu: [descrever].",
+        importante: true, sensivel: false, ordem: 2, de_fabrica: true, created_by: QA_USER_ID,
+        created_at: "2026-09-01T12:00:00Z", updated_at: "2026-09-01T12:00:00Z" },
+    ],
   };
 }

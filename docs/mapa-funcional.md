@@ -33,12 +33,12 @@ Todos conferidos no código em 03/09/2026:
 | Rotas autenticadas (`src/constants/routes.js`) | **54** |
 | …das quais só redirecionam | **7** |
 | …telas de verdade | **47** |
-| Rotas **públicas**, sem login (`src/main.jsx`) | **8** |
+| Rotas **públicas**, sem login (`src/main.jsx`) | **9** |
 | Componentes de view (`src/components/views/`) | **59** |
 | Hooks (`src/hooks/`) | **124** |
 | …que falam com o banco | **99** |
-| Tabelas referenciadas pelo front | **110** |
-| Funções RPC chamadas pelo front | **49** |
+| Tabelas referenciadas pelo front | **111** |
+| Funções RPC chamadas pelo front | **51** |
 | Edge functions **ativas em produção** | **30** |
 | …com fonte versionada no repo | **30** |
 | Buckets de Storage | **13** (2 públicos) |
@@ -189,7 +189,7 @@ abre · dado principal · integração externa (quando tem).
 | `/rh/funcionarios` | `RHFuncionariosView.jsx` | Tabela completa da equipe — **referência canônica do padrão "Tabela com filtro"** e a única tela com o toggle de densidade hoje. Pedido de atualização de dado pelo próprio colaborador (aprova/recusa), benefícios, e assinatura de documento via D4Sign. Guarda o **gestor direto** (`rh_colaboradores.gestor_id`, auto-referência com trava de ciclo no banco) — não confundir com `profiles.supervisor_id`, que é o supervisor **comercial** e controla escopo de lead no Funil/Pós-venda/Dashboard/ABM. |
 | `/rh/fornecedores` | `RHFornecedoresView.jsx` | Convênio médico, seguradora, terceirizada: cadastro, contratos e eventos. Contrato e histórico somem juntos no `ON DELETE CASCADE` — por isso o texto do modal de exclusão é diferente do de Marketing. Piloto do Agent Builder. |
 | `/rh/cargos` | `RHCargosView.jsx` | Cargos & salários: catálogo com faixa salarial, e movimentações. Só gerente_rh/admin/diretoria. |
-| `/rh/comunicacao` | `RHComunicacaoView.jsx` | Comunicados (pra todos, por frente ou por departamento) em dois canais — notificação na plataforma e e-mail em cópia oculta, com WhatsApp registrado como "em breve" — e pesquisas internas, com link público `/pesquisa/:id` e agregado anônimo. Cada envio vira uma linha em `rh_comunicados` (alcance por canal medido no envio, status do e-mail) que alimenta a lista "Enviados"; antes de enviar, `comunicado_alcance` mostra a prévia. Escopo e destinatários saem de `comunicado_destinatarios`, ponto único que EXCLUI agência, cliente, fornecedor e desligado — é a única função aqui que não é chamável pelo client (só `service_role`, pra edge function montar o BCC). |
+| `/rh/comunicacao` | `RHComunicacaoView.jsx` | Comunicados (pra todos, por frente ou por departamento) em dois canais — notificação na plataforma e e-mail em cópia oculta, com WhatsApp registrado como "em breve" — e pesquisas internas, com link público `/pesquisa/:id` e agregado anônimo. Cada envio vira uma linha em `rh_comunicados` (alcance por canal medido no envio, status do e-mail) que alimenta a lista "Enviados"; antes de enviar, `comunicado_alcance` mostra a prévia. Escopo e destinatários saem de `comunicado_destinatarios`, ponto único que EXCLUI agência, cliente, fornecedor e desligado — é a única função aqui que não é chamável pelo client (só `service_role`). Desde 11/09/2026: **confirmação de leitura** (`rh_comunicado_leituras`, uma linha por destinatário com token pessoal, gravada no envio; a lista separa confirmou / não confirmou / sem canal), **imagem e PDF** em `comunicado-anexos` (bucket privado; a imagem vai pro e-mail por link assinado de validade longa), **conteúdo sensível** (tira corpo E imagem do e-mail, que vira aviso com o título) e **modelos** editáveis em `rh_comunicado_modelos` — que guardam o que se diz, nunca a aparência. O e-mail deixou de ser em cópia oculta: virou envio individual, porque o link de confirmação é pessoal. |
 | `/rh/bem-estar` | `RHBemEstarView.jsx` | Sessões (massagem, avaliação física) com fila e inscrição por link público `/bem-estar/:id`. |
 | `/rh/relatorios` | `RHRelatoriosView.jsx` | Montador de relatório: métricas por categoria (Funcionários, Recrutamento, Férias…), presets salvos, export CSV. |
 
@@ -225,7 +225,7 @@ Existem pra não quebrar link salvo. Nenhuma renderiza tela.
 | `/perfil` | `/configuracoes` | perfil é uma seção de Configurações |
 | `/usuarios` | `/configuracoes` (gestor) ou `/` | Usuários virou aba dentro de Configurações → Administração |
 
-### 2.8 As 8 rotas públicas — sem login
+### 2.8 As 9 rotas públicas — sem login
 
 **Não estão em `ROUTES`.** Vivem em `src/main.jsx`, fora do `<App>`, e são a
 superfície de escrita de usuário **não autenticado** — a categoria que exige
@@ -241,6 +241,7 @@ o `security-agent` (CLAUDE.md 3.1).
 | `/gestor-vaga/:token` | `ManagerVagaReviewPage` | decisão do gestor sobre candidato, **autenticada por token**, não por login |
 | `/pesquisa/:id` | `PesquisaPublicaForm` | resposta de pesquisa interna (anônima) |
 | `/bem-estar/:id` | `BemEstarPublicaForm` | inscrição em sessão |
+| `/comunicado/confirmar/:token` | `ComunicadoConfirmacao` | "Confirmei a leitura" do e-mail de comunicado, **autenticada por token pessoal** — um token por destinatário, então o link de uma pessoa não confirma pela outra |
 
 O upload de currículo usa token de uso único (`rh_curriculo_upload_tokens`,
 tabela deny-all deliberada). `rh_pesquisa_respostas` também é deny-all: só

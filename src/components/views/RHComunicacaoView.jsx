@@ -3,6 +3,7 @@ import {
   Megaphone, Plus, X, Send, ClipboardList, BarChart3, Check,
   Loader2, Lock, AlertTriangle, Search, UserCheck, BellRing,
   Mail, MonitorSmartphone, MessageCircle, History, RefreshCw,
+  ImagePlus, FileSignature, EyeOff, LayoutTemplate, Users,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHComunicacao } from "../../hooks/use-rh-comunicacao";
@@ -13,6 +14,7 @@ import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { formatDateBR } from "../../utils/date";
+import { HelpTooltip } from "../ui/HelpTooltip";
 
 const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
@@ -29,13 +31,21 @@ const CANAIS = [
   { id: "whatsapp",   label: "WhatsApp",   icon: MessageCircle,     hint: "Em breve.", indisponivel: true },
 ];
 
-function ComunicadoComposer({ onSend, onPreview }) {
+const TOOLTIP_SENSIVEL =
+  "Marque quando o comunicado trouxer dado de pessoa (salário, saúde, advertência, desligamento, documento), " +
+  "informação financeira ou de contrato ainda não pública, ou assunto restrito a um grupo. " +
+  "Na dúvida, marque: o comunicado continua chegando, só não viaja por e-mail.";
+
+function ComunicadoComposer({ onSend, onPreview, modelos = [] }) {
   const [title, setTitle] = useState("");
   const [body, setBody]   = useState("");
   const [scopeType, setScopeType] = useState("todos");
   const [scopeValue, setScopeValue] = useState("");
   const [importante, setImportante] = useState(false);
   const [canais, setCanais] = useState(["plataforma"]);
+  const [sensivel, setSensivel] = useState(false);
+  const [imagem, setImagem] = useState(null);
+  const [documento, setDocumento] = useState(null);
   const [sending, setSending] = useState(false);
   const [error, setError]   = useState(null);
   const [result, setResult] = useState(null);
@@ -66,9 +76,14 @@ function ComunicadoComposer({ onSend, onPreview }) {
     if (!canais.length) { setError("Escolha ao menos um canal."); return; }
     setSending(true); setError(null); setResult(null);
     try {
-      const r = await onSend({ title: title.trim(), body: body.trim() || null, scopeType, scopeValue: scopeType === "todos" ? null : scopeValue, importante, canais });
+      const r = await onSend({
+        title: title.trim(), body: body.trim() || null, scopeType,
+        scopeValue: scopeType === "todos" ? null : scopeValue,
+        importante, canais, sensivel, imagem, documento,
+      });
       setResult(r);
-      setTitle(""); setBody(""); setImportante(false);
+      setTitle(""); setBody(""); setImportante(false); setSensivel(false);
+      setImagem(null); setDocumento(null);
     } catch (e) {
       setError(e?.message || "Erro ao enviar comunicado.");
     } finally {
@@ -79,6 +94,38 @@ function ComunicadoComposer({ onSend, onPreview }) {
   return (
     <div style={{ maxWidth: 620, border: "1px solid var(--border)", borderRadius: 12, padding: 20, background: "var(--surface)" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {modelos.length > 0 && (
+          <div>
+            <label style={labelSt}><LayoutTemplate size={11} style={{ display: "inline", marginRight: 4, verticalAlign: -1 }} />Partir de um modelo</label>
+            <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+              {modelos.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  // Modelo preenche e a pessoa edita por cima. Nunca envia
+                  // sozinho, e nunca mexe em aparência: o que ele traz é
+                  // título, texto e os marcadores — a casca visual do e-mail
+                  // continua vindo do template da plataforma.
+                  onClick={() => {
+                    setTitle(m.titulo || "");
+                    setBody(m.corpo || "");
+                    setImportante(!!m.importante);
+                    setSensivel(!!m.sensivel);
+                    setResult(null); setError(null);
+                  }}
+                  title={m.titulo || m.nome}
+                  style={{
+                    fontSize: 12, fontWeight: 600, borderRadius: 999, padding: "6px 12px",
+                    border: "1px solid var(--border-strong)", background: "var(--surface)",
+                    color: "var(--text)", cursor: "pointer",
+                  }}
+                >
+                  {m.nome}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div>
           <label style={labelSt}>Título *</label>
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Recesso de fim de ano" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
@@ -169,6 +216,54 @@ function ComunicadoComposer({ onSend, onPreview }) {
           </div>
         </div>
 
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+          <div>
+            <label style={labelSt}><ImagePlus size={11} style={{ display: "inline", marginRight: 4, verticalAlign: -1 }} />Imagem</label>
+            <input
+              type="file" accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => setImagem(e.target.files?.[0] || null)}
+              className="w-full text-xs" style={{ color: "var(--text-dim)" }}
+            />
+            <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3, lineHeight: 1.45 }}>
+              {imagem ? imagem.name : "PNG ou JPG, até 10 MB. Aparece acima do texto."}
+            </div>
+          </div>
+          <div>
+            <label style={labelSt}><FileSignature size={11} style={{ display: "inline", marginRight: 4, verticalAlign: -1 }} />PDF para assinatura</label>
+            <input
+              type="file" accept="application/pdf"
+              onChange={(e) => setDocumento(e.target.files?.[0] || null)}
+              className="w-full text-xs" style={{ color: "var(--text-dim)" }}
+            />
+            <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3, lineHeight: 1.45 }}>
+              {documento ? documento.name : "Opcional. Anexe o documento que vai para a D4Sign."}
+            </div>
+          </div>
+        </div>
+
+        {/* Conteúdo sensível: tira imagem E corpo do e-mail, não só a imagem.
+            Decidido com o Daniel — na maioria dos comunicados o sensível é o
+            texto, e tirar só a imagem deixaria o marcador decorativo. */}
+        <label
+          style={{
+            display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
+            borderRadius: 10, padding: "10px 12px",
+            border: `1px solid ${sensivel ? "var(--amber)" : "var(--border)"}`,
+            background: sensivel ? "var(--amber-bg)" : "var(--surface-alt)",
+          }}
+        >
+          <input type="checkbox" checked={sensivel} onChange={(e) => setSensivel(e.target.checked)} style={{ marginTop: 2, flexShrink: 0 }} />
+          <span>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: sensivel ? "var(--amber)" : "var(--text)" }}>
+              <EyeOff size={13} /> Conteúdo sensível
+              <HelpTooltip text={TOOLTIP_SENSIVEL} />
+            </span>
+            <span style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2, display: "block" }}>
+              Fica fora do e-mail — nem o texto, nem a imagem. Quem recebe vê só o título e o caminho para abrir na plataforma.
+            </span>
+          </span>
+        </label>
+
         <label
           style={{
             display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
@@ -219,6 +314,12 @@ function ComunicadoComposer({ onSend, onPreview }) {
             {result.semEmail > 0 && !result.emailErro && (
               <div>{result.semEmail} {result.semEmail === 1 ? "pessoa ficou" : "pessoas ficaram"} de fora do e-mail por não ter endereço cadastrado.</div>
             )}
+            {result.sensivel && result.canais.includes("email") && (
+              <div>Marcado como sensível: o e-mail levou só o título e o link — texto e imagem ficaram na plataforma.</div>
+            )}
+            {result.anexoErro && (
+              <div style={{ fontWeight: 600 }}>Anexo: {result.anexoErro}</div>
+            )}
           </div>
         )}
         <div>
@@ -242,8 +343,10 @@ function ComunicadoComposer({ onSend, onPreview }) {
 // Histórico. Antes disto o comunicado não ficava em lugar nenhum: virava
 // notificação e sumia quando a pessoa lia. O RH não conseguia responder "o que
 // foi comunicado em agosto" nem conferir se o e-mail saiu.
-function HistoricoComunicados({ comunicados, loading, onReenviar }) {
+function HistoricoComunicados({ comunicados, loading, onReenviar, onCarregarLeituras }) {
   const [reenviando, setReenviando] = useState(null);
+  const [abertoId, setAbertoId] = useState(null);
+  const [leituras, setLeituras] = useState({ id: null, carregando: false, lista: [], erro: null });
   const [reenvioResult, setReenvioResult] = useState(null); // { id, enviados, erro }
 
   const rotuloEscopo = (c) => {
@@ -257,6 +360,19 @@ function HistoricoComunicados({ comunicados, loading, onReenviar }) {
     if (c.email_status === "enviado") return { texto: `E-mail: ${c.alcance_email}`, cor: "var(--success)", bg: "var(--success-bg)" };
     if (c.email_status === "falhou")  return { texto: "E-mail falhou", cor: "var(--danger)", bg: "var(--danger-bg)", title: c.email_erro || "" };
     return { texto: "E-mail pendente", cor: "var(--amber)", bg: "var(--amber-bg)" };
+  };
+
+  const abrirLeituras = async (id) => {
+    if (abertoId === id) { setAbertoId(null); return; }
+    setAbertoId(id);
+    if (leituras.id === id && !leituras.erro) return;
+    setLeituras({ id, carregando: true, lista: [], erro: null });
+    try {
+      const lista = await onCarregarLeituras(id);
+      setLeituras({ id, carregando: false, lista, erro: null });
+    } catch (e) {
+      setLeituras({ id, carregando: false, lista: [], erro: e?.message || "Não foi possível carregar." });
+    }
   };
 
   const handleReenviar = async (id) => {
@@ -322,6 +438,19 @@ function HistoricoComunicados({ comunicados, loading, onReenviar }) {
                   {c.sem_email} sem e-mail válido cadastrado
                 </span>
               )}
+              {onCarregarLeituras && (
+                <button
+                  type="button"
+                  onClick={() => abrirLeituras(c.id)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600,
+                    borderRadius: 999, padding: "3px 10px", border: "1px solid var(--border-strong)",
+                    background: "var(--surface)", color: "var(--text)", cursor: "pointer",
+                  }}
+                >
+                  <Users size={11} /> {abertoId === c.id ? "Ocultar leitura" : "Quem confirmou"}
+                </button>
+              )}
               {podeReenviar && (
                 <button
                   type="button"
@@ -342,6 +471,56 @@ function HistoricoComunicados({ comunicados, loading, onReenviar }) {
                 </button>
               )}
             </div>
+
+            {abertoId === c.id && (
+              <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+                {leituras.carregando ? (
+                  <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Carregando…</div>
+                ) : leituras.erro ? (
+                  <div style={{ fontSize: 12, color: "var(--danger)" }}>{leituras.erro}</div>
+                ) : (() => {
+                  const confirmaram = leituras.lista.filter(l => l.confirmadoEm);
+                  const semCanal = leituras.lista.filter(l => !l.confirmadoEm && l.semCanal);
+                  const pendentes = leituras.lista.filter(l => !l.confirmadoEm && !l.semCanal);
+                  return (
+                    <>
+                      {/* Três números, não dois. Quem não tinha canal nenhum
+                          não deixou de confirmar — nunca teve como; somar com
+                          quem ignorou faria a conta mentir (regra 14). */}
+                      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 9 }}>
+                        <span style={{ fontSize: 11, color: "var(--text-dim)" }}><b style={{ color: "var(--success)", fontSize: 14 }}>{confirmaram.length}</b> confirmaram</span>
+                        <span style={{ fontSize: 11, color: "var(--text-dim)" }}><b style={{ color: "var(--text)", fontSize: 14 }}>{pendentes.length}</b> não confirmaram</span>
+                        {semCanal.length > 0 && (
+                          <span style={{ fontSize: 11, color: "var(--text-dim)" }} title="Sem e-mail cadastrado e sem notificação na plataforma — não teve como confirmar.">
+                            <b style={{ color: "var(--amber)", fontSize: 14 }}>{semCanal.length}</b> sem canal
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        {leituras.lista.map((l) => (
+                          <div key={l.profileId} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                            <span style={{ color: "var(--text)" }}>{l.nome}</span>
+                            <span style={{
+                              marginLeft: "auto", fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: "2px 8px",
+                              background: l.confirmadoEm ? "var(--success-bg)" : l.semCanal ? "var(--amber-bg)" : "var(--surface-alt)",
+                              color: l.confirmadoEm ? "var(--success)" : l.semCanal ? "var(--amber)" : "var(--text-dim)",
+                            }}>
+                              {l.confirmadoEm
+                                ? `confirmou ${formatDateBR(l.confirmadoEm)}${l.origem === "email" ? " · por e-mail" : ""}`
+                                : l.semCanal ? "sem e-mail nem notificação" : "não confirmou"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 10.5, color: "var(--text-dim)", marginTop: 8, lineHeight: 1.5 }}>
+                        Confirmar leitura registra que a pessoa recebeu e reconheceu — não que leu ou entendeu.
+                        Para aviso com efeito jurídico, use o PDF com assinatura.
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
 
             {res && (
               <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, borderRadius: 8, padding: "6px 10px", background: res.erro ? "var(--danger-bg)" : "var(--success-bg)", color: res.erro ? "var(--danger)" : "var(--success)" }}>
@@ -621,7 +800,7 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHComunicacaoView({ currentUser, canWrite }) {
-  const { pesquisas, comunicados, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao } = useRHComunicacao({ userId: currentUser?.id });
+  const { pesquisas, comunicados, modelos, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, carregarLeituras, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao } = useRHComunicacao({ userId: currentUser?.id });
   const [tab, setTab] = useState("comunicados");
   const [novaOpen, setNovaOpen] = useState(false);
   const [resultadosDe, setResultadosDe] = useState(null);
@@ -699,7 +878,7 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
       {tab === "comunicados" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {canWrite
-            ? <ComunicadoComposer onSend={enviarComunicado} onPreview={carregarAlcance} />
+            ? <ComunicadoComposer onSend={enviarComunicado} onPreview={carregarAlcance} modelos={modelos} />
             : <EmptyState icon={Megaphone} title="Só leitura" description="Você acompanha o que o RH comunicou, mas não envia comunicados." />}
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -710,6 +889,7 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
               comunicados={comunicados}
               loading={loading}
               onReenviar={canWrite ? reenviarEmailComunicado : null}
+              onCarregarLeituras={carregarLeituras}
             />
           </div>
         </div>

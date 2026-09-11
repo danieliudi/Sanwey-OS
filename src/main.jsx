@@ -9,6 +9,7 @@ import MarketingRequestForm from "./components/public/MarketingRequestForm";
 import ManagerVagaReviewPage from "./components/public/ManagerVagaReviewPage";
 import PesquisaPublicaForm from "./components/public/PesquisaPublicaForm";
 import BemEstarPublicaForm from "./components/public/BemEstarPublicaForm";
+import ComunicadoConfirmacao from "./components/public/ComunicadoConfirmacao";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -23,6 +24,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Route path="/gestor-vaga/:token" element={<ManagerVagaReviewPage />} />
         <Route path="/pesquisa/:id" element={<PesquisaPublicaForm />} />
         <Route path="/bem-estar/:id" element={<BemEstarPublicaForm />} />
+        <Route path="/comunicado/confirmar/:token" element={<ComunicadoConfirmacao />} />
         <Route path="/*" element={<App />} />
       </Routes>
     </BrowserRouter>
