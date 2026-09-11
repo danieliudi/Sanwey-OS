@@ -181,6 +181,28 @@ export async function montarDados() {
     custom_fields: {}, negotiation_started_at: null, client_id: null,
   }));
 
+  // Comunicados: um por status de e-mail, pra o histórico da tela de
+  // Comunicação mostrar os três selos (enviado/pendente/falhou) em vez de só
+  // o caminho feliz — é onde estava o bug de "sumiu e ninguém sabe se saiu".
+  const comunicados = [
+    { id: "00000000-0000-4000-a100-000000000001", titulo: "Recesso de fim de ano",
+      corpo: "Vamos parar de 24/12 a 02/01.", scope_type: "todos", scope_value: null,
+      importante: false, canais: ["plataforma", "email"], enviado_por: QA_USER_ID,
+      enviado_em: "2026-09-05T13:00:00Z", alcance_plataforma: 12, alcance_email: 11,
+      sem_email: 1, email_status: "enviado", email_erro: null },
+    { id: "00000000-0000-4000-a100-000000000002", titulo: "Mudança na política de home office",
+      corpo: "A partir de outubro, terças e quintas presenciais.", scope_type: "departamento",
+      scope_value: "Comercial", importante: true, canais: ["plataforma", "email"],
+      enviado_por: QA_USER_ID, enviado_em: "2026-09-02T17:30:00Z", alcance_plataforma: 5,
+      alcance_email: 0, sem_email: 0, email_status: "falhou",
+      email_erro: "Falha ao enviar e-mail: 429" },
+    { id: "00000000-0000-4000-a100-000000000003", titulo: "Campanha de vacinação",
+      corpo: null, scope_type: "frente", scope_value: "sanwey", importante: false,
+      canais: ["plataforma"], enviado_por: QA_USER_ID, enviado_em: "2026-08-20T11:00:00Z",
+      alcance_plataforma: 8, alcance_email: 0, sem_email: 0,
+      email_status: "nao_solicitado", email_erro: null },
+  ];
+
   return {
     profiles: PERFIS,
     // Sem isto a plataforma para na tela "Termos de uso" e nenhuma rota
@@ -208,5 +230,6 @@ export async function montarDados() {
     rh_ferias: ferias,
     rh_treinamentos: treinamentos,
     posvenda_cases: posvenda,
+    rh_comunicados: comunicados,
   };
 }

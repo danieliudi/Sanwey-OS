@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Megaphone, Plus, X, Send, ClipboardList, BarChart3, Check,
   Loader2, Lock, AlertTriangle, Search, UserCheck, BellRing,
+  Mail, MonitorSmartphone, MessageCircle, History,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHComunicacao } from "../../hooks/use-rh-comunicacao";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
-import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
+import { RH_FRENTES, RH_FRENTE_LABELS, rhFrenteLabel } from "../../constants/rh-frentes";
 import { QRCodeButton } from "../shared/QRCodeButton";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { Button } from "../ui/Button";
@@ -18,23 +19,55 @@ const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", bac
 
 // ── Comunicados ───────────────────────────────────────────────────────────────
 
-function ComunicadoComposer({ onSend }) {
+// Canais de entrega. WhatsApp aparece desligado de propósito: foi pedido na
+// reunião de RH de 10/09/2026 e decidido com o Daniel que fica pra depois (exige
+// conta comercial aprovada, modelo de mensagem homologado e custo por envio).
+// Mostrar o chip apagado responde "e o WhatsApp?" sem ninguém precisar perguntar.
+const CANAIS = [
+  { id: "plataforma", label: "Plataforma", icon: MonitorSmartphone, hint: "Notificação no sino de quem tem login." },
+  { id: "email",      label: "E-mail",     icon: Mail,              hint: "Chega mesmo pra quem desligou o sino." },
+  { id: "whatsapp",   label: "WhatsApp",   icon: MessageCircle,     hint: "Em breve.", indisponivel: true },
+];
+
+function ComunicadoComposer({ onSend, onPreview }) {
   const [title, setTitle] = useState("");
   const [body, setBody]   = useState("");
   const [scopeType, setScopeType] = useState("todos");
   const [scopeValue, setScopeValue] = useState("");
   const [importante, setImportante] = useState(false);
+  const [canais, setCanais] = useState(["plataforma"]);
   const [sending, setSending] = useState(false);
   const [error, setError]   = useState(null);
   const [result, setResult] = useState(null);
+  const [alcance, setAlcance] = useState(null);
+  const [alcanceErro, setAlcanceErro] = useState(false);
+
+  // Prévia de alcance: recarrega a cada troca de escopo. Escopo incompleto
+  // (frente/departamento ainda não escolhido) zera em vez de mostrar o número
+  // do escopo anterior, que seria um número certo para a pergunta errada.
+  useEffect(() => {
+    let active = true;
+    if (scopeType !== "todos" && !scopeValue) { setAlcance(null); setAlcanceErro(false); return; }
+    setAlcanceErro(false);
+    onPreview(scopeType, scopeType === "todos" ? null : scopeValue)
+      .then((a) => { if (active) setAlcance(a); })
+      .catch(() => { if (active) { setAlcance(null); setAlcanceErro(true); } });
+    return () => { active = false; };
+  }, [scopeType, scopeValue, onPreview]);
+
+  const toggleCanal = (id) => {
+    setResult(null);
+    setCanais((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]);
+  };
 
   const handleSend = async () => {
     if (!title.trim()) { setError("Escreva um título."); return; }
     if (scopeType !== "todos" && !scopeValue) { setError("Escolha a frente/departamento."); return; }
+    if (!canais.length) { setError("Escolha ao menos um canal."); return; }
     setSending(true); setError(null); setResult(null);
     try {
-      const n = await onSend({ title: title.trim(), body: body.trim() || null, scopeType, scopeValue: scopeType === "todos" ? null : scopeValue, importante });
-      setResult(n);
+      const r = await onSend({ title: title.trim(), body: body.trim() || null, scopeType, scopeValue: scopeType === "todos" ? null : scopeValue, importante, canais });
+      setResult(r);
       setTitle(""); setBody(""); setImportante(false);
     } catch (e) {
       setError(e?.message || "Erro ao enviar comunicado.");
@@ -76,6 +109,66 @@ function ComunicadoComposer({ onSend }) {
           )}
         </div>
 
+        <div data-tour="comunicado-canais">
+          <label style={labelSt}>Canais *</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {CANAIS.map((c) => {
+              const ativo = canais.includes(c.id);
+              const Icone = c.icon;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => !c.indisponivel && toggleCanal(c.id)}
+                  disabled={c.indisponivel}
+                  title={c.hint}
+                  aria-pressed={ativo}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    borderRadius: 999, padding: "7px 13px", fontSize: 12, fontWeight: 600,
+                    border: `1px solid ${ativo ? "var(--accent)" : "var(--border-strong)"}`,
+                    background: ativo ? "var(--accent)" : "var(--surface)",
+                    color: c.indisponivel ? "var(--text-dim)" : ativo ? "var(--on-accent)" : "var(--text)",
+                    cursor: c.indisponivel ? "not-allowed" : "pointer",
+                    opacity: c.indisponivel ? 0.55 : 1,
+                  }}
+                >
+                  <Icone size={13} /> {c.label}
+                  {c.indisponivel && <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>em breve</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Regra 14: o número vem de comunicado_alcance (conta profiles do
+              escopo, fora agência/cliente/fornecedor e desligados), e o que
+              fica de fora aparece contado em vez de sumir em silêncio. */}
+          <div style={{ marginTop: 10, borderRadius: 10, padding: "10px 12px", background: "var(--surface-alt)", border: "1px solid var(--border)", fontSize: 12, color: "var(--text-dim)", lineHeight: 1.6 }}>
+            {alcanceErro ? (
+              "Não foi possível calcular o alcance agora — o envio continua funcionando."
+            ) : !alcance ? (
+              scopeType !== "todos" && !scopeValue ? "Escolha a frente/departamento pra ver o alcance." : "Calculando alcance…"
+            ) : (
+              <>
+                <span style={{ color: alcance.total === 0 ? "var(--warning)" : "var(--text)", fontWeight: 700 }}>{alcance.total}</span> {alcance.total === 1 ? "pessoa" : "pessoas"} no escopo.
+                {alcance.total === 0 && <> Enviar agora não alcança ninguém.</>}
+                {canais.includes("plataforma") && <> {" · "}Sino: <span style={{ color: "var(--text)", fontWeight: 700 }}>{importante ? alcance.total : alcance.comNotificacao}</span></>}
+                {canais.includes("email") && <> {" · "}E-mail: <span style={{ color: "var(--text)", fontWeight: 700 }}>{alcance.comEmail}</span></>}
+                {canais.includes("email") && alcance.semEmail > 0 && (
+                  <div style={{ marginTop: 4 }}>
+                    {alcance.semEmail} {alcance.semEmail === 1 ? "pessoa não tem" : "pessoas não têm"} e-mail cadastrado e não {alcance.semEmail === 1 ? "recebe" : "recebem"} por esse canal.
+                  </div>
+                )}
+                {canais.includes("plataforma") && !importante && alcance.total > alcance.comNotificacao && (
+                  <div style={{ marginTop: 4 }}>
+                    {alcance.total - alcance.comNotificacao} desligou as notificações do sino — marque “Importante” pra alcançar mesmo assim.
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
         <label
           style={{
             display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
@@ -97,8 +190,23 @@ function ComunicadoComposer({ onSend }) {
 
         {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
         {result != null && (
-          <div style={{ background: "var(--success-bg)", color: "var(--success)", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600 }}>
-            Comunicado enviado para {result} colaborador{result !== 1 ? "es" : ""}.
+          <div style={{ borderRadius: 8, padding: "10px 12px", fontSize: 12, lineHeight: 1.6, background: result.emailErro ? "var(--warning-bg)" : "var(--success-bg)", color: result.emailErro ? "var(--warning)" : "var(--success)" }}>
+            <div style={{ fontWeight: 700 }}>
+              {result.alcancePlataforma > 0
+                ? `Notificação na plataforma: ${result.alcancePlataforma} ${result.alcancePlataforma === 1 ? "pessoa" : "pessoas"}.`
+                : "Sem envio pela plataforma (canal não selecionado)."}
+            </div>
+            {/* Canal por canal, com o número de cada um: "enviado" sozinho não
+                diz se o e-mail saiu — e ele pode falhar depois da notificação
+                já estar gravada. */}
+            {result.emailErro
+              ? <div style={{ fontWeight: 600 }}>E-mail NÃO saiu: {result.emailErro} O comunicado ficou registrado no histórico como falhou.</div>
+              : result.emailEnviado > 0
+                ? <div style={{ fontWeight: 600 }}>E-mail: {result.emailEnviado} {result.emailEnviado === 1 ? "pessoa" : "pessoas"} (em cópia oculta).</div>
+                : null}
+            {result.semEmail > 0 && !result.emailErro && (
+              <div>{result.semEmail} {result.semEmail === 1 ? "pessoa ficou" : "pessoas ficaram"} de fora do e-mail por não ter endereço cadastrado.</div>
+            )}
           </div>
         )}
         <div>
@@ -110,10 +218,85 @@ function ComunicadoComposer({ onSend }) {
           </button>
         </div>
         <p style={{ fontSize: 11, color: "var(--text-dim)" }}>
-          Vai como notificação pra cada colaborador com login na plataforma. Não expõe a lista de destinatários.
-          {" "}Quem ainda não tem acesso ao sistema não recebe por aqui — veja com o RH os outros canais (WhatsApp/SMS/mural físico).
+          Ninguém vê a lista de destinatários: na plataforma cada pessoa recebe a própria notificação, e no e-mail todos vão em cópia oculta.
+          {" "}Agência, cliente e fornecedor nunca entram em comunicado interno, mesmo no escopo “Todos”.
+          {" "}Quem não tem login nem e-mail cadastrado não é alcançado por nenhum dos dois canais.
         </p>
       </div>
+    </div>
+  );
+}
+
+// Histórico. Antes disto o comunicado não ficava em lugar nenhum: virava
+// notificação e sumia quando a pessoa lia. O RH não conseguia responder "o que
+// foi comunicado em agosto" nem conferir se o e-mail saiu.
+function HistoricoComunicados({ comunicados, loading }) {
+  const rotuloEscopo = (c) => {
+    if (c.scope_type === "frente") return c.scope_value ? rhFrenteLabel(c.scope_value) : "—";
+    if (c.scope_type === "departamento") return c.scope_value || "—";
+    return "Todos";
+  };
+
+  const statusEmail = (c) => {
+    if (!(c.canais || []).includes("email")) return null;
+    if (c.email_status === "enviado") return { texto: `E-mail: ${c.alcance_email}`, cor: "var(--success)", bg: "var(--success-bg)" };
+    if (c.email_status === "falhou")  return { texto: "E-mail falhou", cor: "var(--danger)", bg: "var(--danger-bg)", title: c.email_erro || "" };
+    return { texto: "E-mail pendente", cor: "var(--amber)", bg: "var(--amber-bg)" };
+  };
+
+  if (loading) return <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>;
+  if (!comunicados.length) {
+    return <EmptyState icon={History} title="Nenhum comunicado enviado ainda" description="O que for enviado acima fica registrado aqui, com o alcance de cada canal." />;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {comunicados.map((c) => {
+        const email = statusEmail(c);
+        return (
+          <div key={c.id} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", background: "var(--surface)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  {c.importante && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--danger)", background: "var(--danger-bg)", borderRadius: 999, padding: "2px 7px" }}>
+                      <AlertTriangle size={10} /> Importante
+                    </span>
+                  )}
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{c.titulo}</span>
+                </div>
+                {c.corpo && (
+                  <p style={{ fontSize: 12, color: "var(--text-dim)", margin: "4px 0 0", whiteSpace: "pre-wrap" }}>{c.corpo}</p>
+                )}
+              </div>
+              <span style={{ fontSize: 11, color: "var(--text-dim)", whiteSpace: "nowrap" }}>{formatDateBR(c.enviado_em)}</span>
+            </div>
+
+            {/* Cada número traz o canal a que pertence — "enviado para 12" sem
+                dizer por onde não responde nada (regra 14). */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+              <span style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 999, padding: "3px 9px" }}>
+                Para: {rotuloEscopo(c)}
+              </span>
+              {(c.canais || []).includes("plataforma") && (
+                <span style={{ fontSize: 11, color: "var(--text)", background: "var(--surface-alt)", borderRadius: 999, padding: "3px 9px" }}>
+                  Sino: {c.alcance_plataforma}
+                </span>
+              )}
+              {email && (
+                <span title={email.title} style={{ fontSize: 11, fontWeight: 600, color: email.cor, background: email.bg, borderRadius: 999, padding: "3px 9px" }}>
+                  {email.texto}
+                </span>
+              )}
+              {c.sem_email > 0 && (
+                <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
+                  {c.sem_email} sem e-mail cadastrado
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -362,7 +545,7 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHComunicacaoView({ currentUser, canWrite }) {
-  const { pesquisas, loading, enviarComunicado, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao } = useRHComunicacao({ userId: currentUser?.id });
+  const { pesquisas, comunicados, loading, enviarComunicado, carregarAlcance, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao } = useRHComunicacao({ userId: currentUser?.id });
   const [tab, setTab] = useState("comunicados");
   const [novaOpen, setNovaOpen] = useState(false);
   const [resultadosDe, setResultadosDe] = useState(null);
@@ -425,7 +608,18 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
       </div>
 
       {tab === "comunicados" ? (
-        canWrite ? <ComunicadoComposer onSend={enviarComunicado} /> : <EmptyState icon={Megaphone} title="Sem permissão" description="Só a gestão de RH envia comunicados." />
+        canWrite ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <ComunicadoComposer onSend={enviarComunicado} onPreview={carregarAlcance} />
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                <History size={15} style={{ color: "var(--text-dim)" }} />
+                <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", margin: 0 }}>Enviados</h2>
+              </div>
+              <HistoricoComunicados comunicados={comunicados} loading={loading} />
+            </div>
+          </div>
+        ) : <EmptyState icon={Megaphone} title="Sem permissão" description="Só a gestão de RH envia comunicados." />
       ) : loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : (

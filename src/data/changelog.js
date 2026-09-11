@@ -38,6 +38,22 @@
 
 export const CHANGELOG = [
   {
+    version: "5.3.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Comunicado agora também vai por e-mail, e fica registrado. Antes de enviar você vê quantas pessoas o escopo alcança em cada canal; depois, a lista \"Enviados\" guarda o que foi comunicado, para quem e se o e-mail saiu.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Comunicado para \"Todos\" não vai mais para agência, cliente ou fornecedor — só para quem é do Grupo.",
+        roles: ["rh", "gerente_rh", "admin"],
+        toast: true,
+      },
+    ],
+  },
+  {
     version: "5.2.0",
     items: [
       {
