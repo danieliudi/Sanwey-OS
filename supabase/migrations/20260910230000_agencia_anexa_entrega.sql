@@ -60,10 +60,26 @@ as $$
   );
 $$;
 
-revoke all on function public.agencia_pode_anexar_entrega(uuid) from public, anon;
-revoke all on function public.agencia_pode_mexer_entrega(uuid) from public, anon;
-grant execute on function public.agencia_pode_anexar_entrega(uuid) to authenticated;
-grant execute on function public.agencia_pode_mexer_entrega(uuid) to authenticated;
+-- ANON PRECISA DE EXECUTE. A primeira versão deste arquivo revogava, achando
+-- que era cuidado, e quebrou TODO upload público por 20 minutos em 10/09.
+-- Por quê: as policies de storage.objects são avaliadas para QUALQUER inserção
+-- na tabela, não só as do bucket da policy. O formulário público de currículo
+-- (anon) inserindo em rh-curriculos também avalia "Deliverable attachments
+-- insert" — e estourava "permission denied for function" antes de qualquer
+-- teste de bucket. Não há curto-circuito garantido em expressão de policy.
+--
+-- É por isso que TODA função usada em policy de Storage neste banco concede
+-- execute a anon: agencia_sees_supplier, current_user_is_marketing,
+-- rh_curriculo_token_consume. Expor é inócuo — as duas devolvem só um booleano
+-- sobre a ETAPA de uma entrega.
+--
+-- A correção foi aplicada direto em produção na hora; este bloco existe pra o
+-- ARQUIVO não reintroduzir a quebra em qualquer banco reconstruído a partir
+-- das migrations.
+revoke all on function public.agencia_pode_anexar_entrega(uuid) from public;
+revoke all on function public.agencia_pode_mexer_entrega(uuid) from public;
+grant execute on function public.agencia_pode_anexar_entrega(uuid) to authenticated, anon;
+grant execute on function public.agencia_pode_mexer_entrega(uuid) to authenticated, anon;
 
 -- ---------- tabela ----------
 drop policy if exists "Deliverable attachments table read" on public.marketing_deliverable_attachments;
