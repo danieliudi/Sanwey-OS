@@ -622,6 +622,7 @@ export function SettingsView({
   );
 
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [clearResultado, setClearResultado] = useState(null);
   const [clearTyped, setClearTyped] = useState("");
 
   // ── Appearance / theme colors ────────────────────────────────────────
@@ -994,8 +995,17 @@ export function SettingsView({
     setClearConfirmOpen(true);
   }, [leadsCount]);
 
-  const handleClearConfirm = useCallback(() => {
-    onClearAllLeads?.();
+  // Espera o resultado em vez de fechar de cara: "limpar tudo" apaga o que a
+  // RLS deixar (demo é gerente+admin, o resto só admin), e a versão anterior
+  // fechava o modal sempre — dando a impressão de que apagou tudo mesmo
+  // quando não apagou nada.
+  const handleClearConfirm = useCallback(async () => {
+    setClearResultado(null);
+    const r = await onClearAllLeads?.();
+    if (r && r.ok === false) {
+      setClearResultado(r.motivo || "Nenhum lead foi excluído.");
+      return;
+    }
     setClearConfirmOpen(false);
     setClearTyped("");
   }, [onClearAllLeads]);
@@ -2517,7 +2527,7 @@ export function SettingsView({
       {/* Confirm clear leads modal */}
       <Modal
         open={clearConfirmOpen}
-        onClose={() => setClearConfirmOpen(false)}
+        onClose={() => { setClearConfirmOpen(false); setClearResultado(null); }}
         title="⚠️ Confirmar exclusão de leads"
         width={440}
       >
@@ -2533,6 +2543,15 @@ export function SettingsView({
             <AlertTriangle size={13} className="shrink-0 mt-0.5" />
             <span>Dados sincronizados com o Supabase serão excluídos do banco de dados permanentemente.</span>
           </div>
+          {clearResultado && (
+            <div
+              role="alert"
+              className="p-3 rounded-lg text-xs font-semibold"
+              style={{ background: "var(--danger-bg)", color: "var(--danger)" }}
+            >
+              {clearResultado}
+            </div>
+          )}
           <div>
             <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--text-dim)" }}>
               Digite <strong style={{ color: "var(--text)" }}>LIMPAR</strong> para confirmar
