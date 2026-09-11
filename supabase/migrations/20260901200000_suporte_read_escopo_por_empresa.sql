@@ -19,29 +19,42 @@
 -- que voltou pela porta do lado quando _historico/20260921_papel_suporte_
 -- comercial.sql criou as três *_suporte_read.
 --
--- EXPOSIÇÃO HOJE: LATENTE, não ativa — conferido em 01/09/2026, `profiles`
--- tem ZERO usuário com o cargo `suporte`. Não há vazamento acontecendo; há um
--- buraco esperando o primeiro usuário do cargo. Por isso dá pra fechar sem
--- pressa e sem risco de rollout: não existe ninguém pra quebrar.
+-- EXPOSIÇÃO HOJE: LATENTE, não ativa — `profiles` tem ZERO usuário com o
+-- cargo `suporte`. Conferido em 01/09/2026 e de novo em 11/09/2026, contra
+-- produção. Não há vazamento acontecendo; há um buraco esperando o primeiro
+-- usuário do cargo. Por isso dá pra fechar sem pressa e sem risco de rollout:
+-- não existe ninguém pra quebrar.
 --
--- POR QUE UMA FUNÇÃO E NÃO UM `EXISTS` INLINE  ← o ponto não-óbvio
+-- POR QUE UMA FUNÇÃO E NÃO UM `EXISTS` INLINE
 -- As três tabelas não têm coluna de empresa; o escopo tem que sair de
--- `clients.company_ids` via `client_id`. Mas um EXISTS contra `clients`
--- escrito DENTRO da policy também passa pela RLS de `clients` — e o suporte
--- puro enxerga ZERO cliente hoje (`clients_read` só admite admin, gerente e
--- vendedor). Medido em transação revertida, com um suporte puro de verdade:
+-- `clients.company_ids` via `client_id`, e um EXISTS contra `clients` escrito
+-- DENTRO da policy também passa pela RLS de `clients`.
+--
+-- CORREÇÃO DE 11/09/2026 — a justificativa original desta seção não vale
+-- mais, e ficou registrada porque rationale desatualizado engana a próxima
+-- sessão. Ela dizia que o EXISTS inline devolveria 0/0 ("cega o suporte
+-- inteiro"), porque `clients_read` só admitia admin, gerente e vendedor, e
+-- que a 20260901190000 "pode nem ser aplicada". As duas premissas caíram: a
+-- 20260901190000 ESTÁ aplicada em produção, e `clients_read` hoje é
+--   admin OR (roles && {gerente,vendedor,suporte} AND company_ids && companies)
+-- ou seja, já admite suporte com escopo de frente.
+--
+-- Medido de novo numa branch descartável em 11/09/2026, com um suporte puro
+-- de verdade (só o cargo `suporte`, frente `industria`):
 --
 --   variante                      própria frente   outra frente
 --   hoje (sem filtro)                    1              1   ← o vazamento
---   EXISTS inline                        0              0   ← quebra tudo
---   helper SECURITY DEFINER              1              0   ← correto
+--   EXISTS inline                        1              0   ← também resolve
+--   helper SECURITY DEFINER              1              0   ← o desta migration
 --
--- O EXISTS inline não vaza, mas cega o suporte inteiro — e ainda amarraria
--- esta migration à 20260901190000 (que acrescenta suporte ao `clients_read`),
--- que pode nem ser aplicada. A função SECURITY DEFINER lê `clients` como dona
--- e devolve só o booleano, que é exatamente o que `current_user_can_manage_
--- client()` já faz pros ramos *_interno destas mesmas tabelas. Reaproveitar o
--- padrão da tabela-irmã, como manda a regra 3.1.
+-- As duas fecham o vazamento. Fico com o helper por dois motivos, nenhum
+-- deles "o inline não funciona": ele é o mesmo desenho de
+-- `current_user_can_manage_client()`, que os ramos *_interno destas MESMAS
+-- três tabelas já usam (regra 3.1 manda espelhar a irmã), e não acopla a
+-- correção ao `clients_read` continuar admitindo suporte. Se um dia alguém
+-- estreitar o `clients_read`, o inline faria estas três tabelas sumirem em
+-- silêncio — falha pro lado seguro, mas ainda assim uma tela vazia sem
+-- explicação.
 --
 -- ATENÇÃO — NÃO espelhar as *_suporte_read atuais. Aqui a regra 3.1 ("compare
 -- com o predicado da tabela-irmã") aponta pro lado errado: as irmãs são
@@ -71,7 +84,7 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION public.is_comercial_support_for_client(uuid) IS
-  'Suporte comercial COM escopo de frente: true só se o usuário tem o cargo suporte E o cliente pertence a alguma das frentes dele. SECURITY DEFINER de propósito — dentro de uma policy, um EXISTS contra clients passaria pela RLS de clients, e o suporte não enxerga clients hoje.';
+  'Suporte comercial COM escopo de frente: true só se o usuário tem o cargo suporte E o cliente pertence a alguma das frentes dele. SECURITY DEFINER de propósito — espelha current_user_can_manage_client(), que os ramos *_interno destas mesmas tabelas já usam, e não acopla o escopo destas três tabelas ao que o clients_read admitir no futuro.';
 
 -- anon fora, igual ao is_comercial_support() (que já é o único da família sem
 -- anon no ACL). authenticated precisa executar: a policy roda como o chamador.

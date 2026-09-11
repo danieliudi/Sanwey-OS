@@ -134,6 +134,11 @@ export function computeFairMetrics({
     // Conversão sobre o que já foi DECIDIDO (ganho+perdido), não sobre o total
     // — negócio ainda aberto não é fracasso, e incluí-lo puniria a feira nova.
     conversion: decided > 0 ? won.length / decided : null,
+    // O denominador sai junto com a razão, sempre. Sem ele, 1 ganho e 0
+    // perdidos vira "100%" num cartão que vai pra diretoria — é o defeito que
+    // a regra 14 do CLAUDE.md nomeia, e que aqui não dá pra ver de fora
+    // porque `conversion` é só um número entre 0 e 1.
+    decidedCount: decided,
     // Retorno sobre o investido. null quando não houve custo registrado, pra
     // não exibir retorno infinito de uma feira sem despesa lançada.
     roi: cost > 0 ? revenue / cost : null,

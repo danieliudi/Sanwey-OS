@@ -11,6 +11,7 @@ import { formatK } from "../../utils/currency";
 import { DEFAULT_PIPELINE_STAGES, WON_STAGES } from "../../constants/pipelines";
 import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
 import { useClientContactCounts } from "../../hooks/use-client-contact-counts";
+import { razaoHonesta } from "../../utils/proporcao";
 import {
   collapseLeadsToAccounts,
   accountMetrics,
@@ -37,9 +38,8 @@ function pct(v) {
 //
 // 5 é escolha, não cálculo: é o menor número em que um ponto percentual ainda
 // significa alguma coisa (1/5 = 20%, 2/5 = 40%). Abaixo disso a fração é mais
-// honesta que a porcentagem. Se o volume crescer, subir esse piso é ajuste de
-// uma linha.
-const MIN_DECIDIDAS_PARA_PERCENTUAL = 5;
+// honesta que a porcentagem. O piso mora em utils/proporcao.js desde
+// 11/09/2026, junto com o denominador e a contagem do que ficou de fora.
 
 function thStyle(i, last) {
   return {
@@ -122,7 +122,12 @@ export function AbmAccountsView({
   // 2. denominador visivel — "X de Y decididas" no sublabel, sempre;
   // 3. o que ficou de fora, contado — as abertas nao entram no denominador,
   //    entao aparecem rotuladas como fora da conta.
-  // Abaixo do minimo, exibe a fracao no lugar do percentual.
+  // Piso, denominador e "o que ficou de fora" saíram daqui pra
+  // utils/proporcao.js em 11/09/2026: esta tela foi a 1ª ocorrência do padrão,
+  // o Relatório de Feiras/Conteúdo virou a 2ª e o Executivo a 3ª — extração no
+  // momento que a regra 4 manda. O caso de ZERO decididas fica local porque
+  // aqui a tela sabe dizer quantas estão abertas, e o helper genérico não tem
+  // esse vocabulário.
   const conversao = useMemo(() => {
     const ganhas = totals.wonAccountCount;
     const decididas = ganhas + totals.lostAccountCount;
@@ -134,12 +139,11 @@ export function AbmAccountsView({
         sublabel: abertas === 1 ? "1 conta aberta, nenhuma decidida" : `${abertas} contas abertas, nenhuma decidida`,
       };
     }
-    const base = `${ganhas} de ${decididas} ${decididas === 1 ? "decidida" : "decididas"}`;
-    const fora = abertas === 0 ? "" : ` · ${abertas === 1 ? "1 aberta fora da conta" : `${abertas} abertas fora da conta`}`;
-    return {
-      valor: decididas >= MIN_DECIDIDAS_PARA_PERCENTUAL ? pct(totals.accountConversion) : `${ganhas}/${decididas}`,
-      sublabel: base + fora,
-    };
+    const r = razaoHonesta(ganhas, decididas, {
+      singular: "decidida", plural: "decididas",
+      fora: abertas === 0 ? "" : (abertas === 1 ? "1 aberta fora da conta" : `${abertas} abertas fora da conta`),
+    });
+    return { valor: r.valor, sublabel: r.nota };
   }, [totals]);
 
   const withCommittee = filtered.filter(a => (committeeCounts[a.clientId]?.active || 0) > 0).length;

@@ -39,6 +39,7 @@ import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
 import { AnalyticsTab } from "./AnalyticsTab";
 import { FunnelHistoryView } from "./FunnelHistoryView";
+import { razaoHonesta } from "../../utils/proporcao";
 
 // Painel Executivo — único ponto de visão consolidada do Grupo. Inclui
 // o que era a tela "Presidência" como uma tab. Filtro de período é
@@ -216,8 +217,11 @@ export function ExecutiveDashboard({
       stale += m.stale;
       totalCount += m.leadsCount;
     }
-    const conversion = totalCount > 0 ? Math.round((wonCount / totalCount) * 100) : 0;
-    return { pipeline, forecast, wonValue, wonCount, stale, conversion };
+    // `totalCount` no denominador de propósito: aqui a pergunta é "de tudo que
+    // entrou, quanto virou ganho", não "das decisões, quantas ganhamos" (essa
+    // é o win rate do Analytics). Os dois números convivem e NÃO são o mesmo.
+    const conversion = totalCount > 0 ? Math.round((wonCount / totalCount) * 100) : null;
+    return { pipeline, forecast, wonValue, wonCount, stale, conversion, totalCount };
   }, [metricsByCompany]);
 
   // CAC agregado do Grupo inteiro no período selecionado — sem filtro de
@@ -568,7 +572,17 @@ export function ExecutiveDashboard({
                   <StatCard icon={HandCoins}    value={formatK(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
                   <StatCard icon={TrendingUp}   value={formatK(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
                   <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
-                  <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
+                  <StatCard
+                    icon={Target}
+                    {...(() => {
+                      // Regra 14: a razão sai com o `n`, e abaixo do piso sai
+                      // como fração. Antes disto, zero lead exibia "0%" — um
+                      // zero medido é diferente de não ter o que medir.
+                      const r = razaoHonesta(totals.wonCount, totals.totalCount, { singular: "lead", plural: "leads" });
+                      return { value: r.valor, sublabel: r.nota || "Leads → ganhos" };
+                    })()}
+                    label="Conversão"
+                  />
                   {/* formatK em vez de formatBRL: em card estreito o valor
                       cheio cortava. O hint da fórmula saiu do <div title>
                       externo (que quebraria o cloneElement do StatCardGrid)
