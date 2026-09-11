@@ -24,6 +24,14 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.4.0 (nome de quem respondeu na pesquisa identificada) — decisão de
+  // PULAR o spotlight, registrada aqui como a regra 12 pede. A novidade vive
+  // DENTRO do modal de resultados, que só existe depois de clicar em "Ver
+  // respostas" numa pesquisa identificada. O FeatureSpotlight tem timer de
+  // órfão (FeatureSpotlight.jsx:110): apontado pra um alvo que não está na
+  // rota, ele se marca como visto em silêncio pra todo mundo que abrir
+  // Comunicação — inclusive pra quem precisava dele. Mesmo motivo do campo
+  // Gestor, na 4.98.0. Vai pelo toast do changelog, com `roles` de RH.
   {
     id: "comunicado-canais",
     route: "rh-comunicacao",

@@ -38,6 +38,25 @@
 
 export const CHANGELOG = [
   {
+    version: "5.4.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pesquisa identificada agora mostra quem respondeu, ao lado de cada resposta escrita. A anônima não muda: continua liberando só a partir de 5 respostas e sem nenhum vínculo com quem respondeu.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Excluir um lead sem permissão não some mais com ele da tela — a plataforma avisa que não foi excluído, em vez de fingir que foi.",
+      },
+      {
+        kind: "ajuste",
+        text: "Relatórios de Feiras e Conteúdo passam a mostrar quantos leads ficaram de fora da conta, e a conversão vem com o número de casos decididos ao lado.",
+        roles: ["marketing", "gerente_marketing", "gerente", "diretoria"],
+      },
+    ],
+  },
+  {
     version: "5.3.0",
     items: [
       {
