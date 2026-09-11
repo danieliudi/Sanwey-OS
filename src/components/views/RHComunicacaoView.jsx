@@ -15,6 +15,7 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { formatDateBR } from "../../utils/date";
 import { HelpTooltip } from "../ui/HelpTooltip";
+import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
 
 const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
@@ -340,10 +341,64 @@ function ComunicadoComposer({ onSend, onPreview, modelos = [] }) {
   );
 }
 
+// Assinatura do comunicado: reusa o mesmo mecanismo genérico que RH já tem
+// (domain/record_id), com `domain = "comunicado"`. Nenhuma peça nova — a
+// D4Sign assina ARQUIVO, e o arquivo é o PDF que o RH anexou no envio.
+function AssinaturaComunicado({ comunicado, onCarregarAssinantes }) {
+  const { requests, sending, sendError, sendForSignature } = useRHSignatureRequests({
+    domain: "comunicado", recordId: comunicado.id,
+  });
+  const [erroLocal, setErroLocal] = useState(null);
+
+  const jaEnviado = requests.length > 0;
+  const ultimo = requests[0];
+
+  const enviar = async () => {
+    setErroLocal(null);
+    try {
+      const signers = await onCarregarAssinantes(comunicado.id);
+      if (!signers.length) { setErroLocal("Nenhum destinatário com e-mail para assinar."); return; }
+      await sendForSignature({
+        signers,
+        sourceStoragePath: comunicado.documento_path,
+        message: `Assinatura do comunicado: ${comunicado.titulo}`,
+      });
+    } catch (e) {
+      setErroLocal(e?.message || "Não foi possível enviar para assinatura.");
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 9 }}>
+      {jaEnviado ? (
+        <span style={{ fontSize: 11, fontWeight: 600, borderRadius: 999, padding: "3px 9px", background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+          <FileSignature size={11} style={{ display: "inline", marginRight: 4, verticalAlign: -1 }} />
+          Assinatura: {ultimo?.status || "enviada"}
+        </span>
+      ) : (
+        <button
+          type="button" onClick={enviar} disabled={sending}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600,
+            borderRadius: 999, padding: "3px 10px", border: "1px solid var(--border-strong)",
+            background: "var(--surface)", color: "var(--text)",
+            cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1,
+          }}
+        >
+          <FileSignature size={11} /> {sending ? "Enviando…" : "Enviar PDF para assinatura"}
+        </button>
+      )}
+      {(erroLocal || sendError) && (
+        <div style={{ marginTop: 6, fontSize: 11, fontWeight: 600, color: "var(--danger)" }}>{erroLocal || sendError}</div>
+      )}
+    </div>
+  );
+}
+
 // Histórico. Antes disto o comunicado não ficava em lugar nenhum: virava
 // notificação e sumia quando a pessoa lia. O RH não conseguia responder "o que
 // foi comunicado em agosto" nem conferir se o e-mail saiu.
-function HistoricoComunicados({ comunicados, loading, onReenviar, onCarregarLeituras }) {
+function HistoricoComunicados({ comunicados, loading, onReenviar, onCarregarLeituras, onCarregarAssinantes }) {
   const [reenviando, setReenviando] = useState(null);
   const [abertoId, setAbertoId] = useState(null);
   const [leituras, setLeituras] = useState({ id: null, carregando: false, lista: [], erro: null });
@@ -471,6 +526,10 @@ function HistoricoComunicados({ comunicados, loading, onReenviar, onCarregarLeit
                 </button>
               )}
             </div>
+
+            {c.documento_path && onCarregarAssinantes && (
+              <AssinaturaComunicado comunicado={c} onCarregarAssinantes={onCarregarAssinantes} />
+            )}
 
             {abertoId === c.id && (
               <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
@@ -800,7 +859,7 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHComunicacaoView({ currentUser, canWrite }) {
-  const { pesquisas, comunicados, modelos, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, carregarLeituras, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao } = useRHComunicacao({ userId: currentUser?.id });
+  const { pesquisas, comunicados, modelos, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, carregarLeituras, carregarAssinantes, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao } = useRHComunicacao({ userId: currentUser?.id });
   const [tab, setTab] = useState("comunicados");
   const [novaOpen, setNovaOpen] = useState(false);
   const [resultadosDe, setResultadosDe] = useState(null);
@@ -890,6 +949,7 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
               loading={loading}
               onReenviar={canWrite ? reenviarEmailComunicado : null}
               onCarregarLeituras={carregarLeituras}
+              onCarregarAssinantes={canWrite ? carregarAssinantes : null}
             />
           </div>
         </div>

@@ -6,6 +6,13 @@ import { debounce } from "../utils/debounce";
 // notifications) + pesquisas anônimas (definição em rh_pesquisas; respostas
 // só lidas via RPC de agregação, nunca com identidade).
 const BUCKET_ANEXOS = "comunicado-anexos";
+// O PDF de assinatura NÃO vai pro bucket de anexos: a edge function `d4sign-send`
+// só aceita `rh-documentos-assinatura`, e só um caminho `${domain}/${recordId}/`.
+// Isso é decisão de segurança fechada — uma versão anterior aceitava bucket
+// arbitrário e dava pra mandar currículo e comprovante pra D4Sign
+// (d4sign-send/index.ts:73). Então o comunicado se adapta ao contrato, em vez
+// de afrouxá-lo.
+const BUCKET_ASSINATURA = "rh-documentos-assinatura";
 
 export function useRHComunicacao({ userId } = {}) {
   const [pesquisas, setPesquisas] = useState([]);
@@ -118,8 +125,12 @@ export function useRHComunicacao({ userId } = {}) {
   // fora dessa pasta seria invisível pra quem recebeu.
   const subirAnexo = useCallback(async (comunicadoId, file, prefixo) => {
     const ext = (file.name.split(".").pop() || "bin").toLowerCase();
-    const path = `${comunicadoId}/${prefixo}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from(BUCKET_ANEXOS)
+    const assinatura = prefixo === "documento";
+    const bucket = assinatura ? BUCKET_ASSINATURA : BUCKET_ANEXOS;
+    const path = assinatura
+      ? `comunicado/${comunicadoId}/${Date.now()}.${ext}`
+      : `${comunicadoId}/${prefixo}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from(bucket)
       .upload(path, file, { contentType: file.type, upsert: false });
     if (error) throw new Error(error.message);
     return path;
@@ -171,6 +182,26 @@ export function useRHComunicacao({ userId } = {}) {
     await fetchAll();
     return res;
   }, [dispararEmail, fetchAll, subirAnexo]);
+
+  // Assinantes do comunicado: os mesmos destinatários, com nome e e-mail. Sai
+  // da lista de leitura (gravada no envio) e não de um recálculo de escopo —
+  // quem assina é quem recebeu, não quem estaria no escopo hoje.
+  const carregarAssinantes = useCallback(async (comunicadoId) => {
+    const { data, error } = await supabase
+      .from("rh_comunicado_leituras")
+      .select("profiles(name, email)")
+      .eq("comunicado_id", comunicadoId);
+    if (error) throw new Error(error.message);
+    const vistos = new Set();
+    const out = [];
+    for (const r of data || []) {
+      const email = (r.profiles?.email || "").trim();
+      if (!email || vistos.has(email.toLowerCase())) continue;
+      vistos.add(email.toLowerCase());
+      out.push({ name: r.profiles?.name || email, email });
+    }
+    return out;
+  }, []);
 
   const carregarLeituras = useCallback(async (comunicadoId) => {
     const { data, error } = await supabase.rpc("comunicado_leituras", { p_comunicado_id: comunicadoId });
@@ -277,9 +308,9 @@ export function useRHComunicacao({ userId } = {}) {
 
   return useMemo(() => ({
     pesquisas, comunicados, modelos, loading,
-    enviarComunicado, reenviarEmailComunicado, carregarAlcance, carregarLeituras,
+    enviarComunicado, reenviarEmailComunicado, carregarAlcance, carregarLeituras, carregarAssinantes,
     salvarModelo, deletarModelo,
     criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao,
     refetch: fetchAll,
-  }), [pesquisas, comunicados, modelos, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, carregarLeituras, salvarModelo, deletarModelo, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao, fetchAll]);
+  }), [pesquisas, comunicados, modelos, loading, enviarComunicado, reenviarEmailComunicado, carregarAlcance, carregarLeituras, carregarAssinantes, salvarModelo, deletarModelo, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao, fetchAll]);
 }

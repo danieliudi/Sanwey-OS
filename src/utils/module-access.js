@@ -52,7 +52,7 @@ export const MODULE_GROUPS = [
       { id: "rh-funcionarios", label: "Funcionários" },
       { id: "rh-cargos",       label: "Cargos & Salários" },
       { id: "rh-comunicacao",  label: "Comunicação" },
-      { id: "rh-bem-estar",    label: "Bem-estar" },
+      { id: "rh-bem-estar",    label: "Programas" },
       { id: "rh-fornecedores", label: "Fornecedores (RH)" },
       { id: "rh-relatorios",   label: "Relatórios" },
     ],
