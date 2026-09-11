@@ -557,7 +557,7 @@ function HistoricoComunicados({ comunicados, loading, onReenviar, onCarregarLeit
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                         {leituras.lista.map((l) => (
-                          <div key={l.profileId} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                          <div key={l.chave} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
                             <span style={{ color: "var(--text)" }}>{l.nome}</span>
                             <span style={{
                               marginLeft: "auto", fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: "2px 8px",

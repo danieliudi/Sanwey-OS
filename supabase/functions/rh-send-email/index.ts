@@ -895,7 +895,12 @@ async function handleComunicado(
   // entrou ou saiu no meio.
   const { data: leituras, error: leiErr } = await supabase
     .from("rh_comunicado_leituras")
-    .select("token, profile_id, profiles(email)")
+    // `email` é a coluna CONGELADA no envio, não um join em profiles. Dois
+    // motivos: desde 11/09/2026 o destinatário pode ser ficha sem conta (não
+    // há profile pra fazer join), e mesmo para quem tem conta o join lia o
+    // e-mail ATUAL — trocar o endereço de alguém entre o disparo e a entrega
+    // mandava o link pessoal pro endereço novo.
+    .select("token, email")
     .eq("comunicado_id", comunicadoId)
     .eq("canal_email", true);
   if (leiErr) {
@@ -907,8 +912,8 @@ async function handleComunicado(
   const vistos = new Set<string>();
   type Destino = { email: string; token: string };
   const destinos: Destino[] = [];
-  for (const l of (leituras || []) as Array<{ token: string; profiles?: { email?: string | null } | null }>) {
-    const email = (l.profiles?.email || "").trim();
+  for (const l of (leituras || []) as Array<{ token: string; email?: string | null }>) {
+    const email = (l.email || "").trim();
     const chave = email.toLowerCase();
     if (!EMAIL_RE.test(email) || vistos.has(chave)) continue;
     vistos.add(chave);

@@ -20,6 +20,7 @@ import {
   Download,
   AlertCircle,
   Trash2,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -33,6 +34,7 @@ import {
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { ColaboradorImportModal } from "./ColaboradorImportModal";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { descendentesDe, equipeDe, podeSerGestor } from "../../utils/rh-hierarquia";
 import { useRHBeneficios } from "../../hooks/use-rh-beneficios";
@@ -1661,7 +1663,7 @@ export function RHFuncionariosView({
   onOpenTreinamento,
   onOpenFerias,
 }) {
-  const { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador, refetch } = useRHColaboradores({ userId: currentUser?.id });
   const [density, setDensity] = useTableDensity("rh-funcionarios-table-density");
   const cellPadY = density === "compact" ? "py-1.5" : "py-3";
   const headPadY = density === "compact" ? "py-1.5" : "py-2.5";
@@ -1684,6 +1686,7 @@ export function RHFuncionariosView({
   }, [initialSelectedEmployeeId, users, onInitialEmployeeConsumed]);
   const [novoColaboradorOpen, setNovoColaboradorOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [importPessoasOpen, setImportPessoasOpen] = useState(false);
   const [editingColaborador, setEditingColaborador]   = useState(null);
   const [sortCol, setSortCol] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
@@ -2016,6 +2019,23 @@ export function RHFuncionariosView({
           </button>
           {canWrite && (
             <>
+              {/* "Importar pessoas" (planilha, cria/atualiza ficha) ao lado de
+                  "Importar documentos" (arquivo pra quem já existe). Os dois
+                  nomes ficam no mesmo par de propósito — antes só existia o
+                  segundo, escrito com maiúscula, e "Importar Documentos"
+                  sozinho dava a entender que era a única importação da tela. */}
+              <button
+                onClick={() => setImportPessoasOpen(true)}
+                className="flex items-center gap-1.5 font-semibold"
+                style={{
+                  background: "var(--surface)", color: "var(--text)", borderRadius: 10,
+                  padding: "6px 16px", fontSize: 13, border: "1px solid var(--border)",
+                  cursor: "pointer",
+                }}
+                data-tour="importar-pessoas"
+              >
+                <FileSpreadsheet size={14} /> Importar pessoas
+              </button>
               <button
                 onClick={() => setBulkUploadOpen(true)}
                 className="flex items-center gap-1.5 font-semibold"
@@ -2025,7 +2045,7 @@ export function RHFuncionariosView({
                   cursor: "pointer",
                 }}
               >
-                <Upload size={14} /> Importar Documentos
+                <Upload size={14} /> Importar documentos
               </button>
               <button
                 onClick={() => setNovoColaboradorOpen(true)}
@@ -2536,6 +2556,12 @@ export function RHFuncionariosView({
           </div>
         </Modal>
       )}
+
+      <ColaboradorImportModal
+        open={importPessoasOpen}
+        onClose={() => setImportPessoasOpen(false)}
+        onImported={refetch}
+      />
 
       {bulkUploadOpen && (
         <BulkDocumentUploadModal

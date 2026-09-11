@@ -25,6 +25,17 @@
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
   {
+    id: "importar-pessoas",
+    route: "rh-funcionarios",
+    target: '[data-tour="importar-pessoas"]',
+    text: "Novo: dá pra cadastrar gente por planilha. Você vê o que vai ser criado e o que vai ser alterado antes de confirmar — nada é gravado às cegas.",
+    version: "5.6.0",
+  },
+  // 5.6.0 (comunicado alcança ficha sem login) — decisão de PULAR o
+  // spotlight: a mudança não tem elemento próprio na tela pra apontar. O que
+  // muda é o NÚMERO da prévia de alcance, que a tela de Comunicação já mostra
+  // por conta própria antes de enviar. Vai pelo changelog, com `roles` de RH.
+  {
     id: "programas-novo",
     route: "rh-bem-estar",
     target: '[data-tour="programas-novo"]',

@@ -186,19 +186,21 @@ export function useRHComunicacao({ userId } = {}) {
   // Assinantes do comunicado: os mesmos destinatários, com nome e e-mail. Sai
   // da lista de leitura (gravada no envio) e não de um recálculo de escopo —
   // quem assina é quem recebeu, não quem estaria no escopo hoje.
+  // Sai da mesma RPC da lista de leitura, e não de um select direto com
+  // `profiles(name, email)`: desde 11/09/2026 o destinatário pode ser uma
+  // ficha SEM conta, e nesse caso não há profile pra fazer join — o nome e o
+  // e-mail vêm do colaborador (ou do e-mail congelado no envio). O select
+  // antigo devolvia essas pessoas em branco e elas sumiam da lista.
   const carregarAssinantes = useCallback(async (comunicadoId) => {
-    const { data, error } = await supabase
-      .from("rh_comunicado_leituras")
-      .select("profiles(name, email)")
-      .eq("comunicado_id", comunicadoId);
+    const { data, error } = await supabase.rpc("comunicado_leituras", { p_comunicado_id: comunicadoId });
     if (error) throw new Error(error.message);
     const vistos = new Set();
     const out = [];
     for (const r of data || []) {
-      const email = (r.profiles?.email || "").trim();
+      const email = (r.email || "").trim();
       if (!email || vistos.has(email.toLowerCase())) continue;
       vistos.add(email.toLowerCase());
-      out.push({ name: r.profiles?.name || email, email });
+      out.push({ name: r.nome || email, email });
     }
     return out;
   }, []);
@@ -207,7 +209,13 @@ export function useRHComunicacao({ userId } = {}) {
     const { data, error } = await supabase.rpc("comunicado_leituras", { p_comunicado_id: comunicadoId });
     if (error) throw new Error(error.message);
     return (data || []).map(r => ({
+      // `chave` em vez de só `profileId`: ficha sem conta tem profile_id
+      // nulo, e usar isso como key de lista faria todas elas colidirem numa
+      // key só.
+      chave: r.profile_id || r.colaborador_id,
       profileId: r.profile_id,
+      colaboradorId: r.colaborador_id,
+      email: r.email,
       nome: r.nome,
       confirmadoEm: r.confirmado_em,
       origem: r.origem,

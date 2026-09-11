@@ -38,6 +38,23 @@
 
 export const CHANGELOG = [
   {
+    version: "5.6.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Funcionários ganhou \"Importar pessoas\": você sobe uma planilha com e-mail, departamento e nome, vê exatamente o que vai ser criado e o que vai ser alterado, e só então confirma. Quem já existe é encontrado pelo e-mail e atualizado.",
+        roles: ["rh", "gerente_rh", "admin"],
+        toast: true,
+      },
+      {
+        kind: "novo",
+        text: "Comunicado agora alcança também quem está cadastrado como ficha, sem login na plataforma — o e-mail vai para o endereço da ficha, e a confirmação de leitura funciona pelo link, sem precisar entrar. Quem não tem conta não recebe pelo sino, e isso aparece dito na lista de leitura.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+    ],
+  },
+
+  {
     version: "5.5.1",
     items: [
       {
