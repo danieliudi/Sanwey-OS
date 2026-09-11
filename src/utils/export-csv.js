@@ -328,7 +328,9 @@ export function exportDeliverablesToCSV(deliverables, { stages, filename } = {})
 }
 
 export function exportMarketingTasksToCSV(tasks, { stages, usersById, campaignsById, priorityLabels, filename } = {}) {
-  const header = ["Título", "Campanha", "Responsáveis", "Prioridade", "Prazo", "Etapa", "Empresas", "Criado em"];
+  // "Arquivada em" existe porque arquivar tira do quadro e NÃO tira do
+  // relatório — é o que separa arquivo de perda. Vazia = tarefa ativa.
+  const header = ["Título", "Campanha", "Responsáveis", "Prioridade", "Prazo", "Etapa", "Empresas", "Criado em", "Arquivada em"];
   const rows = (tasks || []).map(t => [
     t.title || "",
     (t.campaignId && campaignsById?.get(t.campaignId)?.name) || "",
@@ -338,6 +340,7 @@ export function exportMarketingTasksToCSV(tasks, { stages, usersById, campaignsB
     (stages || []).find(s => s.id === t.stage)?.name || t.stage || "",
     (t.companyIds || []).map(id => COMPANIES[id]?.short || id).join(", "),
     formatDate(t.createdAt),
+    formatDate(t.archivedAt),
   ]);
   const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
   const today = new Date().toISOString().slice(0, 10);

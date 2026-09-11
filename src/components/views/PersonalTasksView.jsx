@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown, Download, AlertCircle, Lock, Zap } from "lucide-react";
+import { List, LayoutGrid, Calendar, Plus, Check, CheckCircle2, ListChecks, Pencil, Settings2, ArrowUpDown, Download, AlertCircle, Lock, Zap } from "lucide-react";
 import { AppToast } from "../shared/AppToast";
 import { usePersonalTasks } from "../../hooks/use-personal-tasks";
 import { exportPersonalTasksToCSV } from "../../utils/export-csv";
@@ -518,6 +518,12 @@ export function PersonalTasksView({ currentUser }) {
   const [dateBucketFilter, setDateBucketFilter] = useState("");
   const [search, setSearch] = useState("");
   const [listSort, setListSort] = useState("recent");
+  // Decidido com o Daniel em 10/09/2026: o quadro escondia nada e a bolinha
+  // do menu contava só as não concluídas — 8 na bolinha contra 12 no quadro,
+  // e ele perguntou por quê. Agora o padrão do quadro é o mesmo recorte da
+  // bolinha (as abertas), e as terminais ficam atrás deste botão. Não
+  // persiste: abrir na segunda-feira já vendo tudo é o comportamento óbvio.
+  const [mostrarConcluidas, setMostrarConcluidas] = useState(false);
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
   const [editingFieldsStageKey, setEditingFieldsStageKey] = useState(null);
   const [moveError, setMoveError] = useState(null);
@@ -554,9 +560,21 @@ export function PersonalTasksView({ currentUser }) {
     });
   }, [tasks, search, activeTags, activePriorities, dateBucketFilter]);
 
+  // Recorte das terminais, separado do resto pelo mesmo motivo do
+  // arquivamento em Tarefas de Marketing: o CSV e a Agenda continuam vendo
+  // tudo, só o quadro é que deixa de mostrar.
+  const visibleTasks = useMemo(
+    () => mostrarConcluidas ? filteredTasks : filteredTasks.filter(t => !isTaskDone(t.status)),
+    [filteredTasks, mostrarConcluidas]
+  );
+  const concluidasEscondidas = useMemo(
+    () => filteredTasks.filter(t => isTaskDone(t.status)).length,
+    [filteredTasks]
+  );
+
   const sortedFilteredTasks = useMemo(
-    () => sortKanbanItems(filteredTasks, listSort, personalSortGetters),
-    [filteredTasks, listSort]
+    () => sortKanbanItems(visibleTasks, listSort, personalSortGetters),
+    [visibleTasks, listSort]
   );
 
   const buckets = useMemo(() => {
@@ -764,6 +782,9 @@ export function PersonalTasksView({ currentUser }) {
               <ViewToggleButton active={viewMode === "automacoes"} onClick={() => setViewMode("automacoes")} icon={Zap} label="Automações" iconOnlyMobile dataTour="lista-pessoal-automacoes" />
             </div>
             <button
+              // CSV com `filteredTasks`, não `visibleTasks`: concluída sai
+              // da tela, nunca do relatório. Mesmo princípio do
+              // arquivamento em Tarefas de Marketing.
               onClick={() => exportPersonalTasksToCSV(filteredTasks, { columns })}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
               style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
@@ -825,6 +846,28 @@ export function PersonalTasksView({ currentUser }) {
             <PriorityFilterBar activePriorities={activePriorities} onToggle={togglePriorityFilter} />
           </div>
           <TagFilterBar allTags={allTags} activeTags={activeTags} onToggle={toggleTagFilter} />
+
+          {/* FORA do bloco condicional de viewMode (regra 11): o controle não
+              pode aparecer e sumir ao trocar de visão, senão empurra o que
+              está ao lado. Declara quantas escondeu — número que descarta
+              linha diz quantas descartou (regra 14). */}
+          {concluidasEscondidas > 0 && (
+            <div className="flex items-center gap-2 flex-wrap mb-2" style={{
+              fontSize: 12, padding: "6px 10px", borderRadius: 8,
+              background: "var(--surface-alt)", border: "1px solid var(--border)", color: "var(--text-dim)",
+            }}>
+              <CheckCircle2 size={13} style={{ flexShrink: 0, opacity: 0.7 }} />
+              <span>
+                {mostrarConcluidas
+                  ? <>Mostrando também <strong>{concluidasEscondidas}</strong> {concluidasEscondidas === 1 ? "tarefa concluída" : "tarefas concluídas"}</>
+                  : <><strong>{concluidasEscondidas}</strong> {concluidasEscondidas === 1 ? "tarefa concluída" : "tarefas concluídas"} fora do quadro · continuam no CSV</>}
+              </span>
+              <button onClick={() => setMostrarConcluidas(v => !v)}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--accent)", fontWeight: 550, fontSize: 12 }}>
+                {mostrarConcluidas ? "Esconder concluídas" : "Mostrar concluídas"}
+              </button>
+            </div>
+          )}
           {viewMode === "list" ? (
             <div>
               <div className="flex justify-end mb-3">
@@ -841,13 +884,13 @@ export function PersonalTasksView({ currentUser }) {
             </div>
           ) : viewMode === "kanban" ? (
             <TaskKanbanBoard
-              tasks={filteredTasks} columns={columns} onMove={handleMove} onDelete={deleteTask}
+              tasks={visibleTasks} columns={columns} onMove={handleMove} onDelete={deleteTask}
               onCreate={() => setShowCreate(true)} onOpen={handleOpen}
               onEditStageFields={setEditingFieldsStageKey}
               blockedIds={blockedTaskIds}
             />
           ) : (
-            <PersonalTaskAgendaView tasks={filteredTasks} onOpen={handleOpen} />
+            <PersonalTaskAgendaView tasks={visibleTasks} onOpen={handleOpen} />
           )}
         </>
       )}

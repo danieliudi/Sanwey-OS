@@ -125,6 +125,11 @@ function ApplyEventChecklistButton({ campaign, currentUser }) {
   // o drawer, sem precisar de flag própria. `loading` trava o clique
   // enquanto essa checagem ainda não voltou do banco (senão dava pra clicar
   // duas vezes antes do fetch inicial confirmar que já tinha sido aplicado).
+  //
+  // NÃO filtrar arquivadas aqui. Parece "limpeza" ignorar card arquivado nesta
+  // checagem, e seria um bug sério: quem arquivasse o checklist da feira
+  // passada faria o botão achar que nunca foi aplicado, e um clique recriaria
+  // as 28 tarefas duplicadas.
   const alreadyApplied = tasks.some(t =>
     EVENT_CHECKLIST_TEMPLATE.some(seg => seg.segment === t.title)
   );

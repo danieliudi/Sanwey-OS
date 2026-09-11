@@ -485,6 +485,10 @@ export function PurchaseRequestDetailDrawer({
     .filter(s => s.id !== "solicitado" && s.id !== "cotacao" && s.id !== purchase.stage && (s.id !== "pago" || invoiceUrl))
     .map(s => ({ ...s, color: STAGE_COLORS[s.id] || "var(--text-dim)" }));
   const quoteOptions = Array.isArray(purchase.quoteOptions) ? purchase.quoteOptions : [];
+  // Na Cotação, se já há opções salvas, exige vencedor antes de aprovar —
+  // mesma regra do botão "Aprovar" da coluna direita (declarado cedo pra o
+  // CTA do aviso de Execução poder reutilizar sem TDZ).
+  const canApproveNow = isCotacao ? (quoteOptions.length === 0 || winnerIndex !== "") : true;
 
   // Compras não usa rh_pipeline_stage_fields (PURCHASE_STAGES é hardcoded —
   // exceção deliberada, regra 2 do CLAUDE.md), então não há de onde derivar
@@ -730,8 +734,36 @@ export function PurchaseRequestDetailDrawer({
             )}
           </div>
           {!canEditFields && (
-            <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
-              Disponível após a aprovação da solicitação.
+            <div
+              className="text-xs px-3 py-2 rounded-lg mb-3 flex flex-wrap items-center gap-2"
+              style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}
+            >
+              <span style={{ flex: "1 1 12rem", lineHeight: 1.45 }}>
+                {canApprove
+                  ? (isCotacao && quoteOptions.length > 0 && winnerIndex === ""
+                    ? "Pra liberar estes campos, escolha o fornecedor vencedor em Decisão (à direita) e aprove."
+                    : "Pra liberar estes campos, aprove a solicitação — botão Aprovar à direita, ou use o atalho abaixo.")
+                  : "Pra liberar estes campos, alguém de marketing precisa aprovar a solicitação na coluna da direita (Decisão)."}
+              </span>
+              {canApprove && isPending && (
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={actionLoading || !canApproveNow}
+                  title={!canApproveNow ? "Escolha o fornecedor vencedor em Decisão antes de aprovar" : undefined}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
+                  style={{
+                    background: "var(--success-bg)",
+                    color: "var(--success)",
+                    border: "none",
+                    cursor: (actionLoading || !canApproveNow) ? "default" : "pointer",
+                    opacity: (actionLoading || !canApproveNow) ? 0.6 : 1,
+                  }}
+                >
+                  <CheckCircle2 size={13} />
+                  {actionLoading ? "Aprovando…" : "Aprovar agora"}
+                </button>
+              )}
             </div>
           )}
           <fieldset disabled={!canEditFields} style={{ border: "none", padding: 0, margin: 0, opacity: canEditFields ? 1 : 0.55 }}>
@@ -872,8 +904,6 @@ export function PurchaseRequestDetailDrawer({
       )}
     </>
   );
-
-  const canApproveNow = isCotacao ? (quoteOptions.length === 0 || winnerIndex !== "") : true;
 
   const right = (
     <>

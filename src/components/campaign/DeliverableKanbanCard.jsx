@@ -1,6 +1,6 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Star, Calendar, MessageCircle } from "lucide-react";
-import { DELIVERABLE_STAGES, CHANNEL_COLORS } from "../../constants/marketing-pipelines";
+import { Star, Calendar, MessageCircle, Archive } from "lucide-react";
+import { DELIVERABLE_STAGES, CHANNEL_COLORS, filterDeliverableMoveTargets } from "../../constants/marketing-pipelines";
 import { formatDateBR, formatDateShortBR, daysSince } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
@@ -28,7 +28,7 @@ function deadlineTone(deadline) {
 function DeliverableKanbanCardImpl({
   item, users, onClick, onDragStart, onDragEnd,
   stages, onMoveToStage, onDeleteCard, onDuplicateCard, canWrite, onToggleStar, completeness, unread,
-  campaignsById, showMoveOptions = true,
+  campaignsById, showMoveOptions = true, isAgenciaWriter = false, onArchiveCard,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
@@ -44,7 +44,13 @@ function DeliverableKanbanCardImpl({
   const stage       = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
   const daysInStage = daysFromDate(item.stageChangedAt);
   const isTerminal  = Boolean(stage?.terminal);
-  const accentOp    = terminalAccentOpacity(isTerminal);
+  // Card arquivado recebe o MESMO tratamento visual de "assentado" que a etapa
+  // terminal já tem — o helper existe pra isso e o comentário dele
+  // (terminal-card-style.js:1-5) já dizia que terminal "lê como arquivado".
+  // Em Entregas `item.archivedAt` é undefined, então isSettled === isTerminal
+  // e o pixel continua idêntico ao de hoje.
+  const isSettled   = isTerminal || Boolean(item.archivedAt);
+  const accentOp    = terminalAccentOpacity(isSettled);
   const campaign    = item.campaignId ? campaignsById?.get(item.campaignId) : null;
   // Só "alta" desenha algo. "Média" é o padrão de quem abre a solicitação e
   // não carrega informação nenhuma; "baixa" idem, no outro sentido — um pill
@@ -54,8 +60,13 @@ function DeliverableKanbanCardImpl({
   // o card então só oferece excluir, com um ícone de lixeira direto no lugar
   // dos "3 pontinhos" (ver MoveStageMenu). O acordeão mobile (sem drag)
   // continua com showMoveOptions=true (default), único jeito de mover lá.
+  // Agência: só Encaminhado/Em Produção (espelha md_update / 20260828b).
   const moveTargets = showMoveOptions
-    ? (stages || DELIVERABLE_STAGES).filter(s => s.id !== item.stage && !s.terminal)
+    ? filterDeliverableMoveTargets(stages || DELIVERABLE_STAGES, {
+      fromStage: item.stage,
+      isAgenciaWriter,
+      includeTerminal: false,
+    })
     : [];
 
   // Comentário não lido vira ponto na quina do avatar (ver AvatarStack). Sem
@@ -80,7 +91,7 @@ function DeliverableKanbanCardImpl({
       onClick={() => { if (!menuOpen) onClick?.(item); }}
       className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
-        background: terminalCardBackground(isTerminal),
+        background: terminalCardBackground(isSettled),
         border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
@@ -123,6 +134,11 @@ function DeliverableKanbanCardImpl({
               Alta
             </StatusChip>
           )}
+          {item.archivedAt && (
+            <StatusChip tone="neutral" size="tiny" icon={Archive} title="Fora do quadro, ainda no CSV">
+              Arquivada
+            </StatusChip>
+          )}
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
           {canWrite && onToggleStar ? (
@@ -139,7 +155,7 @@ function DeliverableKanbanCardImpl({
           ) : (
             item.starred && <Star size={11} fill="var(--amber)" color="var(--amber)" style={{ opacity: accentOp }} />
           )}
-          {canWrite && ((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
+          {canWrite && ((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard || onArchiveCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => {
                 const list = stages || DELIVERABLE_STAGES;
@@ -149,6 +165,8 @@ function DeliverableKanbanCardImpl({
               onMove={onMoveToStage ? (key) => onMoveToStage(item.id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(item.id) : undefined}
               onDuplicate={onDuplicateCard ? () => onDuplicateCard(item.id) : undefined}
+              onArchive={onArchiveCard ? () => onArchiveCard(item.id, !item.archivedAt) : undefined}
+              archiveLabel={item.archivedAt ? "Desarquivar tarefa" : "Arquivar tarefa"}
               onOpenChange={setMenuOpen}
             />
           )}
@@ -156,7 +174,7 @@ function DeliverableKanbanCardImpl({
       </div>
 
       {/* Título — linha inteira, o elemento mais forte do card */}
-      <div className="font-semibold text-[13px] leading-snug line-clamp-2 mt-0.5" style={{ color: terminalTextColor(isTerminal) }}>
+      <div className="font-semibold text-[13px] leading-snug line-clamp-2 mt-0.5" style={{ color: terminalTextColor(isSettled) }}>
         {item.title}
       </div>
 

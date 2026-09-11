@@ -68,6 +68,18 @@ export async function montarDados() {
   const despesas    = paraQA(demo.generateDemoExpenses());
   const solicit     = paraQA(demo.generateDemoRequests());
   const colabs      = paraQA(demo.generateDemoColaboradores());
+  // Hierarquia de gestor (10/09/2026): sem isto, a varredura com dados
+  // abriria Funcionários com o campo Gestor vazio em todo mundo e o bloco
+  // "Lidera N pessoas" nunca renderizaria — a tela montaria sem exercitar
+  // nada do que foi construído. Primeiro colaborador vira o topo; os três
+  // seguintes reportam a ele; o quinto reporta ao segundo, pra existir uma
+  // cadeia de dois níveis e a trava de descendentes ter o que barrar.
+  if (colabs.length >= 5) {
+    colabs[1].gestor_id = colabs[0].id;
+    colabs[2].gestor_id = colabs[0].id;
+    colabs[3].gestor_id = colabs[0].id;
+    colabs[4].gestor_id = colabs[1].id;
+  }
   const vagas       = paraQA(demo.generateDemoVagas());
   const candidatos  = paraQA(demo.generateDemoCandidatos());
   const leads       = leadsMod.generateLeadsForAllCompanies();

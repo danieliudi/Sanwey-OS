@@ -34,6 +34,7 @@ import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
+import { descendentesDe, equipeDe, podeSerGestor } from "../../utils/rh-hierarquia";
 import { useRHBeneficios } from "../../hooks/use-rh-beneficios";
 import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
 import { useColaboradorConnections } from "../../hooks/use-colaborador-connections";
@@ -872,7 +873,7 @@ function StatusBadge({ statusId }) {
 // ── Employee Detail Modal ─────────────────────────────────────────────────────
 
 function EmployeeDetailModal({
-  user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, onClose, onDelete, currentUser,
+  user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, colaboradores = [], onClose, onDelete, currentUser,
   onOpenAvaliacao, onOpenMovimentacao, onOpenTreinamento, onOpenFerias,
 }) {
   const [activeTab, setActiveTab] = useState("dados");
@@ -889,6 +890,7 @@ function EmployeeDetailModal({
     admission_date:  user.admission_date  ? user.admission_date.slice(0, 10) : "",
     employee_status: user.employee_status || "ativo",
     salary:          user.salary          != null ? String(user.salary) : "",
+    gestor_id:       colaboradorRow?.gestorId || "",
     aso_vencimento:  colaboradorRow?.asoVencimento || "",
     contrato_fim:    colaboradorRow?.contratoFim || "",
     aprendiz_inicio: colaboradorRow?.aprendizInicio || "",
@@ -908,6 +910,54 @@ function EmployeeDetailModal({
       : cargoTemplates;
     return [...base].sort((a, b) => a.name.localeCompare(b.name));
   }, [cargoTemplates, form.department]);
+
+  // Opções de Gestor. Férias e afastamento continuam na lista de propósito —
+  // quem está de férias segue sendo gestor de alguém; só desligado sai. (O
+  // mockup dizia "ativos"; corrigido aqui pro que faz sentido na operação,
+  // decisão registrada no commit em vez de interpretada em silêncio.)
+  //
+  // A própria pessoa e os descendentes aparecem DESABILITADOS com o motivo,
+  // em vez de sumirem — quem procura um nome que não está na lista precisa
+  // saber por quê. A trava de verdade é o trigger no banco.
+  const gestorOptions = useMemo(() => {
+    const eu = colaboradorRow?.id;
+    const descendentes = descendentesDe(colaboradores, eu);
+    return colaboradores
+      .filter(podeSerGestor)
+      .map((c) => ({
+        id: c.id,
+        nome: c.fullName,
+        cargo: c.jobTitle || "",
+        bloqueio: c.id === eu
+          ? "é a própria pessoa"
+          : descendentes.has(c.id)
+            ? "já reporta a esta pessoa"
+            : null,
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [colaboradores, colaboradorRow?.id]);
+
+  // Gestor que foi DESLIGADO sai de `gestorOptions` — e um <select> controlado
+  // com value sem <option> correspondente renderiza EM BRANCO, enquanto a
+  // leitura logo ao lado mostra o nome. A tela afirmaria duas coisas opostas,
+  // e salvar preservaria o vínculo que o RH acabou de ver como vazio. Mesma
+  // saída que o campo Cargo já usa pro cargo fora do catálogo, 40 linhas acima.
+  const gestorForaDaLista = useMemo(() => {
+    if (!form.gestor_id) return null;
+    if (gestorOptions.some((g) => g.id === form.gestor_id)) return null;
+    const c = colaboradores.find((x) => x.id === form.gestor_id);
+    return c ? { id: c.id, nome: c.fullName } : null;
+  }, [form.gestor_id, gestorOptions, colaboradores]);
+
+  // O recíproco do campo — ninguém digita "quem eu lidero", isso se deduz.
+  const liderados = useMemo(
+    () => equipeDe(colaboradores, colaboradorRow?.id),
+    [colaboradores, colaboradorRow?.id]
+  );
+  const gestorAtual = useMemo(
+    () => colaboradores.find((c) => c.id === colaboradorRow?.gestorId) || null,
+    [colaboradores, colaboradorRow?.gestorId]
+  );
 
   // Snapshot dos valores originais — usado só pra não travar retroativamente
   // um campo que esse registro já tinha vazio antes de virar obrigatório
@@ -1070,6 +1120,7 @@ function EmployeeDetailModal({
         } : {};
         await onUpdateColaborador(colaboradorRow.id, {
           frente: form.frente || null,
+          gestorId: form.gestor_id || null,
           asoVencimento: form.aso_vencimento || null,
           contratoFim: form.contrato_fim || null,
           aprendizInicio: form.aprendiz_inicio || null,
@@ -1145,12 +1196,20 @@ function EmployeeDetailModal({
       .join("")
       .toUpperCase();
 
+  // Conexões fica FORA pro Departamento Pessoal: a RPC que alimenta a aba
+  // (get_colaborador_connections) devolve avaliações com nota final no mesmo
+  // payload, e Avaliação de Desempenho está explicitamente fora do escopo do
+  // DP. Ela não foi afrouxada de propósito — então, sem esconder a aba, o DP
+  // clicaria e receberia "Sem permissão pra ver conexões deste colaborador",
+  // que é erro duro na cara do usuário por uma regra que está certa.
+  const ehDP = (currentUser?.roles || []).includes("dp")
+    && !(currentUser?.roles || []).some(r => ["rh", "gerente_rh", "admin", "diretoria"].includes(r));
   const tabs = [
     { id: "dados", label: "Dados" },
     { id: "beneficios", label: "Benefícios" },
     { id: "assinatura", label: "Assinatura" },
     { id: "solicitacoes", label: "Solicitações" },
-    { id: "conexoes", label: "Conexões" },
+    ...(ehDP ? [] : [{ id: "conexoes", label: "Conexões" }]),
   ];
 
   return (
@@ -1271,6 +1330,33 @@ function EmployeeDetailModal({
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label style={labelSt}>Gestor</label>
+                  <select
+                    value={form.gestor_id}
+                    onChange={(e) => set("gestor_id", e.target.value)}
+                    className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+                    style={inputSt}
+                    disabled={!colaboradorRow}
+                  >
+                    <option value="">Sem gestor definido</option>
+                    {gestorForaDaLista && (
+                      <option value={gestorForaDaLista.id}>{gestorForaDaLista.nome} — desligado</option>
+                    )}
+                    {gestorOptions.map((g) => (
+                      <option key={g.id} value={g.id} disabled={!!g.bloqueio}>
+                        {g.bloqueio
+                          ? `${g.nome} — ${g.bloqueio}`
+                          : g.cargo ? `${g.nome} · ${g.cargo}` : g.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
+                    {colaboradorRow
+                      ? "Opcional — quem responde à presidência fica sem gestor."
+                      : "Disponível depois que a ficha de RH deste usuário existir."}
+                  </div>
                 </div>
                 <div>
                   <label style={labelSt}>Tipo de Contrato *</label>
@@ -1416,6 +1502,7 @@ function EmployeeDetailModal({
                 {[
                   { label: "Cargo",            value: user.job_title || "—" },
                   { label: "Departamento",      value: user.department || "—" },
+                  { label: "Gestor",            value: gestorAtual?.fullName || "Sem gestor definido" },
                   { label: "Tipo de Contrato",  value: contractLabel(user.contract_type) },
                   { label: "Data de Admissão",  value: fmt(user.admission_date) },
                   { label: "Status",            value: statusInfo(user.employee_status).label },
@@ -1432,6 +1519,24 @@ function EmployeeDetailModal({
                     <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {!editing && liderados.length > 0 && (
+              <div style={{ marginTop: 16, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ ...labelSt, marginBottom: 8 }}>
+                  Lidera {liderados.length} {liderados.length === 1 ? "pessoa" : "pessoas"}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {liderados.map((c) => (
+                    <span
+                      key={c.id}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 10px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 12, color: "var(--text)" }}
+                    >
+                      {c.fullName}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1566,6 +1671,7 @@ export function RHFuncionariosView({
   const [filterFrente, setFilterFrente] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterContract, setFilterContract] = useState("all");
+  const [soMinhaEquipe, setSoMinhaEquipe] = useState(false);
   const [selected, setSelected]     = useState(null);
 
   // Vem do Cmd-K (App.jsx) — funcionário buscado já veio de `users`, que é
@@ -1601,9 +1707,16 @@ export function RHFuncionariosView({
   // ordem: se a conta falhar por permissão, nada mais é tocado — nunca
   // apaga o registro de RH e deixa a conta viva por trás sem explicar por quê.
   const handleDeleteRow = useCallback((id, name, hasAccess, colaboradorId) => {
-    const message = hasAccess
+    const base = hasAccess
       ? `Excluir ${name || "este funcionário"}? Isso remove o registro de RH E a conta de acesso à plataforma — a pessoa não vai mais conseguir entrar. Não pode ser desfeito.`
       : `Excluir o registro de ${name || "este funcionário"}? Não tem login vinculado — a exclusão é definitiva e não pode ser desfeita.`;
+    // O `on delete set null` da migration do gestor deixa os liderados sem
+    // gestor em silêncio. Mesmo princípio já usado nos modais de Fornecedores
+    // (regra 1): o texto reflete o que de fato se perde nesta página.
+    const equipe = equipeDe(colaboradores, hasAccess ? colaboradorId : id);
+    const message = equipe.length > 0
+      ? `${base}\n\n${equipe.length} ${equipe.length === 1 ? "pessoa fica" : "pessoas ficam"} sem gestor: ${equipe.map((c) => c.fullName).join(", ")}.`
+      : base;
     setConfirmDelete({
       message,
       onConfirm: async () => {
@@ -1622,7 +1735,7 @@ export function RHFuncionariosView({
         }
       },
     });
-  }, [deleteColaborador, onDeleteUser]);
+  }, [deleteColaborador, onDeleteUser, colaboradores]);
 
   // rh_colaboradores agora tem uma linha sincronizada pra cada profile (ver
   // sync_profile_to_colaborador), então quem já aparece em `users` também
@@ -1632,6 +1745,20 @@ export function RHFuncionariosView({
   const colaboradoresSemAcesso = useMemo(
     () => colaboradores.filter((c) => !c.profileId),
     [colaboradores]
+  );
+
+  // Declarados AQUI, acima do useMemo de `filtered` que os usa no array de
+  // dependência — regra 3.2 do CLAUDE.md: const usada em dependência de um
+  // useMemo declarado antes dela compila sem ruído e mata a tela em produção.
+  const meuColaboradorId = useMemo(
+    () => colaboradores.find((c) => c.profileId === currentUser?.id)?.id || null,
+    [colaboradores, currentUser?.id]
+  );
+  // O botão "Minha equipe" só existe pra quem de fato lidera alguém — filtro
+  // que sempre devolve lista vazia é controle morto na barra.
+  const lideroAlguem = useMemo(
+    () => equipeDe(colaboradores, meuColaboradorId).length > 0,
+    [colaboradores, meuColaboradorId]
   );
 
   // Visitante (role "agencia") não é funcionário — não deve ser listado nem
@@ -1659,9 +1786,16 @@ export function RHFuncionariosView({
   // Lista única com todo mundo — colaborador sem login carrega _hasAccess:
   // false e um selo inline na tabela, em vez de uma seção separada.
   const unifiedRows = useMemo(() => {
+    // O gestor vive em rh_colaboradores, e metade das linhas da tabela vem de
+    // `profiles` — sem este índice, a linha de quem tem login não saberia
+    // quem é o gestor dela.
+    const colabPorProfile = new Map(
+      colaboradores.filter((c) => c.profileId).map((c) => [c.profileId, c])
+    );
     const withAccess = employeeUsers.map((u) => ({
       _hasAccess: true,
       _raw: u,
+      _gestorId: colabPorProfile.get(u.id)?.gestorId || null,
       id: u.id,
       name: u.name,
       email: u.email,
@@ -1675,6 +1809,7 @@ export function RHFuncionariosView({
     const withoutAccess = colaboradoresSemAcesso.map((c) => ({
       _hasAccess: false,
       _raw: c,
+      _gestorId: c.gestorId || null,
       id: c.id,
       name: c.fullName,
       email: c.email,
@@ -1686,7 +1821,7 @@ export function RHFuncionariosView({
       admission_date: c.admissionDate,
     }));
     return [...withAccess, ...withoutAccess];
-  }, [employeeUsers, colaboradoresSemAcesso]);
+  }, [employeeUsers, colaboradoresSemAcesso, colaboradores]);
 
   const filtered = useMemo(() => {
     const arr = unifiedRows.filter((u) => {
@@ -1702,6 +1837,9 @@ export function RHFuncionariosView({
       if (filterFrente !== "all" && u.frente !== filterFrente) return false;
       if (filterStatus !== "all" && u.employee_status !== filterStatus) return false;
       if (filterContract !== "all" && u.contract_type !== filterContract) return false;
+      // Sem `meuColaboradorId`, `null !== null` é false e a linha PASSARIA —
+      // o filtro viraria "quem não tem gestor", ou seja, a lista inteira.
+      if (soMinhaEquipe && (!meuColaboradorId || u._gestorId !== meuColaboradorId)) return false;
       return true;
     });
     arr.sort((a, b) => {
@@ -1712,11 +1850,11 @@ export function RHFuncionariosView({
       return 0;
     });
     return arr;
-  }, [unifiedRows, search, filterDept, filterFrente, filterStatus, filterContract, sortCol, sortDir]);
+  }, [unifiedRows, search, filterDept, filterFrente, filterStatus, filterContract, soMinhaEquipe, meuColaboradorId, sortCol, sortDir]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, filterDept, filterFrente, filterStatus, filterContract]);
+  }, [search, filterDept, filterFrente, filterStatus, filterContract, soMinhaEquipe]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -1828,6 +1966,7 @@ export function RHFuncionariosView({
     setFilterFrente("all");
     setFilterStatus("all");
     setFilterContract("all");
+    setSoMinhaEquipe(false);
   };
 
   const selectSt = {
@@ -2046,6 +2185,23 @@ export function RHFuncionariosView({
             <option key={c.id} value={c.id}>{c.label}</option>
           ))}
         </select>
+
+        {lideroAlguem && (
+          <button
+            type="button"
+            onClick={() => setSoMinhaEquipe((v) => !v)}
+            aria-pressed={soMinhaEquipe}
+            className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+            style={{
+              cursor: "pointer",
+              background: soMinhaEquipe ? "var(--accent)" : "var(--surface)",
+              borderColor: soMinhaEquipe ? "var(--accent)" : "var(--border-strong)",
+              color: soMinhaEquipe ? "var(--on-accent)" : "var(--text-dim)",
+            }}
+          >
+            Minha equipe
+          </button>
+        )}
       </div>
 
       {/* Barra de ação em massa */}
@@ -2313,6 +2469,12 @@ export function RHFuncionariosView({
       {/* Detail Modal */}
       {selected && (
         <EmployeeDetailModal
+          // O `form` do modal é useState inicializado UMA vez. O deep link do
+          // Cmd-K abre a ficha antes de `colaboradores` terminar de carregar,
+          // então sem esta key o form nasceria com gestor/ASO/contrato vazios
+          // e um "Salvar" gravaria null por cima do que estava lá. Trocar a
+          // key remonta o modal quando a linha de RH finalmente chega.
+          key={`${selected.id}:${colaboradores.find((c) => c.profileId === selected.id)?.id || "sem-ficha"}`}
           user={selected}
           leads={leads}
           canWrite={canWrite}
@@ -2322,6 +2484,7 @@ export function RHFuncionariosView({
           }}
           colaboradorRow={colaboradores.find((c) => c.profileId === selected.id)}
           onUpdateColaborador={updateColaborador}
+          colaboradores={colaboradores}
           onClose={() => setSelected(null)}
           onDelete={canWrite ? () => handleDeleteRow(selected.id, selected.name, true, colaboradores.find((c) => c.profileId === selected.id)?.id) : undefined}
           currentUser={currentUser}
@@ -2334,6 +2497,7 @@ export function RHFuncionariosView({
 
       {novoColaboradorOpen && (
         <NovoColaboradorModal
+          colaboradores={colaboradores}
           currentUser={currentUser}
           onSave={createColaborador}
           onClose={() => setNovoColaboradorOpen(false)}
@@ -2342,6 +2506,7 @@ export function RHFuncionariosView({
 
       {editingColaborador && (
         <NovoColaboradorModal
+          colaboradores={colaboradores}
           currentUser={currentUser}
           initialData={editingColaborador}
           onSave={(patch) => updateColaborador(editingColaborador.id, patch)}

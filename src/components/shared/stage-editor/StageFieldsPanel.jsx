@@ -520,17 +520,50 @@ export function StageFieldsPanel({
       await fn();
       if (onRefetch) await onRefetch();
     } catch (e) {
-      setOpError(e.message || "Erro ao salvar. Verifique a conexão.");
+      // Rede de segurança pro caso que a checagem antes do envio não cobre:
+      // duas abas criando o mesmo campo ao mesmo tempo. (Renomear um campo
+      // existente NÃO passa por aqui — `mergePatch` preserva o fieldKey
+      // original e nunca o recalcula a partir do label novo, então renomear
+      // pra um nome que colide não viola unicidade nenhuma. Achado do QA.)
+      // Sem isto, o usuário via a mensagem crua do Postgres com o nome da
+      // constraint.
+      const msg = e?.message || "";
+      setOpError(
+        /duplicate key value|unique constraint/i.test(msg)
+          ? "Já existe um campo com esse nome nesta etapa. Use outro nome."
+          : msg || "Erro ao salvar. Verifique a conexão."
+      );
     } finally {
       setBusy(false);
     }
   };
 
-  const handleAdd = ({ fieldType, label, required, options, validationRule }) =>
-    run(async () => {
+  const handleAdd = ({ fieldType, label, required, options, validationRule }) => {
+    // A chave interna do campo vem do NOME (slugifyKey), e o banco tem
+    // unicidade em (domínio, empresa, etapa, chave). Sem esta checagem, criar
+    // um segundo campo com o mesmo nome estourava a mensagem crua do Postgres
+    // na tela — "duplicate key value violates unique constraint
+    // rh_pipeline_stage_fields_domain_company_stage_field_key" (Daniel,
+    // 10/09/2026, ao adicionar um segundo "RG" no Onboarding).
+    //
+    // A colisão também acontece entre nomes VISUALMENTE diferentes, porque o
+    // slug descarta pontuação e corta em 50 caracteres: "RG" e "R.G." viram a
+    // mesma chave. Por isso a mensagem cita o campo que já existe, em vez de
+    // só dizer "nome repetido".
+    const chave = slugifyKey(label);
+    const conflito = fields.find((f) => f.fieldKey === chave);
+    if (conflito) {
+      setOpError(
+        conflito.label === label
+          ? `Já existe um campo "${label}" nesta etapa. Use outro nome.`
+          : `Este nome gera a mesma chave interna do campo "${conflito.label}", que já existe nesta etapa. Use outro nome.`
+      );
+      return;
+    }
+    return run(async () => {
       await onAddField({
         fieldType, label, required, options,
-        fieldKey: slugifyKey(label),
+        fieldKey: chave,
         orderIdx: fields.length,
         placeholder: "", helpText: "",
         visibleIf: null, requiredIf: null,
@@ -538,6 +571,7 @@ export function StageFieldsPanel({
       });
       setAddingType(null);
     });
+  };
 
   const mergePatch = (id, patch) =>
     run(() => {
@@ -648,7 +682,7 @@ export function StageFieldsPanel({
                   return (
                     <button
                       key={t.value}
-                      onClick={() => setAddingType(active ? null : t.value)}
+                      onClick={() => { setOpError(null); setAddingType(active ? null : t.value); }}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg border text-left cursor-pointer shrink-0 transition-colors"
                       style={{
                         fontSize: 12, fontWeight: 600,
@@ -747,7 +781,7 @@ export function StageFieldsPanel({
                       accent={accent}
                       busy={busy}
                       onAdd={handleAdd}
-                      onCancel={() => setAddingType(null)}
+                      onCancel={() => { setOpError(null); setAddingType(null); }}
                     />
                   </div>
                 )}

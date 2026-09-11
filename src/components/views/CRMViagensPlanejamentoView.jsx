@@ -4,6 +4,7 @@ import {
   MapPin,
   Receipt,
   Upload,
+  Camera,
   Sparkles,
   Check,
   X,
@@ -40,6 +41,7 @@ import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { usePlacesAutocomplete } from "../../hooks/use-places-autocomplete";
 import { ClientSelector } from "../client/ClientSelector";
 import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
+import { COMMERCIAL_COST_CENTERS, COMMERCIAL_CREDIT_CARDS, costCenterLabel, creditCardLabel } from "../../constants/cost-centers";
 
 const MAX_FILE_MB = 10;
 const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
@@ -757,16 +759,19 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
 
 // ── Nova despesa ──────────────────────────────────────────────────────────────
 
-function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
+function NovaDespesaModal({ categorias, registros, ai, onSave, onClose, initialDraft = null }) {
   useEscToClose(onClose);
   const { complete, isConfigured, provider } = ai;
   const podeExtrairIA = isConfigured && provider === "anthropic";
 
-  const [categoria, setCategoria] = useState("");
-  const [valor, setValor] = useState("");
-  const [dataDespesa, setDataDespesa] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [registroId, setRegistroId] = useState("");
+  // initialDraft: "Refazer despesa" reaproveita categoria/CDC/cartão/visita da rejeitada.
+  const [categoria, setCategoria] = useState(initialDraft?.categoria || "");
+  const [valor, setValor] = useState(initialDraft?.valor != null ? String(initialDraft.valor) : "");
+  const [dataDespesa, setDataDespesa] = useState(initialDraft?.data_despesa || "");
+  const [descricao, setDescricao] = useState(initialDraft?.descricao || "");
+  const [registroId, setRegistroId] = useState(initialDraft?.registro_id || "");
+  const [centroCusto, setCentroCusto] = useState(initialDraft?.centro_custo || "");
+  const [cartao, setCartao] = useState(initialDraft?.cartao || "");
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -788,8 +793,13 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
       if (!match) throw new Error("A IA não retornou um JSON válido.");
       const data = JSON.parse(match[0]);
       setIaExtraido(data);
+      // Sugestão editável — nunca sobrescreve à força o que o usuário já digitou
+      // depois da leitura, exceto na primeira passagem (campos ainda vazios).
       if (data.valor != null) setValor(String(data.valor));
       if (data.data) setDataDespesa(data.data);
+      if (data.fornecedor) {
+        setDescricao((prev) => prev?.trim() ? prev : String(data.fornecedor));
+      }
       if (data.categoria_sugerida) {
         const found = categorias.find((c) => c.nome.toLowerCase() === String(data.categoria_sugerida).toLowerCase());
         if (found) setCategoria(found.nome);
@@ -801,8 +811,7 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
     }
   };
 
-  const handleFile = (e) => {
-    const f = e.target.files?.[0];
+  const acceptFile = (f) => {
     if (!f) return;
     if (!ACCEPTED_TYPES.includes(f.type)) {
       setFileError("Formato não suportado. Use PDF, JPEG, PNG ou WEBP.");
@@ -819,6 +828,11 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
     if (podeExtrairIA) extrairComIA(f);
   };
 
+  const handleFile = (e) => {
+    acceptFile(e.target.files?.[0]);
+    e.target.value = "";
+  };
+
   const removeFile = () => {
     setFile(null);
     setFileError(null);
@@ -829,6 +843,8 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!categoria) { setError("Selecione a categoria."); return; }
+    if (!centroCusto) { setError("Selecione o centro de custo."); return; }
+    if (!cartao) { setError("Selecione o cartão usado."); return; }
     const valorNum = Number(valor);
     if (!valor || !(valorNum > 0)) { setError("Informe um valor válido."); return; }
     if (!dataDespesa) { setError("Informe a data da despesa."); return; }
@@ -842,6 +858,8 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
           valor: valorNum,
           data_despesa: dataDespesa,
           descricao: descricao.trim() || null,
+          centro_custo: centroCusto,
+          cartao,
           ia_extraido: iaExtraido || {},
         },
         file
@@ -860,7 +878,9 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Receipt size={16} style={{ color: "var(--accent)" }} />
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova despesa</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>
+              {initialDraft ? "Refazer despesa" : "Nova despesa"}
+            </div>
           </div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}>
             <X size={18} />
@@ -871,11 +891,18 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
             <div>
               <label style={LABEL_ST}>Comprovante</label>
               {!file ? (
-                <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, border: "1px dashed var(--border)", borderRadius: 10, padding: "16px 12px", cursor: "pointer", color: "var(--text-dim)", fontSize: 12 }}>
-                  <Upload size={14} />
-                  Selecionar arquivo (PDF, JPEG, PNG ou WEBP · máx. {MAX_FILE_MB}MB)
-                  <input type="file" accept={ACCEPT_ATTR} onChange={handleFile} style={{ display: "none" }} />
-                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, border: "1px dashed var(--border)", borderRadius: 10, padding: "14px 10px", cursor: "pointer", color: "var(--text-dim)", fontSize: 12, textAlign: "center" }}>
+                    <Camera size={16} />
+                    Tirar foto
+                    <input type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: "none" }} />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, border: "1px dashed var(--border)", borderRadius: 10, padding: "14px 10px", cursor: "pointer", color: "var(--text-dim)", fontSize: 12, textAlign: "center" }}>
+                    <Upload size={16} />
+                    Arquivo / galeria
+                    <input type="file" accept={ACCEPT_ATTR} onChange={handleFile} style={{ display: "none" }} />
+                  </label>
+                </div>
               ) : (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px" }}>
                   <span style={{ fontSize: 12, color: "var(--text)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
@@ -892,7 +919,7 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
               {extracting && <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}><Sparkles size={11} /> Lendo comprovante…</div>}
               {iaExtraido && !extracting && (
                 <div style={{ fontSize: 11, color: "var(--accent)", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                  <Sparkles size={11} /> Lido automaticamente — confira antes de salvar
+                  <Sparkles size={11} /> Sugestão preenchida a partir da nota — confira antes de salvar
                 </div>
               )}
               {iaError && (
@@ -924,6 +951,24 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
                 <select value={registroId} onChange={(e) => setRegistroId(e.target.value)} className={INPUT_CLS} style={INPUT_ST}>
                   <option value="">Despesa avulsa</option>
                   {registros.map((r) => <option key={r.id} value={r.id}>{r.destino_planejado} · {formatDateBR(r.data_planejada)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={LABEL_ST}>Centro de custo *</label>
+                <select value={centroCusto} onChange={(e) => setCentroCusto(e.target.value)} className={INPUT_CLS} style={INPUT_ST}>
+                  <option value="">Selecionar</option>
+                  {COMMERCIAL_COST_CENTERS.map((c) => (
+                    <option key={c.code} value={c.code}>{costCenterLabel(c.code)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={LABEL_ST}>Cartão *</label>
+                <select value={cartao} onChange={(e) => setCartao(e.target.value)} className={INPUT_CLS} style={INPUT_ST}>
+                  <option value="">Selecionar</option>
+                  {COMMERCIAL_CREDIT_CARDS.map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -997,6 +1042,11 @@ function DespesaRow({ despesa, onVerComprovante, onRefazer, onOpenDetalhe }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{despesa.categoria}</div>
           <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{formatDateBR(despesa.data_despesa)}{despesa.descricao && ` · ${despesa.descricao}`}</div>
+          {(despesa.centro_custo || despesa.cartao) && (
+            <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>
+              {[despesa.centro_custo ? costCenterLabel(despesa.centro_custo) : null, despesa.cartao ? creditCardLabel(despesa.cartao) : null].filter(Boolean).join(" · ")}
+            </div>
+          )}
         </div>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", whiteSpace: "nowrap" }}>{fmtMoney(despesa.valor)}</div>
         <Badge variant={info.variant}>{info.label}</Badge>
@@ -1087,6 +1137,23 @@ function DespesaDetalheModal({ despesa, onVerComprovante, onRefazer, onClose }) 
             <div style={LABEL_ST}>Valor</div>
             <div style={{ fontSize: 13, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{fmtMoney(despesa.valor)}</div>
           </div>
+
+          {(despesa.centro_custo || despesa.cartao) && (
+            <div style={{ marginBottom: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {despesa.centro_custo && (
+                <div>
+                  <div style={LABEL_ST}>Centro de custo</div>
+                  <div style={{ fontSize: 13, color: "var(--text)" }}>{costCenterLabel(despesa.centro_custo)}</div>
+                </div>
+              )}
+              {despesa.cartao && (
+                <div>
+                  <div style={LABEL_ST}>Cartão</div>
+                  <div style={{ fontSize: 13, color: "var(--text)" }}>{creditCardLabel(despesa.cartao)}</div>
+                </div>
+              )}
+            </div>
+          )}
 
           {despesa.descricao && (
             <div style={{ marginBottom: 20 }}>
@@ -1352,6 +1419,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   const [visitasView, setVisitasView] = useState("lista"); // "lista" | "calendario"
   const [showNovaVisita, setShowNovaVisita] = useState(false);
   const [showNovaDespesa, setShowNovaDespesa] = useState(false);
+  const [despesaDraft, setDespesaDraft] = useState(null);
   const [showNovaPrestacao, setShowNovaPrestacao] = useState(false);
   const [selectedRegistro, setSelectedRegistro] = useState(null);
   const [selectedDespesa, setSelectedDespesa] = useState(null);
@@ -1569,6 +1637,14 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   // antes o vendedor ficava sem saída, só via a etiqueta "Rejeitado".
   const handleRefazerDespesa = async (despesa) => {
     await deleteDespesa(despesa.id);
+    // Reaproveita categoria/CDC/cartão/visita — valor e data ficam pra nova nota.
+    setDespesaDraft({
+      categoria: despesa.categoria || "",
+      registro_id: despesa.registro_id || "",
+      centro_custo: despesa.centro_custo || "",
+      cartao: despesa.cartao || "",
+      descricao: despesa.descricao || "",
+    });
     setShowNovaDespesa(true);
   };
 
@@ -1714,7 +1790,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
             {despesasDoMes.length > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-dim)" }}>· {fmtMoney(totalDespesasDoMes)}</span>}
           </div>
           <button
-            onClick={() => setShowNovaDespesa(true)}
+            onClick={() => { setDespesaDraft(null); setShowNovaDespesa(true); }}
             disabled={loadingCategorias}
             style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: loadingCategorias ? "default" : "pointer", opacity: loadingCategorias ? 0.6 : 1 }}
             onMouseEnter={(e) => { if (!loadingCategorias) e.currentTarget.style.background = "var(--accent-hover)"; }}
@@ -1803,7 +1879,14 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
       )}
 
       {showNovaDespesa && (
-        <NovaDespesaModal categorias={categorias} registros={registrosDoMes} ai={ai} onSave={handleCreateDespesa} onClose={() => setShowNovaDespesa(false)} />
+        <NovaDespesaModal
+          categorias={categorias}
+          registros={registrosDoMes}
+          ai={ai}
+          onSave={handleCreateDespesa}
+          initialDraft={despesaDraft}
+          onClose={() => { setShowNovaDespesa(false); setDespesaDraft(null); }}
+        />
       )}
 
       {selectedRegistro && (

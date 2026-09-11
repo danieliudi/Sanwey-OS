@@ -12,6 +12,19 @@ const ALLOWED_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
+// O bucket rh-curriculos só aceita estes dois MIME. O navegador nem sempre
+// preenche `file.type` (acontece com arquivo vindo de download, de pendrive ou
+// de sistema sem a associação registrada), e aí o upload era recusado pelo
+// Storage ANTES de chegar na RLS — com o candidato já gravado e o currículo
+// não. Daqui pra frente o tipo é derivado da extensão, que é o que o nome do
+// arquivo garante.
+const MIME_POR_EXTENSAO = {
+  pdf:  "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+function extensaoDe(nome) {
+  return (nome || "").split(".").pop()?.toLowerCase() || "";
+}
 const ACCENT = "#CC2936";
 const UNIDADES = [
   { id: "", label: "Não tenho preferência" },
@@ -45,7 +58,10 @@ export default function TalentPoolForm() {
   const handleFile = (f) => {
     setFileError(null);
     if (!f) { setFile(null); return; }
-    if (!ALLOWED_TYPES.includes(f.type)) { setFileError("Envie um arquivo PDF ou DOCX."); return; }
+    // Valida pela EXTENSÃO, não pelo `file.type`: navegador que devolve tipo
+    // vazio fazia a tela recusar um .pdf perfeitamente válido.
+    const ext = extensaoDe(f.name);
+    if (!MIME_POR_EXTENSAO[ext]) { setFileError("Envie um arquivo PDF ou DOCX."); return; }
     if (f.size > MAX_FILE_SIZE) { setFileError("O arquivo deve ter no máximo 10MB."); return; }
     setFile(f);
   };
@@ -69,7 +85,7 @@ export default function TalentPoolForm() {
     setSubmitting(true);
     setError(null);
     try {
-      const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
+      const ext = extensaoDe(file.name) || "pdf";
       // MD-03(b) da auditoria de segurança (20/08/2026): a RPC devolvia o
       // UUID cru do candidato (reaproveitável pra sempre por quem soubesse
       // o e-mail de outra pessoa); agora devolve um path de upload de uso
@@ -87,8 +103,30 @@ export default function TalentPoolForm() {
 
       const { error: uploadErr } = await supabase.storage
         .from("rh-curriculos")
-        .upload(resp.resume_object_path, file, { contentType: file.type, upsert: true });
-      if (uploadErr) throw uploadErr;
+        // contentType pela extensão, nunca `file.type` cru — ver
+        // MIME_POR_EXTENSAO acima.
+        .upload(resp.resume_object_path, file, { contentType: MIME_POR_EXTENSAO[ext] || "application/pdf", upsert: true });
+      if (uploadErr) {
+        // O candidato JÁ foi gravado neste ponto (a RPC roda antes, pra
+        // devolver o caminho de upload de uso único). Sem esta distinção, a
+        // pessoa via "não foi possível enviar" e reenviava, criando token novo
+        // a cada tentativa — enquanto o RH via um candidato sem currículo e
+        // sem nenhuma pista do motivo.
+        //
+        // NÃO passa por friendlyError de propósito, e não embute o erro cru:
+        // (a) friendlyError reconhece "permission denied"/"row-level security"
+        // e devolveria a frase genérica, apagando o que importa aqui — que os
+        // dados FORAM salvos; (b) o próprio arquivo do friendlyError existe pra
+        // não vazar detalhe técnico em formulário público. O detalhe vai pro
+        // console, que é onde se diagnostica.
+        try { console.error("[erro] upload do currículo", uploadErr); } catch { /* noop */ }
+        setError(
+          "Seus dados foram registrados, mas o currículo não subiu. " +
+          "Envie o arquivo para rh@sanwey.com.br que anexamos na sua candidatura."
+        );
+        setSubmitting(false);
+        return;
+      }
 
       setDone(true);
     } catch (err) {

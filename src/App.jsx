@@ -9,7 +9,7 @@ import {
   FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks, Leaf,
   FlaskConical, PackageSearch, ClipboardList, Bug, BookOpen, Newspaper,
 } from "lucide-react";
-import { supabase } from "./lib/supabase";
+import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { usePipelines } from "./hooks/use-pipelines";
 import { DEFAULT_PIPELINE_STAGES } from "./constants/pipelines";
@@ -44,6 +44,7 @@ import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
 import { useMyColaborador } from "./hooks/use-my-colaborador";
 import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
+import { useRHTreinamentos, vencimentoDate } from "./hooks/use-rh-treinamentos";
 import { useCRMDespesas } from "./hooks/use-crm-despesas";
 import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim, contratoFornecedorDiasParaVencer } from "./utils/rh-compliance-dates";
 import { avaliacaoDiasParaProxima, cicloTipoLabel } from "./utils/rh-feedback-cycles";
@@ -254,6 +255,12 @@ export default function App() {
   const isPureSuporte      = rolesSubsetOf(["suporte"]);
   // RH roles (isRHManager já foi hoisted acima)
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
+  // Departamento Pessoal (decidido com o Daniel 11/09/2026): vê Funcionários,
+  // Férias e Cargos & Salários — e EDITA Cargos & Salários. NÃO vê
+  // Recrutamento, Avaliação de Desempenho nem Pesquisa de clima. Por isso
+  // `dp` NÃO entra em isRHUser nem em current_user_is_rh() no banco: entrar
+  // ali daria a ele o módulo inteiro de RH de uma vez.
+  const isDP               = hasAnyRole(["dp"]);
   const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
   // Comex (Importação/Exportação Direta): cargo dedicado, sem carve-out pro
   // time comercial geral — vendedor/gerente não enxergam por padrão.
@@ -263,6 +270,10 @@ export default function App() {
   // (RLS bloqueia toda escrita — ver migration 20260756_papel_diretoria.sql).
   // A única exceção pedida é interação mais rica no Painel Executivo.
   const isDiretoria        = hasAnyRole(["diretoria"]);
+  // Declarado AQUI e não junto de `isDP` lá em cima: depende de
+  // `isDiretoria`, e const usada antes da própria declaração é TDZ —
+  // compila sem ruído e mata a tela (regra 3.2 do CLAUDE.md).
+  const isDPOnly           = isDP && !isRHUser && !isDiretoria;
   // Painel Executivo deixou de ser exclusivo do gerente Comercial: cada
   // gerente de departamento acessa pra ver (só) a área do próprio setor —
   // Comex incluído desde que a aba própria existe (regra 8 do CLAUDE.md).
@@ -435,6 +446,7 @@ export default function App() {
     markAllRead: markAllNotificationsRead,
     markRead: markNotificationRead,
     clearAll: clearAllNotifications,
+    dropOrfas: dropNotificacoesOrfas,
     desktopPermission,
     requestDesktopPermission,
   } = useNotifications({ currentUser, leads, personalTasks, notificationPrefs: settings.notifications });
@@ -629,6 +641,16 @@ export default function App() {
     enabled: Boolean(currentUser) && isRHManager,
   });
   const complianceVistoRef = useRef(new Set());
+
+  // Treinamento com validade vencendo. A plataforma já avisava ASO, contrato,
+  // período de experiência e aprendiz — treinamento tinha o campo de validade
+  // e ninguém era avisado (levantado na reunião de RH de 10/09/2026).
+  // Carrega só pra quem é RH, senão toda sessão abriria uma assinatura de
+  // Realtime que a maioria não usa.
+  const { treinamentos: treinamentosParaLembretes, atribuicoes: atribuicoesParaLembretes } = useRHTreinamentos({
+    enabled: Boolean(currentUser) && isRHManager,
+  });
+  const treinamentoVistoRef = useRef(new Set());
   useEffect(() => {
     if (!isRHManager) return;
     const hoje = new Date();
@@ -702,6 +724,50 @@ export default function App() {
     }
   }, [colaboradoresParaLembretes, isRHManager, pushNotification]);
 
+  // Treinamento vencendo — mesmo formato dos avisos de compliance acima:
+  // uma vez por dia por atribuição enquanto a janela estiver aberta, e a
+  // conta do vencimento vem de `vencimentoDate` do próprio hook, nunca
+  // recalculada aqui (regra 1: duas contas iguais em dois lugares divergem).
+  useEffect(() => {
+    if (!isRHManager) return;
+    if (!treinamentosParaLembretes.length || !atribuicoesParaLembretes.length) return;
+    const hoje = new Date();
+    const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    const porId = new Map(treinamentosParaLembretes.map(t => [t.id, t]));
+
+    for (const a of atribuicoesParaLembretes) {
+      const t = porId.get(a.treinamento_id);
+      const venc = vencimentoDate(a, t);
+      if (!venc) continue;
+      const dias = Math.floor((venc.getTime() - hoje.getTime()) / 86400000);
+      // Janela igual à do ASO: avisa a partir de 30 dias antes, e segue
+      // avisando depois de vencido — treinamento vencido é o caso que mais
+      // importa numa auditoria.
+      if (dias > 30) continue;
+      const chave = `${a.id}:${hojeISO}`;
+      if (treinamentoVistoRef.current.has(chave)) continue;
+      // Guard contra o array JÁ persistido no localStorage, não só o ref em
+      // memória — o ref zera a cada reload e o aviso seria reinserido em lote.
+      const jaExiste = notifications.some(n =>
+        n.type === "treinamento_vencendo" &&
+        n.link?.id === a.id &&
+        new Date(n.createdAt).toDateString() === hoje.toDateString()
+      );
+      if (jaExiste) { treinamentoVistoRef.current.add(chave); continue; }
+      treinamentoVistoRef.current.add(chave);
+
+      const colab = colaboradoresParaLembretes.find(c => c.id === a.colaborador_id);
+      const quem = colab?.fullName || "Colaborador";
+      pushNotification({
+        type: "treinamento_vencendo",
+        title: dias < 0 ? "Treinamento vencido" : "Treinamento vencendo",
+        body: `${quem} — ${t.titulo}: ${dias < 0 ? `venceu há ${Math.abs(dias)} dia(s)` : `vence em ${dias} dia(s)`}.`,
+        link: { module: "rh_treinamentos", id: a.id },
+      });
+    }
+  }, [treinamentosParaLembretes, atribuicoesParaLembretes, colaboradoresParaLembretes, isRHManager, pushNotification, notifications]);
+
+
   // Lembrete de avaliação de desempenho se aproximando — avisa RH/gestor
   // (in-app + e-mail) quando o próximo ciclo de um colaborador ativo está a
   // até 15 dias de vencer (ou já venceu), uma vez por dia por colaborador.
@@ -754,7 +820,7 @@ export default function App() {
   // acabar (ou já acabou). Reunião com o RH (20/07): "colocar notificação/
   // lembrete pro usuário responsável receber email e notificação de
   // vencimento do contrato".
-  const { contratos: contratosParaLembretes } = useRHSuppliers({ enabled: Boolean(currentUser) && isRHManager });
+  const { contratos: contratosParaLembretes, loading: contratosCarregando } = useRHSuppliers({ enabled: Boolean(currentUser) && isRHManager });
   const contratoVistoRef = useRef(new Set());
   useEffect(() => {
     if (!isRHManager) return;
@@ -798,7 +864,14 @@ export default function App() {
         }, { contratoId: c.id });
       }
     }
-  }, [contratosParaLembretes, isRHManager, users, pushNotification, notifications]);
+    // Mesma poda do reembolso — contrato apagado deixava o aviso órfão.
+    // Guarda por `loading`, NÃO por lista vazia: apagar o último contrato
+    // deixa a lista em [], e um guard de tamanho pularia justamente o caso
+    // que a poda existe pra resolver.
+    if (isSupabaseConfigured && !contratosCarregando) {
+      dropNotificacoesOrfas("contrato_fornecedor_vencendo", new Set(contratosParaLembretes.map(c => c.id)));
+    }
+  }, [contratosParaLembretes, contratosCarregando, isRHManager, users, pushNotification, notifications, dropNotificacoesOrfas]);
 
   // Lembrete de bem-estar chegando perto — reunião com o RH (20/07): "recebe
   // e-mail avisando... e quando estiver próximo". Roda enquanto um RH tem a
@@ -828,7 +901,7 @@ export default function App() {
   // Lembrete de reembolso de Viagens pendente há muito tempo — mesma ideia
   // de "approval-queue timeout" do Concur/TravelPerk: sem isso, uma despesa
   // fica esquecida na fila do gestor sem ninguém notar.
-  const { despesas: despesasParaLembretes } = useCRMDespesas({
+  const { despesas: despesasParaLembretes, loading: despesasCarregando } = useCRMDespesas({
     enabled: Boolean(currentUser) && isManagerRole,
   });
   const despesaPendenteVistaRef = useRef(new Set());
@@ -864,7 +937,32 @@ export default function App() {
         link: { module: "crm_despesas", id: d.id },
       });
     }
-  }, [despesasParaLembretes, isManagerRole, pushNotification, notifications]);
+
+    // Poda o inverso do laço acima. As notificações vivem no localStorage do
+    // navegador e os geradores só acrescentam: apagar a despesa não tocava na
+    // cópia local, e o aviso ficava para sempre apontando pra um registro que
+    // não existe mais (Daniel, 10/09/2026 — deletou o reembolso e continuou
+    // recebendo).
+    //
+    // O guard é `loading`, NÃO `length > 0`. A primeira versão desta correção
+    // usava tamanho e por isso NÃO resolvia o caso relatado: quem tinha uma
+    // despesa pendente e apagou fica com a lista em [], e a poda era pulada
+    // justamente aí (achado do QA). `isSupabaseConfigured` cobre o caminho
+    // mock, onde loading vira false com a lista vazia por não haver banco.
+    //
+    // O conjunto é o das PENDENTES, não o de todas: o aviso diz "pendente há
+    // N dias", então ele deixa de ser verdade também quando a despesa é
+    // aprovada — some nos dois casos, apagada ou aprovada.
+    //
+    // LACUNA CONHECIDA: os outros geradores com link (férias, avaliação,
+    // funcionários, solicitações de marketing) seguem sem poda. Se um deles
+    // for reportado, a ferramenta pra resolver já é esta.
+    if (isSupabaseConfigured && !despesasCarregando) {
+      dropNotificacoesOrfas("reembolso_pendente_ha_dias", new Set(
+        despesasParaLembretes.filter(d => d.status_reembolso === "pendente").map(d => d.id)
+      ));
+    }
+  }, [despesasParaLembretes, despesasCarregando, isManagerRole, pushNotification, notifications, dropNotificacoesOrfas]);
 
   // Geradores de notificação — stale_lead, cross_sell, weekly_digest,
   // new_candidato: toggles existiam em Configurações > Notificações desde a
@@ -1753,6 +1851,20 @@ export default function App() {
       groups.push({ label: "Marketing", items: mktItems });
     }
 
+    // Departamento Pessoal puro: grupo próprio, com os três módulos que o
+    // Daniel definiu. Fica ANTES do bloco de RH e é excludente — quem acumula
+    // `dp` com `rh` cai no grupo de RH completo, que já contém estes três.
+    if (isDPOnly) {
+      groups.push({
+        label: "Departamento Pessoal",
+        items: [
+          { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
+          { id: "rh-cargos",       label: "Cargos & Salários", icon: Briefcase },
+          { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
+        ],
+      });
+    }
+
     if (isRHUser || isDiretoria) {
       groups.push({
         label: "Recursos Humanos",
@@ -1873,7 +1985,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isPureSuporte, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled, filaIA.total]);
+  }, [isManager, isRHManager, isDPOnly, isDP, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isPureSuporte, isDiretoria, allowedModules, moduleStates, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount, currentUser?.chatEnabled, filaIA.total]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -2634,7 +2746,7 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-funcionarios"]} element={
-            (isRHUser || isDiretoria)
+            (isRHUser || isDiretoria || isDP)
               ? <RHFuncionariosView
                   users={users}
                   leads={leads}
@@ -2693,7 +2805,7 @@ export default function App() {
             />
           } />
           <Route path={ROUTES["rh-ferias"]} element={
-            (isRHUser || isDiretoria)
+            (isRHUser || isDiretoria || isDP)
               ? <RHFeriasView
                   currentUser={currentUser}
                   users={users}
@@ -2705,10 +2817,12 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-cargos"]} element={
-            (isRHManager || isDiretoria)
+            // DP entra aqui com canWrite: "ver e editar Cargos & Salários" foi
+            // a única permissão que o Daniel qualificou com o verbo editar.
+            (isRHManager || isDiretoria || isDP)
               ? <RHCargosView
                   currentUser={currentUser}
-                  canWrite={isRHManager}
+                  canWrite={isRHManager || isDP}
                   isDirector={isAdmin}
                   users={users}
                   notifyMentions={notifyMentions}

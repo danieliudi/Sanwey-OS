@@ -14,6 +14,62 @@ export const DELIVERABLE_STAGES = [
   { id: "entregue",    name: "Entregue",     color: "#16A34A", sla: null, terminal: true },
 ];
 
+// Espelha a policy md_update. São DUAS listas porque a policy é assimétrica:
+// o USING diz em quais cards a agência pode mexer, o WITH CHECK diz para onde
+// ela pode mandar. Encaminhar pra Revisão é um caminho só de ida.
+//
+// Histórico, porque a decisão foi e voltou: em 09/09/2026 a agência foi
+// travada nas duas primeiras etapas. Em 10/09 o Daniel corrigiu — "a agência
+// precisa conseguir encaminhar para revisão. Foi um erro meu ter aprovado" —
+// depois de a Beehave reportar que ficava presa em Em Produção sem nenhum
+// jeito de avisar que o trabalho acabou.
+
+/** Cards em que a agência pode mexer (espelha o USING). */
+export const AGENCIA_DELIVERABLE_WRITE_STAGES = ["encaminhado_para_agencia", "em_producao"];
+
+/** Para onde a agência pode mandar um card (espelha o WITH CHECK).
+ *  Inclui `revisao`: ela encaminha pra revisão e, a partir daí, a LINHA da
+ *  entrega sai das mãos dela. Ressalva registrada na revisão de segurança: a
+ *  policy de anexos ainda deixa a agência apagar anexo de card em revisão —
+ *  buraco pré-existente, aberto para decisão, não coberto por esta lista. */
+export const AGENCIA_DELIVERABLE_MOVE_TARGETS = ["encaminhado_para_agencia", "em_producao", "revisao"];
+
+/** Agência sem cargo de marketing/admin — quem de fato cai no WITH CHECK restrito. */
+export function isAgenciaDeliverableWriter(rolesOrUser) {
+  const roles = Array.isArray(rolesOrUser)
+    ? rolesOrUser
+    : (rolesOrUser?.roles?.length
+      ? rolesOrUser.roles
+      : (rolesOrUser?.role ? [rolesOrUser.role] : []));
+  if (!roles.includes("agencia")) return false;
+  if (roles.some(r => ["admin", "marketing", "gerente_marketing"].includes(r))) return false;
+  return true;
+}
+
+/** O card está numa etapa em que a agência pode mexer? (USING) */
+export function canAgenciaWriteDeliverableStage(stageId) {
+  return AGENCIA_DELIVERABLE_WRITE_STAGES.includes(stageId);
+}
+
+/** A agência pode mandar o card PRA esta etapa? (WITH CHECK) */
+export function canAgenciaMoveDeliverableTo(stageId) {
+  return AGENCIA_DELIVERABLE_MOVE_TARGETS.includes(stageId);
+}
+
+/** Destinos de "Mover para" / menu do card — filtra o que a agência não pode gravar. */
+export function filterDeliverableMoveTargets(stages, { fromStage, isAgenciaWriter, includeTerminal = false } = {}) {
+  let list = (stages || []).filter(s => s.id !== fromStage && (includeTerminal || !s.terminal));
+  if (isAgenciaWriter) {
+    // Destinos, não "onde pode mexer" — eram a mesma lista e por isso Revisão
+    // sumia do menu da agência.
+    list = list.filter(s => AGENCIA_DELIVERABLE_MOVE_TARGETS.includes(s.id));
+  }
+  return list;
+}
+
+export const AGENCIA_STAGE_MOVE_BLOCKED_MSG =
+  "A agência move entre Encaminhado à Agência e Em Produção, e pode encaminhar para Revisão. Depois de encaminhado, o card fica com o time interno de Marketing.";
+
 export const DELIVERABLE_DEPARTMENTS = [
   "Vendas", "Marketing", "Operações", "Financeiro", "RH", "TI", "Diretoria", "Outro",
 ];

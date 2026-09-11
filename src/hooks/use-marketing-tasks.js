@@ -28,6 +28,7 @@ function rowToTask(r) {
     customFields:      r.custom_fields && typeof r.custom_fields === "object" ? r.custom_fields : {},
 
     starred:           r.starred ?? false,
+    archivedAt:        r.archived_at ?? null,
     activities:        Array.isArray(r.activities) ? r.activities : [],
     notes:             Array.isArray(r.notes) ? r.notes : [],
     createdBy:         r.created_by ?? null,
@@ -55,6 +56,11 @@ function taskToRow(t, extras = {}) {
     custom_fields:      t.customFields && typeof t.customFields === "object" ? t.customFields : {},
 
     starred:            t.starred ?? false,
+    // `archived_at` NÃO entra aqui de propósito. `updateTask` reconstrói a
+    // linha inteira a partir do estado em memória; se o arquivamento viesse
+    // por este caminho, uma edição de título feita com estado defasado
+    // desarquivaria o card em silêncio. A escrita é exclusiva de
+    // `setArchived`/`setArchivedBulk` abaixo.
     activities:         t.activities ?? [],
     notes:              t.notes ?? [],
     ...extras,
@@ -190,6 +196,48 @@ export function useMarketingTasks({ userId, role, roles, campaignId } = {}) {
     );
   }, [canWrite, tasks]);
 
+  // Arquivar NÃO mexe em `stage`: o card guarda a etapa em que terminou, e o
+  // gatilho de mudança de etapa (e as automações) não disparam. Arquivar é
+  // organização de tela, não evento de processo.
+  const setArchived = useCallback(async (id, archived) => {
+    if (!isSupabaseConfigured || !canWrite) return;
+    const now        = new Date().toISOString();
+    const archivedAt = archived ? now : null;
+    const current    = tasks.find(t => t.id === id);
+    const activities = [...(current?.activities || []), {
+      type:        "archive",
+      description: archived ? "Arquivada" : "Desarquivada",
+      at:          now,
+    }];
+    const { data, error: err } = await supabase
+      .from(TABLE)
+      .update({ archived_at: archivedAt, activities })
+      .eq("id", id)
+      .select();
+    if (err) throw err;
+    if (!data || data.length === 0) throw new Error("Não foi possível salvar — sem permissão pra editar esta tarefa.");
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, archivedAt, activities } : t));
+  }, [canWrite, tasks]);
+
+  // Lote por etapa terminal. Devolve os ids REALMENTE afetados — é o que o
+  // "Desfazer" do aviso usa pra reverter exatamente o que mudou, e não o que
+  // o chamador achava que ia mudar.
+  const setArchivedBulk = useCallback(async (ids, archived) => {
+    if (!isSupabaseConfigured || !canWrite || !ids?.length) return [];
+    const archivedAt = archived ? new Date().toISOString() : null;
+    const { data, error: err } = await supabase
+      .from(TABLE)
+      .update({ archived_at: archivedAt })
+      .in("id", ids)
+      .select("id");
+    if (err) throw err;
+    const afetados = (data || []).map(r => r.id);
+    if (afetados.length === 0) throw new Error("Não foi possível arquivar — sem permissão pra editar estas tarefas.");
+    const alvo = new Set(afetados);
+    setTasks(prev => prev.map(t => alvo.has(t.id) ? { ...t, archivedAt } : t));
+    return afetados;
+  }, [canWrite]);
+
   const toggleStar = useCallback(async (id) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const current = tasks.find(t => t.id === id);
@@ -211,6 +259,8 @@ export function useMarketingTasks({ userId, role, roles, campaignId } = {}) {
     deleteTask,
     duplicateTask,
     changeStage,
+    setArchived,
+    setArchivedBulk,
     toggleStar,
     refetch: fetchAll,
   };

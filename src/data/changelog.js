@@ -38,6 +38,153 @@
 
 export const CHANGELOG = [
   {
+    version: "5.2.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Novo cargo Departamento Pessoal: lê Funcionários e Férias, e edita Cargos & Salários — sem Recrutamento, Avaliação de Desempenho nem Pesquisa de clima. Atribuível em Configurações › Usuários.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+    ],
+  },
+  {
+    version: "5.1.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pesquisa anônima: o resultado só aparece a partir de 5 respostas, e sempre em conjunto. Em equipe pequena, menos que isso deixava dar nome a quem escreveu — e a página de resposta agora diz isso a quem vai responder.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
+    version: "5.0.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Treinamento com validade agora avisa. O aviso chega a partir de 30 dias antes e continua enquanto estiver vencido — e dá pra desligar em Configurações › Notificações › Conformidade.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
+    version: "4.99.4",
+    items: [
+      {
+        kind: "correcao",
+        text: "Banco de talentos: se o currículo não subir, a pessoa é avisada de que os dados dela foram salvos e para onde mandar o arquivo, em vez de uma mensagem genérica de erro.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
+    version: "4.99.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "Entregas: a agência voltou a ver e a subir anexo. Antes a permissão dependia de a campanha ter fornecedor cadastrado, o que não valia para nenhuma entrega — ela não conseguia nem baixar o briefing.",
+        toast: true,
+      },
+    ],
+  },
+  {
+    version: "4.99.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "Entregas: a agência voltou a poder encaminhar um card para Revisão. Depois de encaminhado, ele fica com o time interno — a agência não mexe mais nele.",
+        toast: true,
+      },
+    ],
+  },
+  {
+    version: "4.99.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Banco de talentos: o currículo passou a ser aceito mesmo quando o navegador não informa o tipo do arquivo, e se o envio falhar a pessoa vê o motivo e para onde mandar o arquivo — antes o cadastro entrava sem currículo e sem aviso.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
+    version: "4.99.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Tarefas de Marketing: dá pra arquivar tarefa antiga. Ela sai do quadro e continua no CSV — pra achar de novo, o filtro \"Arquivamento\". Na coluna final dá pra arquivar todas as visíveis de uma vez.",
+        roles: ["marketing", "gerente_marketing"],
+      },
+      {
+        kind: "ajuste",
+        text: "Meu To-do: o quadro passa a mostrar só o que está aberto, igual ao número da bolinha no menu. As concluídas ficam a um clique, no aviso acima do quadro.",
+      },
+    ],
+  },
+  {
+    version: "4.98.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "Aviso de reembolso que já foi apagado ou aprovado, e de contrato que já foi apagado, some sozinho do sino em vez de ficar para sempre.",
+      },
+      {
+        kind: "correcao",
+        text: "Ao criar um campo com nome repetido em \"Editar etapas\", a tela diz qual campo já existe — antes mostrava uma mensagem técnica do banco. Vale para os 12 quadros que usam esse editor.",
+      },
+    ],
+  },
+  {
+    version: "4.98.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Ficha do funcionário agora tem Gestor. Quem lidera alguém vê \"Lidera N pessoas\" na própria ficha e ganha o filtro \"Minha equipe\" na tabela.",
+        roles: ["rh", "gerente_rh"],
+      },
+    ],
+  },
+  {
+    version: "4.97.12",
+    items: [
+      {
+        kind: "novo",
+        text: "Em Viagens e em Marketing → Despesas, o lançamento pede centro de custo (Matriz SP comercial: 701–722, sem filial SC) e cartão. Na viagem dá pra tirar foto da nota e a IA sugere valor/data pra você conferir.",
+        roles: ["vendedor", "gerente", "marketing", "gerente_marketing", "admin"],
+      },
+    ],
+  },
+
+  {
+    version: "4.97.11",
+    items: [
+      {
+        kind: "correcao",
+        text: "Na conta da Agência (Beehave), Entregas deixa de oferecer \"Revisão e Aprovação\" e outras etapas internas no mover/arrastar — só Encaminhado e Em Produção, que é o que o sistema permite. Se tentar, aparece aviso claro em vez do erro técnico.",
+        roles: ["agencia", "marketing", "gerente_marketing", "admin"],
+      },
+    ],
+  },
+  {
+    version: "4.97.10",
+    items: [
+      {
+        kind: "ajuste",
+        text: "Em Compras, o aviso de \"Execução da compra\" agora diz onde aprovar e oferece o atalho \"Aprovar agora\" — sem precisar caçar o botão na coluna da direita.",
+        roles: ["marketing", "gerente_marketing", "admin"],
+      },
+    ],
+  },
+  {
+    version: "4.97.9",
+    items: [
+      {
+        kind: "ajuste",
+        text: "No Funil de Vendas, o detalhe do negócio deixou de mostrar o atalho \"Adicionar e-mail\" e os cards de Probabilidade, Fechamento e Follow-up na coluna esquerda.",
+      },
+    ],
+  },
+  {
     version: "4.97.7",
     items: [
       {

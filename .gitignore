@@ -6,6 +6,12 @@ dist
 .env
 .env.local
 .env.*.local
+# Exceção: o par VITE_SUPABASE_* de FACHADA da varredura de QA com dados.
+# Não é segredo — host inexistente e chave que não abre nada, ver o próprio
+# arquivo. Ignorado, o `envDir` do vite.dados.config.js aponta pro nada, o App
+# cai em modo demo e `npm run qa:dados` fotografa a tela de seleção de perfil
+# achando que é a plataforma. Foi o que aconteceu desde cf0d044.
+!scripts/qa/env-falso/.env
 vite.config.js.timestamp-*.mjs
 vite.config.ts.timestamp-*.mjs
 # .claude/ continua fora do Git (settings locais, cache de sessão), MENOS os

@@ -258,7 +258,7 @@ function NovaPesquisaModal({ onSave, onClose }) {
 
 function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ total: 0, respostas: [] });
+  const [data, setData] = useState({ total: 0, respostas: [], minimo: 0, liberado: true });
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -303,6 +303,19 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
             <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>
           ) : data.total === 0 ? (
             <div style={{ fontSize: 13, color: "var(--text-dim)" }}>Nenhuma resposta ainda.</div>
+          ) : !data.liberado ? (
+            // Piso de respondentes: abaixo dele nem o RH vê. Se visse, "anônima"
+            // seria só "não assinada" — em time pequeno, duas respostas abertas
+            // identificam quem escreveu. Decidido com o Daniel em 10/09/2026.
+            <div style={{ border: "1px dashed var(--border-strong)", borderRadius: 10, padding: "18px 16px", textAlign: "center" }}>
+              <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 600, marginBottom: 4 }}>
+                {data.total} de {data.minimo} respostas
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-dim)", maxWidth: 380, margin: "0 auto", lineHeight: 1.5 }}>
+                O resultado aparece a partir de {data.minimo} respostas. Em equipe pequena, menos que isso permite
+                identificar quem escreveu — e a pesquisa foi anunciada como anônima.
+              </div>
+            </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               {perguntas.map((q) => {

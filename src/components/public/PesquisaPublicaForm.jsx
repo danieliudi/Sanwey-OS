@@ -110,8 +110,16 @@ export default function PesquisaPublicaForm() {
             <UserCheck size={12} /> Sua resposta fica associada ao seu perfil — é preciso estar logado na plataforma.
           </div>
         ) : (
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#16A34A", fontWeight: 600 }}>
-            <Lock size={12} /> Suas respostas são anônimas
+          <div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#16A34A", fontWeight: 600 }}>
+              <Lock size={12} /> Suas respostas são anônimas
+            </div>
+            {/* Dizer COMO o anonimato é garantido vale mais que prometer que
+                ele existe — e é o que o piso de respondentes (5) de fato faz.
+                Sem esta linha, a pessoa só tem a palavra da empresa. */}
+            <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4, lineHeight: 1.5 }}>
+              O RH só vê os resultados a partir de 5 respostas, e sempre juntas — nunca uma a uma.
+            </div>
           </div>
         )}
       </header>

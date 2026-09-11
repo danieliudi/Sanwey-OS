@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { X, Trash2, ArrowRight, ChevronDown } from "lucide-react";
+import { X, Trash2, ArrowRight, ChevronDown, Archive, ArchiveRestore } from "lucide-react";
 import { useBodyScrollLock } from "../../hooks/use-body-scroll-lock";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { StageNavigator, StageMoveRegistryContext } from "./StageNavigator";
@@ -25,7 +25,12 @@ import { StageNavigator, StageMoveRegistryContext } from "./StageNavigator";
 // onDelete (opcional): botão de excluir no header, com confirmação inline —
 // mesmo padrão do LeadDetailDrawer (Trash2 → "Confirmar exclusão"/"Cancelar"),
 // pra dar paridade de exclusão aos kanbans de RH que usam este shell.
-export function SplitPanelDrawer({ onClose, header, left, center, right, onDelete, deleteLabel = "Excluir card" }) {
+// onArchive (opcional): botão de arquivar/desarquivar ao lado do de excluir.
+// É o único caminho de arquivamento a partir da Tabela e do Calendário, onde
+// o clique na linha abre o drawer e o menu do card não existe. Hover em
+// --surface-alt de propósito, diferente do hover do excluir (--danger-bg):
+// não é a mesma família de ação, e a cor é o que diz isso antes do clique.
+export function SplitPanelDrawer({ onClose, header, left, center, right, onDelete, deleteLabel = "Excluir card", onArchive, archived = false, archiveLabel }) {
   // Componente só existe montado quando o drawer está aberto (o pai
   // renderiza condicionalmente) — trava o scroll do body enquanto estiver
   // montado, destrava no unmount. Achado da auditoria de fricção de 18/07.
@@ -73,6 +78,19 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
         >
           <div className="flex-1 min-w-0">{header}</div>
           <div className="flex items-center gap-1 shrink-0">
+            {onArchive && (
+              <button
+                onClick={onArchive}
+                className="min-w-10 min-h-10 flex items-center justify-center rounded-lg transition-colors duration-150 cursor-pointer"
+                style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                aria-label={archiveLabel || (archived ? "Desarquivar" : "Arquivar")}
+                title={archiveLabel || (archived ? "Desarquivar" : "Arquivar")}
+              >
+                {archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+              </button>
+            )}
             {onDelete && !confirmDelete && (
               <button
                 onClick={() => setConfirmDelete(true)}

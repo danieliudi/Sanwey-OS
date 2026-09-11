@@ -2,14 +2,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
-function vencimentoDate(atribuicao, treinamento) {
+// Exportada porque o gerador de aviso de treinamento vencendo (App.jsx) precisa
+// da MESMA conta — reimplementar "data_conclusao + validade_dias" num segundo
+// lugar é como as duas contas divergem depois (regra 1 do CLAUDE.md).
+export function vencimentoDate(atribuicao, treinamento) {
   if (!treinamento?.validade_dias || !atribuicao?.data_conclusao) return null;
   const d = new Date(atribuicao.data_conclusao);
   d.setDate(d.getDate() + Number(treinamento.validade_dias));
   return d;
 }
 
-export function useRHTreinamentos({ userId } = {}) {
+// `enabled` deixa o hook inerte (sem fetch, sem canal de Realtime) — mesmo
+// padrão de useRHColaboradores. Existe porque o App.jsx passou a carregar esta
+// lista só pra gerar aviso de vencimento, e só pra quem é RH: sem isso, toda
+// sessão da plataforma abriria uma assinatura de Realtime que 90% dos usuários
+// não têm o que fazer com ela.
+export function useRHTreinamentos({ userId, enabled = true } = {}) {
   const [treinamentos, setTreinamentos] = useState([]);
   const [atribuicoes, setAtribuicoes]   = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -18,7 +26,7 @@ export function useRHTreinamentos({ userId } = {}) {
   // `isActive` é a guarda por execução do efeito (não um ref da instância)
   // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
   const fetchAll = useCallback(async (isActive = () => true) => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
       const [{ data: trData }, { data: atrData }] = await Promise.all([
@@ -31,12 +39,13 @@ export function useRHTreinamentos({ userId } = {}) {
     } finally {
       if (isActive()) setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     let active = true;
+    if (!enabled) { setLoading(false); return undefined; }
     fetchAll(() => active);
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured) return undefined;
     const debouncedFetchAll = debounce(() => { if (active) fetchAll(() => active); }, 400);
     const channelName = `rh-treinamentos-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
@@ -49,7 +58,7 @@ export function useRHTreinamentos({ userId } = {}) {
       debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
-  }, [fetchAll]);
+  }, [fetchAll, enabled]);
 
   // Reconciliação de "vencido": antes era só um cálculo no cliente
   // (data_conclusao + validade_dias no passado); agora vira o stage_key de
