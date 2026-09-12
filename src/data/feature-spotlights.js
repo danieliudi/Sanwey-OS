@@ -24,6 +24,20 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // ALVO, decisão registrada (achado do QA desta entrega): o elemento que
+  // REPRESENTA a novidade é a coluna "Concluído" — mas ela só existe na view
+  // Kanban, e a faixa das arquivadas só existe quando há arquivada. Alvo que
+  // não aparece se auto-marca como visto (ver FeatureSpotlight.jsx), ou seja,
+  // ancorar num dos dois queimaria o aviso pra quem abrisse em Lista. Ancora
+  // no botão "Kanban", que existe em toda abertura da tela, e o TEXTO manda
+  // olhar pro lugar certo em vez de fingir que o botão é a novidade.
+  {
+    id: "todo-concluido-arquivar",
+    route: "personal-tasks",
+    target: '[data-tour="todo-concluido-arquivar"]',
+    text: "Abra o Kanban: a coluna Concluído parou de nascer vazia. Concluir e arquivar deixaram de ser o mesmo gesto — a tarefa concluída fica à vista, e só sai do quadro quando você arquiva, na mão ou sozinha depois do prazo que escolher em Configurações.",
+    version: "5.7.0",
+  },
   {
     id: "importar-pessoas",
     route: "rh-funcionarios",

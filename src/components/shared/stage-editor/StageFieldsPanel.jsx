@@ -61,6 +61,10 @@ function ValidationRuleBlock({ fieldType, rule, onChange, accent }) {
         min: rule.type === "range" && rule.min != null ? rule.min : (preset?.type === "range" ? preset.min : undefined),
         max: rule.type === "range" && rule.max != null ? rule.max : (preset?.type === "range" ? preset.max : undefined),
       });
+    } else if (newType === "min_length") {
+      onChange({ type: "min_length", min: rule.type === "min_length" ? rule.min : undefined });
+    } else if (newType === "not_in") {
+      onChange({ type: "not_in", values: rule.type === "not_in" ? rule.values : [] });
     } else {
       onChange({ type: newType });
     }
@@ -84,6 +88,31 @@ function ValidationRuleBlock({ fieldType, rule, onChange, accent }) {
               onChange={e => onChange({ ...rule, pattern: e.target.value })}
               placeholder="Expressão regular (ex.: ^[0-9]+$)"
               style={{ ...INPUT_BASE, fontFamily: "monospace" }}
+              onFocus={focusStyle} onBlur={blurStyle}
+            />
+          )}
+          {rule.type === "min_length" && (
+            <input
+              type="number" min={1} step={1}
+              value={rule.min ?? ""}
+              onChange={e => onChange({ ...rule, min: e.target.value === "" ? undefined : Number(e.target.value) })}
+              placeholder="Mínimo de caracteres (ex.: 10)"
+              style={INPUT_BASE}
+              onFocus={focusStyle} onBlur={blurStyle}
+            />
+          )}
+          {rule.type === "not_in" && (
+            <input
+              type="text"
+              value={(rule.values || []).join(", ")}
+              // Um valor por vírgula — mesmo jeito que as opções de select já
+              // são digitadas neste editor, não inventa um 2º formato.
+              onChange={e => onChange({
+                ...rule,
+                values: e.target.value.split(",").map(v => v.trim()).filter(Boolean),
+              })}
+              placeholder="Valores proibidos, separados por vírgula (ex.: a definir, tbd)"
+              style={INPUT_BASE}
               onFocus={focusStyle} onBlur={blurStyle}
             />
           )}

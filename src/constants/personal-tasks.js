@@ -111,3 +111,38 @@ export const RECURRENCE_OPTIONS = [
   { id: "monthly", label: "Todo mês" },
   { id: "custom",  label: "A cada X dias" },
 ];
+
+// "Essa tarefa saiu do quadro?" — pergunta DIFERENTE de isTaskDone acima, e a
+// confusão entre as duas é o bug que o Daniel reportou em 11/09/2026: o
+// quadro escondia tudo que era `terminal`, então a coluna "Concluído"
+// (a que existe justamente pra você ver o que fechou) nascia e morria vazia,
+// e concluir virava o mesmo gesto que guardar. Mockup "Concluído não é
+// Arquivado", aprovado no mesmo dia: o flag `terminal` continua valendo pros
+// dois (é ele que destrava dependente, cala lembrete e gera a próxima
+// ocorrência de recorrente — nada disso muda); o que o quadro esconde passa
+// a ser só ARQUIVAR.
+//
+// Chave, não nome exibido — quem renomeou "Arquivar" continua funcionando.
+export const ARCHIVE_STATUS = "feito";
+export function isTaskArchived(status) {
+  return status === ARCHIVE_STATUS;
+}
+
+// Arquivamento automático. Sem ele, "Concluído" vira depósito: em três meses
+// são 200 cartões que ninguém arrasta um a um. 0 = nunca (só na mão).
+// Conta a partir de `completedAt` (o dia em que entrou em Concluído), não do
+// prazo da tarefa.
+export const AUTO_ARCHIVE_OPTIONS = [
+  { days: 0,  label: "Nunca — eu arquivo na mão" },
+  { days: 7,  label: "Depois de 7 dias" },
+  { days: 15, label: "Depois de 15 dias" },
+  { days: 30, label: "Depois de 30 dias" },
+];
+
+export const DEFAULT_AUTO_ARCHIVE_DAYS = 30;
+
+// A partir de quando o cartão avisa que vai arquivar: metade do prazo
+// (15 dos 30, como no mockup). Nada some sem aviso.
+export function autoArchiveWarnAfter(days) {
+  return Math.ceil(days / 2);
+}

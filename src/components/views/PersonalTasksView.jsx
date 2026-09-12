@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { List, LayoutGrid, Calendar, Plus, Check, CheckCircle2, ListChecks, Pencil, Settings2, ArrowUpDown, Download, AlertCircle, Lock, Zap } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { List, LayoutGrid, Calendar, Plus, Check, ListChecks, Pencil, Settings2, ArrowUpDown, Download, AlertCircle, Lock, Zap, Archive } from "lucide-react";
 import { AppToast } from "../shared/AppToast";
 import { usePersonalTasks } from "../../hooks/use-personal-tasks";
 import { exportPersonalTasksToCSV } from "../../utils/export-csv";
@@ -24,7 +24,8 @@ import { PageTitle } from "../shared/PageTitle";
 import { semAcento } from "../../utils/text-search";
 import { Badge } from "../ui/Badge";
 import { formatDateBR, daysSince } from "../../utils/date";
-import { STATUS_COLUMNS, isTaskDone, buildTaskConditionValues } from "../../constants/personal-tasks";
+import { STATUS_COLUMNS, isTaskDone, isTaskArchived, ARCHIVE_STATUS, autoArchiveWarnAfter, DEFAULT_AUTO_ARCHIVE_DAYS, buildTaskConditionValues } from "../../constants/personal-tasks";
+import { useUserSettings } from "../../hooks/use-user-settings";
 import { getMissingRequiredFields, isStageRegression } from "../../utils/field-conditions";
 import { PersonalTaskCreateModal } from "../personal/PersonalTaskCreateModal";
 import { PersonalTaskDetailDrawer } from "../personal/PersonalTaskDetailDrawer";
@@ -235,8 +236,9 @@ function BlockedBadge() {
 // Checkbox quadrado com check — mesmo padrão visual do item de checklist de
 // Entregas (ChecklistsTab em DeliverableDetailDrawer.jsx): borda/fundo
 // var(--success) quando marcado, título com line-through.
-function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen, blocked }) {
+function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen, blocked, autoArchiveDays }) {
   const done = isTaskDone(task.status);
+  const archiveHint = autoArchiveHint(task, autoArchiveDays);
   return (
     <div
       onClick={() => onOpen(task)}
@@ -267,6 +269,7 @@ function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen, blocked })
         </span>
         <div className="flex items-center gap-1.5 flex-wrap">
           {blocked && <BlockedBadge />}
+          <AutoArchiveChip hint={archiveHint} />
           <TagChips tags={task.tags} />
         </div>
       </div>
@@ -285,7 +288,7 @@ function TaskRow({ task, columns, onToggle, onMove, onDelete, onOpen, blocked })
   );
 }
 
-function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen, blockedIds }) {
+function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen, blockedIds, autoArchiveDays }) {
   return (
     <div className="mb-5">
       <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
@@ -301,7 +304,7 @@ function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen
       ) : (
         <div className="flex flex-col gap-2">
           {tasks.map(t => (
-            <TaskRow key={t.id} task={t} columns={columns} onToggle={onToggle} onMove={onMove} onDelete={onDelete} onOpen={onOpen} blocked={blockedIds?.has(t.id)} />
+            <TaskRow key={t.id} task={t} columns={columns} onToggle={onToggle} onMove={onMove} onDelete={onDelete} onOpen={onOpen} blocked={blockedIds?.has(t.id)} autoArchiveDays={autoArchiveDays} />
           ))}
         </div>
       )}
@@ -309,9 +312,46 @@ function TaskSection({ title, tasks, columns, onToggle, onMove, onDelete, onOpen
   );
 }
 
+// "há 21 dias · arquiva em 9" — o aviso que o mockup "Concluído não é
+// Arquivado" (11/09/2026) exige antes de qualquer cartão sumir sozinho.
+// Só aparece na tarefa CONCLUÍDA (não na arquivada, que já saiu do quadro),
+// com arquivamento automático ligado, e só depois de passada a metade do
+// prazo — antes disso não há nada de útil a dizer.
+//
+// Regra 14 (todo número em tela declara de onde veio): `idade` são dias
+// corridos desde `personal_tasks.completed_at`, o carimbo de quando a tarefa
+// entrou em Concluído — não o prazo dela. Arrastar de volta pra uma etapa
+// aberta limpa completed_at (ver setTaskStatus em use-personal-tasks.js), e
+// a contagem zera junto.
+function autoArchiveHint(task, autoArchiveDays) {
+  if (!autoArchiveDays || !task?.completedAt) return null;
+  if (!isTaskDone(task.status) || isTaskArchived(task.status)) return null;
+  const idade = daysSince(task.completedAt);
+  if (idade < autoArchiveWarnAfter(autoArchiveDays)) return null;
+  const faltam = Math.max(0, autoArchiveDays - idade);
+  return {
+    faltam,
+    label: `há ${idade} ${idade === 1 ? "dia" : "dias"} · arquiva em ${faltam} ${faltam === 1 ? "dia" : "dias"}`,
+  };
+}
+
+function AutoArchiveChip({ hint }) {
+  if (!hint) return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] shrink-0"
+      style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}
+      title="Arquivar não apaga: a tarefa continua na coluna Arquivar, no CSV e na busca."
+    >
+      <Archive size={9} /> {hint.label}
+    </span>
+  );
+}
+
 /* ── Kanban mode ─────────────────────────────────────────────── */
 
-function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, onDragEnd, blocked }) {
+function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, onDragEnd, blocked, autoArchiveDays }) {
+  const archiveHint = autoArchiveHint(task, autoArchiveDays);
   return (
     <div
       draggable
@@ -335,9 +375,10 @@ function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, 
           />
         </div>
       </div>
-      {(blocked || task.tags?.length > 0) && (
+      {(blocked || archiveHint || task.tags?.length > 0) && (
         <div className="flex items-center gap-1.5 flex-wrap mb-2">
           {blocked && <BlockedBadge />}
+          <AutoArchiveChip hint={archiveHint} />
           <TagChips tags={task.tags} />
         </div>
       )}
@@ -349,7 +390,7 @@ function TaskKanbanCard({ task, columns, onMove, onDelete, onOpen, onDragStart, 
   );
 }
 
-function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, onEditStageFields, blockedIds }) {
+function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, onEditStageFields, blockedIds, autoArchiveDays }) {
   // Sem `trailingRef`: ele existia pra descontar a altura do rodapé "Arraste
   // para mover…", removido a pedido do Daniel (01/09/2026). O ref ficou
   // declarado sem nunca ser preso a nenhum elemento — medida que não media
@@ -426,14 +467,17 @@ function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, o
                   <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                     {items.length === 0 ? (
                       <div
-                        className="flex items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs"
+                        className="flex items-center justify-center text-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs"
                         style={{ borderColor: "var(--border)", color: "var(--text-dim)", opacity: 0.6 }}
                       >
-                        Nenhuma tarefa
+                        {/* A coluna de arquivo fica vazia quase sempre (é pra
+                            onde as coisas vão, não onde ficam) — o vazio dela
+                            diz pra que serve, como no mockup aprovado. */}
+                        {col.id === ARCHIVE_STATUS ? "Arraste aqui para tirar da frente" : "Nenhuma tarefa"}
                       </div>
                     ) : items.map(t => (
                       <TaskKanbanCard key={t.id} task={t} columns={columns} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
-                        onDragStart={setDraggedTask} onDragEnd={handleDragEnd} blocked={blockedIds?.has(t.id)} />
+                        onDragStart={setDraggedTask} onDragEnd={handleDragEnd} blocked={blockedIds?.has(t.id)} autoArchiveDays={autoArchiveDays} />
                     ))}
                   </div>
                 </div>
@@ -458,7 +502,7 @@ function TaskKanbanBoard({ tasks, columns, onMove, onDelete, onCreate, onOpen, o
               <div className="flex flex-col gap-2">
                 {items.map(t => (
                   <TaskKanbanCard key={t.id} task={t} columns={columns} onMove={onMove} onDelete={onDelete} onOpen={onOpen}
-                    onDragStart={() => {}} onDragEnd={() => {}} blocked={blockedIds?.has(t.id)} />
+                    onDragStart={() => {}} onDragEnd={() => {}} blocked={blockedIds?.has(t.id)} autoArchiveDays={autoArchiveDays} />
                 ))}
                 {items.length === 0 && (
                   <div className="text-xs" style={{ color: "var(--text-dim)", opacity: 0.6 }}>Nenhuma tarefa</div>
@@ -518,15 +562,38 @@ export function PersonalTasksView({ currentUser }) {
   const [dateBucketFilter, setDateBucketFilter] = useState("");
   const [search, setSearch] = useState("");
   const [listSort, setListSort] = useState("recent");
-  // Decidido com o Daniel em 10/09/2026: o quadro escondia nada e a bolinha
-  // do menu contava só as não concluídas — 8 na bolinha contra 12 no quadro,
-  // e ele perguntou por quê. Agora o padrão do quadro é o mesmo recorte da
-  // bolinha (as abertas), e as terminais ficam atrás deste botão. Não
-  // persiste: abrir na segunda-feira já vendo tudo é o comportamento óbvio.
-  const [mostrarConcluidas, setMostrarConcluidas] = useState(false);
+  // 10/09/2026: o quadro não escondia nada e a bolinha do menu contava só as
+  // não concluídas — 8 na bolinha contra 12 no quadro, e o Daniel perguntou
+  // por quê. A resposta daquele dia foi esconder tudo que era `terminal`.
+  //
+  // CORRIGIDO 11/09/2026 (mockup "Concluído não é Arquivado"): aquilo passou
+  // do ponto — escondia a coluna Concluído junto, então concluir virava o
+  // mesmo gesto que guardar e a coluna nascia e morria vazia. O que o quadro
+  // esconde passa a ser só ARQUIVAR (ver ARCHIVE_STATUS).
+  //
+  // Isso reabre a diferença entre a bolinha (abertas) e as views (abertas +
+  // concluídas), e é deliberado — desde que cada view diga onde a concluída
+  // está: no Kanban é a coluna verde "Concluído"; na Lista é a seção
+  // "Concluídas" (ver `buckets` abaixo, separada no QA desta entrega); na
+  // Agenda é o risco no título, que já existia. Sem esse lugar próprio, a
+  // diferença vira a confusão de 10/09 de novo. A bolinha continua sendo
+  // openCount (não-terminais) em use-personal-tasks.js; mexer nela faria
+  // "pendência" incluir tarefa já concluída.
+  //
+  // Não persiste: abrir na segunda-feira já vendo o quadro limpo é o
+  // comportamento óbvio.
+  const [mostrarArquivadas, setMostrarArquivadas] = useState(false);
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
   const [editingFieldsStageKey, setEditingFieldsStageKey] = useState(null);
   const [moveError, setMoveError] = useState(null);
+
+  // Preferência de arquivamento automático — mesmo localStorage de todas as
+  // outras (useUserSettings). Só leitura aqui; quem escreve é Configurações →
+  // Preferências → Recursos. 0 = nunca.
+  const { settings: userSettings } = useUserSettings();
+  const autoArchiveDays = Number(
+    userSettings.personalTasksAutoArchiveDays ?? DEFAULT_AUTO_ARCHIVE_DAYS
+  ) || 0;
 
   const allTags = useMemo(() => {
     const set = new Set();
@@ -560,15 +627,16 @@ export function PersonalTasksView({ currentUser }) {
     });
   }, [tasks, search, activeTags, activePriorities, dateBucketFilter]);
 
-  // Recorte das terminais, separado do resto pelo mesmo motivo do
-  // arquivamento em Tarefas de Marketing: o CSV e a Agenda continuam vendo
-  // tudo, só o quadro é que deixa de mostrar.
+  // Recorte das ARQUIVADAS, separado do resto pelo mesmo motivo do
+  // arquivamento em Tarefas de Marketing: o CSV continua vendo tudo, só o
+  // quadro é que deixa de mostrar. Concluída NÃO entra aqui — ela fica à
+  // vista na própria coluna, que é o ponto do ajuste de 11/09/2026.
   const visibleTasks = useMemo(
-    () => mostrarConcluidas ? filteredTasks : filteredTasks.filter(t => !isTaskDone(t.status)),
-    [filteredTasks, mostrarConcluidas]
+    () => mostrarArquivadas ? filteredTasks : filteredTasks.filter(t => !isTaskArchived(t.status)),
+    [filteredTasks, mostrarArquivadas]
   );
-  const concluidasEscondidas = useMemo(
-    () => filteredTasks.filter(t => isTaskDone(t.status)).length,
+  const arquivadasEscondidas = useMemo(
+    () => filteredTasks.filter(t => isTaskArchived(t.status)).length,
     [filteredTasks]
   );
 
@@ -577,15 +645,22 @@ export function PersonalTasksView({ currentUser }) {
     [visibleTasks, listSort]
   );
 
+  // A Lista não tem coluna "Concluído" pra explicar o que o Kanban explica
+  // sozinho — e `bucketFor` joga toda tarefa com prazo vencido em "Hoje".
+  // Sem a faixa própria abaixo, a concluída de ontem apareceria misturada
+  // com as pendentes de hoje por até 30 dias, que é exatamente a confusão
+  // que a mudança de 11/09/2026 queria desfazer, só que em outra view.
+  // Achado no QA desta entrega; a separação aqui é a decisão tomada.
   const buckets = useMemo(() => {
-    const hoje = [], semana = [], semData = [];
+    const hoje = [], semana = [], semData = [], concluidas = [];
     for (const t of sortedFilteredTasks) {
+      if (isTaskDone(t.status)) { concluidas.push(t); continue; }
       const b = bucketFor(t);
       if (b === "hoje") hoje.push(t);
       else if (b === "semana") semana.push(t);
       else semData.push(t);
     }
-    return { hoje, semana, semData };
+    return { hoje, semana, semData, concluidas };
   }, [sortedFilteredTasks]);
 
   const tasksById = useMemo(() => Object.fromEntries(tasks.map(t => [t.id, t])), [tasks]);
@@ -701,6 +776,84 @@ export function PersonalTasksView({ currentUser }) {
     attemptMove(id, isTaskDone(task.status) ? "a_fazer" : "concluido");
   }, [tasksById, attemptMove]);
 
+  // Arquivamento automático das concluídas (mockup "Concluído não é
+  // Arquivado", aprovado pelo Daniel 11/09/2026). Roda quando o quadro abre,
+  // no aparelho onde a preferência foi configurada — ela mora no localStorage
+  // como todas as outras da plataforma. Limitação declarada na aprovação: no
+  // celular, sem abrir o quadro no computador, nada é arquivado. O estado em
+  // si é compartilhado (mora no banco), então basta um aparelho rodar.
+  //
+  // NÃO passa por attemptMove de propósito, e isso não é trava contornada: a
+  // tarefa já está numa etapa `terminal`, e concluido→feito não muda
+  // isTaskDone, não destrava nem trava dependente nenhum — a propriedade que
+  // as travas guardam (terminar com pendência aberta / campo obrigatório em
+  // branco) já foi cobrada quando a tarefa chegou em Concluído e não muda
+  // aqui. setTaskStatus preserva completed_at e não redispara recorrência
+  // (becomingDone é falso), que é exatamente o que se quer.
+  // Uma varredura por abertura do quadro, nunca mais de uma.
+  //
+  // `jaCarregouRef` existe pela armadilha que já mordeu em EntregasView
+  // (hasLoadedOnceRef, :758): `loading` nasce false no hook e só vira true
+  // DENTRO do efeito dele, no mesmo flush — então o 1º commit vê
+  // loading=false com tasks=[] e queimaria o one-shot antes de existir dado
+  // nenhum, matando a feature em silêncio. Só conta como "carregou" depois
+  // que loading foi true ao menos uma vez e voltou a false.
+  const jaCarregouRef = useRef(false);
+  useEffect(() => { if (loading) jaCarregouRef.current = true; }, [loading]);
+
+  const jaVarreuRef = useRef(false);
+  useEffect(() => {
+    if (loading || !jaCarregouRef.current || jaVarreuRef.current) return;
+    jaVarreuRef.current = true;
+    if (!autoArchiveDays) return;
+
+    // As MESMAS travas que o arquivamento na mão enfrenta. A versão anterior
+    // deste bloco dizia que concluido→feito não era guardado por trava
+    // nenhuma — errado: `isStageRegression(columns,"concluido","feito")` é
+    // falso, então avançar pra Arquivar COBRA os campos obrigatórios
+    // configurados na etapa Concluído, e uma dependência reaberta depois da
+    // conclusão volta a bloquear. Arquivar sozinho o que a pessoa não
+    // consegue arquivar na mão seria contornar a trava pela porta dos fundos.
+    // Quem não passa fica no quadro, visível, com o chip de contagem parado.
+    const podeArquivar = (t) => {
+      if (depsHook.getBlockers(t.id, tasksById, terminalStageKeys).length > 0) return false;
+      if (isStageRegression(columns, t.status, ARCHIVE_STATUS)) return true;
+      return getMissingRequiredFields(
+        stageFieldsHook.getFields(t.status),
+        buildTaskConditionValues(t),
+      ).length === 0;
+    };
+
+    const vencidas = tasks.filter(t =>
+      isTaskDone(t.status) && !isTaskArchived(t.status) &&
+      t.completedAt && daysSince(t.completedAt) >= autoArchiveDays &&
+      podeArquivar(t)
+    );
+    if (vencidas.length === 0) return;
+    (async () => {
+      for (const t of vencidas) {
+        try {
+          // setTaskStatus direto (não attemptMove): as travas já foram
+          // conferidas acima, e o attemptMove abriria um AppToast de erro na
+          // cara de quem só abriu o quadro. Preserva completed_at e não
+          // redispara recorrência (becomingDone é falso).
+          //
+          // DECISÃO REGISTRADA: não roda runAutomations. Automação de
+          // `stage_change` é reação a um movimento de gente; disparar N
+          // avisos "sua tarefa foi arquivada" na abertura do quadro seria
+          // ruído, não informação. Arquivar na mão continua disparando.
+          await setTaskStatus(t.id, ARCHIVE_STATUS);
+        } catch {
+          // Silencioso de propósito: arrumação de fundo não vira toast de
+          // erro. O cartão fica onde está e a próxima abertura tenta de novo.
+        }
+      }
+    })();
+  }, [
+    tasks, loading, autoArchiveDays, setTaskStatus,
+    depsHook, tasksById, terminalStageKeys, columns, stageFieldsHook,
+  ]);
+
   const handleCreate = useCallback(async (data) => { await createTask(data); }, [createTask]);
 
   // Único ponto de edição de campo usado pelo drawer (autosave debounced) —
@@ -776,13 +929,13 @@ export function PersonalTasksView({ currentUser }) {
               }}
             />
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-              <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile dataTour="todo-concluido-arquivar" />
               <ViewToggleButton active={viewMode === "list"}   onClick={() => setViewMode("list")}   icon={List}       label="Lista"  iconOnlyMobile />
               <ViewToggleButton active={viewMode === "agenda"} onClick={() => setViewMode("agenda")} icon={Calendar}   label="Agenda" iconOnlyMobile dataTour="lista-pessoal-agenda" />
               <ViewToggleButton active={viewMode === "automacoes"} onClick={() => setViewMode("automacoes")} icon={Zap} label="Automações" iconOnlyMobile dataTour="lista-pessoal-automacoes" />
             </div>
             <button
-              // CSV com `filteredTasks`, não `visibleTasks`: concluída sai
+              // CSV com `filteredTasks`, não `visibleTasks`: arquivada sai
               // da tela, nunca do relatório. Mesmo princípio do
               // arquivamento em Tarefas de Marketing.
               onClick={() => exportPersonalTasksToCSV(filteredTasks, { columns })}
@@ -851,20 +1004,20 @@ export function PersonalTasksView({ currentUser }) {
               pode aparecer e sumir ao trocar de visão, senão empurra o que
               está ao lado. Declara quantas escondeu — número que descarta
               linha diz quantas descartou (regra 14). */}
-          {concluidasEscondidas > 0 && (
+          {arquivadasEscondidas > 0 && (
             <div className="flex items-center gap-2 flex-wrap mb-2" style={{
               fontSize: 12, padding: "6px 10px", borderRadius: 8,
               background: "var(--surface-alt)", border: "1px solid var(--border)", color: "var(--text-dim)",
             }}>
-              <CheckCircle2 size={13} style={{ flexShrink: 0, opacity: 0.7 }} />
+              <Archive size={13} style={{ flexShrink: 0, opacity: 0.7 }} />
               <span>
-                {mostrarConcluidas
-                  ? <>Mostrando também <strong>{concluidasEscondidas}</strong> {concluidasEscondidas === 1 ? "tarefa concluída" : "tarefas concluídas"}</>
-                  : <><strong>{concluidasEscondidas}</strong> {concluidasEscondidas === 1 ? "tarefa concluída" : "tarefas concluídas"} fora do quadro · continuam no CSV</>}
+                {mostrarArquivadas
+                  ? <>Mostrando também <strong>{arquivadasEscondidas}</strong> {arquivadasEscondidas === 1 ? "tarefa arquivada" : "tarefas arquivadas"}</>
+                  : <><strong>{arquivadasEscondidas}</strong> {arquivadasEscondidas === 1 ? "tarefa arquivada" : "tarefas arquivadas"} fora do quadro · continuam no CSV</>}
               </span>
-              <button onClick={() => setMostrarConcluidas(v => !v)}
+              <button onClick={() => setMostrarArquivadas(v => !v)}
                 style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--accent)", fontWeight: 550, fontSize: 12 }}>
-                {mostrarConcluidas ? "Esconder concluídas" : "Mostrar concluídas"}
+                {mostrarArquivadas ? "Esconder arquivadas" : "Mostrar arquivadas"}
               </button>
             </div>
           )}
@@ -878,9 +1031,14 @@ export function PersonalTasksView({ currentUser }) {
                   </select>
                 </div>
               </div>
-              <TaskSection title="Hoje"        tasks={buckets.hoje}    columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
-              <TaskSection title="Esta semana" tasks={buckets.semana}  columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
-              <TaskSection title="Sem data"    tasks={buckets.semData} columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} />
+              <TaskSection title="Hoje"        tasks={buckets.hoje}    columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} autoArchiveDays={autoArchiveDays} />
+              <TaskSection title="Esta semana" tasks={buckets.semana}  columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} autoArchiveDays={autoArchiveDays} />
+              <TaskSection title="Sem data"    tasks={buckets.semData} columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} autoArchiveDays={autoArchiveDays} />
+              {/* Só aparece quando há o que mostrar — seção vazia permanente
+                  seria ruído; as outras três são a estrutura fixa da Lista. */}
+              {buckets.concluidas.length > 0 && (
+                <TaskSection title="Concluídas" tasks={buckets.concluidas} columns={columns} onToggle={handleToggleDone} onMove={handleMove} onDelete={deleteTask} onOpen={handleOpen} blockedIds={blockedTaskIds} autoArchiveDays={autoArchiveDays} />
+              )}
             </div>
           ) : viewMode === "kanban" ? (
             <TaskKanbanBoard
@@ -888,6 +1046,7 @@ export function PersonalTasksView({ currentUser }) {
               onCreate={() => setShowCreate(true)} onOpen={handleOpen}
               onEditStageFields={setEditingFieldsStageKey}
               blockedIds={blockedTaskIds}
+              autoArchiveDays={autoArchiveDays}
             />
           ) : (
             <PersonalTaskAgendaView tasks={visibleTasks} onOpen={handleOpen} />

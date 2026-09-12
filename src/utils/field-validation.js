@@ -6,6 +6,8 @@
 //   { type: "regex", pattern: string }              — testado com new RegExp(pattern)
 //   { type: "range", min?: number, max?: number }    — numérico
 //   { type: "not_future" } | { type: "not_past" }    — data (string YYYY-MM-DD ou ISO)
+//   { type: "min_length", min: number }             — texto com tamanho mínimo
+//   { type: "not_in", values: string[] }            — valor que NÃO pode ser usado
 //
 // Client-side apenas, de propósito — mesmo nível de maturidade do resto do
 // app hoje (enforcement de obrigatoriedade também é só client-side; um
@@ -15,6 +17,13 @@
 
 import { resolveVisibleFields } from "./field-conditions";
 import { parseDateInput } from "./date";
+import { semAcento } from "./text-search";
+
+// Mesma normalização que a busca da plataforma usa (semAcento já minusculiza)
+// — um só critério de "esses dois textos são o mesmo".
+function normalizarComparacao(v) {
+  return semAcento(String(v ?? "").trim());
+}
 
 export const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
 const PHONE_PATTERN = "^\\+?[0-9]{10,13}$";
@@ -33,6 +42,11 @@ export const VALIDATION_RULE_TYPES = [
   { value: "range",      label: "Intervalo numérico" },
   { value: "not_future", label: "Não pode ser data futura" },
   { value: "not_past",   label: "Não pode ser data passada" },
+  // Acrescentados 12/09/2026 a pedido do Daniel (brief pipeline_stage_fields,
+  // TAREFA 2). `date_not_past` do brief já existia com outro nome: é o
+  // `not_past` acima, não um tipo novo.
+  { value: "min_length", label: "Tamanho mínimo do texto" },
+  { value: "not_in",     label: "Valores proibidos" },
 ];
 
 // Checksum de CNPJ (mod 11, 2 dígitos verificadores) — mesmo algoritmo
@@ -91,6 +105,28 @@ export function validateFieldFormat(rule, value) {
       if (Number.isNaN(d.getTime())) return null;
       const today = new Date(); today.setHours(0, 0, 0, 0);
       return d.getTime() < today.getTime() ? "Não pode ser uma data passada" : null;
+    }
+    // Conta caracteres do valor JÁ sem espaço nas pontas (o `str` acima), pra
+    // "   " não passar como 3 caracteres. Regra mal configurada (min ausente
+    // ou não numérico) não trava o usuário, mesmo critério do regex inválido.
+    case "min_length": {
+      const min = Number(rule.min);
+      if (!Number.isFinite(min) || min <= 0) return null;
+      return str.length < min
+        ? `Precisa de pelo menos ${min} caracter${min > 1 ? "es" : ""}`
+        : null;
+    }
+    // Lista de valores proibidos (ex.: um "A definir" que não pode sobreviver
+    // até a etapa seguinte). Comparação sem diferenciar maiúscula/minúscula
+    // nem acento — quem configura escreve "a definir" uma vez, não seis
+    // variações.
+    case "not_in": {
+      const proibidos = Array.isArray(rule.values) ? rule.values : [];
+      if (proibidos.length === 0) return null;
+      const alvo = normalizarComparacao(str);
+      return proibidos.some(v => normalizarComparacao(String(v)) === alvo)
+        ? "Esse valor não pode ser usado aqui"
+        : null;
     }
     default:
       return null;

@@ -1,4 +1,5 @@
 import { COMPANY_IDS } from "./companies";
+import { DEFAULT_AUTO_ARCHIVE_DAYS } from "./personal-tasks";
 
 // Painel Executivo é cross-departamento (Comercial + Marketing + RH), não uma
 // tela do Comercial — cada executivo com acesso escolhe o que aparece no
@@ -207,4 +208,12 @@ export const DEFAULT_USER_SETTINGS = {
   // quiser desliga em Configurações → Preferências → Recursos. Persistência
   // pelo mesmo useUserSettings/localStorage do resto, sem tabela própria.
   personalTasksEnabled: true,
+  // Arquivar concluídas automaticamente depois de N dias (0 = nunca).
+  // Decidido com o Daniel 11/09/2026 — mockup "Concluído não é Arquivado".
+  // Fica no navegador como todas as outras preferências da plataforma: a
+  // limpeza roda quando o quadro abre, no aparelho onde você configurou.
+  // Levar isso pra conta (coluna nova + rotina diária no servidor) foi
+  // deliberadamente adiado — arquivar é reversível e o estado em si já é
+  // compartilhado, porque mora no banco.
+  personalTasksAutoArchiveDays: DEFAULT_AUTO_ARCHIVE_DAYS,
 };

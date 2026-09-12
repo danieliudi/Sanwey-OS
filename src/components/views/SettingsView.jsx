@@ -26,6 +26,7 @@ import { useBottomNavPrefs, BOTTOM_NAV_MAX_SHORTCUTS } from "../../hooks/use-bot
 import { getRoleTabs, flattenNavGroups } from "../shell/MobileBottomNav";
 import { usePersonalTasksApiKeys } from "../../hooks/use-personal-tasks-api-keys";
 import { formatDateBR, relativeTime } from "../../utils/date";
+import { AUTO_ARCHIVE_OPTIONS, DEFAULT_AUTO_ARCHIVE_DAYS } from "../../constants/personal-tasks";
 
 // Mesmo critério de quem cria canal no Chat (chat_is_manager, migration
 // 20260812_chat_interno_fase1.sql) — replicado aqui (2ª ocorrência, também em
@@ -2131,6 +2132,35 @@ export function SettingsView({
                     checked={Boolean(settings.personalTasksEnabled)}
                     onChange={() => onUpdate({ personalTasksEnabled: !settings.personalTasksEnabled })}
                   />
+
+                  {/* Decidido com o Daniel 11/09/2026 (mockup "Concluído não
+                      é Arquivado"): concluir deixa a tarefa à vista na coluna
+                      Concluído; arquivar é que tira do quadro. Sem esta
+                      limpeza, Concluído viraria depósito. */}
+                  {settings.personalTasksEnabled && (
+                    <div className="flex items-start gap-3 py-2.5">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium" style={{ color: "var(--text)" }}>
+                          Arquivar concluídas automaticamente
+                        </div>
+                        <div className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                          Conta a partir do dia em que a tarefa entrou em <strong>Concluído</strong>, não do prazo dela.
+                          Arquivar não apaga: ela continua na coluna Arquivar, no CSV e na busca.
+                          A limpeza roda quando você abre o quadro neste aparelho.
+                        </div>
+                      </div>
+                      <select
+                        value={Number(settings.personalTasksAutoArchiveDays ?? DEFAULT_AUTO_ARCHIVE_DAYS)}
+                        onChange={e => onUpdate({ personalTasksAutoArchiveDays: Number(e.target.value) })}
+                        className="shrink-0 rounded-lg text-sm px-2.5 py-1.5"
+                        style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)" }}
+                      >
+                        {AUTO_ARCHIVE_OPTIONS.map(o => (
+                          <option key={o.days} value={o.days}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </Section>
                 )}
 

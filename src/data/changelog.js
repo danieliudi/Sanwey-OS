@@ -38,6 +38,28 @@
 
 export const CHANGELOG = [
   {
+    version: "5.7.0",
+    items: [
+      {
+        // "correcao" e não "novo": isto desfaz o comportamento que subiu em
+        // 4.99.0 (esconder tudo que era terminal). `toast: true` porque é
+        // mudança de comportamento visível, não ajuste cosmético.
+        kind: "correcao",
+        toast: true,
+        text: "No Meu To-do, concluir e arquivar deixaram de ser o mesmo gesto. A tarefa concluída agora fica à vista na coluna Concluído — antes ela sumia do quadro no instante em que você a concluía, e a coluna vivia vazia. Quem sai da frente agora é só a arquivada.",
+      },
+      {
+        kind: "novo",
+        text: "Em Configurações → Preferências → Recursos dá pra escolher arquivar as concluídas sozinho depois de 7, 15 ou 30 dias — ou nunca, se preferir arrastar na mão. O cartão avisa quantos dias faltam antes de sair do quadro, e arquivar não apaga nada: a tarefa continua na coluna Arquivar, no CSV e na busca.",
+      },
+      {
+        kind: "novo",
+        text: "O editor de campos por etapa ganhou duas validações novas: exigir um tamanho mínimo de texto, e recusar valores que não podem passar da etapa (por exemplo, um \"a definir\" que ficou esquecido no campo).",
+        roles: ["gerente", "admin", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "5.6.2",
     items: [
       {
