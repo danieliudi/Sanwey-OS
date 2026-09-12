@@ -105,6 +105,34 @@ const PRIORITY_OPTIONS = [
   { id: "urgente", name: "Urgente", color: "#DC2626" },
 ];
 
+// Preenchimento de uma vaga com mais de uma posição (mockup "Vaga para mais
+// de uma pessoa", aprovado com o Daniel em 11/09/2026).
+//
+// Regra 14 do CLAUDE.md — de onde vem cada número:
+//   total       rh_vagas.positions (NOT NULL default 1)
+//   contratados candidaturas desta vaga com rh_aplicacoes.hired_at
+//               preenchido — o carimbo da CONVERSÃO em funcionário
+//               (markHired), não da aprovação no processo
+//   aguardando  candidaturas na etapa "aprovado" ainda SEM hired_at: a
+//               posição já está falada, mas ainda não é fato
+//
+// Os dois são deliberadamente separados: somar aprovado com contratado
+// faria a vaga parecer cheia antes de estar, e foi por isso que a barra
+// conta só a conversão.
+function posicoesInfo(vaga, contagem) {
+  const total = Math.max(1, Number(vaga?.positions) || 1);
+  const contratados = contagem?.contratados || 0;
+  const aguardando = contagem?.aguardando || 0;
+  return {
+    total,
+    contratados,
+    aguardando,
+    faltam: Math.max(0, total - contratados),
+    completa: contratados >= total,
+    pct: Math.min(100, Math.round((contratados / total) * 100)),
+  };
+}
+
 function priorityInfo(id) {
   return PRIORITY_OPTIONS.find((p) => p.id === id) || PRIORITY_OPTIONS[1];
 }
@@ -477,6 +505,10 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
   const [escala, setEscala]         = useState(initialData?.escala || "");
   const [deadline, setDeadline]     = useState(initialData?.hiring_deadline ? initialData.hiring_deadline.slice(0, 10) : "");
   const [priority, setPriority]     = useState(initialData?.priority || "media");
+  // Posições (mockup "Vaga para mais de uma pessoa", aprovado 11/09/2026).
+  // String no estado pra deixar o campo ficar vazio enquanto a pessoa
+  // digita; normaliza pra >= 1 só no salvar.
+  const [positions, setPositions]   = useState(String(initialData?.positions || 1));
   const [desc, setDesc]             = useState(initialData?.description || "");
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState(null);
@@ -543,6 +575,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
         escala: escala || null,
         hiring_deadline: deadline || null,
         priority,
+        positions: Math.min(999, Math.max(1, parseInt(positions, 10) || 1)),
         description: desc.trim() || null,
         custom_fields: customValues,
       };
@@ -650,6 +683,19 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
               <div>
                 <label style={labelSt}>Salário máx. (R$)</label>
                 <CurrencyInput value={salaryMax} onChange={setSalaryMax} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+              </div>
+              <div>
+                <label style={labelSt}>Posições</label>
+                <input
+                  type="number" min={1} max={999} step={1}
+                  value={positions}
+                  onChange={(e) => setPositions(e.target.value)}
+                  onBlur={(e) => { setPositions(String(Math.min(999, Math.max(1, parseInt(e.target.value, 10) || 1)))); blurGray(e); }}
+                  className={inputCls} style={inputSt} onFocus={focusBlue}
+                />
+                <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4, lineHeight: 1.5 }}>
+                  Quantas pessoas serão contratadas para esta vaga. Deixe 1 para o caso normal.
+                </div>
               </div>
               <div>
                 <label style={labelSt}>Prazo para contratação</label>
@@ -858,13 +904,55 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose, userId }) {
 
 // ── Vaga Kanban Card ──────────────────────────────────────────────────────────
 
-function VagaCard({ vaga, candidatosCount, usersById }) {
+function PosicoesProgresso({ pos, compact = false }) {
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ height: 5, background: "var(--surface-alt)", borderRadius: 99, overflow: "hidden", marginBottom: 4 }}>
+        <div style={{
+          height: "100%", width: `${pos.pct}%`, borderRadius: 99,
+          background: pos.completa ? "var(--success)" : "var(--accent)",
+        }} />
+      </div>
+      <div style={{ fontSize: compact ? 12 : 10, fontWeight: 700, color: "var(--text)" }}>
+        {pos.contratados} de {pos.total} contratados
+      </div>
+      <div style={{ fontSize: compact ? 11 : 9.5, color: "var(--text-dim)", lineHeight: 1.5 }}>
+        {pos.completa
+          ? "Todas as posições foram preenchidas."
+          : pos.aguardando > 0
+            ? `${pos.aguardando} aprovado${pos.aguardando > 1 ? "s" : ""} aguardando virar funcionário · falta${pos.faltam > 1 ? "m" : ""} ${pos.faltam}`
+            : `Falta${pos.faltam > 1 ? "m" : ""} ${pos.faltam} de ${pos.total}`}
+      </div>
+      {pos.completa && (
+        <span style={{
+          display: "inline-block", marginTop: 5, fontSize: 9.5, fontWeight: 700,
+          borderRadius: 99, padding: "2px 9px",
+          background: "var(--amber-bg)", color: "var(--amber)",
+        }}>
+          {/* Não move a vaga sozinha pra "Encerrada": o RH pode querer manter
+              aberta pra repor uma desistência antes do primeiro dia. */}
+          Encerrar a vaga?
+        </span>
+      )}
+    </div>
+  );
+}
+
+function VagaCard({ vaga, candidatosCount, usersById, posicoes }) {
   const pri = priorityInfo(vaga.priority);
   const resolvedResponsibles = (vaga.responsible_ids || []).map(id => usersById?.get(id)).filter(Boolean);
+  const pos = posicoesInfo(vaga, posicoes);
   return (
     <div>
       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>{vaga.title}</div>
-      <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 6 }}>{vaga.job_title || vaga.department || "—"}</div>
+      <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 6 }}>
+        {vaga.job_title || vaga.department || "—"}
+        {/* Vaga de 1 posição segue exatamente como hoje — sem barra, sem
+            contador, sem nem dizer "1 posição". Só quem tem mais de uma
+            ganha o bloco abaixo. */}
+        {pos.total > 1 && ` · ${pos.total} posições`}
+      </div>
+      {pos.total > 1 && <PosicoesProgresso pos={pos} />}
       {(vaga.company_ids || []).length > 0 && (
         <div className="flex gap-1 flex-wrap" style={{ marginBottom: 6 }}>
           {vaga.company_ids.map((id) => (
@@ -893,7 +981,7 @@ function VagaCard({ vaga, candidatosCount, usersById }) {
 }
 
 function VagaKanbanColumn({
-  stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
+  stage, stages, vagasList, candidatosByVaga, posicoesByVaga, onCardClick, canWrite,
   onMoveToStage, onDeleteVaga, onDuplicateVaga, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
   getCompleteness, getUnread, onAddVaga, usersById, boardHeight, getSortCriteria, setSortCriteria,
 }) {
@@ -980,7 +1068,7 @@ function VagaKanbanColumn({
               completeness={getCompleteness?.(v)}
               unread={getUnread?.(v)}
             >
-              <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
+              <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} posicoes={posicoesByVaga[v.id]} />
             </RHKanbanCard>
           ))
         )}
@@ -992,7 +1080,7 @@ function VagaKanbanColumn({
 // ── Vaga Drawer ───────────────────────────────────────────────────────────────
 
 function VagaDrawer({
-  vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onClose, onVerCandidatos,
+  vaga, candidatosCount, posicoes, canWrite, stages, onStageChange, onEdit, onClose, onVerCandidatos,
   customFields, onCustomFieldChange, onAddActivity, onUpdateActivity, currentUser, users, moveError, notifyMentions, onUpdateResponsibles,
   onDelete, onEditFields, onUpdateTitle,
 }) {
@@ -1220,6 +1308,15 @@ function VagaDrawer({
           </div>
         ))}
       </div>
+
+      {/* Só aparece na vaga de mais de uma pessoa — a de 1 posição segue
+          exatamente como antes (mockup aprovado 11/09/2026). */}
+      {posicoesInfo(vaga, posicoes).total > 1 && (
+        <div>
+          <div style={labelSt}>Posições</div>
+          <PosicoesProgresso pos={posicoesInfo(vaga, posicoes)} compact />
+        </div>
+      )}
 
       {vaga.benefits?.length > 0 && (
         <div>
@@ -3224,6 +3321,20 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
     return map;
   }, [candidatos]);
 
+  // Preenchimento por vaga — único ponto que conta isso (card, painel e
+  // tabela consomem daqui, nenhum recalcula por dentro). Ver posicoesInfo()
+  // pra origem de cada número.
+  const posicoesByVaga = useMemo(() => {
+    const map = {};
+    for (const c of candidatos) {
+      if (!c.vaga_id) continue;
+      const e = map[c.vaga_id] || (map[c.vaga_id] = { contratados: 0, aguardando: 0 });
+      if (c.hired_at) e.contratados += 1;
+      else if (c.stage === "aprovado") e.aguardando += 1;
+    }
+    return map;
+  }, [candidatos]);
+
   // Responsáveis por vaga (FASE 5) — resolução de ids pra AvatarStack/AssigneeMultiSelect.
   const usersById = useMemo(() => new Map((profileUsers || []).map(u => [u.id, u])), [profileUsers]);
 
@@ -3491,7 +3602,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
                   completeness={getVagaCompleteness?.(v)}
                   unread={hasUnreadRHComment(v, vagaViewedAt, user?.id)}
                 >
-                  <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
+                  <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} posicoes={posicoesByVaga[v.id]} />
                 </RHKanbanCard>
               )}
               onAdd={canWrite ? (stageKey) => setAddVagaStage(stageKey) : undefined}
@@ -3508,6 +3619,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
                       stages={vagaStages}
                       vagasList={vagasByStage[stage.stageKey] || []}
                       candidatosByVaga={candidatosByVaga}
+                      posicoesByVaga={posicoesByVaga}
                       canWrite={canWrite}
                       onCardClick={(v) => setVagaDrawerId(v.id)}
                       onMoveToStage={attemptVagaStageChange}
@@ -3785,6 +3897,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
         <VagaDrawer
           vaga={vagaEmDrawer}
           candidatosCount={candidatosByVaga[vagaEmDrawer.id] || 0}
+          posicoes={posicoesByVaga[vagaEmDrawer.id]}
           canWrite={canWrite}
           stages={vagaStages}
           onStageChange={handleVagaStageChange}

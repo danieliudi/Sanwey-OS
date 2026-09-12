@@ -265,11 +265,15 @@ export function exportTreinamentoAtribuicoesToCSV(atribuicoes, { colaboradoresBy
 
 export function exportVagasToCSV(vagas, { stages, filename } = {}) {
   const stageLabel = new Map((stages || []).map(s => [s.stageKey, s.name]));
-  const header = ["Título", "Etapa", "Empresas"];
+  // "Posições" entrou junto com rh_vagas.positions (11/09/2026): vaga de
+  // mais de uma pessoa sem esse número no CSV faria a planilha contar uma
+  // contratação onde havia três.
+  const header = ["Título", "Etapa", "Empresas", "Posições"];
   const rows = (vagas || []).map(v => [
     v.title || "",
     stageLabel.get(v.stage) || v.stage || "",
     (v.company_ids || []).map(id => COMPANIES[id]?.short || id).join(", "),
+    String(Math.max(1, Number(v.positions) || 1)),
   ]);
   const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
   const today = new Date().toISOString().slice(0, 10);
