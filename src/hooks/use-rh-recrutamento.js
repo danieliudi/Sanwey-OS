@@ -320,6 +320,22 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
     return { movidos: movidasIds.size };
   }, []);
 
+  // Quantas pessoas JÁ foram contratadas nesta vaga, lido do banco na hora.
+  // Existe porque decidir o encerramento automático a partir do estado local
+  // erra em concorrência: dois RHs com a tela aberta numa vaga de 3 com 1
+  // preenchida veem "1" cada um, os dois calculam que ainda falta, e a vaga
+  // nunca encerra. Conta `hired_at not null`, a mesma origem que a barra da
+  // vaga usa (regra 14) — só que fresca.
+  const contarContratadosDaVaga = useCallback(async (vagaId) => {
+    const { count, error } = await supabase
+      .from("rh_aplicacoes")
+      .select("id", { count: "exact", head: true })
+      .eq("vaga_id", vagaId)
+      .not("hired_at", "is", null);
+    if (error) throw new Error(error.message);
+    return count || 0;
+  }, []);
+
   // Marca a aplicação como contratada (usado após converter o candidato em
   // funcionário) — dá sinal durável de "já contratado" e trava a 2ª conversão.
   const markHired = useCallback(async (aplicacaoId) => {
@@ -346,10 +362,14 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
   // visível em vez de um sucesso silencioso.
   const unmarkHired = useCallback(async (aplicacaoId, { motivo, autor } = {}) => {
     const current = aplicacoes.find(a => a.id === aplicacaoId);
+    // `created_at`, não `at`: é a chave que o único leitor de `notes` usa
+    // (CandidatoDrawer) e que `addNote` já grava. Com a chave errada a nota
+    // aparecia com data "—", justamente a informação que ela existe pra dar.
+    // O autor vai DENTRO do texto porque a lista de notas não renderiza
+    // autor — gravar num campo que ninguém lê seria dívida silenciosa.
     const nota = {
-      text: `Contratação desfeita${motivo ? ` — ${motivo}` : ""}.`,
-      author: autor || null,
-      at: new Date().toISOString(),
+      text: `Contratação desfeita${autor ? ` por ${autor}` : ""}${motivo ? ` — ${motivo}` : ""}.`,
+      created_at: new Date().toISOString(),
     };
     const notes = [...(current?.notes || []), nota];
     const { data, error } = await supabase
@@ -426,7 +446,8 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
     changeRating,
     markHired,
     unmarkHired,
+    contarContratadosDaVaga,
     attachTriagemToVaga,
     refetch: fetchAll,
-  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, unmarkHired, attachTriagemToVaga, fetchAll]);
+  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, unmarkHired, contarContratadosDaVaga, attachTriagemToVaga, fetchAll]);
 }

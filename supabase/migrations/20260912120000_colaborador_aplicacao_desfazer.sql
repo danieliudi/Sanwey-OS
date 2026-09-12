@@ -16,15 +16,22 @@
 -- nome/e-mail — exatamente o palpite que esta coluna existe pra eliminar, e
 -- um palpite errado ligaria a ficha de uma pessoa à candidatura de outra. As
 -- contratações que já aconteceram continuam com aplicacao_id nulo; o
--- front-end cai no reconhecimento por e-mail/nome dentro da mesma vaga e,
--- quando não tem certeza, pede confirmação em vez de escolher sozinho (ver
--- RHRecrutamentoView.jsx, encontrarColaboradorDaCandidatura).
+-- front-end cai no reconhecimento por e-mail e depois nome, sempre DENTRO da
+-- mesma vaga e descartando ficha já ligada a outra candidatura. Quando não
+-- tem certeza não mexe em ficha nenhuma: avisa no próprio modal que aquela
+-- precisa ser ajustada à mão (ver RHRecrutamentoView.jsx,
+-- encontrarColaboradorDaCandidatura).
 --
 -- RLS: nenhuma policy nova. rh_colaboradores já tem RLS ligada e as policies
--- são por linha (rh_colaboradores_rh_access, FOR ALL, roles[] via
--- current_user_has_role) — não existe grant por coluna nessa tabela, então a
--- coluna nova herda exatamente o mesmo controle das demais. Quem já podia
--- ler/editar a ficha passa a ler/editar este campo junto.
+-- são por LINHA, nunca por coluna (pg_attribute.attacl nulo em todas elas),
+-- então a coluna nova herda exatamente o mesmo controle das demais. São três:
+--   · rh_colaboradores_rh_access  — FOR ALL, current_user_is_rh()
+--                                   (roles && {rh, gerente_rh, admin})
+--   · rh_colaboradores_dp_read    — SELECT, current_user_is_pessoal()
+--   · rh_colaboradores_diretoria_read — SELECT
+-- Ou seja: RH lê e escreve o campo novo junto com o resto da ficha; DP e
+-- diretoria passam a LER e continuam sem escrever. Todas usam roles[] e
+-- nenhuma lê o escalar profiles.role (MD-11).
 --
 -- Quem pode desfazer: a MESMA população que já pode converter (qualquer
 -- pessoa do RH com permissão de escrita) — decidido com o Daniel 12/09/2026
@@ -46,10 +53,15 @@ begin
   end if;
 end $$;
 
--- Índice parcial: a esmagadora maioria das fichas não vem de candidatura
--- (importação, cadastro direto), e a única consulta que usa a coluna é
--- "qual ficha veio desta candidatura".
-create index if not exists rh_colaboradores_aplicacao_id_idx
+-- Índice parcial e ÚNICO. Parcial porque a esmagadora maioria das fichas não
+-- vem de candidatura (importação, cadastro direto) e a única consulta que usa
+-- a coluna é "qual ficha veio desta candidatura". Único porque a relação é
+-- 1:1 por intenção: sem a unicidade, duas fichas apontando pra mesma
+-- candidatura fariam o front (que exige exatamente um resultado) cair de
+-- volta no palpite por nome e depois desistir, e o RH veria "não achei a
+-- ficha" sem saber que a causa foi ambiguidade, não ausência. Assim vira
+-- erro na hora de gravar.
+create unique index if not exists rh_colaboradores_aplicacao_id_idx
   on public.rh_colaboradores (aplicacao_id)
   where aplicacao_id is not null;
 

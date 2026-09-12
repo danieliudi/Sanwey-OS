@@ -906,7 +906,7 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose, userId }) {
 
 // ── Vaga Kanban Card ──────────────────────────────────────────────────────────
 
-function PosicoesProgresso({ pos, compact = false }) {
+function PosicoesProgresso({ pos, compact = false, encerrada = false }) {
   return (
     <div style={{ marginBottom: 6 }}>
       <div style={{ height: 5, background: "var(--surface-alt)", borderRadius: 99, overflow: "hidden", marginBottom: 4 }}>
@@ -925,14 +925,18 @@ function PosicoesProgresso({ pos, compact = false }) {
             ? `${pos.aguardando} aprovado${pos.aguardando > 1 ? "s" : ""} aguardando virar funcionário · falta${pos.faltam > 1 ? "m" : ""} ${pos.faltam}`
             : `Falta${pos.faltam > 1 ? "m" : ""} ${pos.faltam} de ${pos.total}`}
       </div>
-      {pos.completa && (
+      {/* Só quando as posições fecharam E a vaga continua aberta. Desde
+          12/09/2026 a última contratação encerra a vaga sozinha, então no
+          caminho normal esta etiqueta nem aparece — ela existe pro caso de
+          alguém ter reaberto a vaga na mão, ou de o encerramento automático
+          ter falhado. Sem a checagem de etapa, a plataforma pedia uma ação
+          que ela mesma acabara de executar. */}
+      {pos.completa && !encerrada && (
         <span style={{
           display: "inline-block", marginTop: 5, fontSize: 9.5, fontWeight: 700,
           borderRadius: 99, padding: "2px 9px",
           background: "var(--amber-bg)", color: "var(--amber)",
         }}>
-          {/* Não move a vaga sozinha pra "Encerrada": o RH pode querer manter
-              aberta pra repor uma desistência antes do primeiro dia. */}
           Encerrar a vaga?
         </span>
       )}
@@ -954,7 +958,7 @@ function VagaCard({ vaga, candidatosCount, usersById, posicoes }) {
             ganha o bloco abaixo. */}
         {pos.total > 1 && ` · ${pos.total} posições`}
       </div>
-      {pos.total > 1 && <PosicoesProgresso pos={pos} />}
+      {pos.total > 1 && <PosicoesProgresso pos={pos} encerrada={vaga.stage === "encerrada"} />}
       {(vaga.company_ids || []).length > 0 && (
         <div className="flex gap-1 flex-wrap" style={{ marginBottom: 6 }}>
           {vaga.company_ids.map((id) => (
@@ -1316,7 +1320,7 @@ function VagaDrawer({
       {posicoesInfo(vaga, posicoes).total > 1 && (
         <div>
           <div style={labelSt}>Posições</div>
-          <PosicoesProgresso pos={posicoesInfo(vaga, posicoes)} compact />
+          <PosicoesProgresso pos={posicoesInfo(vaga, posicoes)} compact encerrada={vaga.stage === "encerrada"} />
         </div>
       )}
 
@@ -2361,21 +2365,34 @@ const MOTIVOS_DESFAZER = [
   "Foi convertido por engano",
 ];
 
-function DesfazerContratacaoModal({ candidato, ficha, vaga, onConfirm, onClose }) {
+function DesfazerContratacaoModal({ candidato, ficha, vaga, stages, onConfirm, onClose }) {
   const [motivo, setMotivo] = useState(MOTIVOS_DESFAZER[0]);
   const [outro, setOutro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState(null);
+  // Falhas parciais: a posição já foi devolvida, mas alguma consequência
+  // prometida não aconteceu. Vira um aviso de fechamento, não um "tentar de
+  // novo" — repetir reescreveria a nota e não desfaria nada a mais.
+  const [parcial, setParcial] = useState(null);
 
   const motivoFinal = motivo === "__outro" ? outro.trim() : motivo;
   const vagaReabre = vaga?.stage === "encerrada";
+  // Etapa REAL do candidato, não um rótulo fixo: nada impede que ele tenha
+  // sido movido depois de contratado, e prometer "continua em Aprovado"
+  // seria dizer na tela uma coisa que a tela pode desmentir ao lado.
+  const etapaAtual = findStage(stages, candidato.stage)?.name || candidato.stage;
 
   const confirmar = async () => {
     if (salvando) return;
     setSalvando(true);
     setErro(null);
     try {
-      await onConfirm({ candidato, motivo: motivoFinal });
+      const { falhas = [] } = (await onConfirm({ candidato, motivo: motivoFinal })) || {};
+      if (falhas.length > 0) {
+        setParcial(falhas);
+        setSalvando(false);
+        return;
+      }
       onClose();
     } catch (e) {
       setErro(e?.message || "Não deu pra desfazer. Tenta de novo.");
@@ -2385,74 +2402,101 @@ function DesfazerContratacaoModal({ candidato, ficha, vaga, onConfirm, onClose }
 
   return (
     <Modal open onClose={salvando ? () => {} : onClose} title="Desfazer contratação" width={520}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.55 }}>
-          A posição de <strong>{candidato.name}</strong> volta a contar como aberta
-          {vaga?.title ? <> na vaga <strong>{vaga.title}</strong></> : null}.
-        </div>
+      <div className="p-6" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {parcial ? (
+          <>
+            <div style={{ background: "var(--warning-bg)", color: "var(--warning)", borderRadius: 10, padding: "12px 14px", fontSize: 13, lineHeight: 1.6 }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>Feito pela metade</div>
+              A posição de <strong>{candidato.name}</strong> foi devolvida e a candidatura está
+              intacta, mas não deu pra {parcial.join(" nem ")}. Isso precisa ser ajustado à mão.
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                onClick={onClose}
+                style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                Entendi, fechar
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.55 }}>
+              A posição de <strong>{candidato.name}</strong> volta a contar como aberta
+              {vaga?.title ? <> na vaga <strong>{vaga.title}</strong></> : null}.
+            </div>
 
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 6 }}>
-            Motivo
-          </div>
-          <select
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            style={{ width: "100%", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "8px 10px", fontSize: 13 }}
-          >
-            {MOTIVOS_DESFAZER.map((m) => <option key={m} value={m}>{m}</option>)}
-            <option value="__outro">Outro motivo…</option>
-          </select>
-          {motivo === "__outro" && (
-            <input
-              type="text"
-              value={outro}
-              onChange={(e) => setOutro(e.target.value)}
-              placeholder="Escreva o motivo"
-              style={{ width: "100%", marginTop: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "8px 10px", fontSize: 13 }}
-            />
-          )}
-        </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 6 }}>
+                Motivo
+              </div>
+              <select
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                style={{ width: "100%", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "8px 10px", fontSize: 13 }}
+              >
+                {MOTIVOS_DESFAZER.map((m) => <option key={m} value={m}>{m}</option>)}
+                <option value="__outro">Outro motivo…</option>
+              </select>
+              {motivo === "__outro" && (
+                <input
+                  type="text"
+                  value={outro}
+                  onChange={(e) => setOutro(e.target.value)}
+                  placeholder="Escreva o motivo"
+                  style={{ width: "100%", marginTop: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "8px 10px", fontSize: 13 }}
+                />
+              )}
+            </div>
 
-        {/* O que vai acontecer, em vez de "tem certeza?" — a pessoa decide
-            olhando a consequência, não a pergunta. */}
-        <div style={{ background: "var(--surface-alt)", borderRadius: 10, padding: "11px 13px", fontSize: 12.5, color: "var(--text-dim)", lineHeight: 1.6 }}>
-          <div style={{ color: "var(--text)", fontWeight: 600, marginBottom: 5 }}>O que acontece</div>
-          <div>· A candidatura continua inteira no funil, em “Aprovado”, com entrevistas, notas e anexos.</div>
-          <div>
-            {ficha
-              ? <>· A ficha de <strong>{ficha.fullName}</strong> vai para “Removido” no Onboarding. Nada é apagado.</>
-              : <>· Não achei com certeza a ficha de funcionário criada nesta contratação — ela <strong>não</strong> será movida, e você precisa ajustá-la à mão em Onboarding.</>}
-          </div>
-          <div>
-            {vagaReabre
-              ? <>· A vaga estava encerrada e volta para “Em Triagem”.</>
-              : <>· A vaga já está aberta e continua onde está.</>}
-          </div>
-        </div>
+            {/* O que vai acontecer, em vez de "tem certeza?" — a pessoa decide
+                olhando a consequência, não a pergunta. */}
+            <div style={{ background: "var(--surface-alt)", borderRadius: 10, padding: "11px 13px", fontSize: 12.5, color: "var(--text-dim)", lineHeight: 1.6 }}>
+              <div style={{ color: "var(--text)", fontWeight: 600, marginBottom: 5 }}>O que acontece</div>
+              <div>· A candidatura continua inteira no funil, em “{etapaAtual}”, com entrevistas, notas e anexos.</div>
+              {ficha && <div>· A ficha de <strong>{ficha.fullName}</strong> vai para “Removido” no Onboarding. Nada é apagado.</div>}
+              <div>
+                {vagaReabre
+                  ? <>· A vaga estava encerrada e volta para “Em Triagem”.</>
+                  : <>· A vaga já está aberta e continua onde está.</>}
+              </div>
+            </div>
 
-        {erro && (
-          <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 9, padding: "9px 12px", fontSize: 12.5 }}>
-            {erro}
-          </div>
+            {/* Único ponto do modal que exige trabalho manual depois — some do
+                cinza e vai pra --warning, que é o token de "precisa de
+                atenção" (regra 1). Ficava idêntico às linhas informativas
+                vizinhas e era a frase mais fácil de não ler. */}
+            {!ficha && (
+              <div style={{ background: "var(--warning-bg)", color: "var(--warning)", borderRadius: 10, padding: "10px 13px", fontSize: 12.5, lineHeight: 1.55 }}>
+                Não achei com certeza a ficha de funcionário criada nesta contratação — ela
+                <strong> não</strong> será movida para “Removido”, e você precisa ajustá-la à mão em Onboarding.
+              </div>
+            )}
+
+            {erro && (
+              <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 9, padding: "9px 12px", fontSize: 12.5 }}>
+                {erro}
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={onClose}
+                disabled={salvando}
+                style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: salvando ? "default" : "pointer" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmar}
+                disabled={salvando || !motivoFinal}
+                style={{ border: "none", background: "var(--danger)", color: "#FFF", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: (salvando || !motivoFinal) ? "default" : "pointer", opacity: (salvando || !motivoFinal) ? 0.6 : 1 }}
+              >
+                {salvando ? "Desfazendo…" : "Desfazer contratação"}
+              </button>
+            </div>
+          </>
         )}
-
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button
-            onClick={onClose}
-            disabled={salvando}
-            style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: salvando ? "default" : "pointer" }}
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={confirmar}
-            disabled={salvando || !motivoFinal}
-            style={{ border: "none", background: "var(--danger)", color: "#FFF", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: (salvando || !motivoFinal) ? "default" : "pointer", opacity: (salvando || !motivoFinal) ? 0.6 : 1 }}
-          >
-            {salvando ? "Desfazendo…" : "Desfazer contratação"}
-          </button>
-        </div>
       </div>
     </Modal>
   );
@@ -3004,7 +3048,7 @@ function addDays(base, days) {
 export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, initialSelectedVagaId, onInitialVagaConsumed }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
-    createVaga, updateVaga, changeVagaStage, duplicateVaga, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, unmarkHired, attachTriagemToVaga,
+    createVaga, updateVaga, changeVagaStage, duplicateVaga, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, unmarkHired, contarContratadosDaVaga, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const { cargos, createCargo, deleteCargo } = useRHCargoTemplates({ userId: user?.id });
   const { colaboradores, createColaborador, changeOnboardingStage } = useRHColaboradores({ userId: user?.id });
@@ -3160,9 +3204,16 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
     // Marca a aplicação como contratada — dá sinal durável de "já contratado"
     // e trava a 2ª conversão (antes o candidato ficava em "Aprovado" com o CTA
     // "Converter" ativo, gerando cadastro/onboarding em dobro). Achado da auditoria.
+    let carimbou = false;
     if (hiringCandidato?.id) {
-      await markHired(hiringCandidato.id).catch((e) => console.error("markHired falhou:", e));
+      try {
+        await markHired(hiringCandidato.id);
+        carimbou = true;
+      } catch (e) {
+        console.error("markHired falhou:", e);
+      }
     }
+
     // Encerrar a vaga passou a olhar as POSIÇÕES (12/09/2026, mockup
     // "Desistiu antes de começar"). Até aqui isto encerrava na PRIMEIRA
     // conversão, sempre — o que numa vaga de 3 operadores fechava a vaga (e o
@@ -3173,13 +3224,21 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
     // Vaga de 1 posição continua encerrando na contratação, exatamente como
     // antes — quem só contrata um de cada vez não percebe mudança nenhuma.
     //
-    // `+ 1` porque `posicoesByVaga` é derivado de `candidatos`, que só volta
-    // a refletir o hired_at recém-gravado no próximo render.
-    if (vaga?.id) {
-      const totalPosicoes = Math.max(1, Number(vaga.positions) || 1);
-      const jaContratados = (posicoesByVaga[vaga.id]?.contratados || 0) + 1;
-      if (jaContratados >= totalPosicoes) {
-        await changeVagaStage(vaga.id, "encerrada");
+    // Conta do BANCO, não do estado local: `posicoesByVaga` é um retrato do
+    // último render e não enxerga nem o hired_at que acabou de ser gravado
+    // aqui, nem o que outra sessão gravou enquanto esta tela estava aberta —
+    // com dois RHs contratando ao mesmo tempo, os dois veriam faltar e a vaga
+    // nunca encerraria. E só decide se o carimbo DEU CERTO: encerrar a vaga
+    // com base num hired_at que a RLS recusou deixaria "2 de 3 contratados"
+    // numa vaga "Encerrada".
+    if (vaga?.id && carimbou) {
+      try {
+        const contratados = await contarContratadosDaVaga(vaga.id);
+        if (posicoesInfo(vaga, { contratados }).completa) {
+          await changeVagaStage(vaga.id, "encerrada");
+        }
+      } catch (e) {
+        console.error("encerramento automático da vaga falhou:", e);
       }
     }
     return novo;
@@ -3201,7 +3260,14 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
     const porElo = colaboradores.filter(c => c.aplicacaoId && c.aplicacaoId === candidato.id);
     if (porElo.length === 1) return porElo[0];
 
-    const daVaga = colaboradores.filter(c => c.vagaId && c.vagaId === candidato.vaga_id);
+    // Ficha já ligada a OUTRA candidatura sai do palpite: o elo prova que ela
+    // é de outra pessoa. Sem este filtro, dois candidatos homônimos na mesma
+    // vaga faziam o reconhecimento por nome devolver a ficha de quem está
+    // contratado de verdade — e o passo seguinte a mandaria pra "Removido".
+    const daVaga = colaboradores.filter(c =>
+      c.vagaId && c.vagaId === candidato.vaga_id &&
+      !(c.aplicacaoId && c.aplicacaoId !== candidato.id)
+    );
     const norm = (v) => String(v || "").trim().toLowerCase();
     if (candidato.email) {
       const porEmail = daVaga.filter(c => norm(c.email) === norm(candidato.email));
@@ -3213,29 +3279,42 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
 
   const handleDesfazerContratacao = async ({ candidato, motivo }) => {
     // 1. Devolve a posição. É o único passo que PRECISA dar certo — se ele
-    //    falhar, nada mais acontece e o erro sobe pro modal.
+    //    falhar, o erro sobe e nada mais acontece.
     await unmarkHired(candidato.id, { motivo, autor: user?.name || user?.email || null });
+
+    // Os passos 2 e 3 são consequências prometidas ao usuário no modal. Falha
+    // aqui NÃO pode ser engolida: os dois hooks detectam corretamente a
+    // negação da RLS (`.select()` + checagem de 0 linhas) e lançam, e engolir
+    // isso fecharia o modal anunciando sucesso com a ficha ainda ativa no
+    // Onboarding. Acumula e devolve — o modal mostra o que ficou pra trás.
+    const falhas = [];
 
     // 2. A ficha do funcionário vai pra "Removido" no Onboarding — etapa
     //    terminal que a plataforma já usa e que não conta nas métricas. Nunca
     //    apaga: admissão, checklist e documentos ficam guardados.
     const ficha = encontrarColaboradorDaCandidatura(candidato);
     if (ficha) {
-      await changeOnboardingStage(ficha.id, "removido").catch((e) => {
+      try {
+        await changeOnboardingStage(ficha.id, "removido");
+      } catch (e) {
         console.error("desfazer contratação: mover ficha pra Removido falhou:", e);
-      });
+        falhas.push(`mover a ficha de ${ficha.fullName} para “Removido” no Onboarding`);
+      }
     }
 
     // 3. Vaga encerrada por causa desta contratação reabre em "Em Triagem" —
     //    voltar a publicar continua sendo decisão de gente.
     const vaga = vagas.find(v => v.id === candidato.vaga_id);
     if (vaga && vaga.stage === "encerrada") {
-      await changeVagaStage(vaga.id, "em_triagem").catch((e) => {
+      try {
+        await changeVagaStage(vaga.id, "em_triagem");
+      } catch (e) {
         console.error("desfazer contratação: reabrir vaga falhou:", e);
-      });
+        falhas.push(`reabrir a vaga “${vaga.title}” em “Em Triagem”`);
+      }
     }
 
-    return { fichaMovida: Boolean(ficha), vagaReaberta: Boolean(vaga && vaga.stage === "encerrada") };
+    return { falhas };
   };
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -4213,6 +4292,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
           candidato={desfazendoCandidato}
           ficha={encontrarColaboradorDaCandidatura(desfazendoCandidato)}
           vaga={vagas.find((v) => v.id === desfazendoCandidato.vaga_id) || null}
+          stages={candStages}
           onConfirm={handleDesfazerContratacao}
           onClose={() => setDesfazendoCandidato(null)}
         />
