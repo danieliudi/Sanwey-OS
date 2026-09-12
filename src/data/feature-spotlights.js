@@ -24,6 +24,19 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // ALVO: o campo "Posições" mora DENTRO do modal Nova Vaga, que não existe
+  // até alguém abrir — alvo ausente se auto-marca como visto (ver
+  // FeatureSpotlight.jsx). Ancora no botão que abre o modal, que é o
+  // caminho real até a novidade. Ele depende de `canWrite` + view "vagas"
+  // (o padrão da tela), ou seja: aparece justamente pra quem cadastra vaga,
+  // que é quem precisa saber disso.
+  {
+    id: "vaga-posicoes",
+    route: "rh-recrutamento",
+    target: '[data-tour="vaga-posicoes"]',
+    text: "Vaga para mais de uma pessoa: o formulário agora tem o campo \"Posições\". Preenchendo mais de 1, o card da vaga passa a mostrar quantas já foram contratadas — e avisa quando fecha.",
+    version: "5.8.0",
+  },
   // ALVO, decisão registrada (achado do QA desta entrega): o elemento que
   // REPRESENTA a novidade é a coluna "Concluído" — mas ela só existe na view
   // Kanban, e a faixa das arquivadas só existe quando há arquivada. Alvo que

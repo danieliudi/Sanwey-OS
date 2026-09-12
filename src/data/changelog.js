@@ -38,6 +38,21 @@
 
 export const CHANGELOG = [
   {
+    version: "5.8.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Vaga para mais de uma pessoa: o formulário da vaga ganhou o campo \"Posições\". Quem contrata três operadores no mesmo processo agora vê uma barra com \"1 de 3 contratados\" no card e no painel da vaga, em vez de a vaga parecer preenchida na primeira contratação.",
+        roles: ["gerente_rh", "rh", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "A barra conta quem já virou funcionário de verdade; o candidato aprovado que ainda não foi convertido aparece na linha de baixo. Ao completar as posições a vaga sugere encerrar, mas não se encerra sozinha — repor uma desistência continua sendo decisão sua.",
+        roles: ["gerente_rh", "rh", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.7.0",
     items: [
       {
