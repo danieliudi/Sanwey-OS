@@ -157,6 +157,7 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
       escala:             source.escala,
       hiring_deadline:    source.hiring_deadline,
       priority:           source.priority,
+      positions:          source.positions,
       description:        source.description,
       custom_fields:      source.custom_fields,
       responsible_ids:    source.responsible_ids,
