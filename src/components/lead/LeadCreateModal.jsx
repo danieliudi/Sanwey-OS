@@ -1009,6 +1009,15 @@ export function LeadCreateModal({
                       {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>}
                       {f.label}
                     </label>
+                    {/* O texto de ajuda do campo existia no cadastro da etapa e
+                        só aparecia no drawer de detalhe — ou seja, sumia
+                        justamente na PRIMEIRA vez que alguém preenche o campo,
+                        que é quando ele mais serve. Mesmo elemento e mesmo
+                        estilo do LeadDetailDrawer, pra explicação não mudar de
+                        cara entre criar e editar. */}
+                    {f.helpText && (
+                      <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>
+                    )}
                     <StageFieldInput
                       field={f}
                       value={customValues[f.fieldKey]}

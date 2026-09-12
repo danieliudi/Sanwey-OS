@@ -38,6 +38,27 @@
 
 export const CHANGELOG = [
   {
+    version: "5.6.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "Baixar o próprio holerite, cartão de ponto ou anexo de onboarding voltou a funcionar. A permissão estava negando para todo colaborador que não é do RH — inclusive para o dono do próprio documento.",
+        toast: true,
+      },
+      {
+        kind: "correcao",
+        text: "O texto de ajuda dos campos de etapa agora aparece também na hora de CRIAR o lead. Antes só aparecia ao editar depois, ou seja, sumia justamente na primeira vez que alguém preenchia o campo.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Campos de Valor e Hora passaram a respeitar o texto de exemplo cadastrado na etapa, em vez de usar sempre um fixo.",
+        roles: ["gerente", "admin"],
+      },
+    ],
+  },
+
+  {
     version: "5.6.1",
     items: [
       {

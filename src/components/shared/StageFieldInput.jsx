@@ -96,16 +96,22 @@ function renderInput({ field, value, onChange, users, companyId }) {
       <CurrencyInput
         value={value}
         onChange={onChange}
-        placeholder="0,00"
+        placeholder={field.placeholder || "0,00"}
         style={baseStyle}
         onFocus={handleFocus}
         onBlur={handleBlur}
       />
     );
   }
+  // `date` e `datetime` NÃO recebem `field.placeholder`, e isso é deliberado:
+  // input nativo de data ignora o atributo `placeholder` em todo navegador —
+  // ele já desenha a máscara dd/mm/aaaa sozinho. Passar o valor aqui daria a
+  // impressão, pra quem lê o código e pra quem cadastra a etapa, de que o
+  // texto aparece em algum lugar. Não aparece. Quem precisa explicar um campo
+  // de data usa o texto de ajuda, que é renderizado de verdade.
   if (t === "date") return <input type="date" value={value || ""} onChange={e => onChange(e.target.value)} style={baseStyle} onFocus={handleFocus} onBlur={handleBlur} />;
   if (t === "datetime") return <input type="datetime-local" value={value || ""} onChange={e => onChange(e.target.value)} style={baseStyle} onFocus={handleFocus} onBlur={handleBlur} />;
-  if (t === "time") return <input type="time" value={value || ""} onChange={e => onChange(e.target.value)} placeholder="00:00" style={baseStyle} onFocus={handleFocus} onBlur={handleBlur} />;
+  if (t === "time") return <input type="time" value={value || ""} onChange={e => onChange(e.target.value)} placeholder={field.placeholder || "00:00"} style={baseStyle} onFocus={handleFocus} onBlur={handleBlur} />;
   if (t === "email") return <input type="email" value={value || ""} onChange={e => onChange(e.target.value)} placeholder={field.placeholder} style={baseStyle} onFocus={handleFocus} onBlur={handleBlur} />;
   if (t === "phone") return <input type="tel" value={value || ""} onChange={e => onChange(e.target.value)} placeholder={field.placeholder || "(00) 00000-0000"} style={baseStyle} onFocus={handleFocus} onBlur={handleBlur} />;
   if (t === "url") return <input type="url" value={value || ""} onChange={e => onChange(e.target.value)} placeholder={field.placeholder || "https://"} style={baseStyle} onFocus={handleFocus} onBlur={handleBlur} />;

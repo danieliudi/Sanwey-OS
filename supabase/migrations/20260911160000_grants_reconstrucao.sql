@@ -112,7 +112,9 @@ declare
   f text;
 begin
   foreach f in array array[
-    'public.abrir_documentos_admissao(uuid)'
+    'public.abrir_documentos_admissao(uuid)',
+    'public.importar_colaboradores(jsonb,boolean)',
+    'public.is_own_colaborador_folder(text)'
   ] loop
     if to_regprocedure(f) is not null then
       execute format('revoke execute on function %s from anon', f);
