@@ -24,6 +24,14 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.9.0 (desfazer contratação) — decisão de PULAR o spotlight, registrada
+  // aqui pra não virar pergunta esquecida (regra 12): o botão "Desfazer" só
+  // existe no card de um candidato JÁ contratado, e não há candidato
+  // contratado na tela até haver um. Alvo ausente se auto-marca como visto,
+  // então o aviso morreria antes de existir alguém pra quem ele importa.
+  // Além disso é saída de exceção: quem precisa dela vai procurar no card da
+  // pessoa exata, que é onde o botão está. Changelog e tutorial cobrem.
+  //
   // ALVO: o campo "Posições" mora DENTRO do modal Nova Vaga, que não existe
   // até alguém abrir — alvo ausente se auto-marca como visto (ver
   // FeatureSpotlight.jsx). Ancora no botão que abre o modal, que é o

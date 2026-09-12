@@ -330,6 +330,40 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
     setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, hired_at: when } : a));
   }, []);
 
+  // Desfaz a contratação: limpa hired_at, devolvendo a posição da vaga.
+  // Mockup "Desistiu antes de começar", aprovado 12/09/2026 — o caso real é
+  // a pessoa avisar na véspera que não vem. Antes disso o carimbo era
+  // write-once e a única saída era apagar a candidatura inteira, levando
+  // junto entrevistas, notas, avaliação e a triagem por IA.
+  //
+  // Não apaga nada: a candidatura fica, o histórico fica, e o motivo entra
+  // em `notes` (a mesma lista que o RH lê no card) pra que "por que essa
+  // vaga reabriu?" tenha resposta dentro da própria candidatura.
+  //
+  // Mesma população que já podia converter — decidido com o Daniel
+  // ("mantém"), sem trava nova de papel. Quem não tiver permissão de escrita
+  // esbarra na RLS, e a checagem de 0 linhas abaixo transforma isso num erro
+  // visível em vez de um sucesso silencioso.
+  const unmarkHired = useCallback(async (aplicacaoId, { motivo, autor } = {}) => {
+    const current = aplicacoes.find(a => a.id === aplicacaoId);
+    const nota = {
+      text: `Contratação desfeita${motivo ? ` — ${motivo}` : ""}.`,
+      author: autor || null,
+      at: new Date().toISOString(),
+    };
+    const notes = [...(current?.notes || []), nota];
+    const { data, error } = await supabase
+      .from("rh_aplicacoes")
+      .update({ hired_at: null, notes })
+      .eq("id", aplicacaoId)
+      .select();
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) {
+      throw new Error("Não foi possível desfazer — sem permissão pra editar esta candidatura.");
+    }
+    setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, hired_at: null, notes } : a));
+  }, [aplicacoes]);
+
   const addNote = useCallback(async (aplicacaoId, note) => {
     const current = aplicacoes.find(a => a.id === aplicacaoId);
     const notes = [...(current?.notes || []), note];
@@ -391,7 +425,8 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
     addNote,
     changeRating,
     markHired,
+    unmarkHired,
     attachTriagemToVaga,
     refetch: fetchAll,
-  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga, fetchAll]);
+  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, unmarkHired, attachTriagemToVaga, fetchAll]);
 }

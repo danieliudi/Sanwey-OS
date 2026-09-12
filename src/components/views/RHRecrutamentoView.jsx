@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   ChevronRight,
@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Download,
+  Undo2,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -59,6 +60,7 @@ import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useProfiles } from "../../hooks/use-profiles";
 import { useAI } from "../../hooks/use-ai";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
+import { Modal } from "../ui/Modal";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { RHStageListManager } from "../shared/stage-editor/StageListManager";
@@ -1874,7 +1876,7 @@ function NovoCandidatoModal({ defaultStage, defaultVagaId, vagas, stages, onSave
 // ── Candidato Drawer ──────────────────────────────────────────────────────────
 
 function CandidatoDrawer({
-  candidato, vagas, stages, canWrite, onStageChange, onStageMoved, onAddNote, onRatingChange, onClose, onHire,
+  candidato, vagas, stages, canWrite, onStageChange, onStageMoved, onAddNote, onRatingChange, onClose, onHire, onUndoHire,
   customFields, onCustomFieldChange, onAddActivity, onUpdateActivity, currentUser, users, notifyMentions, onDelete, onEditFields, onUpdateTitle,
 }) {
   const [noteText, setNoteText] = useState("");
@@ -2043,14 +2045,32 @@ function CandidatoDrawer({
 
       {/* Já contratado — sinal durável + sem botão de converter de novo */}
       {candidato.hired_at && (
-        <div style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <Check size={20} style={{ color: "var(--success)", flexShrink: 0 }} />
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>Contratado</div>
             <div style={{ fontSize: 12, color: "var(--success)", marginTop: 2 }}>
               Convertido em funcionário em {formatDateBR(candidato.hired_at)}.
             </div>
           </div>
+          {/* Desistência antes do primeiro dia (12/09/2026). Mesma população
+              que converte é quem desfaz — decidido com o Daniel, sem trava
+              nova de papel. Discreto de propósito: é saída de exceção, não
+              ação do dia a dia. */}
+          {canWrite && onUndoHire && (
+            <button
+              onClick={() => onUndoHire(candidato)}
+              title="A pessoa desistiu, não apareceu, ou foi convertida por engano"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                background: "transparent", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)",
+                color: "var(--success)", borderRadius: 8, padding: "5px 11px",
+                fontSize: 11.5, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+              }}
+            >
+              <Undo2 size={12} /> Desfazer
+            </button>
+          )}
         </div>
       )}
 
@@ -2331,6 +2351,113 @@ function CandidatoDrawer({
 // Mesma regra de negócio do fluxo por botão (requestStageChange no
 // CandidatoDrawer): mover pra uma etapa marcada como "lost" sempre exige
 // motivo — aqui cobre o caminho de soltar o card direto na coluna.
+// Desfazer contratação — mockup "Desistiu antes de começar", aprovado com o
+// Daniel 12/09/2026. Pede motivo antes de agir porque desistência e erro de
+// cadastro pedem coisas diferentes do RH depois, e porque "por que essa vaga
+// reabriu?" precisa ter resposta dentro da própria candidatura.
+const MOTIVOS_DESFAZER = [
+  "A pessoa desistiu antes de começar",
+  "A pessoa não apareceu no primeiro dia",
+  "Foi convertido por engano",
+];
+
+function DesfazerContratacaoModal({ candidato, ficha, vaga, onConfirm, onClose }) {
+  const [motivo, setMotivo] = useState(MOTIVOS_DESFAZER[0]);
+  const [outro, setOutro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState(null);
+
+  const motivoFinal = motivo === "__outro" ? outro.trim() : motivo;
+  const vagaReabre = vaga?.stage === "encerrada";
+
+  const confirmar = async () => {
+    if (salvando) return;
+    setSalvando(true);
+    setErro(null);
+    try {
+      await onConfirm({ candidato, motivo: motivoFinal });
+      onClose();
+    } catch (e) {
+      setErro(e?.message || "Não deu pra desfazer. Tenta de novo.");
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={salvando ? () => {} : onClose} title="Desfazer contratação" width={520}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.55 }}>
+          A posição de <strong>{candidato.name}</strong> volta a contar como aberta
+          {vaga?.title ? <> na vaga <strong>{vaga.title}</strong></> : null}.
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 6 }}>
+            Motivo
+          </div>
+          <select
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            style={{ width: "100%", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "8px 10px", fontSize: 13 }}
+          >
+            {MOTIVOS_DESFAZER.map((m) => <option key={m} value={m}>{m}</option>)}
+            <option value="__outro">Outro motivo…</option>
+          </select>
+          {motivo === "__outro" && (
+            <input
+              type="text"
+              value={outro}
+              onChange={(e) => setOutro(e.target.value)}
+              placeholder="Escreva o motivo"
+              style={{ width: "100%", marginTop: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "8px 10px", fontSize: 13 }}
+            />
+          )}
+        </div>
+
+        {/* O que vai acontecer, em vez de "tem certeza?" — a pessoa decide
+            olhando a consequência, não a pergunta. */}
+        <div style={{ background: "var(--surface-alt)", borderRadius: 10, padding: "11px 13px", fontSize: 12.5, color: "var(--text-dim)", lineHeight: 1.6 }}>
+          <div style={{ color: "var(--text)", fontWeight: 600, marginBottom: 5 }}>O que acontece</div>
+          <div>· A candidatura continua inteira no funil, em “Aprovado”, com entrevistas, notas e anexos.</div>
+          <div>
+            {ficha
+              ? <>· A ficha de <strong>{ficha.fullName}</strong> vai para “Removido” no Onboarding. Nada é apagado.</>
+              : <>· Não achei com certeza a ficha de funcionário criada nesta contratação — ela <strong>não</strong> será movida, e você precisa ajustá-la à mão em Onboarding.</>}
+          </div>
+          <div>
+            {vagaReabre
+              ? <>· A vaga estava encerrada e volta para “Em Triagem”.</>
+              : <>· A vaga já está aberta e continua onde está.</>}
+          </div>
+        </div>
+
+        {erro && (
+          <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 9, padding: "9px 12px", fontSize: 12.5 }}>
+            {erro}
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button
+            onClick={onClose}
+            disabled={salvando}
+            style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: salvando ? "default" : "pointer" }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={confirmar}
+            disabled={salvando || !motivoFinal}
+            style={{ border: "none", background: "var(--danger)", color: "#FFF", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: (salvando || !motivoFinal) ? "default" : "pointer", opacity: (salvando || !motivoFinal) ? 0.6 : 1 }}
+          >
+            {salvando ? "Desfazendo…" : "Desfazer contratação"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function ReprovacaoDropModal({ info, onConfirm, onClose }) {
   const [motivo, setMotivo] = useState("");
   const [saving, setSaving] = useState(false);
@@ -2877,10 +3004,10 @@ function addDays(base, days) {
 export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, initialSelectedVagaId, onInitialVagaConsumed }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
-    createVaga, updateVaga, changeVagaStage, duplicateVaga, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
+    createVaga, updateVaga, changeVagaStage, duplicateVaga, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, unmarkHired, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const { cargos, createCargo, deleteCargo } = useRHCargoTemplates({ userId: user?.id });
-  const { createColaborador } = useRHColaboradores({ userId: user?.id });
+  const { colaboradores, createColaborador, changeOnboardingStage } = useRHColaboradores({ userId: user?.id });
   const { templates: onboardingTemplates, applyChecklist } = useRHOnboarding({ userId: user?.id });
 
   // ── Etapas administráveis (Pipefy-style) + campos customizados por etapa ──
@@ -2997,10 +3124,26 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
     [hiringCandidato, vagas]
   );
 
+  // Preenchimento por vaga — único ponto que conta isso (card, painel e
+  // tabela consomem daqui, nenhum recalcula por dentro). Ver posicoesInfo()
+  // pra origem de cada número.
+  const posicoesByVaga = useMemo(() => {
+    const map = {};
+    for (const c of candidatos) {
+      if (!c.vaga_id) continue;
+      const e = map[c.vaga_id] || (map[c.vaga_id] = { contratados: 0, aguardando: 0 });
+      if (c.hired_at) e.contratados += 1;
+      else if (c.stage === "aprovado") e.aguardando += 1;
+    }
+    return map;
+  }, [candidatos]);
+
   // ── Contratação: candidato aprovado → funcionário → onboarding ─────────────
   const handleSaveHired = async (form) => {
     const vaga = vagaDoCandidatoContratando;
-    const novo = await createColaborador({ ...form, vagaId: vaga?.id || null });
+    // `aplicacaoId` liga a ficha à candidatura que a gerou — é o que
+    // permite desfazer a contratação depois sem adivinhar por nome.
+    const novo = await createColaborador({ ...form, vagaId: vaga?.id || null, aplicacaoId: hiringCandidato?.id || null });
     if (vaga?.job_title && novo?.id) {
       const template = onboardingTemplates.find(
         (t) => t.cargo && t.cargo.toLowerCase() === vaga.job_title.toLowerCase()
@@ -3014,16 +3157,85 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
         );
       }
     }
-    if (vaga?.id) {
-      await changeVagaStage(vaga.id, "encerrada");
-    }
     // Marca a aplicação como contratada — dá sinal durável de "já contratado"
     // e trava a 2ª conversão (antes o candidato ficava em "Aprovado" com o CTA
     // "Converter" ativo, gerando cadastro/onboarding em dobro). Achado da auditoria.
     if (hiringCandidato?.id) {
       await markHired(hiringCandidato.id).catch((e) => console.error("markHired falhou:", e));
     }
+    // Encerrar a vaga passou a olhar as POSIÇÕES (12/09/2026, mockup
+    // "Desistiu antes de começar"). Até aqui isto encerrava na PRIMEIRA
+    // conversão, sempre — o que numa vaga de 3 operadores fechava a vaga (e o
+    // link público de candidatura) com 2 lugares ainda em aberto. Eu tinha
+    // descrito esse encerramento como manual no mockup das posições; estava
+    // errado, e a correção entrou aqui.
+    //
+    // Vaga de 1 posição continua encerrando na contratação, exatamente como
+    // antes — quem só contrata um de cada vez não percebe mudança nenhuma.
+    //
+    // `+ 1` porque `posicoesByVaga` é derivado de `candidatos`, que só volta
+    // a refletir o hired_at recém-gravado no próximo render.
+    if (vaga?.id) {
+      const totalPosicoes = Math.max(1, Number(vaga.positions) || 1);
+      const jaContratados = (posicoesByVaga[vaga.id]?.contratados || 0) + 1;
+      if (jaContratados >= totalPosicoes) {
+        await changeVagaStage(vaga.id, "encerrada");
+      }
+    }
     return novo;
+  };
+
+  // ── Desfazer contratação (desistência antes do primeiro dia) ───────────────
+  // As 4 decisões do Daniel (12/09/2026, mockup "Desistiu antes de começar"):
+  // ficha guardada em "Removido" e nunca apagada · vaga encerrada reabre em
+  // "Em Triagem" · quem pode desfazer é a mesma população que converte ·
+  // encerramento automático passa a olhar as posições (acima).
+  const [desfazendoCandidato, setDesfazendoCandidato] = useState(null);
+
+  // Sem aplicacao_id (contratação anterior a 12/09/2026 — ver a migration),
+  // reconhece pelo e-mail e, em último caso, pelo nome, sempre DENTRO da
+  // mesma vaga. Devolve null quando não tem certeza: mexer na ficha errada
+  // seria pior que não mexer em nenhuma, e a tela avisa em vez de adivinhar.
+  const encontrarColaboradorDaCandidatura = useCallback((candidato) => {
+    if (!candidato) return null;
+    const porElo = colaboradores.filter(c => c.aplicacaoId && c.aplicacaoId === candidato.id);
+    if (porElo.length === 1) return porElo[0];
+
+    const daVaga = colaboradores.filter(c => c.vagaId && c.vagaId === candidato.vaga_id);
+    const norm = (v) => String(v || "").trim().toLowerCase();
+    if (candidato.email) {
+      const porEmail = daVaga.filter(c => norm(c.email) === norm(candidato.email));
+      if (porEmail.length === 1) return porEmail[0];
+    }
+    const porNome = daVaga.filter(c => norm(c.fullName) === norm(candidato.name));
+    return porNome.length === 1 ? porNome[0] : null;
+  }, [colaboradores]);
+
+  const handleDesfazerContratacao = async ({ candidato, motivo }) => {
+    // 1. Devolve a posição. É o único passo que PRECISA dar certo — se ele
+    //    falhar, nada mais acontece e o erro sobe pro modal.
+    await unmarkHired(candidato.id, { motivo, autor: user?.name || user?.email || null });
+
+    // 2. A ficha do funcionário vai pra "Removido" no Onboarding — etapa
+    //    terminal que a plataforma já usa e que não conta nas métricas. Nunca
+    //    apaga: admissão, checklist e documentos ficam guardados.
+    const ficha = encontrarColaboradorDaCandidatura(candidato);
+    if (ficha) {
+      await changeOnboardingStage(ficha.id, "removido").catch((e) => {
+        console.error("desfazer contratação: mover ficha pra Removido falhou:", e);
+      });
+    }
+
+    // 3. Vaga encerrada por causa desta contratação reabre em "Em Triagem" —
+    //    voltar a publicar continua sendo decisão de gente.
+    const vaga = vagas.find(v => v.id === candidato.vaga_id);
+    if (vaga && vaga.stage === "encerrada") {
+      await changeVagaStage(vaga.id, "em_triagem").catch((e) => {
+        console.error("desfazer contratação: reabrir vaga falhou:", e);
+      });
+    }
+
+    return { fichaMovida: Boolean(ficha), vagaReaberta: Boolean(vaga && vaga.stage === "encerrada") };
   };
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -3321,19 +3533,6 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
     return map;
   }, [candidatos]);
 
-  // Preenchimento por vaga — único ponto que conta isso (card, painel e
-  // tabela consomem daqui, nenhum recalcula por dentro). Ver posicoesInfo()
-  // pra origem de cada número.
-  const posicoesByVaga = useMemo(() => {
-    const map = {};
-    for (const c of candidatos) {
-      if (!c.vaga_id) continue;
-      const e = map[c.vaga_id] || (map[c.vaga_id] = { contratados: 0, aguardando: 0 });
-      if (c.hired_at) e.contratados += 1;
-      else if (c.stage === "aprovado") e.aguardando += 1;
-    }
-    return map;
-  }, [candidatos]);
 
   // Responsáveis por vaga (FASE 5) — resolução de ids pra AvatarStack/AssigneeMultiSelect.
   const usersById = useMemo(() => new Map((profileUsers || []).map(u => [u.id, u])), [profileUsers]);
@@ -3944,6 +4143,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
           onRatingChange={handleRatingChange}
           onClose={() => setSelectedCandidatoId(null)}
           onHire={(c) => setHiringCandidato(c)}
+          onUndoHire={(c) => setDesfazendoCandidato(c)}
           customFields={candStageFields.getFields(selectedCandidato.stage)}
           onCustomFieldChange={(fieldKey, value) => handleAplicacaoCustomFieldChange(selectedCandidato.id, fieldKey, value)}
           onAddActivity={(entry) => handleAplicacaoAddActivity(selectedCandidato.id, entry)}
@@ -4005,6 +4205,16 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions, 
             return res;
           }}
           onClose={() => setBulkReprovarOpen(false)}
+        />
+      )}
+
+      {desfazendoCandidato && (
+        <DesfazerContratacaoModal
+          candidato={desfazendoCandidato}
+          ficha={encontrarColaboradorDaCandidatura(desfazendoCandidato)}
+          vaga={vagas.find((v) => v.id === desfazendoCandidato.vaga_id) || null}
+          onConfirm={handleDesfazerContratacao}
+          onClose={() => setDesfazendoCandidato(null)}
         />
       )}
 

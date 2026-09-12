@@ -36,6 +36,9 @@ function rowToColaborador(r) {
     documentPath: r.document_path,
     notes: r.notes,
     vagaId: r.vaga_id,
+    // Candidatura que gerou esta ficha (20260912120000). Nulo em ficha criada
+    // por outro caminho e nas contratações anteriores à coluna.
+    aplicacaoId: r.aplicacao_id ?? null,
     asoVencimento: r.aso_vencimento,
     contratoFim: r.contrato_fim,
     aprendizInicio: r.aprendiz_inicio,
@@ -88,6 +91,7 @@ function colaboradorToRow(c, extras = {}) {
     document_path: c.documentPath || null,
     notes: c.notes || null,
     vaga_id: c.vagaId || null,
+    ...(c.aplicacaoId !== undefined ? { aplicacao_id: c.aplicacaoId || null } : {}),
     aso_vencimento: c.asoVencimento || null,
     contrato_fim: c.contratoFim || null,
     aprendiz_inicio: c.aprendizInicio || null,

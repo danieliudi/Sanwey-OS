@@ -38,6 +38,22 @@
 
 export const CHANGELOG = [
   {
+    version: "5.9.0",
+    items: [
+      {
+        kind: "correcao",
+        toast: true,
+        text: "A vaga parava de receber candidatura assim que UMA pessoa era contratada, mesmo quando ela era para várias. Agora ela só se encerra sozinha quando a última posição é preenchida — vaga de uma pessoa continua funcionando exatamente como antes.",
+        roles: ["gerente_rh", "rh", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Desfazer contratação: quando alguém desiste antes do primeiro dia (ou foi convertido por engano), o card do candidato contratado tem um botão \"Desfazer\". A posição volta a contar como aberta, a vaga encerrada reabre em Em Triagem, e nada é apagado — a candidatura continua inteira no funil e a ficha do funcionário vai para \"Removido\" no Onboarding, com o motivo registrado.",
+        roles: ["gerente_rh", "rh", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.8.0",
     items: [
       {
