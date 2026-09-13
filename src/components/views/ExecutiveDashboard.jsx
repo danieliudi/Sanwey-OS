@@ -365,7 +365,21 @@ export function ExecutiveDashboard({
     : null;
 
   // RH
-  const vagasPublicadas       = loadingRecrutamento ? dash : vagas.filter(v => v.stage === "publicada").length;
+  // Vagas publicadas × POSIÇÕES publicadas (13/09/2026). Uma vaga pode
+  // contratar mais de uma pessoa desde rh_vagas.positions, e é o número de
+  // CONTRATAÇÕES que a diretoria está tentando ler aqui — "3 vagas" quando
+  // são 7 contratações subdimensiona o que está em curso. Regra 14: os dois
+  // números aparecem juntos quando diferem, e só "vagas" quando são iguais,
+  // pra não inventar precisão onde não há diferença.
+  //   vagas     = rh_vagas na etapa "publicada"
+  //   posições  = soma de rh_vagas.positions dessas mesmas vagas (mínimo 1)
+  const vagasPublicadasLista  = loadingRecrutamento ? [] : vagas.filter(v => v.stage === "publicada");
+  const vagasPublicadas       = loadingRecrutamento ? dash : vagasPublicadasLista.length;
+  const posicoesPublicadas    = vagasPublicadasLista.reduce((soma, v) => soma + Math.max(1, Number(v.positions) || 1), 0);
+  const temPosicoesExtras     = !loadingRecrutamento && posicoesPublicadas > vagasPublicadasLista.length;
+  const rotuloVagasPublicadas = temPosicoesExtras
+    ? `Vagas publicadas · ${posicoesPublicadas} posições`
+    : "Vagas publicadas";
   const candidatosEmProcesso  = loadingRecrutamento ? dash : candidatos.filter(c => !["aprovado", "reprovado"].includes(c.stage)).length;
   const onboardingEmAndamento = loadingColaboradores ? dash : colaboradores.filter(c => c.onboardingStage && c.onboardingStage !== "concluido").length;
   const emFeriasProximos7d    = loadingFerias ? dash : feriasRequests.filter(overlapsNext7Days).length;
@@ -414,7 +428,8 @@ export function ExecutiveDashboard({
     },
     showRHArea && {
       id: "rh", label: "RH", color: "#0EA5E9",
-      value: vagasPublicadas, sub: `${avaliacoesPendentes} avaliaç${avaliacoesPendentes !== 1 ? "ões" : "ão"} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
+      value: vagasPublicadas,
+      sub: `${temPosicoesExtras ? `${posicoesPublicadas} posições · ` : ""}${avaliacoesPendentes} avaliaç${avaliacoesPendentes !== 1 ? "ões" : "ão"} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
     },
     showComexArea && {
       id: "comex", label: "Comex", color: "#0D9488",
@@ -659,7 +674,7 @@ export function ExecutiveDashboard({
               ctaLabel="Ver RH"
               onNavigate={() => navigate(ROUTES["rh-overview"])}
               stats={[
-                { v: vagasPublicadas,        l: "Vagas publicadas" },
+                { v: vagasPublicadas,        l: rotuloVagasPublicadas },
                 { v: candidatosEmProcesso,   l: "Candidatos em processo" },
                 { v: onboardingEmAndamento,  l: "Onboarding em andamento" },
                 { v: emFeriasProximos7d,     l: "Em férias (7 dias)" },

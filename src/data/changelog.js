@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "5.9.1",
+    items: [
+      {
+        kind: "ajuste",
+        text: "No Painel Executivo, \"Vagas publicadas\" passou a mostrar também quantas pessoas essas vagas vão contratar — três vagas podem ser sete contratações, e era esse o número que a linha deixava de fora.",
+        roles: ["diretoria", "admin", "gerente_rh"],
+      },
+    ],
+  },
+  {
     version: "5.9.0",
     items: [
       {
