@@ -45,7 +45,7 @@ Composição depende de cargo; um grupo que fica vazio some.
 |---|---|
 | **Meu Espaço** | `dashboard` → `/` · `chat` → `/chat` · `personal-tasks` → `/tarefas-pessoais` · `meu-rh` → `/meu-rh` |
 | **Comercial** | `commercial-overview` → `/comercial` · `signals` → `/sinais` · `crm` → `/pipeline` · `posvenda` → `/pos-venda` · `pedidos` → `/pedidos` · `clients` → `/clientes` · `catalogo` → `/catalogo` · `document-library` → `/biblioteca-de-documentos` · `crossref` → `/cross-sell` · `explorer` → `/explorador` · `crm-viagens` → `/viagens` · `comex` → `/comex` |
-| **Marketing** | `marketing-home` → `/marketing/inicio` · `marketing` → `/marketing` · `marketing-solicitacoes` · `marketing-entregas` · `marketing-tarefas` · `marketing-fornecedores` · `marketing-compras` · `marketing-despesas` · `marketing-feiras` |
+| **Marketing** | `marketing-home` → `/marketing/inicio` · `marketing` → `/marketing` · `marketing-solicitacoes` · `marketing-entregas` · `marketing-tarefas` · `marketing-fornecedores` · `marketing-compras` · `marketing-despesas` · `marketing-feiras` · `marketing-conteudo` |
 | **Recursos Humanos** | `rh-overview` → `/rh` · `rh-recrutamento` · `rh-onboarding` · `rh-treinamentos` · `rh-feedback` · `rh-ferias` · `rh-funcionarios` · `rh-cargos` · `rh-comunicacao` · `rh-bem-estar` · `rh-fornecedores` · `rh-relatorios` |
 | **Meu Desenvolvimento** *(substitui RH pra quem não é RH)* | `meu-rh` · `rh-onboarding` · `rh-treinamentos` · `rh-feedback` |
 | **Inteligência** | `executive` → `/executivo` · `market-intel` → `/inteligencia-mercado` · `esg-carbono` · `agents` → `/agentes` |
@@ -65,14 +65,14 @@ Composição depende de cargo; um grupo que fica vazio some.
 | `/pipeline` | L1 | menu Comercial | L2: Kanban / Tabela / Calendário / Análise · L3: drawer do negócio, modal de criação, modal "Editar etapas", modal de import CSV · export CSV (download) |
 | `/pipeline` → drawer | L3 | clique no card, em qualquer das 4 visões | fecha com X / Esc / clique no scrim · aba PDF gera arquivo · botão "Enviar para Pós-venda" cria caso em `/pos-venda` (**não navega até lá**) |
 | `/clientes` | L1 | menu Comercial | L3: modal de cliente com linha do tempo (`get_client_timeline`) · CNPJ lookup · a timeline linka visita/ata, mas **sem navegação de volta pro negócio** |
-| `/viagens` | L1 | menu Comercial | L2: 5 abas (Planejamento · Despesas · Prestação · Gestão · Relatórios) + Calculadora |
+| `/viagens` | L1 | menu Comercial | L2: **4 abas** — Minhas viagens · Gestão · Relatórios · Calculadora (`CRMViagensView.jsx:26-31`), montadas por cargo. Despesas e Prestação de contas **não são abas**: são seções dentro de "Minhas viagens" (`CRMViagensPlanejamentoView.jsx:1812`, `:1857`) — corrigido em 14/09/2026, a versão anterior desta linha listava 5 abas |
 | `/executivo` | L1 | menu Inteligência | L2: faixa de saúde + 1 aba por área; absorveu `/historico-funil` |
 | `/inteligencia-mercado` | L1 | menu Inteligência | L2: 3 abas (Mercado · Insights · Cruzamento) |
 | `/configuracoes` | L1 | menu Configuração; também é o destino de `/perfil` e `/usuarios` | L2: Perfil · Aparência · Notificações · Preferências · Integrações de IA · **Administração** (Usuários, `module_states`, descrições, auditoria de export) |
 | `/central-bugs` | L1 | menu (sem gate) **e** ícone de inseto no TopBar, em qualquer tela | L3: modal de report com contexto de origem capturado · board de triagem só `isAdmin` |
 | `/ajuda` | L1 | menu **e** ícone salva-vidas no TopBar | L3: modal de passo a passo por tutorial |
 | `/agentes` | L1 | menu Inteligência | aprovar/recusar sugestão; badge no sino pela escada de urgência |
-| `/marketing/*` (9 rotas) | L1 | menu Marketing | cada board: L2 de visões + L3 de drawer, mesmo padrão do Funil |
+| `/marketing/*` (10 rotas) | L1 | menu Marketing | cada board: L2 de visões + L3 de drawer, mesmo padrão do Funil |
 | `/rh/*` (12 rotas) | L1 | menu RH | idem; 6 boards usam `RHDetailDrawerShell` dentro do slot `left` |
 | 7 rotas de redirect | — | link salvo | `<Navigate replace>` imediato |
 | 8 rotas públicas | — | link externo (e-mail, QR, site) | fora do `<App>`, sem shell, sem menu |
