@@ -132,6 +132,11 @@ export const NOTIFICATION_GROUPS = [
       { id: "aso_vencendo",           label: "ASO vencendo", defaultOn: true },
       { id: "contrato_vencendo",      label: "Contrato de experiência vencendo", defaultOn: true },
       { id: "treinamento_vencendo",   label: "Treinamento vencendo", defaultOn: true },
+      // 14/09/2026 — trava 01 do onboarding ("documento que não chega"):
+      // dispara quando a pessoa segue na etapa Documentação depois do prazo
+      // cadastrado ali. Nasce ligado porque é justamente o aviso que o Daniel
+      // reportou faltar.
+      { id: "documentos_onboarding",  label: "Prazo de documentos de admissão vencido", defaultOn: true },
       { id: "aniversario_colaborador",label: "Aniversário de colaborador", defaultOn: false },
     ],
   },
@@ -181,6 +186,7 @@ export const NOTIFICATION_TYPE_TO_PREF = {
   compliance_aso:         "aso_vencendo",
   compliance_experiencia: "contrato_vencendo",
   treinamento_vencendo:   "treinamento_vencendo",
+  onboarding_documentos_prazo: "documentos_onboarding",
   stale_lead:             "stale_lead",
   cross_sell:             "cross_sell",
   weekly_digest:          "weekly_digest",

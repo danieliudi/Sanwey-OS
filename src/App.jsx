@@ -18,6 +18,7 @@ import { useModuleOverrides } from "./hooks/use-module-overrides";
 import { useModuleStates } from "./hooks/use-module-states";
 import { PageDescriptionProvider } from "./components/shared/PageTitle";
 import { effectiveModules, gateByModuleStates, isModuleInTest, ALL_MODULE_IDS, MODULE_LABELS } from "./utils/module-access";
+import { parseDateInput } from "./utils/date";
 import { useMarketSignals } from "./hooks/use-market-signals";
 import { usePersistentState } from "./hooks/use-persistent-state";
 import { useCrossReferrals } from "./hooks/use-cross-referrals";
@@ -497,6 +498,10 @@ export default function App() {
   // null (ver initialSelectedCampaignId/initialSelectedEmployeeId).
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  // Deep link do sino pro card de Onboarding — o aviso de fim de período de
+  // experiência passou a apontar pra cá (14/09/2026), onde existe o que
+  // preencher. Mesmo par set/consumed dos outros deep links.
+  const [selectedOnboardingColaboradorId, setSelectedOnboardingColaboradorId] = useState(null);
   // Mesmo mecanismo pro toast de mensagem nova do Chat (spec seção 5) — o
   // clique em "Abrir" precisa selecionar o canal certo dentro de ChatView,
   // que mantém `selectedId` como state local (não sobe pro App.jsx).
@@ -671,14 +676,47 @@ export default function App() {
     for (const c of colaboradoresParaLembretes) {
       if (c.employeeStatus !== "ativo") continue;
 
+      // DESTINO MUDOU 14/09/2026. Este aviso já existia e já disparava — o
+      // Daniel reportou que "avaliação ninguém preenche, ou demoram", e a
+      // causa não era o lembrete faltar: ele levava pra ficha do funcionário,
+      // uma tela onde não havia NADA a preencher sobre avaliação. A pessoa
+      // era avisada, clicava, olhava e adiava. Agora leva pro card de
+      // Onboarding, onde a etapa Avaliação ganhou data, resultado e
+      // justificativa. `c.id` (linha de rh_colaboradores), não `c.profileId`:
+      // o board de Onboarding abre o card por id de colaborador, diferente da
+      // tela de Funcionários logo abaixo.
       const exp = periodoExperienciaInfo(c, hoje);
       if (exp && (exp.diasRestantes === 7 || exp.diasRestantes === 1) && marcar(c.id, `exp${exp.marco}`)) {
         pushNotification({
           type: "compliance_experiencia",
           title: `Período de experiência vencendo (${exp.marco} dias)`,
-          body: `${c.fullName}: faltam ${exp.diasRestantes} dia(s) pra decisão do marco de ${exp.marco} dias.`,
-          link: { module: "rh_funcionarios", id: c.profileId },
+          body: `${c.fullName}: faltam ${exp.diasRestantes} dia(s) pra decisão do marco de ${exp.marco} dias. Registre o resultado na etapa Avaliação.`,
+          link: { module: "rh_onboarding", id: c.id },
         });
+      }
+
+      // Prazo de entrega de documentos vencido (TRAVA 01, 14/09/2026).
+      // Critério: a pessoa AINDA está na etapa Documentação depois da data
+      // limite. Deliberadamente não consulta rh_colaborador_documentos — se
+      // ela continua nessa etapa depois do prazo, alguma coisa está pendente
+      // por definição, e esse sinal é mais barato e mais honesto que somar
+      // status de documento um a um.
+      //
+      // Vai pro RH (é quem carrega esta lista — ver o `enabled` do hook, que
+      // é isRHManager). O nome de quem ficou de cobrar entra no TEXTO, porque
+      // é o RH que vê o sino, não necessariamente a pessoa nomeada.
+      const prazoDocs = c.customFields?.prazo_documentos;
+      if (prazoDocs && c.onboardingStage === "documentacao") {
+        const diasVencido = Math.floor((hoje - parseDateInput(prazoDocs)) / 86400000);
+        if (diasVencido >= 0 && marcar(c.id, "docs_prazo")) {
+          const quemCobra = users.find(u => u.id === c.customFields?.responsavel_documentos)?.name;
+          pushNotification({
+            type: "onboarding_documentos_prazo",
+            title: diasVencido === 0 ? "Prazo de documentos vence hoje" : "Prazo de documentos vencido",
+            body: `${c.fullName} segue em Documentação${diasVencido > 0 ? ` há ${diasVencido} dia(s) depois do prazo` : ""}.${quemCobra ? ` Cobrança com ${quemCobra}.` : ""}`,
+            link: { module: "rh_onboarding", id: c.id },
+          });
+        }
       }
 
       const asoDias = asoDiasParaVencer(c, hoje);
@@ -722,7 +760,7 @@ export default function App() {
         pushNotification({ type: "bodas_empresa", title: "Aniversário de empresa", body: `${c.fullName} completa ${anos} ano(s) de casa hoje.`, link: { module: "rh_funcionarios", id: c.profileId } });
       }
     }
-  }, [colaboradoresParaLembretes, isRHManager, pushNotification]);
+  }, [colaboradoresParaLembretes, isRHManager, pushNotification, users]);
 
   // Treinamento vencendo — mesmo formato dos avisos de compliance acima:
   // uma vez por dia por atribuição enquanto a janela estiver aberta, e a
@@ -1326,6 +1364,7 @@ export default function App() {
     rh_treinamentos: setSelectedTreinamentoAtribuicaoId,
     rh_movimentacoes: setSelectedMovimentacaoId,
     rh_funcionarios: setSelectedEmployeeId,
+    rh_onboarding: setSelectedOnboardingColaboradorId,
   };
   const handleNotificationNavigate = useCallback((link) => {
     // Pesquisas identificadas (RH2-7): a página de resposta vive fora do
@@ -2784,7 +2823,14 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-onboarding"]} element={
-            <RHOnboardingView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser || isDiretoria} notifyMentions={notifyMentions} />
+            <RHOnboardingView
+              currentUser={currentUser}
+              canWrite={isRHManager}
+              isRHUser={isRHUser || isDiretoria}
+              notifyMentions={notifyMentions}
+              initialSelectedColaboradorId={selectedOnboardingColaboradorId}
+              onInitialColaboradorConsumed={() => setSelectedOnboardingColaboradorId(null)}
+            />
           } />
           <Route path={ROUTES["rh-treinamentos"]} element={
             <RHTreinamentosView

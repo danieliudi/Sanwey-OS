@@ -12,6 +12,7 @@ import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useMyColaborador } from "../../hooks/use-my-colaborador";
+import { useOnboardingEquipe } from "../../hooks/use-onboarding-equipe";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
@@ -1199,7 +1200,77 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentions }) {
+// Acompanhamento do gestor — TRAVA 03 (14/09/2026). Somente leitura, e de
+// propósito não é um Kanban: o gestor não move ninguém de etapa, ele só
+// precisa parar de perguntar em que pé está. Lista simples, ordenada por
+// nome, com a etapa e há quanto tempo a pessoa está nela.
+function EquipeEmOnboarding({ equipe, stages, loading, erro }) {
+  const stageByKey = useMemo(() => new Map(stages.map(s => [s.stageKey, s])), [stages]);
+
+  if (loading) {
+    return <div style={{ textAlign: "center", padding: "28px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>;
+  }
+  if (erro) {
+    return (
+      <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "11px 14px", fontSize: 12.5 }}>
+        Não deu pra carregar o onboarding da sua equipe: {erro}
+      </div>
+    );
+  }
+  if (equipe.length === 0) {
+    // Vazio EXPLICADO, não vazio mudo. Medido em produção em 14/09/2026: os
+    // três sinais que definem "minha equipe" (supervisor, vaga de origem,
+    // departamento) estão em branco em todas as 15 fichas, porque elas vieram
+    // da importação por planilha. Sem esta frase, um quadro vazio seria
+    // indistinguível de "não tem ninguém entrando", que é uma leitura errada
+    // e leva o gestor a voltar a perguntar — exatamente o que isto veio
+    // resolver.
+    return (
+      <div style={{ background: "var(--warning-bg)", color: "var(--warning)", borderRadius: 10, padding: "12px 14px", fontSize: 12.5, lineHeight: 1.6 }}>
+        <div style={{ fontWeight: 700, marginBottom: 3 }}>Nenhuma pessoa da sua equipe em onboarding</div>
+        Isso pode ser porque não há ninguém entrando agora — ou porque o vínculo ainda não
+        está cadastrado. Você acompanha aqui quem tem você como responsável direto, quem
+        entrou por uma vaga em que você é responsável, ou quem é do seu departamento.
+        Se você esperava ver alguém, peça ao RH para preencher um desses vínculos.
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {equipe.map((p) => {
+        const st = stageByKey.get(p.onboardingStage);
+        const dias = daysSince(p.onboardingStageChangedAt);
+        return (
+          <div key={p.id} className="flex items-center gap-3 flex-wrap"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 13px" }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{p.fullName}</div>
+              <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>
+                {[p.jobTitle, p.department].filter(Boolean).join(" · ") || "—"}
+                {p.admissionDate ? ` · admissão ${formatDateBR(p.admissionDate)}` : ""}
+              </div>
+            </div>
+            <span style={{
+              fontSize: 10.5, fontWeight: 700, borderRadius: 99, padding: "3px 10px",
+              color: st?.color || "var(--text-dim)",
+              background: st?.color ? `${st.color}18` : "var(--surface-alt)",
+            }}>
+              {st?.name || p.onboardingStage}
+            </span>
+            {/* Regra 14: o número declara de onde veio — dias corridos desde a
+                última mudança de etapa, não desde a admissão. */}
+            <span style={{ fontSize: 11, color: "var(--text-dim)", minWidth: 92, textAlign: "right" }}
+              title="Dias corridos desde a última mudança de etapa">
+              {dias === 0 ? "mudou hoje" : `há ${dias} dia${dias === 1 ? "" : "s"} nesta etapa`}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentions, initialSelectedColaboradorId, onInitialColaboradorConsumed }) {
   const { templates, tarefas, loading: loadingTarefas, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, deleteTarefa } = useRHOnboarding({ userId: currentUser?.id });
   // deleteColaborador (hard delete + CASCADE) foi removido do hook — nenhuma
   // tela do app oferecia um caminho seguro e intencional pra ele (era um
@@ -1208,6 +1279,10 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   // REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE acima).
   const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador, createColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
+  // Equipe do gestor (TRAVA 03). Só carrega pra quem NÃO é do RH — quem é RH
+  // já vê todo mundo no Kanban abaixo, e a RPC seria uma chamada a mais sem
+  // nada de novo pra mostrar.
+  const { equipe, loading: loadingEquipe, error: erroEquipe } = useOnboardingEquipe({ enabled: !isRHUser });
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
   const vagasById = useMemo(() => new Map(vagas.map((v) => [v.id, v])), [vagas]);
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
@@ -1254,6 +1329,16 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const [bulkTarefaOpen, setBulkTarefaOpen] = useState(false);
   const [addColaboradorStage, setAddColaboradorStage] = useState(null);
   const [drawerColaboradorId, setDrawerColaboradorId] = useState(null);
+  // Deep link do sino (14/09/2026): o aviso de fim de período de experiência
+  // passou a apontar pro card daqui, onde a etapa Avaliação tem o que
+  // preencher — antes levava pra ficha do funcionário, uma tela sem nada a
+  // responder sobre avaliação. Mesmo par set/consumed já usado em
+  // RHRecrutamentoView pra `initialSelectedVagaId`.
+  useEffect(() => {
+    if (!initialSelectedColaboradorId) return;
+    setDrawerColaboradorId(initialSelectedColaboradorId);
+    onInitialColaboradorConsumed?.();
+  }, [initialSelectedColaboradorId, onInitialColaboradorConsumed]);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
   const [addingStage, setAddingStage] = useState(false);
   const [draggedColumnKey, setDraggedColumnKey] = useState(null);
@@ -1519,6 +1604,11 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
 
   // ── Colaborador comum (sem acesso de RH): só o próprio checklist ──────────
   if (!isRHUser) {
+    // Duas seções empilhadas: o próprio checklist (o que já existia) e, para
+    // quem tem equipe, o acompanhamento dela (TRAVA 03, 14/09/2026). A seção
+    // da equipe só aparece quando há alguém OU quando a consulta falhou —
+    // para quem não é gestor de ninguém, a tela continua exatamente como era.
+    const temSecaoEquipe = loadingEquipe || Boolean(erroEquipe) || equipe.length > 0;
     return (
       <div>
         <div className="mb-4">
@@ -1527,7 +1617,9 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
         ) : !meuColaborador ? (
-          <EmptyState icon={ClipboardCheck} title="Nenhum checklist de onboarding pra você" description="Quando você entrar em um processo de onboarding, seu checklist aparecerá aqui." />
+          !temSecaoEquipe ? (
+            <EmptyState icon={ClipboardCheck} title="Nenhum checklist de onboarding pra você" description="Quando você entrar em um processo de onboarding, seu checklist aparecerá aqui." />
+          ) : null
         ) : (
           <MeuChecklist
             colaborador={meuColaborador}
@@ -1535,6 +1627,14 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
             users={users}
             onStatusChange={updateTarefaStatus}
           />
+        )}
+        {temSecaoEquipe && (
+          <div style={{ marginTop: meuColaborador ? 24 : 0 }}>
+            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
+              Minha equipe em onboarding
+            </div>
+            <EquipeEmOnboarding equipe={equipe} stages={stages} loading={loadingEquipe} erro={erroEquipe} />
+          </div>
         )}
       </div>
     );
