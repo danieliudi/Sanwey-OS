@@ -85,13 +85,19 @@ as $$
     from public.rh_colaboradores c
    where (select auth.uid()) is not null
      and c.employee_status <> 'desligado'
-     -- Só quem está de fato NO quadro: etapa não terminal, mesmo critério que
-     -- RHOnboardingView usa pra montar as colunas do Kanban do RH.
-     and exists (
+     -- Fora do quadro: só a etapa terminal DE SAÍDA (terminal AND lost, hoje
+     -- "Removido"). É o mesmo critério de `colaboradoresEmOnboarding` em
+     -- RHOnboardingView — e não `terminal` puro, que também esconderia
+     -- "Concluído" e faria a pessoa simplesmente sumir da lista do gestor em
+     -- vez de aparecer como terminada. (Eu tinha escrito `terminal = false`
+     -- na primeira versão, com um comentário afirmando espelhar a view;
+     -- não espelhava. Pego no QA desta entrega.)
+     and not exists (
        select 1 from public.rh_pipeline_stages s
         where s.domain = 'onboarding'
           and s.stage_key = c.onboarding_stage
-          and s.terminal = false
+          and s.terminal = true
+          and s.lost = true
      )
      and (
        -- 1. a ficha aponta pra mim como gestor (rh_colaboradores.gestor_id)
@@ -122,3 +128,47 @@ grant execute on function public.get_onboarding_da_minha_equipe() to authenticat
 
 comment on function public.get_onboarding_da_minha_equipe() is
   'Onboarding da equipe do usuário logado, somente leitura e com lista de colunas fixa (sem salário, documento, CPF ou custom_fields). Equipe = ficha cujo gestor_id aponta pra ele (a hierarquia de RH, mesma de equipeDe) OU ficha vinda de vaga em que ele é responsável. Só etapas não terminais. Ver 20260914110000.';
+
+
+-- ── "Eu sou gestor de alguém?" ─────────────────────────────────────────────
+-- Existe por um bloqueador do QA desta entrega: sem este sinal, a tela só
+-- conseguia decidir se mostra a seção do gestor OLHANDO A CONTAGEM de pessoas
+-- em onboarding. Com gestor_id vazio (0 de 15 hoje), a contagem é zero pra
+-- todo mundo, a seção nunca aparecia — e a explicação escrita justamente pro
+-- caso "sou gestor mas não tem ninguém entrando agora" virava código morto.
+--
+-- São perguntas diferentes e precisam de respostas separadas:
+--   · não sou gestor de ninguém  → a seção não existe pra mim, a tela fica
+--     exatamente como era antes desta entrega;
+--   · sou gestor e ninguém está entrando → a seção aparece vazia e explicada.
+--
+-- Aqui NÃO filtra etapa de propósito: a pergunta é sobre a relação de
+-- hierarquia, não sobre quem está em onboarding agora.
+create or replace function public.tenho_equipe_de_rh()
+returns boolean
+language sql
+stable
+security definer
+set search_path to 'public', 'pg_temp'
+as $$
+  select (select auth.uid()) is not null
+     and (
+       exists (
+         select 1
+           from public.rh_colaboradores c
+           join public.rh_colaboradores g on g.id = c.gestor_id
+          where g.profile_id = (select auth.uid())
+            and c.employee_status <> 'desligado'
+       )
+       or exists (
+         select 1 from public.rh_vagas v
+          where (select auth.uid()) = any (v.responsible_ids)
+       )
+     );
+$$;
+
+revoke all on function public.tenho_equipe_de_rh() from public, anon, authenticated;
+grant execute on function public.tenho_equipe_de_rh() to authenticated;
+
+comment on function public.tenho_equipe_de_rh() is
+  'Booleano: o usuário logado é gestor de alguém (rh_colaboradores.gestor_id) ou responsável por alguma vaga. Serve só pra decidir se a seção "Minha equipe em onboarding" existe na tela — separa "não sou gestor" de "sou gestor e não tem ninguém entrando". Ver 20260914110000.';

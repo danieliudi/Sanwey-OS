@@ -669,10 +669,15 @@ export default function App() {
       complianceVistoRef.current.add(key);
       return true;
     };
-    // link.id de todo pushNotification abaixo é c.profileId, não c.id: a tela
-    // de Funcionários abre o card por id de PROFILE, não pelo id da linha
-    // rh_colaboradores (ver RHFuncionariosView.jsx:1553). profileId vem nulo
-    // pra colaborador sem login — cai no fallback de só trocar de seção.
+    // ATENÇÃO ao `link.id` de cada pushNotification abaixo — ele MUDA por
+    // destino, e errar faz o clique não abrir nada:
+    //   · destino rh_funcionarios → c.profileId, porque aquela tela abre o
+    //     card por id de PROFILE (RHFuncionariosView.jsx:1553). Vem nulo pra
+    //     colaborador sem login, e aí cai no fallback de só trocar de seção.
+    //   · destino rh_onboarding   → c.id, o id da linha de rh_colaboradores,
+    //     que é por onde o board de Onboarding casa o card.
+    // Os avisos de experiência e de prazo de documentos usam o segundo desde
+    // 14/09/2026; ASO, contrato e aprendiz seguem no primeiro.
     for (const c of colaboradoresParaLembretes) {
       if (c.employeeStatus !== "ativo") continue;
 
@@ -690,7 +695,7 @@ export default function App() {
         pushNotification({
           type: "compliance_experiencia",
           title: `Período de experiência vencendo (${exp.marco} dias)`,
-          body: `${c.fullName}: faltam ${exp.diasRestantes} dia(s) pra decisão do marco de ${exp.marco} dias. Registre o resultado na etapa Avaliação.`,
+          body: `${c.fullName}: faltam ${exp.diasRestantes} dia(s) pra decisão do marco de ${exp.marco} dias. Mova o card para Avaliação e registre o resultado.`,
           link: { module: "rh_onboarding", id: c.id },
         });
       }
@@ -705,17 +710,46 @@ export default function App() {
       // Vai pro RH (é quem carrega esta lista — ver o `enabled` do hook, que
       // é isRHManager). O nome de quem ficou de cobrar entra no TEXTO, porque
       // é o RH que vê o sino, não necessariamente a pessoa nomeada.
+      //
+      // A chave de etapa é literal aqui, diferente do resto da feature, que
+      // lê de rh_pipeline_stages. É consciente: esta é uma condição de
+      // notificação no App, que não carrega as etapas, e ela anda junto com o
+      // campo semeado em 20260914100000. Se um admin apagar e recriar a
+      // coluna Documentação com outra chave, este lembrete para de disparar —
+      // em silêncio. Dívida registrada, não descuido.
       const prazoDocs = c.customFields?.prazo_documentos;
       if (prazoDocs && c.onboardingStage === "documentacao") {
-        const diasVencido = Math.floor((hoje - parseDateInput(prazoDocs)) / 86400000);
-        if (diasVencido >= 0 && marcar(c.id, "docs_prazo")) {
+        const limite = parseDateInput(prazoDocs);
+        const diasVencido = Number.isNaN(limite.getTime())
+          ? null
+          : Math.floor((hoje - limite) / 86400000);
+        // Teto de 30 dias, mesma janela de ASO e contrato: sem ele, uma ficha
+        // esquecida em Documentação avisaria todo dia pra sempre e treinaria
+        // o RH a ignorar o sino.
+        if (diasVencido != null && diasVencido >= 0 && diasVencido <= 30) {
+          // Guard contra o array JÁ persistido no localStorage, não só o ref
+          // em memória — o ref zera a cada reload e o aviso seria reinserido
+          // em lote a cada visita. Mesmo padrão do treinamento abaixo.
+          const jaExiste = notifications.some(n =>
+            n.type === "onboarding_documentos_prazo" &&
+            n.link?.id === c.id &&
+            new Date(n.createdAt).toDateString() === hoje.toDateString()
+          );
+          // Resolve o nome ANTES de consumir a chave do dia: `users` e
+          // `colaboradoresParaLembretes` são buscas independentes e, se os
+          // colaboradores chegassem primeiro, o aviso sairia sem a frase
+          // "Cobrança com X" e a chave já estaria gasta — o reparo pela
+          // dependência `users` nunca aconteceria (achado do QA).
           const quemCobra = users.find(u => u.id === c.customFields?.responsavel_documentos)?.name;
-          pushNotification({
-            type: "onboarding_documentos_prazo",
-            title: diasVencido === 0 ? "Prazo de documentos vence hoje" : "Prazo de documentos vencido",
-            body: `${c.fullName} segue em Documentação${diasVencido > 0 ? ` há ${diasVencido} dia(s) depois do prazo` : ""}.${quemCobra ? ` Cobrança com ${quemCobra}.` : ""}`,
-            link: { module: "rh_onboarding", id: c.id },
-          });
+          const esperandoNomes = usersLoading && Boolean(c.customFields?.responsavel_documentos) && !quemCobra;
+          if (!jaExiste && !esperandoNomes && marcar(c.id, "docs_prazo")) {
+            pushNotification({
+              type: "onboarding_documentos_prazo",
+              title: diasVencido === 0 ? "Prazo de documentos vence hoje" : "Prazo de documentos vencido",
+              body: `${c.fullName} segue em Documentação${diasVencido > 0 ? ` há ${diasVencido} dia(s) depois do prazo` : ""}.${quemCobra ? ` Cobrança com ${quemCobra}.` : ""}`,
+              link: { module: "rh_onboarding", id: c.id },
+            });
+          }
         }
       }
 
@@ -760,7 +794,15 @@ export default function App() {
         pushNotification({ type: "bodas_empresa", title: "Aniversário de empresa", body: `${c.fullName} completa ${anos} ano(s) de casa hoje.`, link: { module: "rh_funcionarios", id: c.profileId } });
       }
     }
-  }, [colaboradoresParaLembretes, isRHManager, pushNotification, users]);
+    // Poda avisos de prazo de documentos cujo colaborador não existe mais: as
+    // notificações vivem no localStorage e os geradores só ACRESCENTAM, então
+    // ficha apagada deixaria um aviso permanente cujo clique não abre nada
+    // (o board devolve null quando o id sumiu). Mesmo mecanismo já usado pra
+    // contrato de fornecedor e reembolso; faltava para este tipo novo.
+    if (colaboradoresParaLembretes.length > 0) {
+      dropNotificacoesOrfas("onboarding_documentos_prazo", new Set(colaboradoresParaLembretes.map(c => c.id)));
+    }
+  }, [colaboradoresParaLembretes, isRHManager, pushNotification, users, usersLoading, notifications, dropNotificacoesOrfas]);
 
   // Treinamento vencendo — mesmo formato dos avisos de compliance acima:
   // uma vez por dia por atribuição enquanto a janela estiver aberta, e a
@@ -1354,9 +1396,11 @@ export default function App() {
   // mecanismo de deep-link do Cmd-K (initialSelectedXId/onInitialXConsumed já
   // plugados em cada tela, ver App.jsx:401-419). Os módulos fora deste mapa
   // (deliverables, marketing_tasks, purchase_requests, marketing_requests,
-  // rh_vagas, rh_candidatos, rh_onboarding, comex_*, crm_despesas,
-  // crm_cross_sell, pipeline_summary) ainda não têm um estado "selecionado"
-  // hoisted aqui — ficam só na navegação de seção até ganharem um.
+  // rh_vagas, rh_candidatos, comex_*, crm_despesas, crm_cross_sell,
+  // pipeline_summary) ainda não têm um estado "selecionado" hoisted aqui —
+  // ficam só na navegação de seção até ganharem um. `rh_onboarding` saiu
+  // dessa lista em 14/09/2026, quando o aviso de fim de experiência passou a
+  // apontar pro card.
   const notificationDeepLinkSetters = {
     campaigns: setSelectedCampaignId,
     rh_ferias: setSelectedFeriasId,
@@ -1387,6 +1431,7 @@ export default function App() {
     leads, setSelectedLead, setSection, navigate,
     setSelectedCampaignId, setSelectedFeriasId, setSelectedAvaliacaoId,
     setSelectedTreinamentoAtribuicaoId, setSelectedMovimentacaoId, setSelectedEmployeeId,
+    setSelectedOnboardingColaboradorId,
   ]);
 
   // Mesmo espírito de handleNotificationNavigate acima, pra fila de

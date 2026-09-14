@@ -24,6 +24,16 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.11.0 ("Minha equipe em onboarding") — decisão de PULAR o spotlight,
+  // registrada aqui (regra 12). É UI nova e não-óbvia, então a pergunta é
+  // legítima; o motivo de pular é que a seção só é montada pra quem é gestor
+  // de alguém, e hoje o campo "Gestor" da ficha está vazio em 15 de 15 —
+  // ou seja, o alvo não existe na tela de ninguém. Alvo ausente se
+  // auto-marca como visto (FeatureSpotlight.jsx), então o aviso morreria
+  // antes de existir um gestor pra quem ele importa, e quando o RH
+  // preenchesse o campo ninguém veria nada. Mesma armadilha já registrada
+  // abaixo. Changelog cobre; reavaliar quando gestor_id estiver preenchido.
+  //
   // 5.10.0 (provisionamento na vaga, avaliação, prazo de documentos) —
   // decisão de PULAR o spotlight, registrada aqui (regra 12): os campos
   // novos moram DENTRO do painel de uma vaga em "Publicada" e do card de um

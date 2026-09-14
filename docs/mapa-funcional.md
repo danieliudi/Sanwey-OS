@@ -35,10 +35,10 @@ Todos conferidos no código em 03/09/2026:
 | …telas de verdade | **47** |
 | Rotas **públicas**, sem login (`src/main.jsx`) | **9** |
 | Componentes de view (`src/components/views/`) | **60** |
-| Hooks (`src/hooks/`) | **125** |
-| …que falam com o banco | **100** |
+| Hooks (`src/hooks/`) | **126** |
+| …que falam com o banco | **101** |
 | Tabelas referenciadas pelo front | **114** |
-| Funções RPC chamadas pelo front | **53** |
+| Funções RPC chamadas pelo front | **55** |
 | Edge functions **ativas em produção** | **30** |
 | …com fonte versionada no repo | **30** |
 | Buckets de Storage | **13** (2 públicos) |

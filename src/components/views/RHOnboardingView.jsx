@@ -1204,34 +1204,22 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
 // propósito não é um Kanban: o gestor não move ninguém de etapa, ele só
 // precisa parar de perguntar em que pé está. Lista simples, ordenada por
 // nome, com a etapa e há quanto tempo a pessoa está nela.
-function EquipeEmOnboarding({ equipe, stages, loading, erro }) {
+function EquipeEmOnboarding({ equipe, stages, loading, vagasById }) {
   const stageByKey = useMemo(() => new Map(stages.map(s => [s.stageKey, s])), [stages]);
 
   if (loading) {
     return <div style={{ textAlign: "center", padding: "28px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>;
   }
-  if (erro) {
-    return (
-      <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "11px 14px", fontSize: 12.5 }}>
-        Não deu pra carregar o onboarding da sua equipe: {erro}
-      </div>
-    );
-  }
   if (equipe.length === 0) {
-    // Vazio EXPLICADO, não vazio mudo. Medido em produção em 14/09/2026: os
-    // três sinais que definem "minha equipe" (supervisor, vaga de origem,
-    // departamento) estão em branco em todas as 15 fichas, porque elas vieram
-    // da importação por planilha. Sem esta frase, um quadro vazio seria
-    // indistinguível de "não tem ninguém entrando", que é uma leitura errada
-    // e leva o gestor a voltar a perguntar — exatamente o que isto veio
-    // resolver.
+    // Alcançável: quem chega aqui É gestor de alguém (a seção só é montada
+    // quando `souGestor`), só não tem ninguém entrando agora. Na primeira
+    // versão a própria seção era condicionada à contagem, então este bloco
+    // era código morto e a explicação nunca aparecia — bloqueador do QA.
     return (
-      <div style={{ background: "var(--warning-bg)", color: "var(--warning)", borderRadius: 10, padding: "12px 14px", fontSize: 12.5, lineHeight: 1.6 }}>
-        <div style={{ fontWeight: 700, marginBottom: 3 }}>Nenhuma pessoa da sua equipe em onboarding</div>
-        Isso pode ser porque não há ninguém entrando agora — ou porque o vínculo ainda não
-        está cadastrado. Você acompanha aqui quem tem <strong>você</strong> como gestor na
-        ficha, e quem entrou por uma vaga em que você é responsável. Se você esperava ver
-        alguém, peça ao RH para preencher o campo “Gestor” na ficha dessa pessoa.
+      <div style={{ background: "var(--surface-alt)", color: "var(--text-dim)", borderRadius: 10, padding: "12px 14px", fontSize: 12.5, lineHeight: 1.6 }}>
+        Ninguém da sua equipe está em onboarding agora. Quando alguém que tem você como
+        gestor entrar — ou alguém for contratado por uma vaga sua — aparece aqui, com a
+        etapa em que está.
       </div>
     );
   }
@@ -1248,19 +1236,33 @@ function EquipeEmOnboarding({ equipe, stages, loading, erro }) {
               <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>
                 {[p.jobTitle, p.department].filter(Boolean).join(" · ") || "—"}
                 {p.admissionDate ? ` · admissão ${formatDateBR(p.admissionDate)}` : ""}
+                {/* A vaga de origem é um dos DOIS caminhos que fazem a pessoa
+                    aparecer aqui — mostrá-la explica por que ela está na
+                    lista de quem não é gestor direto dela. */}
+                {vagasById?.get?.(p.vagaId)?.title ? ` · vaga: ${vagasById.get(p.vagaId).title}` : ""}
               </div>
             </div>
+            {/* stageTextColor, nunca a cor crua da etapa: o par cor-sobre-
+                cor18 reprova em contraste (pior caso medido 1,42:1), foi
+                corrigido em 02/08/2026 e está registrado em
+                utils/stage-colors.js. Os outros três badges deste arquivo já
+                usavam; este tinha reintroduzido a falha. */}
             <span style={{
               fontSize: 10.5, fontWeight: 700, borderRadius: 99, padding: "3px 10px",
-              color: st?.color || "var(--text-dim)",
+              color: st?.color ? stageTextColor(st.color) : "var(--text-dim)",
               background: st?.color ? `${st.color}18` : "var(--surface-alt)",
             }}>
               {st?.name || p.onboardingStage}
             </span>
-            {/* Regra 14: o número declara de onde veio — dias corridos desde a
-                última mudança de etapa, não desde a admissão. */}
+            {/* Regra 14 — de onde vem o número: dias corridos desde
+                onboarding_stage_changed_at. Ressalva que o tooltip precisa
+                dar: nas fichas que vieram da importação por planilha essa
+                coluna guarda o instante da IMPORTAÇÃO (NOT NULL DEFAULT
+                now()), não uma mudança de etapa real. Sem o aviso, "há 40
+                dias nesta etapa" seria lido como estagnação quando é só a
+                idade do cadastro. */}
             <span style={{ fontSize: 11, color: "var(--text-dim)", minWidth: 92, textAlign: "right" }}
-              title="Dias corridos desde a última mudança de etapa">
+              title="Dias corridos desde a última mudança de etapa. Para fichas criadas por importação, conta a partir da importação.">
               {dias === 0 ? "mudou hoje" : `há ${dias} dia${dias === 1 ? "" : "s"} nesta etapa`}
             </span>
           </div>
@@ -1285,7 +1287,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   // MESMA definição de equipeDe (utils/rh-hierarquia.js) — nunca
   // profiles.supervisor_id, que é o supervisor comercial e decide escopo de
   // lead (separação fechada na migration 20260910120000).
-  const { equipe, loading: loadingEquipe, error: erroEquipe } = useOnboardingEquipe({ enabled: !isRHUser });
+  const { equipe, souGestor, loading: loadingEquipe } = useOnboardingEquipe({ enabled: !isRHUser });
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
   const vagasById = useMemo(() => new Map(vagas.map((v) => [v.id, v])), [vagas]);
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
@@ -1611,7 +1613,13 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
     // quem tem equipe, o acompanhamento dela (TRAVA 03, 14/09/2026). A seção
     // da equipe só aparece quando há alguém OU quando a consulta falhou —
     // para quem não é gestor de ninguém, a tela continua exatamente como era.
-    const temSecaoEquipe = loadingEquipe || Boolean(erroEquipe) || equipe.length > 0;
+    // A seção existe pra quem É GESTOR DE ALGUÉM, não pra quem tem alguém em
+    // onboarding — são coisas diferentes, e decidir pela contagem escondia a
+    // seção de todo gestor (gestor_id vazio no banco hoje) e tornava a
+    // mensagem de vazio inalcançável. Falha de carga devolve souGestor=false,
+    // então a seção some em silêncio em vez de pintar erro de banco na tela
+    // de quem só queria ver o próprio checklist. Os dois vieram do QA.
+    const temSecaoEquipe = loadingEquipe || souGestor;
     return (
       <div>
         <div className="mb-4">
@@ -1620,9 +1628,11 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
         ) : !meuColaborador ? (
-          !temSecaoEquipe ? (
-            <EmptyState icon={ClipboardCheck} title="Nenhum checklist de onboarding pra você" description="Quando você entrar em um processo de onboarding, seu checklist aparecerá aqui." />
-          ) : null
+          // Independente da seção da equipe: quem não tem checklist continua
+          // vendo esta mensagem, gestor ou não. Condicioná-la ao bloco da
+          // equipe fazia a tela ficar MUDA pra colaborador comum sempre que a
+          // consulta da equipe falhasse (achado do QA).
+          <EmptyState icon={ClipboardCheck} title="Nenhum checklist de onboarding pra você" description="Quando você entrar em um processo de onboarding, seu checklist aparecerá aqui." />
         ) : (
           <MeuChecklist
             colaborador={meuColaborador}
@@ -1632,11 +1642,11 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           />
         )}
         {temSecaoEquipe && (
-          <div style={{ marginTop: meuColaborador ? 24 : 0 }}>
+          <div style={{ marginTop: 24 }}>
             <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
               Minha equipe em onboarding
             </div>
-            <EquipeEmOnboarding equipe={equipe} stages={stages} loading={loadingEquipe} erro={erroEquipe} />
+            <EquipeEmOnboarding equipe={equipe} stages={stages} loading={loadingEquipe} vagasById={vagasById} />
           </div>
         )}
       </div>

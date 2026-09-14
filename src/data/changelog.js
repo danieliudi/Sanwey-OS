@@ -38,6 +38,27 @@
 
 export const CHANGELOG = [
   {
+    version: "5.11.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Gestor passa a acompanhar o onboarding da própria equipe sem precisar perguntar ao RH: na tela de Onboarding aparece \"Minha equipe em onboarding\", com a etapa de cada pessoa e há quanto tempo ela está nela. É só leitura, e mostra apenas quem tem você como gestor na ficha ou entrou por uma vaga sua — nada de salário, documento ou dado pessoal.",
+        roles: ["gerente", "gerente_marketing", "gerente_rh", "admin", "diretoria"],
+      },
+      {
+        kind: "novo",
+        text: "Aviso novo no sino quando alguém segue na etapa Documentação depois do prazo cadastrado, dizendo com quem ficou a cobrança. Liga e desliga em Configurações → Notificações → RH.",
+        roles: ["gerente_rh", "admin"],
+      },
+      {
+        kind: "correcao",
+        toast: true,
+        text: "O aviso de fim de período de experiência levava para a ficha do funcionário, onde não havia nada a preencher sobre a avaliação — por isso ele era visto e adiado. Agora abre o card no Onboarding, onde o resultado é registrado.",
+        roles: ["gerente_rh", "rh", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.10.0",
     items: [
       {
