@@ -53,5 +53,28 @@ export function useCRMViagemCategorias({ userId } = {}) {
     setCategorias(prev => prev.filter(c => c.id !== id));
   }, []);
 
-  return { categorias, loading, createCategoria, desativarCategoria, refetch: fetchAll };
+  // Referência de gasto por contexto (14/09/2026). `null` limpa a referência,
+  // e categoria sem referência não gera alerta nenhum — é assim que Pedágio
+  // convive com Almoço na mesma lista sem inventar um teto que não existe.
+  //
+  // Mesma checagem de zero linha do desativarCategoria acima: a RLS negando
+  // UPDATE devolve `error: null, data: []`, e sem isto o valor sumiria da
+  // tela e voltaria no próximo refetch sem explicação nenhuma.
+  const atualizarReferencias = useCallback(async (id, { capital, interior }) => {
+    const limpar = (v) => {
+      if (v === "" || v == null) return null;
+      const n = Number(String(v).replace(",", "."));
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    const patch = { referencia_capital: limpar(capital), referencia_interior: limpar(interior) };
+    const { data, error } = await supabase
+      .from("crm_viagem_categorias").update(patch).eq("id", id).select();
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) {
+      throw new Error("Não foi possível salvar a referência — verifique suas permissões.");
+    }
+    setCategorias(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  }, []);
+
+  return { categorias, loading, createCategoria, desativarCategoria, atualizarReferencias, refetch: fetchAll };
 }

@@ -24,6 +24,25 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.12.0 — a pergunta "Onde foi" mora DENTRO do modal Nova Despesa, que não
+  // existe na tela até alguém abrir. Mesmo raciocínio do "vaga-posicoes"
+  // abaixo: ancora no botão que abre o modal, que é o caminho real até a
+  // novidade, e que fica na aba padrão de quem lança despesa.
+  //
+  // A OUTRA metade desta entrega (classificação na linha do gestor e a seção
+  // "Referências de gasto") NÃO ganha spotlight, e a decisão fica registrada
+  // aqui pela regra 12: as duas moram na aba "Gestão", que não é a aba padrão
+  // nem de gerente nem de admin (CRMViagensView monta "Minhas viagens"
+  // primeiro pros dois). Alvo ausente se auto-marca como visto
+  // (FeatureSpotlight.jsx), então o aviso morreria na primeira visita à tela,
+  // antes de a pessoa chegar na aba onde a novidade está. Changelog cobre.
+  {
+    id: "despesa-contexto-capital-interior",
+    route: "crm-viagens",
+    target: '[data-tour="nova-despesa-contexto"]',
+    text: "Ao lançar uma despesa agora tem uma pergunta a mais: Capital ou Interior. São dois toques, e é o que faz o almoço de estrada não ser comparado com o de centro urbano.",
+    version: "5.12.0",
+  },
   // 5.11.0 ("Minha equipe em onboarding") — decisão de PULAR o spotlight,
   // registrada aqui (regra 12). É UI nova e não-óbvia, então a pergunta é
   // legítima; o motivo de pular é que a seção só é montada pra quem é gestor

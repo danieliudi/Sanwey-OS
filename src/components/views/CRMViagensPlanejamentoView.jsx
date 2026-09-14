@@ -42,6 +42,7 @@ import { usePlacesAutocomplete } from "../../hooks/use-places-autocomplete";
 import { ClientSelector } from "../client/ClientSelector";
 import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
 import { COMMERCIAL_COST_CENTERS, COMMERCIAL_CREDIT_CARDS, costCenterLabel, creditCardLabel } from "../../constants/cost-centers";
+import { CONTEXTOS, avaliarDespesa } from "../../utils/despesa-referencia";
 
 const MAX_FILE_MB = 10;
 const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
@@ -759,6 +760,27 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
 
 // ── Nova despesa ──────────────────────────────────────────────────────────────
 
+// Aviso de referência no lançamento. ALERTA, NUNCA BLOQUEIO — decidido com o
+// Daniel em 14/09/2026: o vendedor na estrada não tem alternativa, e travar o
+// lançamento não faz o gasto deixar de existir, faz ele sumir do sistema.
+// Token --warning (precisa de atenção), nunca --danger (erro de quem preenche)
+// e nunca --accent (que muda por frente comercial).
+function ReferenciaAviso({ avaliacao }) {
+  if (!avaliacao || avaliacao.status === "dentro") return null;
+  const grave = avaliacao.status === "acima_de_tudo";
+  return (
+    <div style={{
+      marginTop: 6, borderRadius: 8, padding: "8px 10px", fontSize: 11.5, lineHeight: 1.5,
+      background: grave ? "var(--danger-bg)" : "var(--warning-bg)",
+      color: grave ? "var(--danger)" : "var(--warning)",
+    }}>
+      <strong>{avaliacao.resumo} (R$ {avaliacao.referencia.toFixed(2).replace(".", ",")}).</strong>{" "}
+      Pode lançar normalmente — só descreva rapidinho o que aconteceu, pro gestor não precisar te procurar.
+      {avaliacao.assumido && " (Sem \u201conde foi\u201d preenchido, comparei com a referência de Capital.)"}
+    </div>
+  );
+}
+
 function NovaDespesaModal({ categorias, registros, ai, onSave, onClose, initialDraft = null }) {
   useEscToClose(onClose);
   const { complete, isConfigured, provider } = ai;
@@ -772,6 +794,18 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose, initialD
   const [registroId, setRegistroId] = useState(initialDraft?.registro_id || "");
   const [centroCusto, setCentroCusto] = useState(initialDraft?.centro_custo || "");
   const [cartao, setCartao] = useState(initialDraft?.cartao || "");
+  // Onde o gasto aconteceu. PERGUNTADO, nunca inferido do destino — inferir
+  // erra em silêncio e aqui o erro vira conversa sobre dinheiro (decidido
+  // com o Daniel 14/09/2026). Vocabulário Capital/Interior é o que a empresa
+  // já usa nas categorias de hospedagem do Zoho.
+  const [contexto, setContexto] = useState(initialDraft?.contexto || "");
+  // Categoria escolhida em objeto (não só o nome), pra conseguir ler as
+  // referências. `categoria` continua sendo gravada como texto na despesa —
+  // é assim desde sempre e não muda aqui.
+  const categoriaSelecionada = useMemo(() => {
+    const c = categorias.find((x) => x.nome === categoria);
+    return c ? { referenciaCapital: c.referencia_capital, referenciaInterior: c.referencia_interior } : null;
+  }, [categorias, categoria]);
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -848,6 +882,11 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose, initialD
     const valorNum = Number(valor);
     if (!valor || !(valorNum > 0)) { setError("Informe um valor válido."); return; }
     if (!dataDespesa) { setError("Informe a data da despesa."); return; }
+    // Obrigatório de verdade (o rótulo tem "*"): sem isto a despesa cairia na
+    // referência de Capital em silêncio, que é o "sistema adivinhando" que o
+    // Daniel recusou. São dois toques, e é o que separa excesso de rota de
+    // excesso de verdade na tela do gestor.
+    if (!contexto) { setError("Informe onde a despesa aconteceu (Capital ou Interior)."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -860,6 +899,7 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose, initialD
           descricao: descricao.trim() || null,
           centro_custo: centroCusto,
           cartao,
+          contexto: contexto || null,
           ia_extraido: iaExtraido || {},
         },
         file
@@ -939,8 +979,41 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose, initialD
                 {categorias.length === 0 && <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 4 }}>Nenhuma categoria cadastrada ainda.</div>}
               </div>
               <div>
+                <label style={LABEL_ST}>Onde foi *</label>
+                {/* Dois toques. O vendedor responde sem pensar, e é isso que
+                    decide contra qual referência o valor é comparado — a de
+                    centro urbano ou a de estrada. */}
+                <div className="grid grid-cols-2 gap-2">
+                  {CONTEXTOS.map((c) => {
+                    const on = contexto === c.id;
+                    return (
+                      <button
+                        key={c.id} type="button"
+                        onClick={() => setContexto(on ? "" : c.id)}
+                        title={c.descricao}
+                        style={{
+                          border: `1.5px solid ${on ? "var(--accent)" : "var(--border)"}`,
+                          background: on ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "var(--surface)",
+                          color: on ? "var(--accent)" : "var(--text)",
+                          borderRadius: 9, padding: "9px 8px", fontSize: 13,
+                          fontWeight: on ? 700 : 500, cursor: "pointer",
+                        }}
+                      >
+                        {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
                 <label style={LABEL_ST}>Valor (R$) *</label>
                 <CurrencyInput prefix={null} value={valor} onChange={setValor} placeholder="0,00" className={INPUT_CLS} style={INPUT_ST} />
+                <ReferenciaAviso
+                  avaliacao={avaliarDespesa(
+                    { valor: Number(String(valor).replace(/\./g, "").replace(",", ".")), contexto },
+                    categoriaSelecionada,
+                  )}
+                />
               </div>
               <div>
                 <label style={LABEL_ST}>Data da despesa *</label>
@@ -1790,6 +1863,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
             {despesasDoMes.length > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-dim)" }}>· {fmtMoney(totalDespesasDoMes)}</span>}
           </div>
           <button
+            data-tour="nova-despesa-contexto"
             onClick={() => { setDespesaDraft(null); setShowNovaDespesa(true); }}
             disabled={loadingCategorias}
             style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: loadingCategorias ? "default" : "pointer", opacity: loadingCategorias ? 0.6 : 1 }}

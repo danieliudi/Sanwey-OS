@@ -15,15 +15,20 @@ import {
   List,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  SlidersHorizontal,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
 import { useCRMViagemPrestacoes } from "../../hooks/use-crm-viagem-prestacoes";
+import { useCRMViagemCategorias } from "../../hooks/use-crm-viagem-categorias";
 import { useAI } from "../../hooks/use-ai";
 import { viagemCrossCheckPrompt } from "../../constants/ai-prompts";
 import { Badge } from "../ui/Badge";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { formatDateBR, parseDateInput } from "../../utils/date";
+import { avaliarDespesa, contextoLabel, somarExcedentes } from "../../utils/despesa-referencia";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO, STATUS_PRESTACAO, TIPO_SAIDA, computeViagemDivergencias } from "../../utils/viagens";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
@@ -339,7 +344,154 @@ function monthLabelShort(d) {
   return d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
 }
 
-function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, setRejectObs, onVerComprovante, onAprovar, onRejeitarClick, onCancelarRejeicao, onConfirmarRejeicao, onMarcarPago }) {
+// Onde as referências são preenchidas. Existe porque as colunas
+// `referencia_capital`/`referencia_interior` nasceriam mortas sem ela — foi
+// exatamente o que aconteceu com `limite_alerta`, que está preenchido no banco
+// desde sempre e nenhuma tela nunca leu.
+//
+// Fica aqui, na aba Gestão, e não numa tela de administração nova: a aba já é
+// restrita a gerente/admin (CRMViagensView), que é o MESMO conjunto da policy
+// de escrita da tabela (`crm_viagem_categorias_write`, via roles &&). Vendedor
+// não chega nesta aba, então não existe botão que só falha ao ser clicado.
+//
+// Os valores NÃO vêm de lugar nenhum automaticamente: as 52 categorias do Zoho
+// têm `maximum_allowed_amount = 0`, e a política real da empresa vive numa
+// regra "custom" que a API não expõe. Quem sabe a política digita aqui.
+function ReferenciasPanel({ categorias, atualizarReferencias }) {
+  const [aberto, setAberto]     = useState(false);
+  const [rascunhos, setRascunhos] = useState({});
+  const [salvandoId, setSalvandoId] = useState(null);
+  const [erro, setErro]         = useState(null);
+
+  const semReferencia = (categorias || []).filter((c) => c.referencia_capital == null).length;
+
+  const valorAtual = (c, campo) => {
+    const r = rascunhos[c.id];
+    if (r && campo in r) return r[campo];
+    const bruto = campo === "capital" ? c.referencia_capital : c.referencia_interior;
+    return bruto == null ? "" : Number(bruto);
+  };
+
+  const editar = (id, campo, v) => {
+    setRascunhos((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), [campo]: v } }));
+    setErro(null);
+  };
+
+  const sujo = (c) => {
+    const r = rascunhos[c.id];
+    if (!r) return false;
+    const igual = (novo, antigo) => {
+      const a = novo === "" || novo == null ? null : Number(novo);
+      const b = antigo == null ? null : Number(antigo);
+      return a === b;
+    };
+    if ("capital"  in r && !igual(r.capital,  c.referencia_capital))  return true;
+    if ("interior" in r && !igual(r.interior, c.referencia_interior)) return true;
+    return false;
+  };
+
+  const salvar = async (c) => {
+    setSalvandoId(c.id);
+    setErro(null);
+    try {
+      await atualizarReferencias(c.id, {
+        capital:  valorAtual(c, "capital"),
+        interior: valorAtual(c, "interior"),
+      });
+      setRascunhos((prev) => { const p = { ...prev }; delete p[c.id]; return p; });
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setSalvandoId(null);
+    }
+  };
+
+  return (
+    <section style={cardSt}>
+      <button
+        onClick={() => setAberto((v) => !v)}
+        style={{ ...sectionHeaderSt, marginBottom: aberto ? 12 : 0, width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
+      >
+        <SlidersHorizontal size={16} style={{ color: "var(--text-dim)" }} />
+        Referências de gasto por categoria
+        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 600, color: "var(--text-dim)" }}>
+          {semReferencia > 0 && (
+            <span style={{ color: "var(--warning)" }}>
+              {semReferencia === 1 ? "1 categoria sem referência" : `${semReferencia} categorias sem referência`}
+            </span>
+          )}
+          {aberto ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+      </button>
+
+      {aberto && (
+        <>
+          <p style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 12, lineHeight: 1.6 }}>
+            É contra estes valores que a despesa do vendedor é comparada. Categoria sem
+            referência não gera alerta nenhum — é o certo para Pedágio, por exemplo, onde
+            não existe teto que faça sentido. Deixar <strong>Interior</strong> em branco
+            significa &ldquo;vale o mesmo valor de Capital&rdquo;. Nada aqui bloqueia
+            lançamento: só classifica o que o gestor vê.
+          </p>
+
+          {erro && <div style={errorBannerSt}>{erro}</div>}
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 460 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...thSt, textAlign: "left", padding: "6px 8px" }}>Categoria</th>
+                  <th style={{ ...thSt, textAlign: "left", padding: "6px 8px", width: 140 }}>Capital</th>
+                  <th style={{ ...thSt, textAlign: "left", padding: "6px 8px", width: 140 }}>Interior</th>
+                  <th style={{ ...thSt, padding: "6px 8px", width: 90 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {(categorias || []).map((c) => (
+                  <tr key={c.id} style={{ borderTop: "1px solid var(--border)" }}>
+                    <td style={{ padding: "8px", fontSize: 12, color: "var(--text)" }}>{c.nome}</td>
+                    <td style={{ padding: "8px" }}>
+                      <CurrencyInput
+                        value={valorAtual(c, "capital")}
+                        onChange={(v) => editar(c.id, "capital", v)}
+                        placeholder="sem referência"
+                        ariaLabel={`Referência de Capital para ${c.nome}`}
+                        style={{ ...inputSt, width: "100%" }}
+                      />
+                    </td>
+                    <td style={{ padding: "8px" }}>
+                      <CurrencyInput
+                        value={valorAtual(c, "interior")}
+                        onChange={(v) => editar(c.id, "interior", v)}
+                        placeholder="igual à Capital"
+                        ariaLabel={`Referência de Interior para ${c.nome}`}
+                        style={{ ...inputSt, width: "100%" }}
+                      />
+                    </td>
+                    <td style={{ padding: "8px", textAlign: "right" }}>
+                      {sujo(c) && (
+                        <button onClick={() => salvar(c)} disabled={salvandoId === c.id} style={btnStyle("primary", salvandoId === c.id)}>
+                          {salvandoId === c.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Salvar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function DespesaRow({ despesa, categoria, vendedorNome, deciding, isRejecting, rejectObs, setRejectObs, onVerComprovante, onAprovar, onRejeitarClick, onCancelarRejeicao, onConfirmarRejeicao, onMarcarPago }) {
+  // A exceção chega EXPLICADA. Sem isto a linha dizia só "estourou", e pra
+  // saber se era abuso ou parada de rodovia o gestor abria comprovante por
+  // comprovante — o modelo do papel de volta, só que na tela. Ver
+  // utils/despesa-referencia.js pra origem de cada número (regra 14).
+  const avaliacao = avaliarDespesa(despesa, categoria);
   const iaValor = despesa.ia_extraido?.valor;
   const divergente = iaValor != null && Number(iaValor) !== Number(despesa.valor);
   const badge = STATUS_REEMBOLSO[despesa.status_reembolso] || STATUS_REEMBOLSO.pendente;
@@ -361,10 +513,32 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
             <AlertTriangle size={11} /> Sem comprovante (obrigatório acima de {fmtMoney(COMPROVANTE_OBRIGATORIO_ACIMA_DE)})
           </span>
         )}
+        {avaliacao && avaliacao.status !== "dentro" && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700,
+            borderRadius: 99, padding: "2px 8px",
+            color: avaliacao.status === "acima_de_tudo" ? "var(--danger)" : "var(--warning)",
+            background: avaliacao.status === "acima_de_tudo" ? "var(--danger-bg)" : "var(--warning-bg)",
+          }}>
+            {avaliacao.resumo}
+          </span>
+        )}
+        {avaliacao && avaliacao.status === "dentro" && (
+          <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "2px 8px", color: "var(--success)", background: "var(--success-bg)" }}>
+            dentro do esperado
+          </span>
+        )}
         <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{formatDateBR(despesa.data_despesa)}</span>
         <span style={{ marginLeft: "auto" }}><Badge variant={badge.variant}>{badge.label}</Badge></span>
       </div>
 
+      {(avaliacao || despesa.contexto) && (
+        <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 5 }}>
+          {contextoLabel(despesa.contexto) || "Contexto não informado"}
+          {avaliacao ? ` · referência ${fmtMoney(avaliacao.referencia)}` : " · categoria sem referência cadastrada"}
+          {avaliacao?.assumido && " (comparado com Capital, por falta do contexto)"}
+        </div>
+      )}
       {despesa.descricao && <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 6 }}>{despesa.descricao}</div>}
 
       <div className="flex items-center flex-wrap" style={{ gap: 8, marginTop: 8 }}>
@@ -668,6 +842,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
   const { registros, loading: loadingRegistros } = useCRMViagens({ userId: currentUser?.id });
   const { despesas, loading: loadingDespesas, getComprovanteUrl, decidirReembolso } = useCRMDespesas({ userId: currentUser?.id });
   const { prestacoes, loading: loadingPrestacoes, decidirLote, marcarPaga } = useCRMViagemPrestacoes({ userId: currentUser?.id });
+  const { categorias, atualizarReferencias } = useCRMViagemCategorias({ userId: currentUser?.id });
   const { complete, isConfigured } = useAI(currentUser);
 
   const [selectedMonth, setSelectedMonth] = useState(() => todayISO().slice(0, 7));
@@ -690,6 +865,19 @@ export function CRMViagensGestorView({ currentUser, users }) {
     () => (users || []).filter((u) => (u.roles?.length ? u.roles : [u.role]).some(r => COMERCIAL_ROLES.has(r))),
     [users]
   );
+
+  // `crm_viagem_despesas.categoria` é TEXTO (o nome), não id — então o vínculo
+  // com a referência é por nome mesmo. Categoria desativada continua no mapa
+  // de propósito: despesa antiga não pode perder a referência com que foi
+  // avaliada só porque a categoria saiu do seletor.
+  const categoriaPorNome = useMemo(() => {
+    const map = new Map();
+    (categorias || []).forEach((c) => map.set(c.nome, {
+      referenciaCapital:  c.referencia_capital,
+      referenciaInterior: c.referencia_interior,
+    }));
+    return map;
+  }, [categorias]);
 
   const nomePorId = useMemo(() => {
     const map = new Map();
@@ -734,6 +922,15 @@ export function CRMViagensGestorView({ currentUser, users }) {
       .filter((d) => !d.prestacao_id && (d.status_reembolso === "pendente" || d.status_reembolso === "aprovado"))
       .sort((a, b) => String(b.data_despesa || "").localeCompare(String(a.data_despesa || "")));
   }, [despesasFiltradas]);
+
+  // Os dois números que substituem "abrir comprovante por comprovante".
+  // Cobre TODAS as despesas do mês no filtro atual, não só as pendentes da
+  // lista abaixo — o gestor pergunta "quanto estourou no mês", não "quanto
+  // estourou entre as que ainda não decidi".
+  const excedentesDoMes = useMemo(
+    () => somarExcedentes(despesasFiltradas, categoriaPorNome),
+    [despesasFiltradas, categoriaPorNome]
+  );
 
   const despesasPorPrestacaoId = useMemo(() => {
     const map = new Map();
@@ -1076,6 +1273,31 @@ export function CRMViagensGestorView({ currentUser, users }) {
               Despesas avulsas pendentes de aprovação
             </div>
 
+            {/* Regra 14 — origem: crm_viagem_despesas.valor vs.
+                crm_viagem_categorias.referencia_capital/_interior, sobre TODAS
+                as despesas do mês no filtro atual (não só as pendentes listadas
+                abaixo). O que não pôde ser avaliado aparece contado, em vez de
+                sumir da conta em silêncio. */}
+            {(excedentesDoMes.justificavel > 0 || excedentesDoMes.acimaDeTudo > 0 || excedentesDoMes.semReferencia > 0) && (
+              <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 10, lineHeight: 1.6 }}>
+                No mês:{" "}
+                <strong style={{ color: "var(--warning)" }}>{fmtMoney(excedentesDoMes.justificavel)}</strong>
+                {" "}de excedente justificado por rota ·{" "}
+                <strong style={{ color: "var(--danger)" }}>{fmtMoney(excedentesDoMes.acimaDeTudo)}</strong>
+                {" "}acima de qualquer referência.
+                {excedentesDoMes.semReferencia > 0 && (
+                  <>
+                    {" "}
+                    <span style={{ color: "var(--text-faint)" }}>
+                      {excedentesDoMes.semReferencia === 1
+                        ? "1 despesa fora da conta (categoria sem referência cadastrada)."
+                        : `${excedentesDoMes.semReferencia} despesas fora da conta (categoria sem referência cadastrada).`}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+
             {comprovanteError && <div style={errorBannerSt}>{comprovanteError}</div>}
             {decisaoError && <div style={errorBannerSt}>{decisaoError}</div>}
 
@@ -1087,6 +1309,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
                   <DespesaRow
                     key={d.id}
                     despesa={d}
+                    categoria={categoriaPorNome.get(d.categoria)}
                     vendedorNome={showVendedorCol ? (nomePorId.get(d.vendedor_id) || "—") : null}
                     deciding={decidingId === d.id}
                     isRejecting={rejectingId === d.id}
@@ -1103,6 +1326,8 @@ export function CRMViagensGestorView({ currentUser, users }) {
               </div>
             )}
           </section>
+
+          <ReferenciasPanel categorias={categorias} atualizarReferencias={atualizarReferencias} />
         </>
       )}
 

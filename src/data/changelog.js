@@ -38,6 +38,26 @@
 
 export const CHANGELOG = [
   {
+    version: "5.12.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Ao lançar uma despesa, agora existe uma pergunta a mais — \"Onde foi\": Capital ou Interior. São dois toques, e é o que define contra qual valor de referência o gasto é comparado: almoço de estrada não é comparado com almoço de centro urbano. Nada bloqueia o lançamento; se o valor passar da referência, aparece um aviso pedindo uma linha de explicação.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Na aba Gestão de Viagens & Despesas, cada despesa chega classificada em vez de só \"estourou\": a linha diz se está dentro do esperado, acima da referência daquela rota, ou acima de qualquer referência — e o mês fecha com os dois totais separados. É para não precisar abrir comprovante por comprovante para saber qual excesso é logística e qual vira conversa.",
+        roles: ["gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "novo",
+        text: "Nova seção \"Referências de gasto por categoria\" na aba Gestão, onde gerente e admin definem quanto se espera gastar em cada categoria, com valores diferentes para Capital e Interior. Categoria sem referência simplesmente não gera alerta — é o certo para Pedágio, por exemplo. As categorias também passaram a espelhar as do Zoho.",
+        roles: ["gerente", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.11.0",
     items: [
       {
