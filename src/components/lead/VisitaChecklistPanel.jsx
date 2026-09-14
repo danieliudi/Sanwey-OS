@@ -30,21 +30,25 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
   const [aberta, setAberta] = useState(null);      // id da seção expandida
   const [rascunho, setRascunho] = useState({});    // edições ainda não salvas
 
-  const leadComRascunho = useMemo(() => ({
-    ...lead,
-    customFields: { ...(lead?.customFields || {}), ...rascunho },
-  }), [lead, rascunho]);
-
-  const avaliacao = useMemo(() => avaliarChecklist(leadComRascunho), [leadComRascunho]);
-  const secoes    = useMemo(() => completudeDasSecoes(leadComRascunho, avaliacao), [leadComRascunho, avaliacao]);
-  const respostas = useMemo(() => respostasDoLead(leadComRascunho), [leadComRascunho]);
+  // O rascunho entra como argumento próprio, e não empurrado dentro de
+  // `customFields`: campo que mora em coluna (volume, decisor, data do próximo
+  // contato) era relido da coluna a cada tecla e revertia o que estava sendo
+  // digitado — ficava gravável uma vez só (QA 14/09/2026).
+  const avaliacao = useMemo(() => avaliarChecklist(lead, rascunho), [lead, rascunho]);
+  const secoes    = useMemo(() => completudeDasSecoes(lead, rascunho, avaliacao), [lead, rascunho, avaliacao]);
+  const respostas = useMemo(() => respostasDoLead(lead, rascunho), [lead, rascunho]);
 
   const sujo = Object.keys(rascunho).length > 0;
   const editar = (chave, valor) => setRascunho(r => ({ ...r, [chave]: valor }));
 
   const salvar = async () => {
-    await onSalvar?.({ respostas: rascunho, score: avaliacao.total, faixa: avaliacao.faixa.id });
-    setRascunho({});
+    try {
+      await onSalvar?.({ respostas: rascunho, score: avaliacao.pct, faixa: avaliacao.faixa?.id ?? null });
+      setRascunho({});
+    } catch {
+      // O rascunho FICA: quem mostra o erro é o drawer (toast), e limpar o que
+      // o vendedor digitou depois de uma falha de rede é perder a visita.
+    }
   };
 
   return (
@@ -61,19 +65,22 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
             color: "var(--text-dim)", background: "var(--surface-alt)",
             border: "1px solid var(--border)", borderRadius: 99, padding: "2px 9px", whiteSpace: "nowrap",
           }}>
-            {avaliacao.total} · {avaliacao.faixa.id}
+            {avaliacao.pct == null
+              ? "sem medida"
+              : `${avaliacao.total}/${avaliacao.possivel} · ${avaliacao.faixa.id}`}
           </span>
         </div>
         <div style={{ height: 4, background: "var(--border)", borderRadius: 99, marginTop: 8, overflow: "hidden" }}>
           <div style={{
-            height: "100%", width: `${avaliacao.pct}%`, borderRadius: 99,
-            background: avaliacao.pct >= 80 ? "var(--success)" : avaliacao.pct >= 50 ? "var(--amber)" : "var(--text-faint)",
+            height: "100%", width: `${avaliacao.pct ?? 0}%`, borderRadius: 99,
+            background: avaliacao.pct == null ? "transparent"
+              : avaliacao.pct >= 80 ? "var(--success)" : avaliacao.pct >= 50 ? "var(--amber)" : "var(--text-faint)",
           }} />
         </div>
         {/* Regra 14: o denominador aparece, e o que ficou de fora é contado —
             nunca "45 de 100" quando um dos itens não pode somar. */}
         <div style={{ fontSize: 10.5, color: "var(--text-faint)", marginTop: 6, lineHeight: 1.45 }}>
-          {avaliacao.total} de {avaliacao.possivel} possíveis · {avaliacao.faixa.rotulo}
+          {avaliacao.total} de {avaliacao.possivel} possíveis{avaliacao.faixa ? ` · ${avaliacao.faixa.rotulo}` : ""}
           {avaliacao.naoAvaliaveis.length > 0 && (
             <> · <span style={{ color: "var(--warning)" }}>
               {avaliacao.naoAvaliaveis.map(i => i.rotulo).join(", ")} fora da conta (limiar não configurado)
@@ -99,8 +106,13 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
               display: "flex", alignItems: "flex-start", gap: 8, padding: "6px 0",
               borderTop: i === 0 ? "none" : "1px solid color-mix(in srgb, var(--warning) 18%, transparent)",
             }}>
-              <span style={{ fontSize: 10.5, fontWeight: 600, color: "var(--warning)", width: 26, flexShrink: 0, paddingTop: 1, fontVariantNumeric: "tabular-nums" }}>
-                +{item.peso}
+              {/* Item fora da conta do score continua sendo pergunta a fazer —
+                  só não promete ponto que não pode dar (regra 14). */}
+              <span
+                title={item.pontua ? undefined : "Fora da conta do score enquanto o limiar não estiver configurado"}
+                style={{ fontSize: 10.5, fontWeight: 600, color: item.pontua ? "var(--warning)" : "var(--text-faint)", width: 26, flexShrink: 0, paddingTop: 1, fontVariantNumeric: "tabular-nums" }}
+              >
+                {item.pontua ? `+${item.peso}` : "—"}
               </span>
               <span style={{ fontSize: 12.5, lineHeight: 1.4, color: "var(--text)" }}>{item.pergunta}</span>
             </div>
@@ -121,7 +133,10 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
           <Mic size={17} style={{ flexShrink: 0 }} />
           <span>
             <b style={{ display: "block", fontSize: 13, fontWeight: 700 }}>Gravar a conversa</b>
-            <span style={{ fontSize: 10.5, opacity: 0.85 }}>a ata preenche o que for falado</span>
+            {/* Não diz "preenche o checklist": hoje a ata grava a transcrição
+                em Atividades e nada mais — prometer o que o código não faz é a
+                classe de bug que a regra 14 existe pra evitar. */}
+            <span style={{ fontSize: 10.5, opacity: 0.85 }}>a conversa vira ata em Atividades</span>
           </span>
         </button>
       )}
@@ -196,7 +211,10 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
 }
 
 const rotuloSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 3 };
-const inputSt  = { width: "100%", background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 9px", fontSize: 12.5 };
+// 16px não é escolha estética: abaixo disso o Safari do iPhone dá zoom sozinho
+// ao focar o campo e desloca a tela inteira — e esta tela é operada no celular,
+// de pé, na frente do cliente.
+const inputSt  = { width: "100%", background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px", fontSize: 16 };
 
 function CampoDoChecklist({ campo, valor, onChange }) {
   // Campo vindo do cliente é leitura: a plataforma já sabe, e reperguntar o
@@ -230,7 +248,11 @@ function CampoDoChecklist({ campo, valor, onChange }) {
             const ativa = lista ? lista.includes(o) : valor === o;
             return (
               <Opcao
-                key={o} rotulo={o} ativa={ativa}
+                key={o}
+                // Opção que é valor de banco (canal_origem) mostra o rótulo
+                // humano — "site_widget" não é o que o vendedor lê.
+                rotulo={campo.rotulosOpcoes?.[o] ?? o}
+                ativa={ativa}
                 onClick={() => onChange(
                   lista ? (ativa ? lista.filter(x => x !== o) : [...lista, o])
                         : (ativa ? "" : o)

@@ -35,6 +35,8 @@ import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { ProposalPanel } from "./ProposalPanel";
 import { AtaVozPanel } from "./AtaVozPanel";
 import { VisitaChecklistPanel } from "./VisitaChecklistPanel";
+import { dividirRespostas } from "../../utils/checklist-visita";
+import { AppToast } from "../shared/AppToast";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
 import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
@@ -74,6 +76,12 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   // A ata continua aparecendo na lista de Atividades depois de salva.
   const [ataFloatingOpen, setAtaFloatingOpen] = useState(false);
   const [visitaSalvando, setVisitaSalvando] = useState(false);
+  const [visitaErro, setVisitaErro] = useState(null);
+  // A aba de Visita é montada na primeira abertura e NUNCA desmonta: o
+  // rascunho do checklist vive nela, e desmontar ao trocar de aba jogava fora
+  // o que o vendedor tinha acabado de digitar na frente do cliente.
+  const [visitaMontada, setVisitaMontada] = useState(false);
+  useEffect(() => { if (sideTab === "visita") setVisitaMontada(true); }, [sideTab]);
 
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
@@ -925,32 +933,44 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                 Durante a visita esta aba é guia, não formulário: mostra o que
                 ainda não foi perguntado e deixa a ata preencher o resto. Ver
                 o cabeçalho de VisitaChecklistPanel.jsx. */}
-            {sideTab === "visita" && (
+            {visitaMontada && (
+              <div style={{ display: sideTab === "visita" ? "block" : "none" }}>
               <VisitaChecklistPanel
                 lead={lead}
                 salvando={visitaSalvando}
                 onGravarAta={onAddActivity ? () => setAtaFloatingOpen(true) : undefined}
                 onSalvar={async ({ respostas, score }) => {
                   setVisitaSalvando(true);
+                  setVisitaErro(null);
                   try {
-                    // `custom_fields` guarda as respostas; as três colunas de
-                    // verdade (volume × 2 e score) saem daqui separadas,
-                    // porque é delas que o score de propensão e o gatilho de
-                    // recompra vão precisar — jsonb não ordena nem soma.
-                    const { volume_mensal_bags, volume_anual_bags, data_proximo_contato, ...resto } = respostas;
-                    const patch = { customFields: { ...(lead.customFields || {}), ...resto }, scoreComercial: score };
-                    if (volume_mensal_bags !== undefined) patch.volumeMensalBags = numeroOuNulo(volume_mensal_bags);
-                    if (volume_anual_bags  !== undefined) patch.volumeAnualBags  = numeroOuNulo(volume_anual_bags);
-                    // A "próxima ação agendada" da seção 9 é a mesma data que
-                    // alimenta a fila de Pendências — é a regra que a folha
-                    // impressa manda em caixa alta no rodapé.
-                    if (data_proximo_contato) patch.nextFollowUp = data_proximo_contato;
+                    // Quem decide o que é coluna e o que é custom_fields é o
+                    // `destino` declarado em constants/checklist-visita.js —
+                    // não uma desestruturação aqui, que esquecia campo (o
+                    // decisor e a origem do lead iam parar em custom_fields e
+                    // nunca chegavam na coluna). Campo novo na folha impressa
+                    // não exige mexer neste arquivo.
+                    const { colunas, custom } = dividirRespostas(respostas, lead);
+                    const patch = {
+                      ...colunas,
+                      customFields: { ...(lead.customFields || {}), ...custom },
+                      // Grava o PERCENTUAL, não a soma bruta: `score_comercial`
+                      // tem CHECK 0-100 e as faixas da folha (A 80-100) são
+                      // lidas sobre o percentual. Gravar a soma com um item
+                      // fora da conta deixava a faixa A inalcançável.
+                      scoreComercial: score,
+                    };
                     await onUpdate?.(lead.id, patch);
+                  } catch (e) {
+                    // RLS recusando gravação volta como erro e não como lista
+                    // vazia — engolir isso fazia o vendedor achar que salvou.
+                    setVisitaErro(e?.message || "Não foi possível salvar a visita.");
+                    throw e;
                   } finally {
                     setVisitaSalvando(false);
                   }
                 }}
               />
+              </div>
             )}
 
             {sideTab === "email" && (
@@ -1175,6 +1195,13 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
         </div>
       </Modal>
     )}
+    {/* Falha ao salvar a visita: RLS recusando gravação devolve erro, e sem
+        isto o vendedor saía do cliente achando que tinha salvo. */}
+    {visitaErro && (
+      <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setVisitaErro(null)}>
+        {visitaErro}
+      </AppToast>
+    )}
     </>
   );
 }
@@ -1266,14 +1293,6 @@ function ClientCommitteeSection({ clientId }) {
 const SIDE_TAB_HINTS = {
   ia: "Assistente de IA sob demanda para este lead — briefing, rascunho de e-mail, próximo passo, análise de objeção. Use quando precisa de apoio antes de uma ação específica. Para sugestões automáticas em toda a carteira, veja Time de Agentes.",
 };
-
-// Campo numérico de formulário chega string; vazio tem que virar NULL e não
-// 0 — volume 0 bags/mês é uma afirmação, campo em branco não é.
-function numeroOuNulo(v) {
-  if (v === "" || v == null) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
 
 const SIDE_TABS = [
   { id: "form",         label: "Form",        icon: FileText },

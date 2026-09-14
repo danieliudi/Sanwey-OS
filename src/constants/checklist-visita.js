@@ -43,15 +43,20 @@ export const SECOES = [
     // Vem pronta pra cliente que já existe na base — não se pergunta de novo
     // o que a plataforma já sabe.
     campos: [
-      { chave: "empresa",        rotulo: "Empresa",           tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE },
-      { chave: "cnpj",           rotulo: "CNPJ",              tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE },
-      { chave: "cidade_uf",      rotulo: "Cidade/UF",         tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE },
-      { chave: "segmento",       rotulo: "Segmento",          tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE },
-      { chave: "contato",        rotulo: "Contato",           tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE },
-      { chave: "cargo",          rotulo: "Cargo",             tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE },
-      { chave: "telefone",       rotulo: "Telefone/WhatsApp", tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE },
-      { chave: "email",          rotulo: "E-mail",            tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE },
-      { chave: "origem_lead",    rotulo: "Origem do lead",    tipo: CAMPO.TEXTO, destino: DESTINO.COLUNA, coluna: "canal_origem" },
+      { chave: "empresa",    rotulo: "Empresa",           tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE, de: "company" },
+      { chave: "cnpj",       rotulo: "CNPJ",              tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE, de: "cnpj" },
+      { chave: "cidade_uf",  rotulo: "Cidade/UF",         tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE, de: ["city", "state"] },
+      { chave: "segmento",   rotulo: "Segmento",          tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE, de: "sector" },
+      { chave: "contato",    rotulo: "Contato",           tipo: CAMPO.TEXTO, destino: DESTINO.CUSTOM },
+      { chave: "cargo",      rotulo: "Cargo",             tipo: CAMPO.TEXTO, destino: DESTINO.CUSTOM },
+      { chave: "telefone",   rotulo: "Telefone/WhatsApp", tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE, de: "phone" },
+      { chave: "email",      rotulo: "E-mail",            tipo: CAMPO.TEXTO, destino: DESTINO.CLIENTE, de: "contactEmail" },
+      // QA 14/09/2026: era CAMPO.TEXTO livre apontando pra `leads.canal_origem`,
+      // que tem CHECK em produção com 5 valores. Texto livre devolveria 23514 e
+      // derrubaria o salvamento inteiro. As opções são exatamente as do CHECK.
+      { chave: "origem_lead", rotulo: "Origem do lead", tipo: CAMPO.ESCOLHA, destino: DESTINO.COLUNA, coluna: "canal_origem",
+        opcoes: ["site_widget", "manual", "import", "referral", "whatsapp"],
+        rotulosOpcoes: { site_widget: "Site", manual: "Manual", import: "Importação", referral: "Indicação", whatsapp: "WhatsApp" } },
       { chave: "relacao",        rotulo: "Relação",           tipo: CAMPO.ESCOLHA, destino: DESTINO.CUSTOM,
         opcoes: ["Prospect", "Cliente atual", "Reativação"] },
     ],
@@ -138,7 +143,11 @@ export const SECOES = [
       { chave: "usuario",             rotulo: "Usuário",                tipo: CAMPO.TEXTO, destino: DESTINO.CUSTOM },
       { chave: "area_tecnica",        rotulo: "Área técnica",           tipo: CAMPO.TEXTO, destino: DESTINO.CUSTOM },
       { chave: "comprador",           rotulo: "Comprador",              tipo: CAMPO.TEXTO, destino: DESTINO.CUSTOM },
-      { chave: "decisor",             rotulo: "Decisor",                tipo: CAMPO.TEXTO, destino: DESTINO.COLUNA, coluna: "decision_maker" },
+      // `leads.decision_maker` é jsonb {name, role} e o hook o preenche com um
+      // placeholder {name:"—"} quando vazio — então ler a coluna crua punha
+      // "[object Object]" no input e tornava os +10 de "Decisor identificado"
+      // inalcançáveis. Lê e grava só o `name` (QA 14/09/2026).
+      { chave: "decisor", rotulo: "Decisor", tipo: CAMPO.TEXTO, destino: DESTINO.COLUNA, coluna: "decision_maker", subcampo: "name" },
       { chave: "processo_homologacao", rotulo: "Processo de homologação", tipo: CAMPO.TEXTO, destino: DESTINO.CUSTOM },
       { chave: "prazo_decisao",       rotulo: "Prazo previsto para decisão", tipo: CAMPO.DATA, destino: DESTINO.CUSTOM },
       { chave: "primeira_compra",     rotulo: "Primeira compra prevista", tipo: CAMPO.DATA, destino: DESTINO.CUSTOM },

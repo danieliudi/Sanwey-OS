@@ -28,6 +28,9 @@ function rowToLead(r) {
     trigger: r.trigger,
     triggerLabel: r.trigger_label,
     campaignId: r.campaign_id ?? null,
+    // Origem do lead (seção 1 do Checklist de Visita). Tem CHECK em produção
+    // com 5 valores — a lista em constants/checklist-visita.js é essa mesma.
+    canalOrigem: r.canal_origem ?? null,
     evidence: r.evidence,
     fitScore: r.fit_score ?? 0,
     // Checklist de visita (14/09/2026). `scoreComercial` é DISTINTO de
@@ -136,6 +139,7 @@ function patchToRow(patch) {
     contactEmail: "contact_email",
     triggerLabel: "trigger_label",
     campaignId: "campaign_id",
+    canalOrigem: "canal_origem",
     fitScore: "fit_score",
     volumeMensalBags: "volume_mensal_bags",
     volumeAnualBags: "volume_anual_bags",

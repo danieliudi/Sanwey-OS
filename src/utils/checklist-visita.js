@@ -1,4 +1,4 @@
-import { PESOS, FAIXAS, SECOES, LIMIAR_ALTO_VOLUME_BAGS, DESTINO } from "../constants/checklist-visita";
+import { PESOS, FAIXAS, SECOES, CAMPO, LIMIAR_ALTO_VOLUME_BAGS, DESTINO } from "../constants/checklist-visita";
 
 // Score comercial da visita — soma, não modelo.
 //
@@ -19,22 +19,27 @@ import { PESOS, FAIXAS, SECOES, LIMIAR_ALTO_VOLUME_BAGS, DESTINO } from "../cons
 // tooltip de Fit score do Funil, achado em 14/09/2026.
 
 const temTexto = (v) => typeof v === "string" && v.trim().length > 0;
-const temValor = (v) => v != null && v !== "" && !(typeof v === "object" && Object.keys(v).length === 0);
-const numero   = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+const temValor = (v) => {
+  if (v == null || v === "") return false;
+  if (Array.isArray(v)) return v.length > 0;
+  if (typeof v === "object") return Object.keys(v).length > 0;
+  return true;
+};
+const numero = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
 
-// Como cada item do score se prova a partir do que foi coletado.
-// Devolve true (marcado), false (falta) ou null (não avaliável hoje — sai da
-// conta dos dois lados).
+// Como cada item do score se PROVA a partir do que foi coletado.
+// true = marcado · false = coletado e não pontua · null = não avaliável hoje
+// (sai do numerador E do denominador — ver LIMIAR_ALTO_VOLUME_BAGS).
 const PROVA = {
   alto_volume: (d) => {
-    const v = numero(d.volume_mensal_bags);
     if (LIMIAR_ALTO_VOLUME_BAGS == null) return null;  // ver a constante
+    const v = numero(d.volume_mensal_bags);
     if (v == null) return false;
     return v >= LIMIAR_ALTO_VOLUME_BAGS;
   },
   necessidade:      (d) => temTexto(d.necessidade_principal),
   target:           (d) => temValor(d.target_cliente_bag) || temValor(d.preco_atual_bag),
-  decisor:          (d) => temTexto(d.decisor) || temValor(d.decision_maker),
+  decisor:          (d) => temTexto(d.decisor),
   concorrente:      (d) => temTexto(d.concorrente_principal) || temTexto(d.fornecedor_atual),
   abertura:         (d) => d.postura_troca === "Aberto à troca",
   produto_adequado: (d) => temTexto(d.produto),
@@ -42,22 +47,77 @@ const PROVA = {
   proxima_acao:     (d) => temValor(d.data_proximo_contato) && temValor(d.proxima_acao),
 };
 
+// Se a PERGUNTA já foi feita — que não é a mesma coisa que pontuar, e a
+// diferença importa nas duas pontas:
+//   · "Postura: cliente satisfeito" não pontua, mas foi perguntado — continuar
+//     pedindo pro vendedor perguntar de novo é ruído na frente do cliente.
+//   · "Alto volume" não pontua enquanto o limiar for nulo, mas a pergunta
+//     ("quantos bags por mês?") é a de maior peso da folha e a razão de as
+//     colunas de volume existirem. Sem esta separação ela sumia da tela —
+//     era o achado mais grave do QA de 14/09/2026.
+const DADO = {
+  alto_volume:      (d) => numero(d.volume_mensal_bags) != null,
+  necessidade:      (d) => temTexto(d.necessidade_principal),
+  target:           (d) => temValor(d.target_cliente_bag) || temValor(d.preco_atual_bag),
+  decisor:          (d) => temTexto(d.decisor),
+  concorrente:      (d) => temTexto(d.concorrente_principal) || temTexto(d.fornecedor_atual),
+  abertura:         (d) => temValor(d.postura_troca),
+  produto_adequado: (d) => temTexto(d.produto),
+  prazo:            (d) => temValor(d.prazo_decisao),
+  proxima_acao:     (d) => temValor(d.data_proximo_contato) && temValor(d.proxima_acao),
+};
+
+export const TODOS_OS_CAMPOS = SECOES.flatMap((s) => s.campos);
+export const CAMPO_POR_CHAVE = Object.fromEntries(TODOS_OS_CAMPOS.map((c) => [c.chave, c]));
+
+function camel(s) { return s.replace(/_([a-z])/g, (_, c) => c.toUpperCase()); }
+
+// Placeholder do hook de leads: `decision_maker` nasce {name:"—"} quando
+// vazio, e "—" num input é pior que vazio.
+const vazio = (v) => v == null || v === "" || v === "—";
+
+/** O valor atual de um campo, buscado na origem que aquele campo declara. */
+function valorDoCampo(lead, c) {
+  if (c.destino === DESTINO.CLIENTE) {
+    // Dado que a plataforma já tem — só leitura. `de` pode ser uma lista
+    // (Cidade/UF é `city` + `state`).
+    const partes = (Array.isArray(c.de) ? c.de : [c.de])
+      .map((k) => lead?.[k])
+      .filter((v) => !vazio(v));
+    return partes.join("/");
+  }
+
+  if (c.destino === DESTINO.COLUNA) {
+    const bruto = lead?.[camel(c.coluna)] ?? lead?.[c.coluna];
+    // `subcampo` existe pra jsonb: decision_maker é {name, role}, e gravar o
+    // objeto inteiro num input de texto punha "[object Object]" na tela.
+    let v = c.subcampo ? (bruto && typeof bruto === "object" ? bruto[c.subcampo] : null) : bruto;
+    if (vazio(v)) return "";
+    // `next_follow_up` é timestamptz; <input type="date"> só aceita AAAA-MM-DD
+    // e descarta o valor inteiro em silêncio se vier com hora.
+    if (c.tipo === CAMPO.DATA && typeof v === "string") v = v.slice(0, 10);
+    return v;
+  }
+
+  const cf = lead?.customFields || lead?.custom_fields || {};
+  return cf[c.chave] ?? "";
+}
+
 /**
  * Achata o lead num objeto plano de respostas, juntando as três origens
  * (coluna do lead, custom_fields e dado do cliente) — o resto do arquivo não
  * precisa saber de onde cada uma veio.
+ *
+ * `rascunho` vem POR ÚLTIMO e vence tudo, inclusive valor vazio. Sem isso o
+ * valor da coluna reescrevia o que o vendedor estava digitando a cada tecla,
+ * e os dois campos de volume ficavam gravável-uma-vez-só (QA 14/09/2026).
  */
-export function respostasDoLead(lead) {
-  const d = { ...(lead?.customFields || lead?.custom_fields || {}) };
-  SECOES.forEach((s) => s.campos.forEach((c) => {
-    if (c.destino !== DESTINO.COLUNA) return;
-    const bruto = lead?.[c.coluna] ?? lead?.[camel(c.coluna)];
-    if (bruto != null && bruto !== "") d[c.chave] = bruto;
-  }));
-  return d;
+export function respostasDoLead(lead, rascunho = {}) {
+  const cf = lead?.customFields || lead?.custom_fields || {};
+  const d = { ...cf };
+  TODOS_OS_CAMPOS.forEach((c) => { d[c.chave] = valorDoCampo(lead, c); });
+  return { ...d, ...rascunho };
 }
-
-function camel(s) { return s.replace(/_([a-z])/g, (_, c) => c.toUpperCase()); }
 
 /**
  * O score, a faixa, e o que falta — tudo de uma vez.
@@ -67,8 +127,8 @@ function camel(s) { return s.replace(/_([a-z])/g, (_, c) => c.toUpperCase()); }
  * denominador. A tela mostra "45 de 80", nunca "45 de 100" com um item que
  * nunca poderia somar.
  */
-export function avaliarChecklist(lead) {
-  const d = respostasDoLead(lead);
+export function avaliarChecklist(lead, rascunho = {}) {
+  const d = respostasDoLead(lead, rascunho);
 
   let total = 0, possivel = 0;
   const marcados = [], faltantes = [], naoAvaliaveis = [];
@@ -76,17 +136,26 @@ export function avaliarChecklist(lead) {
   for (const item of PESOS) {
     const prova = PROVA[item.id];
     const r = prova ? prova(d) : false;
-    if (r === null) { naoAvaliaveis.push(item); continue; }
-    possivel += item.peso;
-    if (r) { total += item.peso; marcados.push(item); }
-    else   { faltantes.push(item); }
+    const coletado = DADO[item.id] ? DADO[item.id](d) : false;
+
+    if (r === null) naoAvaliaveis.push(item);
+    else {
+      possivel += item.peso;
+      if (r) { total += item.peso; marcados.push(item); }
+    }
+
+    // A lista "Falta perguntar" é sobre a PERGUNTA, não sobre o ponto.
+    if (!coletado) faltantes.push({ ...item, pontua: r !== null });
   }
 
   // A faixa é lida contra o POSSÍVEL, não contra 100 fixo — senão um item
   // fora da conta rebaixaria todo mundo de faixa sem ninguém ter feito nada
   // pior. Com tudo avaliável, possivel = 100 e a conta é a da folha impressa.
-  const pct = possivel > 0 ? Math.round((total / possivel) * 100) : 0;
-  const faixa = FAIXAS.find((f) => pct >= f.min && pct <= f.max) || FAIXAS[FAIXAS.length - 1];
+  //
+  // `possivel === 0` devolve pct/faixa NULOS, não zero: nenhum item avaliável
+  // não é "baixa prioridade", é ausência de medida (regra 14).
+  const pct = possivel > 0 ? Math.round((total / possivel) * 100) : null;
+  const faixa = pct == null ? null : (FAIXAS.find((f) => pct >= f.min && pct <= f.max) || FAIXAS[FAIXAS.length - 1]);
 
   return {
     total, possivel, pct, faixa,
@@ -95,7 +164,7 @@ export function avaliarChecklist(lead) {
     // É esta lista que vira o bloco "Falta perguntar" na tela do vendedor.
     faltantes: [...faltantes].sort((a, b) => b.peso - a.peso),
     naoAvaliaveis,
-    pontosEmAberto: faltantes.reduce((s, i) => s + i.peso, 0),
+    pontosEmAberto: faltantes.filter((i) => i.pontua).reduce((s, i) => s + i.peso, 0),
   };
 }
 
@@ -103,8 +172,8 @@ export function avaliarChecklist(lead) {
  * Quanto de cada seção já foi respondido — alimenta o índice das 9 seções.
  * A seção 8 (score) não tem campo: reporta a completude do próprio score.
  */
-export function completudeDasSecoes(lead, avaliacao) {
-  const d = respostasDoLead(lead);
+export function completudeDasSecoes(lead, rascunho, avaliacao) {
+  const d = respostasDoLead(lead, rascunho);
   return SECOES.map((s) => {
     if (s.calculada) {
       return { id: s.id, numero: s.numero, nome: s.nome, calculada: true,
@@ -113,6 +182,47 @@ export function completudeDasSecoes(lead, avaliacao) {
     const preenchidos = s.campos.filter((c) => temValor(d[c.chave])).length;
     return { id: s.id, numero: s.numero, nome: s.nome, preenchidos, total: s.campos.length };
   });
+}
+
+/**
+ * Separa o rascunho pelo DESTINO declarado de cada campo. Sem isto o drawer
+ * precisava desestruturar campo a campo — e o que ele esquecia (`decisor`,
+ * `origem_lead`) caía em custom_fields e nunca chegava na coluna (QA
+ * 14/09/2026). Agora quem manda é o `destino` da constante: campo novo na
+ * folha impressa não exige mexer no drawer.
+ *
+ * Devolve `{ colunas, custom }`, onde `colunas` já vem com a chave camelCase
+ * que `patchToRow` (use-leads.js) espera, e o subcampo jsonb resolvido.
+ */
+export function dividirRespostas(respostas, lead) {
+  const colunas = {}, custom = {};
+
+  for (const [chave, valor] of Object.entries(respostas || {})) {
+    const campo = CAMPO_POR_CHAVE[chave];
+    // Campo de CLIENTE é leitura: nunca volta pra gravação por este caminho.
+    if (campo?.destino === DESTINO.CLIENTE) continue;
+
+    if (!campo || campo.destino !== DESTINO.COLUNA) { custom[chave] = valor; continue; }
+
+    const nome = camel(campo.coluna);
+    if (campo.subcampo) {
+      // O hook entrega `decision_maker` como {name:"—", role:"—"} quando
+      // vazio. Escrever esse "—" de volta grava o placeholder no banco, então
+      // ele é descartado antes (só o que o vendedor realmente informou vai).
+      const atual = typeof lead?.[nome] === "object" && lead?.[nome] ? lead[nome] : {};
+      const semPlaceholder = Object.fromEntries(Object.entries(atual).filter(([, v]) => !vazio(v)));
+      const base = colunas[nome] ?? semPlaceholder;
+      colunas[nome] = { ...base, [campo.subcampo]: valor === "" ? null : valor };
+    } else if (campo.tipo === CAMPO.NUMERO) {
+      // Vazio vira NULL e não 0 — volume 0 bags/mês é uma afirmação, campo em
+      // branco é a ausência dela.
+      colunas[nome] = valor === "" || valor == null ? null : (numero(valor) ?? null);
+    } else {
+      colunas[nome] = valor === "" ? null : valor;
+    }
+  }
+
+  return { colunas, custom };
 }
 
 export default avaliarChecklist;
