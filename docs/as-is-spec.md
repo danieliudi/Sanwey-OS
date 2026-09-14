@@ -632,8 +632,26 @@ sistema.
 | Conceito | CRM | RH |
 |---|---|---|
 | Definição de campo por etapa | `pipeline_stage_fields` (chaveada por `stage_id`) | `rh_pipeline_stage_fields` (chaveada por `domain` + `stage_key`) |
-| Componente de input | `lead/StageFieldInput.jsx` | `rh-pipeline/RHStageFieldInput.jsx` (switch de tipos idêntico, copiado) |
-| Card do Kanban | `LeadKanbanCard.jsx` | `RHKanbanCard.jsx` |
+| Componente de input | `lead/StageFieldInput.jsx` | `rh-pipeline/RHStageFieldInput.jsx` |
+| Card do Kanban | `LeadKanbanCard.jsx` (247 linhas) | `RHKanbanCard.jsx` (105 linhas) |
+
+**Correção de 14/09/2026 — o input não é mais duplicado.** Esta tabela dizia
+que `RHStageFieldInput.jsx` era um "switch de tipos idêntico, copiado".
+Conferido: os dois arquivos têm **1 linha cada** e são reexports do mesmo
+módulo, `shared/StageFieldInput.jsx` (230 linhas):
+
+```
+lead/StageFieldInput.jsx:      export { StageFieldInput, default } from "../shared/StageFieldInput";
+rh-pipeline/RHStageFieldInput.jsx: export { StageFieldInput as RHStageFieldInput, default } from "../shared/StageFieldInput";
+```
+
+A duplicação que sobra nessa linha é só o **nome de import**, não o código. A
+dos cards do Kanban continua real (dois arquivos, 247 e 105 linhas). A das
+tabelas de definição também.
+
+O mesmo texto obsoleto vive na regra 2 do `CLAUDE.md` ("switch de tipos
+idêntico, copiado") — registrado aqui como constatação; aquele arquivo é a
+fonte e se corrige por lá.
 
 Mesmos 16 tipos, mesmas 3 colunas condicionais, chaves primárias diferentes.
 Marketing/Entregas/Compras não usam nem um nem outro — têm card inline
