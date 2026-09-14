@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
-import { VIDEO_TUTORIALS } from "../data/tutorials";
+import { VIDEO_TUTORIALS, papeisDoUsuario } from "../data/tutorials";
 
 // Dica contextual (quickStart) mostrada quando o usuário chega numa tela pela
 // 1ª vez — reaproveita o mesmo conteúdo de VIDEO_TUTORIALS que também aparece
@@ -64,13 +64,10 @@ export function useScreenTips(currentUser, screenKey, { skip = false } = {}) {
   const userId = currentUser?.id;
   const seenForUser = (userId && screenTipsSeenMap[userId]) || {};
 
-  // Cargo principal primeiro, secundários depois, sem repetir. `vendedor` é o
-  // fim de linha porque é o único array que cobre o tronco comum da
-  // plataforma — é o mesmo fallback que TutoriaisView usa.
-  const papeis = useMemo(() => {
-    const lista = [currentUser?.role, ...(currentUser?.roles || []), "vendedor"];
-    return [...new Set(lista.filter(Boolean))];
-  }, [currentUser?.role, currentUser?.roles]);
+  // Cargo principal primeiro, secundários depois, sem repetir. A ordem vive em
+  // `papeisDoUsuario` (data/tutorials.js) e é a MESMA que a tela de Ajuda usa —
+  // as duas divergiam, e a varredura visual de 14/09/2026 pegou o efeito.
+  const papeis = useMemo(() => papeisDoUsuario(currentUser), [currentUser?.role, currentUser?.roles]);
 
   // O guia da tela atual, independente de já ter sido visto — é o que
   // alimenta tanto o painel quanto o botão "?" (que só aparece quando há o

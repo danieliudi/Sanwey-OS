@@ -308,7 +308,8 @@ export const VIDEO_TUTORIALS = {
       comece: "Se houver ciclo pendente no topo, clique em 'Preencher autoavaliação' antes do prazo.", steps: ["Acesse 'Avaliação de Desempenho' no menu — ciclos pendentes aparecem no topo, em destaque", "Se for a sua vez, clique em 'Preencher autoavaliação' e responda antes do prazo", "No histórico, veja sua nota final de cada ciclo já concluído, com pontos fortes e a desenvolver registrados pelo gestor"] } },
   ],
 };
-VIDEO_TUTORIALS.admin = VIDEO_TUTORIALS.gerente;
+// `admin` e `diretoria` são montados no fim do arquivo, depois que todos os
+// arrays de departamento existem — ver "Quem vê qual guia" lá embaixo.
 
 VIDEO_TUTORIALS.marketing = [
   { id: "v-dash1", title: "Sua fila de pendências", description: "Pendências", route: "dashboard", duration: null, url: null,
@@ -553,6 +554,57 @@ VIDEO_TUTORIALS.portal = [
       resumo: "Sua linha direta com a equipe Sanwey — canais do time e conversas privadas, dentro da própria plataforma.",
       comece: "Abra a lista de conversas e use os filtros Todas, Não lidas, Canais e Diretas pra achar a sua.", steps: ["Clique em 'Chat' no menu lateral para ver canais e abrir conversas diretas com a equipe Sanwey", "No campo de mensagem, use o ícone de carinha para abrir a paleta de emoji, ou o ícone de figurinha para mandar uma do pacote da empresa", "Use os filtros no topo da lista (Todas/Não lidas/Canais/Diretas) para achar uma conversa mais rápido"] } },
 ];
+
+// ── Quem vê qual guia ──────────────────────────────────────────────────────
+//
+// Achado da varredura visual em navegador que o Daniel rodou no Cowork em
+// 14/09/2026, confirmando por captura o que a leitura de código não tinha
+// pegado: a tela Ajuda & Tutoriais mostrava o cabeçalho "Conteúdo para
+// DIRETORIA — 25 guias disponíveis para seu perfil" e listava, embaixo, os 25
+// guias de VENDEDOR. `diretoria` era o único dos 10 cargos canônicos sem
+// entrada aqui, e o fallback `|| VIDEO_TUTORIALS.vendedor` cobria o buraco em
+// silêncio, com o rótulo certo por cima do conteúdo errado.
+//
+// A mesma varredura mediu a outra ponta do problema: diretoria alcança 13 das
+// 14 telas e admin alcança 14 — mais que qualquer outro cargo (o 3º, gerente
+// de marketing, alcança 7) — e mesmo assim os dois não tinham UM guia de
+// Marketing ou de RH, porque `admin` era só um apelido de `gerente`. Quem mais
+// navega pela plataforma era quem menos recebia ajuda.
+//
+// Os dois passam a receber a união dos departamentos que de fato alcançam.
+// Deduplicado por `id`: `v-dash1` (Pendências) e `v-c13` (Meu RH) aparecem em
+// vários arrays, e sem isto a lista de Ajuda repetiria o mesmo guia.
+function unirGuias(...listas) {
+  const vistos = new Set();
+  return listas.flat().filter(g => !vistos.has(g.id) && vistos.add(g.id));
+}
+
+VIDEO_TUTORIALS.admin = unirGuias(
+  VIDEO_TUTORIALS.gerente, VIDEO_TUTORIALS.marketing, VIDEO_TUTORIALS.rh, VIDEO_TUTORIALS.comex,
+);
+VIDEO_TUTORIALS.diretoria = VIDEO_TUTORIALS.admin;
+
+// Resolução de cargo usada TANTO pela tela de Ajuda quanto pela dica de
+// chegada. Vive aqui, e não em cada consumidor, porque a divergência entre os
+// dois foi exatamente o defeito: `use-screen-tips.js` passou a ler `roles[]`
+// em 14/09/2026 e `TutoriaisView.jsx` continuou no escalar, então a mesma
+// pessoa via um conjunto de guias na Ajuda e outro na dica.
+//
+// Ordem: cargo principal primeiro, secundários depois, `vendedor` por último
+// (é o único array que cobre o tronco comum). Quem tem RH como cargo
+// SECUNDÁRIO passa a ver os guias de RH — antes caía no array do cargo
+// principal e recebia a ajuda de outra pessoa. Mesma classe do MD-11 do
+// CLAUDE.md, aqui em conteúdo em vez de permissão.
+export function papeisDoUsuario(user) {
+  const lista = [user?.role, ...(user?.roles || []), "vendedor"];
+  return [...new Set(lista.filter(Boolean))];
+}
+
+// A lista de guias de uma pessoa: união dos arrays de todos os cargos dela,
+// na ordem acima, sem repetir guia.
+export function guiasDoUsuario(user) {
+  return unirGuias(...papeisDoUsuario(user).map(p => VIDEO_TUTORIALS[p] || []));
+}
 
 export const FAQ_ITEMS = [
   {

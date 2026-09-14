@@ -38,6 +38,25 @@
 
 export const CHANGELOG = [
   {
+    version: "5.13.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "Em Ajuda & Tutoriais, quem é da diretoria via o cabeçalho \"Conteúdo para Diretoria\" e, logo abaixo, a lista de guias de vendedor. Agora a lista é a do seu cargo de verdade.",
+        roles: ["diretoria", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Diretoria e admin passam a receber também os guias de Marketing e de RH. Antes só tinham os de Comercial, apesar de acessarem a plataforma inteira — quem mais navegava era quem menos recebia ajuda.",
+        roles: ["diretoria", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Quem tem um segundo cargo passa a ver os guias dos dois, tanto em Ajuda quanto na dica de chegada. Antes valia só o cargo principal.",
+      },
+    ],
+  },
+  {
     version: "5.13.1",
     items: [
       {

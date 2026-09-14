@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Play, ChevronDown, ChevronUp, BookOpen, LifeBuoy, Zap, Bot, Copy, Check, ChevronRight, ArrowRight, Search, Sparkles } from "lucide-react";
-import { VIDEO_TUTORIALS, FAQ_ITEMS, AUTOMATION_GUIDE, AI_PROMPTS } from "../../data/tutorials";
+import { VIDEO_TUTORIALS, FAQ_ITEMS, AUTOMATION_GUIDE, AI_PROMPTS, guiasDoUsuario } from "../../data/tutorials";
 import { CHANGELOG } from "../../data/changelog";
 import { Tabs } from "../shared/Tabs";
 import { Card, CardGrid } from "../shared/Card";
@@ -310,8 +310,12 @@ function PromptCategorySection({ category }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function TutoriaisView({ currentUser, onNavigate, initialTab }) {
+  // Resolução compartilhada com a dica de chegada (use-screen-tips.js) — as
+  // duas telas leem a MESMA função desde 14/09/2026. Antes, esta lia o cargo
+  // escalar e a outra lia roles[]: a mesma pessoa via um conjunto de guias
+  // aqui e outro no painel de chegada.
   const role = currentUser?.role || "vendedor";
-  const videos = VIDEO_TUTORIALS[role] || VIDEO_TUTORIALS.vendedor;
+  const videos = guiasDoUsuario(currentUser);
   const [activeTab, setActiveTab] = useState(initialTab || "tutoriais");
   const [faqSearch, setFaqSearch] = useState("");
 

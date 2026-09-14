@@ -124,6 +124,10 @@ export const FEATURE_SPOTLIGHTS = [
   // muda é o NÚMERO da prévia de alcance, que a tela de Comunicação já mostra
   // por conta própria antes de enviar. Vai pelo changelog, com `roles` de RH.
   {
+    // ALVO CONDICIONAL (registrado 14/09/2026, achado da varredura visual do
+    // Cowork): o botão é `{canWrite && …}` em RHBemEstarView.jsx:491 — só
+    // existe pra quem pode escrever. Pros demais, alvo ausente se auto-marca
+    // como visto, que é o comportamento certo aqui.
     id: "programas-novo",
     route: "rh-bem-estar",
     target: '[data-tour="programas-novo"]',
@@ -151,6 +155,10 @@ export const FEATURE_SPOTLIGHTS = [
   // Comunicação — inclusive pra quem precisava dele. Mesmo motivo do campo
   // Gestor, na 4.98.0. Vai pelo toast do changelog, com `roles` de RH.
   {
+    // ALVO CONDICIONAL (registrado 14/09/2026, achado da varredura visual do
+    // Cowork): vive DENTRO do formulário de novo comunicado
+    // (RHComunicacaoView.jsx:160), não na tela em repouso — só existe depois
+    // de abrir a composição.
     id: "comunicado-canais",
     route: "rh-comunicacao",
     target: '[data-tour="comunicado-canais"]',
@@ -184,6 +192,10 @@ export const FEATURE_SPOTLIGHTS = [
     version: "4.97.0",
   },
   {
+    // ALVO CONDICIONAL (registrado 14/09/2026, achado da varredura visual do
+    // Cowork): está no fundo de uma aba interna de Configurações
+    // (SettingsView.jsx:2377) — a rota abre noutra aba, então o alvo não
+    // existe na 1ª carga.
     id: "captura-utm-dica",
     route: "settings",
     target: '[data-tour="captura-utm-dica"]',
@@ -600,6 +612,14 @@ export const FEATURE_SPOTLIGHTS = [
   {
     id: "rh-busca-card",
     route: "rh-onboarding",
+    // EM ABERTO (14/09/2026): a varredura visual do Cowork não achou este alvo
+    // na 1ª carga de /rh/onboarding com usuário admin. Diferente dos três
+    // acima, este NÃO é condicional — a busca é declarada fora do bloco de
+    // `viewMode` (RHOnboardingView.jsx:1673-1679, seguindo a regra 11) e o
+    // `FilterBar` repassa o atributo (FilterBar.jsx:35). Ou a medição
+    // aconteceu antes de a view terminar de carregar, ou há algo que a leitura
+    // de código não mostra. Precisa de navegador pra fechar — não inventar
+    // explicação.
     target: '[data-tour="rh-onboarding-busca-card"]',
     text: "Novo: os boards de RH ganharam busca. Digite o nome do colaborador (ou cargo, departamento, vaga) e o quadro filtra na hora, em qualquer visão.",
     version: "4.90.1",
