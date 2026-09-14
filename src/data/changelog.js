@@ -38,6 +38,15 @@
 
 export const CHANGELOG = [
   {
+    version: "5.13.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "As colunas dos quadros Kanban paravam bem antes do fim da janela, deixando uma faixa vazia no rodapé. Agora vão até embaixo. A reserva de espaço que existia para o botão flutuante de criar card só vale quando o quadro tem colunas demais para caber na tela — que é quando essa reserva serve para alguma coisa.",
+      },
+    ],
+  },
+  {
     version: "5.13.0",
     items: [
       {
