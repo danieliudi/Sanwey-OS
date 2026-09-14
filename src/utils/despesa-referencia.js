@@ -89,11 +89,19 @@ export function somarExcedentes(despesas, categoriaPorNome) {
   let justificavel = 0;
   let acimaDeTudo = 0;
   let semReferencia = 0;
+  let semCategoria = 0;
   for (const d of despesas || []) {
-    const avaliacao = avaliarDespesa(d, categoriaPorNome?.get?.(d.categoria));
+    const categoria = categoriaPorNome?.get?.(d.categoria);
+    // Duas causas DIFERENTES de ficar de fora, contadas separado: a categoria
+    // não existe mais no cadastro, ou existe e ninguém definiu referência. O
+    // QA pegou isto somado num contador só, com a tela afirmando a segunda
+    // causa pros dois casos — número sem denominador honesto não sustenta
+    // decisão (regra 14), e um rótulo errado é pior que nenhum.
+    if (!categoria) { semCategoria += 1; continue; }
+    const avaliacao = avaliarDespesa(d, categoria);
     if (!avaliacao) { semReferencia += 1; continue; }
     if (avaliacao.status === "excedente_justificavel") justificavel += avaliacao.excedente;
     else if (avaliacao.status === "acima_de_tudo") acimaDeTudo += avaliacao.excedente;
   }
-  return { justificavel, acimaDeTudo, semReferencia };
+  return { justificavel, acimaDeTudo, semReferencia, semCategoria };
 }

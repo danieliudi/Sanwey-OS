@@ -32,7 +32,7 @@
 -- existe.
 --
 -- ── CATEGORIAS ────────────────────────────────────────────────────────────
--- As 6 genéricas de antes ("Alimentação", "Transporte"…) ficam INATIVAS, não
+-- As 4 genéricas de antes ("Alimentação", "Transporte"…) ficam INATIVAS, não
 -- apagadas: `categoria` é gravada como TEXTO na despesa, então apagar deixaria
 -- despesa órfã de rótulo. Inativa some do seletor e continua legível no
 -- histórico.

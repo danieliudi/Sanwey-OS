@@ -48,7 +48,7 @@ export const CHANGELOG = [
       {
         kind: "novo",
         text: "Na aba Gestão de Viagens & Despesas, cada despesa chega classificada em vez de só \"estourou\": a linha diz se está dentro do esperado, acima da referência daquela rota, ou acima de qualquer referência — e o mês fecha com os dois totais separados. É para não precisar abrir comprovante por comprovante para saber qual excesso é logística e qual vira conversa.",
-        roles: ["gerente", "admin", "diretoria"],
+        roles: ["gerente", "admin"],
       },
       {
         kind: "novo",

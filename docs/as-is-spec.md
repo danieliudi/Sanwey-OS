@@ -4,11 +4,16 @@ Levantado em 03/09/2026 lendo o código e **consultando a produção**
 (`adizvduyfzfftyswkijj`). Descritivo puro: registra o que existe hoje, sem
 propor correção. Escrito em português por consistência com o resto de `docs/`.
 
+**Reconsultado em 14/09/2026**: todo número marcado **[prod]** foi refeito
+contra o banco nesta data, e a Seção 3 passou a cobrir tela a tela, não só as
+quatro que tinha. Nem tudo se confirmou — a mudança mais consequente está em
+5.2 (`pipeline_stage_transitions` deixou de estar vazia).
+
 Complementa `docs/mapa-funcional.md` (o que cada tela é e do que depende).
 Aqui: **como está montada, com que campos, com que regras, e onde dói.**
 
 Onde um número vem do banco, ele está marcado com **[prod]** e é do dia
-03/09/2026 — envelhece.
+**14/09/2026** — envelhece.
 
 ---
 
@@ -280,7 +285,8 @@ mesmo array `scopedLeads` (já filtrado).
 | 12 | `notes` | Observações | textarea | |
 
 Além desses, **campos por etapa** vindos de `pipeline_stage_fields` —
-**86 definições em 7 etapas [prod]**, das quais 50 marcadas `required`.
+**86 definições em 7 etapas [prod]**, das quais 50 marcadas `required`
+(reconferido em 14/09/2026: os três números não mudaram desde 03/09).
 
 **Abas do drawer (`SIDE_TABS`) e o que cada uma faz:**
 
@@ -454,11 +460,15 @@ Nenhum item aqui é impressão. Cada um vem de leitura de código ou de consulta
 | `email_templates` | **0** | modelos de e-mail | modal |
 | `whatsapp_conversations` | **0** | WhatsApp fase 1 | aba no drawer (documentado como dormente) |
 | `sales_cases` | **0** | casos de prospecção | painel |
-| `client_contacts` | **2** | comitê de compra | painel no drawer |
+| `client_contacts` | **4** | comitê de compra | painel no drawer |
 
-Comparação pra dimensionar: `leads` **27**, `clients` **41**,
-`marketing_deliverables` **19**, `products` **15**, `rh_colaboradores` **15**,
-`personal_tasks` **19**, `market_signals` **21** [prod].
+Comparação pra dimensionar: `leads` **29**, `clients` **43**,
+`marketing_deliverables` **25**, `products` **15**, `rh_colaboradores` **15**,
+`profiles` **15**, `personal_tasks` **20**, `market_signals` **25** [prod].
+
+As oito primeiras linhas da tabela seguem em **0** em 14/09/2026, onze dias
+depois do primeiro levantamento — `client_contacts` foi de 2 para 4, e é a
+única das nove que se mexeu.
 
 **Três itens de menu L1 abrem vazios pra qualquer usuário, sempre.** Não é
 estado transitório: é o estado atual desde que subiram.

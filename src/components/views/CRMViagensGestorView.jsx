@@ -363,7 +363,7 @@ function ReferenciasPanel({ categorias, atualizarReferencias }) {
   const [salvandoId, setSalvandoId] = useState(null);
   const [erro, setErro]         = useState(null);
 
-  const semReferencia = (categorias || []).filter((c) => c.referencia_capital == null).length;
+  const semReferencia = (categorias || []).filter((c) => c.referencia_capital == null && c.referencia_interior == null).length;
 
   const valorAtual = (c, campo) => {
     const r = rascunhos[c.id];
@@ -653,7 +653,7 @@ function PrestacaoQueueRow({ prestacao, vendedorNome, count, valor, previsto, on
   );
 }
 
-function PrestacaoDecisaoModal({ prestacao, despesas, vendedorNome, previsto, onVerComprovante, onDecidirItem, onDecidirLote, onMarcarPago, onClose }) {
+function PrestacaoDecisaoModal({ prestacao, despesas, categoriaPorNome, vendedorNome, previsto, onVerComprovante, onDecidirItem, onDecidirLote, onMarcarPago, onClose }) {
   useEscToClose(onClose);
   const info = STATUS_PRESTACAO[prestacao.status] || STATUS_PRESTACAO.rascunho;
   const total = despesas.reduce((sum, d) => sum + (Number(d.valor) || 0), 0);
@@ -737,18 +737,42 @@ function PrestacaoDecisaoModal({ prestacao, despesas, vendedorNome, previsto, on
           <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 18 }}>
             {despesas.map((d) => {
               const dinfo = STATUS_REEMBOLSO[d.status_reembolso] || STATUS_REEMBOLSO.pendente;
+              // Mesma classificação da linha avulsa. Sem isto a exceção chegava
+              // explicada só no caminho minoritário: despesa que entra numa
+              // prestação SOME da lista avulsa (ver despesasParaDecidir), então
+              // é aqui que o gestor realmente decide item a item.
+              const avaliacao = avaliarDespesa(d, categoriaPorNome?.get?.(d.categoria));
               const podeDecidir = prestacao.status === "enviada" && d.status_reembolso === "pendente";
               return (
                 <div key={d.id} style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, color: "var(--text)" }}>{d.categoria}</div>
-                      <div style={{ fontSize: 10.5, color: "var(--text-dim)" }}>{formatDateBR(d.data_despesa)}</div>
+                      <div style={{ fontSize: 10.5, color: "var(--text-dim)" }}>
+                        {formatDateBR(d.data_despesa)}
+                        {(avaliacao || d.contexto) && (
+                          <>
+                            {" · "}{contextoLabel(d.contexto) || "contexto não informado"}
+                            {avaliacao
+                              ? ` · referência ${fmtMoney(avaliacao.referencia)}${avaliacao.assumido ? " (de Capital, na falta do contexto)" : ""}`
+                              : " · categoria sem referência cadastrada"}
+                          </>
+                        )}
+                      </div>
                     </div>
                     {d.comprovante_path && (
                       <button onClick={() => onVerComprovante(d)} title="Ver comprovante" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", display: "flex", padding: 2 }}>
                         <ExternalLink size={13} />
                       </button>
+                    )}
+                    {avaliacao && avaliacao.status !== "dentro" && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, borderRadius: 99, padding: "2px 8px", whiteSpace: "nowrap",
+                        color: avaliacao.status === "acima_de_tudo" ? "var(--danger)" : "var(--warning)",
+                        background: avaliacao.status === "acima_de_tudo" ? "var(--danger-bg)" : "var(--warning-bg)",
+                      }}>
+                        {avaliacao.resumo}
+                      </span>
                     )}
                     <div style={{ fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{fmtMoney(d.valor)}</div>
                     {podeDecidir && rejeitandoItemId !== d.id ? (
@@ -842,7 +866,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
   const { registros, loading: loadingRegistros } = useCRMViagens({ userId: currentUser?.id });
   const { despesas, loading: loadingDespesas, getComprovanteUrl, decidirReembolso } = useCRMDespesas({ userId: currentUser?.id });
   const { prestacoes, loading: loadingPrestacoes, decidirLote, marcarPaga } = useCRMViagemPrestacoes({ userId: currentUser?.id });
-  const { categorias, atualizarReferencias } = useCRMViagemCategorias({ userId: currentUser?.id });
+  const { categorias, categoriasTodas, loading: loadingCategorias, atualizarReferencias } = useCRMViagemCategorias({ userId: currentUser?.id });
   const { complete, isConfigured } = useAI(currentUser);
 
   const [selectedMonth, setSelectedMonth] = useState(() => todayISO().slice(0, 7));
@@ -867,17 +891,19 @@ export function CRMViagensGestorView({ currentUser, users }) {
   );
 
   // `crm_viagem_despesas.categoria` é TEXTO (o nome), não id — então o vínculo
-  // com a referência é por nome mesmo. Categoria desativada continua no mapa
-  // de propósito: despesa antiga não pode perder a referência com que foi
-  // avaliada só porque a categoria saiu do seletor.
+  // com a referência é por nome mesmo. Usa `categoriasTodas` (ativas E
+  // inativas) de propósito: despesa antiga não pode perder a referência com
+  // que é lida só porque a categoria saiu do seletor. Com `categorias` (só
+  // ativas) todo o histórico caía em "sem referência" no dia da migration que
+  // aposenta as genéricas — achado do QA, 14/09/2026.
   const categoriaPorNome = useMemo(() => {
     const map = new Map();
-    (categorias || []).forEach((c) => map.set(c.nome, {
+    (categoriasTodas || []).forEach((c) => map.set(c.nome, {
       referenciaCapital:  c.referencia_capital,
       referenciaInterior: c.referencia_interior,
     }));
     return map;
-  }, [categorias]);
+  }, [categoriasTodas]);
 
   const nomePorId = useMemo(() => {
     const map = new Map();
@@ -1278,22 +1304,21 @@ export function CRMViagensGestorView({ currentUser, users }) {
                 as despesas do mês no filtro atual (não só as pendentes listadas
                 abaixo). O que não pôde ser avaliado aparece contado, em vez de
                 sumir da conta em silêncio. */}
-            {(excedentesDoMes.justificavel > 0 || excedentesDoMes.acimaDeTudo > 0 || excedentesDoMes.semReferencia > 0) && (
+            {!loadingCategorias && (excedentesDoMes.justificavel > 0 || excedentesDoMes.acimaDeTudo > 0 || excedentesDoMes.semReferencia > 0 || excedentesDoMes.semCategoria > 0) && (
               <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 10, lineHeight: 1.6 }}>
                 No mês:{" "}
                 <strong style={{ color: "var(--warning)" }}>{fmtMoney(excedentesDoMes.justificavel)}</strong>
                 {" "}de excedente justificado por rota ·{" "}
                 <strong style={{ color: "var(--danger)" }}>{fmtMoney(excedentesDoMes.acimaDeTudo)}</strong>
                 {" "}acima de qualquer referência.
-                {excedentesDoMes.semReferencia > 0 && (
-                  <>
-                    {" "}
-                    <span style={{ color: "var(--text-faint)" }}>
-                      {excedentesDoMes.semReferencia === 1
-                        ? "1 despesa fora da conta (categoria sem referência cadastrada)."
-                        : `${excedentesDoMes.semReferencia} despesas fora da conta (categoria sem referência cadastrada).`}
-                    </span>
-                  </>
+                {(excedentesDoMes.semReferencia > 0 || excedentesDoMes.semCategoria > 0) && (
+                  <span style={{ color: "var(--text-faint)" }}>
+                    {" "}Fora da conta:{" "}
+                    {[
+                      excedentesDoMes.semReferencia > 0 && `${excedentesDoMes.semReferencia} em categoria sem referência cadastrada`,
+                      excedentesDoMes.semCategoria > 0 && `${excedentesDoMes.semCategoria} em categoria que não existe mais no cadastro`,
+                    ].filter(Boolean).join(" · ")}.
+                  </span>
                 )}
               </div>
             )}
@@ -1335,6 +1360,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
         <PrestacaoDecisaoModal
           prestacao={prestacoes.find((p) => p.id === selectedPrestacao.id) || selectedPrestacao}
           despesas={despesasPorPrestacaoId.get(selectedPrestacao.id) || []}
+          categoriaPorNome={categoriaPorNome}
           vendedorNome={nomePorId.get(selectedPrestacao.vendedor_id) || "—"}
           previsto={previstoPorPrestacaoId.get(selectedPrestacao.id) || 0}
           onVerComprovante={handleVerComprovante}

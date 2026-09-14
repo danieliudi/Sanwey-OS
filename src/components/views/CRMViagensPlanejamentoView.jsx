@@ -763,20 +763,25 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
 // Aviso de referência no lançamento. ALERTA, NUNCA BLOQUEIO — decidido com o
 // Daniel em 14/09/2026: o vendedor na estrada não tem alternativa, e travar o
 // lançamento não faz o gasto deixar de existir, faz ele sumir do sistema.
-// Token --warning (precisa de atenção), nunca --danger (erro de quem preenche)
-// e nunca --accent (que muda por frente comercial).
+// Token --warning (precisa de atenção) no grau normal e --amber (urgência
+// intermediária) no grave — nunca --danger, que é erro/bloqueio de input de
+// quem preenche, e aqui nada é erro nem bloqueia; e nunca --accent, que muda
+// por frente comercial. O grau se distingue pelo texto, não por pintar de
+// vermelho quem lançou uma despesa legítima de estrada.
+//
+// Nunca recebe avaliação de contexto "assumido": no lançamento a pergunta
+// está logo acima, então só avalia depois de respondida (ver chamada).
 function ReferenciaAviso({ avaliacao }) {
   if (!avaliacao || avaliacao.status === "dentro") return null;
   const grave = avaliacao.status === "acima_de_tudo";
   return (
     <div style={{
       marginTop: 6, borderRadius: 8, padding: "8px 10px", fontSize: 11.5, lineHeight: 1.5,
-      background: grave ? "var(--danger-bg)" : "var(--warning-bg)",
-      color: grave ? "var(--danger)" : "var(--warning)",
+      background: grave ? "var(--amber-bg)" : "var(--warning-bg)",
+      color: grave ? "var(--amber)" : "var(--warning)",
     }}>
-      <strong>{avaliacao.resumo} (R$ {avaliacao.referencia.toFixed(2).replace(".", ",")}).</strong>{" "}
+      <strong>{avaliacao.resumo} ({fmtMoney(avaliacao.referencia)}).</strong>{" "}
       Pode lançar normalmente — só descreva rapidinho o que aconteceu, pro gestor não precisar te procurar.
-      {avaliacao.assumido && " (Sem \u201conde foi\u201d preenchido, comparei com a referência de Capital.)"}
     </div>
   );
 }
@@ -798,7 +803,10 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose, initialD
   // erra em silêncio e aqui o erro vira conversa sobre dinheiro (decidido
   // com o Daniel 14/09/2026). Vocabulário Capital/Interior é o que a empresa
   // já usa nas categorias de hospedagem do Zoho.
-  const [contexto, setContexto] = useState(initialDraft?.contexto || "");
+  // Sem `initialDraft?.contexto` de propósito: "Refazer despesa" reaproveita
+  // categoria/CDC/cartão/visita, mas a nota nova pode ser de outro lugar — a
+  // pergunta é refeita.
+  const [contexto, setContexto] = useState("");
   // Categoria escolhida em objeto (não só o nome), pra conseguir ler as
   // referências. `categoria` continua sendo gravada como texto na despesa —
   // é assim desde sempre e não muda aqui.
@@ -1008,11 +1016,17 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose, initialD
               <div>
                 <label style={LABEL_ST}>Valor (R$) *</label>
                 <CurrencyInput prefix={null} value={valor} onChange={setValor} placeholder="0,00" className={INPUT_CLS} style={INPUT_ST} />
+                {/* `valor` já vem NÚMERO limpo do CurrencyInput (currency.js:73,
+                    cents/100) — é o mesmo valor que o handleSubmit usa. Tratá-lo
+                    como texto mascarado comia o ponto decimal e multiplicava o
+                    valor por 10 ou 100 (achado do QA, 14/09/2026).
+
+                    E só avalia DEPOIS que a pessoa respondeu onde foi: avisar
+                    antes seria comparar com Capital por conta própria, com a
+                    pergunta a um toque de distância — "perguntado, nunca
+                    inferido" vale aqui mais do que em qualquer outro lugar. */}
                 <ReferenciaAviso
-                  avaliacao={avaliarDespesa(
-                    { valor: Number(String(valor).replace(/\./g, "").replace(",", ".")), contexto },
-                    categoriaSelecionada,
-                  )}
+                  avaliacao={contexto ? avaliarDespesa({ valor: Number(valor), contexto }, categoriaSelecionada) : null}
                 />
               </div>
               <div>
