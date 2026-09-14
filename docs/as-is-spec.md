@@ -1,8 +1,12 @@
 # Especificação As-Is — arquitetura, telas e débito
 
 Levantado em 03/09/2026 lendo o código e **consultando a produção**
-(`adizvduyfzfftyswkijj`). Descritivo puro: registra o que existe hoje, sem
-propor correção. Escrito em português por consistência com o resto de `docs/`.
+(`adizvduyfzfftyswkijj`). Revisado em 14/09/2026 contra o código atual
+(`routes.js`, `main.jsx`, views) — rotas, L2/L3 e catálogos de tela
+atualizados; números **[prod]** continuam do dia 03/09/2026 e envelhecem.
+
+Descritivo puro: registra o que existe hoje, sem propor correção. Escrito em
+português por consistência com o resto de `docs/`.
 
 Complementa `docs/mapa-funcional.md` (o que cada tela é e do que depende).
 Aqui: **como está montada, com que campos, com que regras, e onde dói.**
@@ -18,7 +22,7 @@ Onde um número vem do banco, ele está marcado com **[prod]** e é do dia
 
 | Nível | O que é | Onde vive |
 |---|---|---|
-| **L1** | item do menu lateral | `Sidebar.jsx`, montado do `navGroups` (`App.jsx:1520-1780`) |
+| **L1** | item do menu lateral | `Sidebar.jsx`, montado do `navGroups` (`App.jsx`, ~1706+) |
 | **L2** | aba interna, toggle de visão, filtro | dentro da própria view; nunca troca de URL |
 | **L3** | drawer de detalhe, modal, bottom-sheet | overlay `position:fixed`; nunca troca de URL |
 
@@ -38,41 +42,58 @@ Composição depende de cargo; um grupo que fica vazio some.
 
 | Grupo | Itens (id → rota) |
 |---|---|
-| **Meu Espaço** | `dashboard` → `/` · `chat` → `/chat` · `personal-tasks` → `/tarefas-pessoais` · `meu-rh` → `/meu-rh` |
-| **Comercial** | `commercial-overview` → `/comercial` · `signals` → `/sinais` · `crm` → `/pipeline` · `posvenda` → `/pos-venda` · `pedidos` → `/pedidos` · `clients` → `/clientes` · `catalogo` → `/catalogo` · `document-library` → `/biblioteca-de-documentos` · `crossref` → `/cross-sell` · `explorer` → `/explorador` · `crm-viagens` → `/viagens` · `comex` → `/comex` |
-| **Marketing** | `marketing-home` → `/marketing/inicio` · `marketing` → `/marketing` · `marketing-solicitacoes` · `marketing-entregas` · `marketing-tarefas` · `marketing-fornecedores` · `marketing-compras` · `marketing-despesas` · `marketing-feiras` |
+| **Meu Espaço** | `dashboard` → `/` · `chat` → `/chat` · `personal-tasks` → `/tarefas-pessoais` · `meu-rh` → `/meu-rh` *(só se `(isRHUser \|\| isDiretoria) && temFichaColaborador`)* |
+| **Comercial** | `commercial-overview` → `/comercial` · `signals` → `/sinais` · `crm` → `/pipeline` · `posvenda` → `/pos-venda` · `pedidos` → `/pedidos` · `clients` → `/clientes` · `abm` → `/abm` · `catalogo` → `/catalogo` · `document-library` → `/biblioteca-de-documentos` · `crossref` → `/cross-sell` *(só `isManager`)* · `explorer` → `/explorador` · `crm-viagens` → `/viagens` · `comex` → `/comex` |
+| **Marketing** | `marketing-home` → `/marketing/inicio` · `marketing` → `/marketing` · `marketing-solicitacoes` · `marketing-entregas` · `marketing-tarefas` · `marketing-fornecedores` · `marketing-compras` · `marketing-despesas` · `marketing-feiras` · `marketing-conteudo` → `/marketing/conteudo` · `catalogo` *(só `isPureMarketing`)* |
 | **Recursos Humanos** | `rh-overview` → `/rh` · `rh-recrutamento` · `rh-onboarding` · `rh-treinamentos` · `rh-feedback` · `rh-ferias` · `rh-funcionarios` · `rh-cargos` · `rh-comunicacao` · `rh-bem-estar` · `rh-fornecedores` · `rh-relatorios` |
-| **Meu Desenvolvimento** *(substitui RH pra quem não é RH)* | `meu-rh` · `rh-onboarding` · `rh-treinamentos` · `rh-feedback` |
+| **Departamento Pessoal** *(só `isDPOnly`)* | `rh-funcionarios` · `rh-cargos` · `rh-ferias` |
+| **Meu Desenvolvimento** *(substitui RH pra quem não é RH, com ficha)* | `meu-rh` · `rh-onboarding` · `rh-treinamentos` · `rh-feedback` |
 | **Inteligência** | `executive` → `/executivo` · `market-intel` → `/inteligencia-mercado` · `esg-carbono` · `agents` → `/agentes` |
 | **Configuração** | `automations` → `/automacoes` · `settings` → `/configuracoes` |
 | *(sem rótulo)* | `tutorials` → `/ajuda` · `central-bugs` → `/central-bugs` |
 
-**Dois shells alternativos, que substituem o menu inteiro:**
+**Shells alternativos, que substituem o menu inteiro:**
 
 - `isAgencia` → **2 itens só**: Campanhas e Entregas. Nada mais existe.
 - `isPortalOnly` → **2 itens**: Meu RH e Chat.
+- `isDPOnly` → grupo **Departamento Pessoal** (Funcionários, Cargos & Salários, Férias & Licenças).
 
 ## 1.3 Rotas com nível, gatilho de acesso e saídas
 
 | Rota | Nível | Como se chega | Saídas |
 |---|---|---|---|
-| `/` | L1 | pouso pós-login de todo cargo interno; item "Pendências" | cada item da fila faz deep-link interno pro registro (13 tipos de pendência); sem volta explícita — a fila permanece |
-| `/pipeline` | L1 | menu Comercial | L2: Kanban / Tabela / Calendário / Análise · L3: drawer do negócio, modal de criação, modal "Editar etapas", modal de import CSV · export CSV (download) |
+| `/` | L1 | pouso pós-login de todo cargo interno; item "Pendências" (portal→`/meu-rh`, agência→`/marketing`, diretoria→`/executivo`) | cada item da fila faz deep-link interno pro registro; sem volta explícita — a fila permanece |
+| `/chat` | L1 | menu Meu Espaço / Portal | L3: `NewConversationModal`, `CreateChannelModal`, `ManageChannelModal` |
+| `/tarefas-pessoais` | L1 | menu Meu Espaço | L2: Kanban / Lista / Agenda / Automações · L3: `PersonalTaskDetailDrawer`, `PersonalTaskCreateModal` |
+| `/meu-rh` | L1 | Meu Espaço ou Meu Desenvolvimento (exige ficha em `rh_colaboradores`) | abas internas do portal do colaborador |
+| `/comercial` | L1 | menu Comercial | widgets da Visão Geral Comercial (`DashboardView`) |
+| `/sinais` | L1 | menu Comercial | criar lead a partir do sinal |
+| `/pipeline` | L1 | menu Comercial | L2: Kanban / Tabela / Calendário / Análise · L3: drawer do negócio, modal de criação, modal "Editar etapas", modal de import CSV · export CSV |
 | `/pipeline` → drawer | L3 | clique no card, em qualquer das 4 visões | fecha com X / Esc / clique no scrim · aba PDF gera arquivo · botão "Enviar para Pós-venda" cria caso em `/pos-venda` (**não navega até lá**) |
-| `/clientes` | L1 | menu Comercial | L3: modal de cliente com linha do tempo (`get_client_timeline`) · CNPJ lookup · a timeline linka visita/ata, mas **sem navegação de volta pro negócio** |
-| `/viagens` | L1 | menu Comercial | L2: 5 abas (Planejamento · Despesas · Prestação · Gestão · Relatórios) + Calculadora |
-| `/executivo` | L1 | menu Inteligência | L2: faixa de saúde + 1 aba por área; absorveu `/historico-funil` |
-| `/inteligencia-mercado` | L1 | menu Inteligência | L2: 3 abas (Mercado · Insights · Cruzamento) |
-| `/configuracoes` | L1 | menu Configuração; também é o destino de `/perfil` e `/usuarios` | L2: Perfil · Aparência · Notificações · Preferências · Integrações de IA · **Administração** (Usuários, `module_states`, descrições, auditoria de export) |
-| `/central-bugs` | L1 | menu (sem gate) **e** ícone de inseto no TopBar, em qualquer tela | L3: modal de report com contexto de origem capturado · board de triagem só `isAdmin` |
-| `/ajuda` | L1 | menu **e** ícone salva-vidas no TopBar | L3: modal de passo a passo por tutorial |
+| `/pos-venda` | L1 | menu Comercial | L2: Kanban / Tabela / Calendário / Análise · L3: `PosVendaDetailDrawer`, `QuickAddCaseModal` |
+| `/pedidos` | L1 | menu Comercial | board/lista de `orders` |
+| `/clientes` | L1 | menu Comercial | L3: modal de cliente (`ClientsManager`) com abas Dados / Produtos / Contatos / Histórico · timeline (`get_client_timeline`) · CNPJ lookup · timeline **sem navegação de volta pro negócio** |
+| `/abm` | L1 | menu Comercial ("Contas · ABM") | agregação por conta (leads de campanha Conteúdo/Digital) |
+| `/catalogo` | L1 | Comercial ou Marketing puro | catálogo de produtos / margem |
+| `/biblioteca-de-documentos` | L1 | menu Comercial | docs reutilizáveis (`lead_document_refs`) |
+| `/cross-sell` | L1 | menu Comercial (só gerente) | sugestões de indicação entre frentes |
+| `/explorador` | L1 | menu Comercial | prospecção CNPJ + seeds; absorveu `/importar-feira` |
+| `/viagens` | L1 | menu Comercial | L2 topo: Minhas viagens · Gestão · Relatórios · Calculadora · L2 interno: Lista/Calendário de visitas; Despesas & prestação como seções/modais dentro de Planejamento/Gestão · L3: modais de visita/despesa/prestação |
+| `/comex` | L1 | menu Comercial / shell Comex | L2: Importação \| Exportação + Kanban/Tabela/Calendário/Análise · L3: `ComexDrawer` |
+| `/executivo` | L1 | menu Inteligência | L2: faixa de saúde + abas Visão geral / Comercial / Marketing / RH / Comex / Pós-venda / ESG; sob Comercial: Visão geral / Gráficos / Análise / IA / Histórico; absorveu `/historico-funil` e `/presidencia` |
+| `/inteligencia-mercado` | L1 | menu Inteligência | L2: Mercado · Insights · Cruzamento; absorveu `/insights` |
+| `/esg-carbono` | L1 | menu Inteligência | inventário Escopos 1/2/3; Escopo 3 vem de `/viagens` |
 | `/agentes` | L1 | menu Inteligência | aprovar/recusar sugestão; badge no sino pela escada de urgência |
-| `/marketing/*` (9 rotas) | L1 | menu Marketing | cada board: L2 de visões + L3 de drawer, mesmo padrão do Funil |
-| `/rh/*` (12 rotas) | L1 | menu RH | idem; 6 boards usam `RHDetailDrawerShell` dentro do slot `left` |
-| 7 rotas de redirect | — | link salvo | `<Navigate replace>` imediato |
-| 8 rotas públicas | — | link externo (e-mail, QR, site) | fora do `<App>`, sem shell, sem menu |
+| `/automacoes` | L1 | menu Configuração | L2: Automações · Agentes de IA (Agent Builder) |
+| `/configuracoes` | L1 | menu Configuração; destino de `/perfil` e `/usuarios` | L2 grupos: Minha conta (Perfil, Preferências, Notificações) · Plataforma (Geral, Captura pública, Integrações) · Administração (Usuários, Módulos, Segurança & dados). Aparência é sub-aba de Preferências |
+| `/central-bugs` | L1 | menu (sem gate) **e** ícone de inseto no TopBar | L3: modal de report com contexto · board de triagem só `isAdmin` |
+| `/ajuda` | L1 | menu **e** ícone salva-vidas no TopBar | L3: modal de passo a passo por tutorial |
+| `/marketing/*` (10 rotas) | L1 | menu Marketing | Campanhas/Entregas/Tarefas/Compras: L2 Kanban/Tabela/Calendário/Análise + L3 drawer; Despesas/Solicitações/Fornecedores/Feiras/Conteúdo/Home: listas/modais locais |
+| `/rh/*` (12 rotas) | L1 | menu RH / DP / Meu Desenvolvimento | boards usam `RHDetailDrawerShell` no slot `left` do `SplitPanelDrawer`; Funcionários é tabela (não Kanban) |
+| 7 rotas de redirect | — | link salvo | `<Navigate replace>` imediato (`/insights`, `/presidencia`, `/historico-funil`, `/pipeline-builder`, `/importar-feira`, `/perfil`, `/usuarios`) |
+| 9 rotas públicas | — | link externo (e-mail, QR, site) | fora do `<App>`, sem shell, sem menu |
 
-## 1.4 As 8 rotas públicas (fora de `ROUTES`, em `src/main.jsx`)
+## 1.4 As 9 rotas públicas (fora de `ROUTES`, em `src/main.jsx`)
 
 | Rota | Componente | Autenticação |
 |---|---|---|
@@ -84,6 +105,7 @@ Composição depende de cargo; um grupo que fica vazio some.
 | `/gestor-vaga/:token` | `ManagerVagaReviewPage` | **token + confirmação do e-mail** cadastrado |
 | `/pesquisa/:id` | `PesquisaPublicaForm` | nenhuma (resposta anônima) |
 | `/bem-estar/:id` | `BemEstarPublicaForm` | nenhuma |
+| `/comunicado/confirmar/:token` | `ComunicadoConfirmacao` | **token pessoal** por destinatário (confirma leitura do e-mail) |
 
 ---
 
@@ -336,17 +358,195 @@ Editor único: `shared/stage-editor/StageFieldsPanel.jsx` (+ variantes CRM/RH).
 
 ## 3.3 Painel Executivo — `/executivo`
 
-Estrutura: **faixa de saúde** (1 número + 1 sinal de alerta por área) +
-**1 aba de profundidade por área**. Visibilidade por usuário via
-`EXECUTIVE_WIDGETS` (`src/constants/user-settings.js`).
+**Filtro de período (L2):** Todo · 30d · 60d · 90d · YTD.
+
+**Abas de área (`AREA_TABS`):** Visão geral · Comercial · Marketing · RH ·
+Comex · Pós-venda · ESG & Carbono — filtradas por `EXECUTIVE_WIDGETS`
+(`user-settings.js`).
+
+**Faixa de saúde (topo):** Comercial, Marketing, RH, Comex, Pós-venda, ESG —
+1 número + 1 sinal de alerta cada.
+
+**Sob Comercial:** Visão geral · Gráficos · Análise · IA · Histórico
+(absorveu a antiga rota `/historico-funil`).
+
+Sem drawer de registro: é dashboard de leitura.
 
 ## 3.4 Configurações — `/configuracoes`
 
-Único destino de `/perfil` e `/usuarios`. Abas: Perfil · Aparência ·
-Notificações · Preferências (Recursos: liga/desliga Meu To-do) · Integrações
-de IA (chave pessoal, BYOK) · **Administração** (só gestor): Usuários
-(convite, cargo, empresa, acesso por módulo), `module_states`, descrição de
-página/etapa, auditoria de export.
+Único destino de `/perfil` e `/usuarios`. Grupos L2 reais no código:
+
+| Grupo | Abas |
+|---|---|
+| **Minha conta** | Perfil (sub: Dados · Senha) · Preferências (sub: Aparência · Recursos · Barra inferior) · Notificações |
+| **Plataforma** | Geral (Empresas · Painel Executivo · Chat) · Captura pública (Leads · Solicitações · Vagas) · Integrações (IA · Secretária · Assinatura) |
+| **Administração** *(gestor)* | Usuários (`UserManagementView` embutido) · Módulos (`module_states`) · Segurança & dados (Exportações · Demonstração · Zona de risco) |
+
+## 3.5 Clientes — `/clientes` (`ClientsManager`, fora de `views/`)
+
+**Lista:** busca · Importar planilha (manager) · Novo · tabela (md+) / cards
+(mobile).
+
+**Colunas:** Nome · Categoria · Cidade/UF · CNPJ · Cross-sell · Produtos ·
+Último pedido · Ticket médio.
+
+**Modal de detalhe (L3) — abas:** Dados · Produtos & Preços · Contatos ·
+Histórico (criação só "Dados").
+
+**Campos Dados:** Nome* · Razão social · Categoria · CNPJ (+ Buscar Receita) ·
+Cidade · UF · Endereço · Empresas relacionadas* · Contato principal opcional
+(Nome/Cargo/E-mail/Telefone) · Dono · Notas.
+
+**Entidades:** `clients` · `client_contacts` · `client_products` · timeline via
+`get_client_timeline` · leads/viagens via callbacks (sem deep-link de volta
+pro negócio).
+
+## 3.6 Pós-venda — `/pos-venda`
+
+**L2:** Kanban · Tabela · Calendário · Análise. Header: busca · Export CSV ·
+Novo caso · `KanbanFab`.
+
+**Create (`QuickAddCaseModal`):** ClientSelector · Nome do cliente* · Valor ·
+Responsáveis · `negotiationStartedAt` opcional · + campos de etapa
+(`rh_stage_fields`, domain `posvenda`).
+
+**Drawer:** `SplitPanelDrawer` + `RHDetailDrawerShell` domain `posvenda` —
+tabs do shell: Form (se houver) · Atividades · Histórico · IA · Anexos
+(+ Checklists se ligado). Left: Cliente, Valor, Responsáveis, Empresa, dias na
+etapa, link do negócio origem. Right: `StageNavigator` + comentários.
+
+**Entidades:** `posvenda_cases` · `clients` · lead de origem ·
+`rh_pipeline_stages` domain `posvenda`.
+
+## 3.7 Campanhas — `/marketing`
+
+**L2:** kanban · table · calendar · analytics.
+
+**Create:** Nome* · Empresa* · Canal · KPI · Orçamento · Responsáveis ·
+Lançamento · Encerramento · Agência · Fornecedor agência · + campos etapa
+`marketing`.
+
+**Drawer (`CampaignDetailDrawer`) LEFT_TABS:** Form · Atividades · Histórico ·
+IA · Arquivos · Checklist · Entregas.
+
+**Entidades:** `marketing_campaigns` · suppliers (agência) · deliverables
+ligados · stage fields.
+
+## 3.8 Entregas — `/marketing/entregas`
+
+**L2:** kanban · table · calendar · analytics.
+
+**Create:** Solicitante* · Departamento* · Descrição · Título* · Prazo* ·
+Prioridade* · Empresa · Campanha relacionada · + stage fields
+`marketing_deliverables`.
+
+**Drawer tabs:** Form · Atividades · Histórico · IA · Anexos · Checklists.
+
+## 3.9 Tarefas de Marketing — `/marketing/tarefas`
+
+**L2:** kanban · table · calendar · analytics.
+
+**Create:** Título* · Descrição · Prioridade · Prazo · Empresa* · Campanha ·
+Assignees · + stage fields `marketing_tasks`.
+
+**Drawer tabs:** Fase atual · Form · Atividades · Histórico · IA · Anexos ·
+Checklist.
+
+## 3.10 Compras — `/marketing/compras`
+
+**L2:** kanban · table · calendar · analytics.
+
+**Etapas hardcoded (`PURCHASE_STAGES`):** solicitado → cotacao → aprovado →
+pedido_fornecedor → entrega_parcial → entregue → pago (+ rejeitado). Fora de
+`rh_pipeline_stages` de propósito.
+
+**Create:** Item* · Descrição · Solicitante* · Prazo desejado · Empresas*.
+
+**Drawer tabs:** Atividades · Histórico · IA · Anexos · Checklist (sem aba
+Form separada; cotação/NF no corpo). Aprovar/rejeitar e escolher vencedor via
+RPC no drawer.
+
+## 3.11 Lista Pessoal — `/tarefas-pessoais`
+
+**L2:** kanban · list · agenda · automacoes.
+
+**Create:** Título* · Descrição · Prazo · Hora · Prioridade* · Repetir ·
+Etiquetas.
+
+**Drawer tabs:** Detalhes · Checklist · Anexos.
+
+**Entidades:** `personal_tasks` · stages por usuário · tags · automações
+pessoais · API `personal-tasks-agent`.
+
+## 3.12 RH Recrutamento — `/rh/recrutamento`
+
+**Modo L1 interno:** Vagas \| Candidatos. **boardMode** ortogonal: kanban ·
+table · calendar · analytics.
+
+**Create Vaga (amostra):** Título* · Frente(s)* · modelo Cargo · Cargo* ·
+Departamento* · Contrato · Prioridade · …
+
+**Create Candidato:** Nome · E-mail · Telefone · Origem.
+
+**Drawers:** `VagaDrawer` / `CandidatoDrawer` via `RHDetailDrawerShell`.
+Board = junção candidato×vaga (`rh_aplicacoes`).
+
+## 3.13 RH Funcionários — `/rh/funcionarios`
+
+**Padrão:** tabela + filtros + `TableDensityToggle` (referência canônica do
+padrão "Tabela com filtro"). Stats: Total / Ativos / Férias / Desligados /
+Aprendizes.
+
+**Colunas:** Funcionário · Cargo · Frente · Departamento · Contrato · Status ·
+Admissão.
+
+**Detalhe tabs:** Dados · Benefícios · Assinatura · Solicitações · Conexões.
+
+**Novo (`NovoColaboradorModal`):** Nome* · CPF* · RG* · Nascimento* ·
+Telefone* · E-mail* · endereço completo* · Cargo* · Frente* · Depto* ·
+Contrato* · Admissão* · Salário* · ASO* · condicionais CLT/aprendiz/temporário.
+
+## 3.14 Demais telas primárias (inventário curto)
+
+Catálogo profundo ainda não expandido tela a tela; o que cada uma *é* vive em
+`docs/mapa-funcional.md` §2. L2/L3 confirmados no código:
+
+| Rota | L2 / superfície | L3 principal |
+|---|---|---|
+| `/` Pendências | fila única do dia | deep-link interno via `App.jsx` |
+| `/chat` | lista de canais + conversa | New/Create/Manage channel modals |
+| `/comercial` | widgets Visão Geral | — |
+| `/sinais` | grade/lista de sinais | criar lead |
+| `/pedidos` | board/lista `orders` | detalhe de pedido |
+| `/abm` | tabela/cards de contas | — |
+| `/catalogo` | catálogo produtos | edição de produto/margem |
+| `/biblioteca-de-documentos` | grade de docs | upload/anexo |
+| `/explorador` | busca CNPJ + seeds | — |
+| `/cross-sell` | sugestões | — |
+| `/comex` | Importação\|Exportação + 4 views | `ComexDrawer` |
+| `/marketing/inicio` | KPIs | — |
+| `/marketing/solicitacoes` | inbox de pedidos públicos | aprovar → entrega/compra/tarefa |
+| `/marketing/fornecedores` | grade `Card` | `ConfirmDeleteModal` |
+| `/marketing/despesas` | lista/orçamento | Expense/Budget modals |
+| `/marketing/feiras` | relatório feiras | — |
+| `/marketing/conteudo` | mesmo motor de Feiras | — |
+| `/rh` | overview KPIs | — |
+| `/rh/onboarding` | 4 views Kanban | `OnboardingDrawer` (+ acompanhamento gestor desde 14/09) |
+| `/rh/treinamentos` | 4 views + catálogo | `AtribuicaoDrawer` |
+| `/rh/feedback` | kanban/table/calendar/lembretes/analytics | `FeedbackDrawer` |
+| `/rh/ferias` | 4 views | `FeriasDrawer` + solicitar/recusar |
+| `/rh/cargos` | Cargos · Movimentações | Cargo/Movimentacao modals |
+| `/rh/comunicacao` | Comunicados · Pesquisas | Nova pesquisa / Resultados |
+| `/rh/bem-estar` | programas/sessões | Programa/Data form modals |
+| `/rh/fornecedores` | fornecedores \| contratos | delete modal |
+| `/rh/relatorios` | montador + presets | — |
+| `/inteligencia-mercado` | Mercado · Insights · Cruzamento | — |
+| `/esg-carbono` | inventário / relatório / dossiê | — |
+| `/agentes` | fila de sugestões | aprovar/recusar |
+| `/automacoes` | Automações · Agentes IA | editor de regra |
+| `/ajuda` | grade de tutoriais | modal passo a passo |
+| `/central-bugs` | board (admin) + report | modal de report |
+| `/meu-rh` | abas do portal | — |
 
 ---
 
