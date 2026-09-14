@@ -17,8 +17,9 @@
 -- 40, Combustível 250, Hospedagem 350, Transporte 80) e NENHUMA tela lê — foi
 -- conferido por grep em todo o src/. Era o mesmo teto linear que o Daniel
 -- reclama do Zoho, só que sem nem alertar. Ele vira duas colunas e passa a
--- valer; a coluna antiga fica como está, sem uso, para não perder o valor
--- original de quem quiser conferir (ver comentário nela).
+-- valer NAS CATEGORIAS QUE CONTINUAM ATIVAS (na prática, Combustível 250); a
+-- coluna antiga fica como está, sem uso, para não perder o valor original de
+-- quem quiser conferir (ver comentário nela).
 --
 -- ── NÃO INVENTEI NENHUM VALOR DE REFERÊNCIA ───────────────────────────────
 -- Os tetos reais da empresa NÃO estão nas categorias do Zoho: as 52 têm
@@ -58,14 +59,6 @@ comment on column public.crm_viagem_categorias.limite_alerta is
 comment on column public.crm_viagem_categorias.zoho_category_id is
   'category_id da categoria correspondente no Zoho Expense (org 881366952). É o que permite enviar a despesa pra lá sem re-adivinhar a categoria.';
 
--- Carrega o valor antigo como referência de Capital nas 6 categorias que já
--- existiam — não se perde nada, e o que já estava configurado passa a valer.
-update public.crm_viagem_categorias
-   set referencia_capital = replace(limite_alerta, ',', '.')::numeric
- where limite_alerta is not null
-   and limite_alerta ~ '^[0-9]+([.,][0-9]+)?$'
-   and referencia_capital is null;
-
 -- ── 2. O contexto na despesa ──────────────────────────────────────────────
 
 alter table public.crm_viagem_despesas
@@ -95,6 +88,29 @@ update public.crm_viagem_categorias
    set ativo = false
  where nome in ('Alimentação', 'Transporte', 'Hospedagem', 'Outros')
    and zoho_category_id is null;
+
+-- Só DEPOIS de desativar é que o valor antigo é carregado como referência de
+-- Capital — e por isso ele só alcança categoria que continua ativa
+-- (Combustível 250; Pedágio é nulo). A ordem importa: carregar antes fazia as
+-- referências de Alimentação/Hospedagem/Transporte nascerem e sumirem na
+-- mesma migration, porque o hook lê `.eq("ativo", true)`
+-- (use-crm-viagem-categorias.js:15). O valor histórico das desativadas
+-- continua em `limite_alerta`, legível pra quem quiser conferir.
+--
+-- `limite_alerta` é NUMERIC (baseline.sql:308) — sem replace(), sem regex: a
+-- versão anterior tratava a coluna como texto e abortava a migration inteira
+-- no primeiro UPDATE (achado da revisão de segurança, 14/09/2026).
+--
+-- DECISÃO EM ABERTO, deliberadamente não tomada aqui: "Hospedagem" tinha 350,
+-- e nasce dividida em "Hospedagem (Capital)"/"(Interior)" SEM referência. Se o
+-- 350 deve semear uma das duas (ou as duas) é decisão do Daniel — semear na
+-- unha seria transformar um teto linear no teto dos dois contextos, que é
+-- exatamente o que esta entrega existe pra parar de fazer.
+update public.crm_viagem_categorias
+   set referencia_capital = limite_alerta
+ where limite_alerta is not null
+   and referencia_capital is null
+   and ativo;
 
 -- ── 4. Categorias do Zoho usadas pelo comercial ───────────────────────────
 -- Idempotente por `nome`. Sem referência de propósito (ver cabeçalho).
