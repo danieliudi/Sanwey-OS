@@ -38,6 +38,20 @@
 
 export const CHANGELOG = [
   {
+    version: "5.12.1",
+    items: [
+      {
+        kind: "correcao",
+        toast: true,
+        text: "A dica que aparece quando você abre uma tela pela primeira vez estava mostrando o texto de OUTRA tela em alguns casos — quem abria a Visão Geral de RH, por exemplo, lia a explicação da Visão Geral do Comercial, falando de leads e funil de vendas. Corrigido: agora a dica é sempre a da tela em que você está. O Funil de Vendas, que não tinha dica nenhuma, também voltou a ter.",
+      },
+      {
+        kind: "correcao",
+        text: "Fechar a dica de uma tela marcava outras duas como lidas junto, e elas nunca mais apareciam. Agora cada tela tem a sua. Quem tem mais de um cargo também passa a ver a dica do cargo certo.",
+      },
+    ],
+  },
+  {
     version: "5.12.0",
     items: [
       {

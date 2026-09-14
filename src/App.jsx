@@ -139,32 +139,49 @@ import { FeatureSpotlight } from "./components/shared/FeatureSpotlight";
 import { NotFoundView } from "./components/shared/NotFoundView";
 
 // Onboarding contextual por tela: reaproveita o quickStart que já existe em
-// VIDEO_TUTORIALS (src/data/tutorials.js), hoje só visível na tela separada
-// "Tutoriais". Mapeia o id de `section` (rota) pro `description`
-// correspondente em VIDEO_TUTORIALS — só as combinações que genuinamente
-// existem nos dois lados hoje. "Usuários", "Construtor de pipeline" e
-// "Histórico do funil" (conteúdo do papel gerente) ficam de fora de
-// propósito: as 3 telas que descrevem foram absorvidas por outra rota
-// (Usuários → dentro de Configurações; Construtor de pipeline → botão
-// dentro do próprio Kanban de "crm"; Histórico do funil → aba dentro do
-// Executivo) e não têm mais uma `section` própria pra receber a dica sem
-// colidir com o mapeamento já escolhido pra "crm"/"executive" abaixo.
-const SECTION_SCREEN_TIP_KEYS = {
-  crm: "Negócios",
-  signals: "Sinais",
-  automations: "Automações",
-  executive: "Executivo",
-  marketing: "Campanhas",
-  "marketing-entregas": "Entregas",
-  "marketing-despesas": "Despesas",
-  "marketing-feiras": "Relatório de Feiras",
-  "marketing-conteudo": "Relatório de Conteúdo",
-  "marketing-home": "Visão Geral",
-  "rh-overview": "Visão Geral",
-  "rh-funcionarios": "Funcionários",
-  "rh-recrutamento": "Recrutamento",
-  "rh-ferias": "Férias",
-};
+// VIDEO_TUTORIALS (src/data/tutorials.js), também visível na tela "Ajuda &
+// Tutoriais". Esta lista é a LISTA DE PERMISSÃO — quais seções mostram dica.
+// O casamento com o texto é feito por `route` dentro do use-screen-tips.js,
+// que é o mesmo id usado aqui.
+//
+// CORREÇÃO DE 14/09/2026: isto era um mapa `section -> rótulo humano`
+// ("crm" -> "Negócios", "rh-overview" -> "Visão Geral") e o rótulo era a chave
+// de busca. Como três seções usam o rótulo "Visão Geral", a busca devolvia a
+// dica da tela vizinha — 12 das 154 combinações seção × cargo mostravam o
+// texto de OUTRA tela, e "crm" não mostrava nada porque nenhum guia se chama
+// "Negócios". Ver o cabeçalho do use-screen-tips.js pro racional completo. O
+// rótulo saiu de cena; sobrou só a decisão de QUAIS telas têm dica, que é o
+// que esta lista sempre quis dizer.
+//
+// Deliberadamente NÃO foi ampliada nesta correção: 29 outras rotas já têm guia
+// escrito e continuam sem dica. Ligar todas de uma vez multiplicaria por três
+// o problema que originou este conserto (o painel é um bloco de texto corrido,
+// hoje sem altura máxima nem rolagem) — é decisão do Daniel, com mockup, não
+// efeito colateral de um bug fix.
+//
+// "Usuários", "Construtor de pipeline" e "Histórico do funil" ficam de fora:
+// as 3 telas que descrevem foram absorvidas por outra rota (Usuários → dentro
+// de Configurações; Construtor de pipeline → botão dentro do Kanban de "crm";
+// Histórico do funil → aba dentro do Executivo).
+const SECOES_COM_DICA_DE_TELA = new Set([
+  "crm",
+  "signals",
+  "automations",
+  "executive",
+  "marketing",
+  "marketing-entregas",
+  "marketing-despesas",
+  // Estas duas continuam sem guia escrito em nenhum cargo: ficam aqui pra
+  // acender sozinhas no dia em que alguém escrever o texto, em vez de virar
+  // uma linha esquecida noutro lugar.
+  "marketing-feiras",
+  "marketing-conteudo",
+  "marketing-home",
+  "rh-overview",
+  "rh-funcionarios",
+  "rh-recrutamento",
+  "rh-ferias",
+]);
 
 export default function App() {
   // Supabase drives auth when env vars are present. When not configured, we
@@ -1323,7 +1340,7 @@ export default function App() {
   // (update disponível, novidades): só um AppToast visível por vez.
   const { tip: screenTip, dismiss: dismissScreenTip } = useScreenTips(
     currentUser,
-    SECTION_SCREEN_TIP_KEYS[section],
+    SECOES_COM_DICA_DE_TELA.has(section) ? section : null,
     { skip: showOnboarding || needRefresh || agentsCoachmarkVisible || changelogItems.length > 0 }
   );
 
