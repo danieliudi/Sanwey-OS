@@ -4,7 +4,7 @@ import {
   Calendar, Linkedin, Newspaper, MessageSquareWarning, Search, ChevronDown,
   Check, Trash2, Mail, Mic,
   Clock, GitBranch, CalendarClock, History,
-  FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
+  FileText, Activity, Paperclip, ListChecks, ClipboardList, FileDown, Plus, Upload, Download,
   File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake, BookOpen,
   MessageCircle,
 } from "lucide-react";
@@ -34,6 +34,7 @@ import { Modal } from "../ui/Modal";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { ProposalPanel } from "./ProposalPanel";
 import { AtaVozPanel } from "./AtaVozPanel";
+import { VisitaChecklistPanel } from "./VisitaChecklistPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
 import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
@@ -72,6 +73,7 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   // header do drawer abre por cima, de qualquer aba, sem trocar de contexto.
   // A ata continua aparecendo na lista de Atividades depois de salva.
   const [ataFloatingOpen, setAtaFloatingOpen] = useState(false);
+  const [visitaSalvando, setVisitaSalvando] = useState(false);
 
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
@@ -919,6 +921,38 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
             )}
 
             {/* ── Tab: Email ── */}
+            {/* ── Tab: Visita (o checklist comercial em campo) ────────────
+                Durante a visita esta aba é guia, não formulário: mostra o que
+                ainda não foi perguntado e deixa a ata preencher o resto. Ver
+                o cabeçalho de VisitaChecklistPanel.jsx. */}
+            {sideTab === "visita" && (
+              <VisitaChecklistPanel
+                lead={lead}
+                salvando={visitaSalvando}
+                onGravarAta={onAddActivity ? () => setAtaFloatingOpen(true) : undefined}
+                onSalvar={async ({ respostas, score }) => {
+                  setVisitaSalvando(true);
+                  try {
+                    // `custom_fields` guarda as respostas; as três colunas de
+                    // verdade (volume × 2 e score) saem daqui separadas,
+                    // porque é delas que o score de propensão e o gatilho de
+                    // recompra vão precisar — jsonb não ordena nem soma.
+                    const { volume_mensal_bags, volume_anual_bags, data_proximo_contato, ...resto } = respostas;
+                    const patch = { customFields: { ...(lead.customFields || {}), ...resto }, scoreComercial: score };
+                    if (volume_mensal_bags !== undefined) patch.volumeMensalBags = numeroOuNulo(volume_mensal_bags);
+                    if (volume_anual_bags  !== undefined) patch.volumeAnualBags  = numeroOuNulo(volume_anual_bags);
+                    // A "próxima ação agendada" da seção 9 é a mesma data que
+                    // alimenta a fila de Pendências — é a regra que a folha
+                    // impressa manda em caixa alta no rodapé.
+                    if (data_proximo_contato) patch.nextFollowUp = data_proximo_contato;
+                    await onUpdate?.(lead.id, patch);
+                  } finally {
+                    setVisitaSalvando(false);
+                  }
+                }}
+              />
+            )}
+
             {sideTab === "email" && (
               <EmailPanel lead={lead} currentUser={currentUser} onAddActivity={onAddActivity} initialDraft={emailPrefill} />
             )}
@@ -1233,8 +1267,21 @@ const SIDE_TAB_HINTS = {
   ia: "Assistente de IA sob demanda para este lead — briefing, rascunho de e-mail, próximo passo, análise de objeção. Use quando precisa de apoio antes de uma ação específica. Para sugestões automáticas em toda a carteira, veja Time de Agentes.",
 };
 
+// Campo numérico de formulário chega string; vazio tem que virar NULL e não
+// 0 — volume 0 bags/mês é uma afirmação, campo em branco não é.
+function numeroOuNulo(v) {
+  if (v === "" || v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 const SIDE_TABS = [
   { id: "form",         label: "Form",        icon: FileText },
+  // Checklist de visita — 2ª posição, não 1ª: é a aba primária DURANTE a
+  // visita, mas trocar a aba padrão mudaria a abertura do drawer pra todo
+  // mundo, inclusive pra quem nunca sai da mesa. Mockup aprovado com o Daniel
+  // em 14/09/2026.
+  { id: "visita",       label: "Visita",      icon: ClipboardList },
   { id: "email",        label: "Email",       icon: Mail },
   { id: "whatsapp",     label: "WhatsApp",    icon: MessageCircle },
   { id: "atividades",   label: "Atividades",  icon: Activity },

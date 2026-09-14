@@ -38,6 +38,26 @@
 
 export const CHANGELOG = [
   {
+    version: "5.14.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Nova aba \"Visita\" dentro do negócio, com o Checklist Comercial de Vendas que o vendedor leva impresso. Durante a visita ela mostra o que ainda FALTA PERGUNTAR, em vez de pedir para preencher 60 campos: as perguntas aparecem do jeito que se fala, da que mais pesa para a que menos pesa.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "A qualificação de 0 a 100 da folha impressa passou a ser calculada sozinha a partir do que foi coletado, nunca marcada à mão — e a faixa A, B ou C sai junto. Marcar \"decisor identificado\" sem ter o nome do decisor era o jeito mais fácil de o score virar ficção.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "A data do próximo contato preenchida na visita é a mesma que alimenta a sua fila de Pendências — a regra do rodapé da folha (nenhum lead sem próxima ação e data) passou a valer sozinha.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.13.3",
     items: [
       {

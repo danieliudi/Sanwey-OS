@@ -24,6 +24,13 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.14.0 — aba "Visita" no drawer do negócio. Decisão de PULAR o spotlight,
+  // registrada aqui (regra 12): o alvo é uma aba DENTRO do drawer, e o drawer
+  // não existe na tela até alguém abrir um card. Alvo ausente se auto-marca
+  // como visto (FeatureSpotlight.jsx) — é a mesma armadilha das entradas de
+  // 5.9, 5.10 e 5.11. Ancorar no card do Kanban também não serve: o card é
+  // repetido e o seletor pegaria um qualquer. Changelog e tutorial cobrem, e
+  // a aba fica visível assim que o drawer abre, que é onde ela serve.
   // 5.13.0 — o "?" que reabre a dica da tela. Ganha spotlight (e não a decisão
   // de pular, como as três entradas abaixo) por um motivo simples: é o único
   // caso recente em que o alvo está SEMPRE montado. O botão vive na barra
