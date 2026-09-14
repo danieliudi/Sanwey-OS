@@ -24,6 +24,14 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.10.0 (provisionamento na vaga, avaliação, prazo de documentos) —
+  // decisão de PULAR o spotlight, registrada aqui (regra 12): os campos
+  // novos moram DENTRO do painel de uma vaga em "Publicada" e do card de um
+  // onboarding numa etapa específica. Nenhum deles existe na tela até a
+  // pessoa abrir aquele registro exato, e alvo ausente se auto-marca como
+  // visto. Changelog e tutorial cobrem; quem abre a vaga encontra o campo no
+  // formulário, que é onde ele serve.
+  //
   // 5.9.0 (desfazer contratação) — decisão de PULAR o spotlight, registrada
   // aqui pra não virar pergunta esquecida (regra 12): o botão "Desfazer" só
   // existe no card de um candidato JÁ contratado, e não há candidato

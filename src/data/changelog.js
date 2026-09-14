@@ -38,6 +38,30 @@
 
 export const CHANGELOG = [
   {
+    version: "5.10.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Pedido de computador, celular, crachá e cartão de benefícios agora começa na VAGA, assim que ela é publicada — não depois da contratação. Publicar a vaga já significa que alguém vai entrar, e é aí que o pedido precisa sair pra chegar a tempo do primeiro dia. Na Pré-admissão, a caixa deixou de perguntar \"já solicitado\" e passou a perguntar \"já chegou\".",
+        roles: ["gerente_rh", "rh", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "A etapa Avaliação do Onboarding ganhou onde registrar o resultado do período de experiência (efetivar, prorrogar ou não efetivar) com justificativa. O aviso de fim de experiência já existia e já disparava — só levava para uma tela sem nada a preencher.",
+        roles: ["gerente_rh", "rh", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "A etapa Documentação ganhou prazo de entrega e quem cobra. A relação de documentos continua onde estava — o que faltava era a data limite e um nome responsável por perseguir o que falta.",
+        roles: ["gerente_rh", "rh", "admin"],
+      },
+      {
+        kind: "ajuste",
+        text: "Todo campo de etapa do Funil de Vendas, do Recrutamento e do Onboarding passou a ter texto de ajuda explicando o que se espera ali, e exemplo dentro do campo onde faz sentido. Eram 49 campos sem nenhuma explicação.",
+      },
+    ],
+  },
+  {
     version: "5.9.1",
     items: [
       {
