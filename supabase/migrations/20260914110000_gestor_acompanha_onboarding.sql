@@ -19,26 +19,49 @@
 -- endereço, custom_fields ou desligamento. Só leitura — não existe caminho de
 -- escrita nenhum criado aqui.
 --
--- QUEM É "MINHA EQUIPE" — três caminhos, em OU:
---   1. profiles.supervisor_id aponta pra mim (a hierarquia que a plataforma
---      já modela, usada por current_user_subordinate_ids no Comercial);
+-- QUEM É "MINHA EQUIPE" — dois caminhos, em OU:
+--   1. rh_colaboradores.gestor_id aponta para a MINHA ficha. Esta é a
+--      definição canônica de hierarquia de RH na plataforma: tem seletor na
+--      tela (NovoColaboradorModal / RHFuncionariosView), trava de ciclo no
+--      banco e um utilitário único, `equipeDe` em src/utils/rh-hierarquia.js,
+--      que o filtro "Só minha equipe" já usa. Esta função espelha aquele
+--      predicado, inclusive a exclusão de desligado.
 --   2. eu estou em rh_vagas.responsible_ids da vaga que originou a ficha —
---      ser nomeado responsável pela vaga JÁ É a autorização, não precisa de
---      papel nenhum por cima;
---   3. mesmo departamento que o meu, E eu tenho papel de gestor. Este é o
---      único dos três que precisa da checagem de papel: sem ela, todo colega
---      de departamento passaria a ver o onboarding dos outros, que é uma
---      ampliação de privacidade que ninguém pediu.
+--      ser nomeado responsável pela vaga JÁ É a autorização, sem papel por
+--      cima. Cobre o período entre a contratação e o RH designar o gestor.
 --
--- ⚠ LIMITAÇÃO MEDIDA, NÃO SUPOSTA (produção, 14/09/2026): os três sinais
--- estão VAZIOS hoje. profiles.supervisor_id = 0 de 15 · profiles.department =
--- 0 de 15 · rh_colaboradores.department = 0 de 15 · rh_colaboradores.vaga_id =
--- 0 de 15 (as 15 fichas vieram da importação por planilha, não de
--- recrutamento). Ou seja: esta função está correta e devolve ZERO linha pra
--- todo mundo até alguém preencher supervisor, departamento, ou até a próxima
--- contratação entrar por uma vaga com responsável. Isso está dito na tela
--- (ver RHOnboardingView) em vez de virar um quadro vazio sem explicação —
--- que seria indistinguível de "não tem ninguém em onboarding".
+-- ⚠ DUAS COISAS QUE EU TINHA ERRADO NA PRIMEIRA VERSÃO, pegas na revisão de
+-- segurança desta entrega — ficam escritas porque as duas são fáceis de
+-- reintroduzir:
+--
+--   · Eu usava `profiles.supervisor_id`. Aquele é o supervisor COMERCIAL,
+--     que decide escopo de LEAD, e a migration 20260910120000 criou
+--     `gestor_id` exatamente para não confundir os dois ("São dois conceitos
+--     com o mesmo nome popular; ficam separados de propósito"). Usar
+--     supervisor_id aqui faria um supervisor de vendas enxergar RH dos seus
+--     vendedores, o gestor designado pelo RH não enxergar nada, e o mesmo
+--     UPDATE passaria a mexer em visibilidade de lead E de RH de uma vez.
+--
+--   · Eu tinha um terceiro caminho por `department` igual. Removido: era o
+--     único que autorizava por texto livre batendo em vez de designação
+--     explícita, não tinha recorte por empresa/frente (um "Comercial" da
+--     Resibag e um da Sanwey são a mesma string), e era o único que ampliava
+--     sozinho conforme o RH preenchesse campo. Designação explícita é mais
+--     trabalho de cadastro e não tem esse tipo de surpresa.
+--
+-- ⚠ LIMITAÇÃO MEDIDA, NÃO SUPOSTA (produção, 14/09/2026): gestor_id está
+-- vazio em 15 de 15 fichas e vaga_id também (as fichas vieram da importação
+-- por planilha, não de recrutamento). Ou seja: esta função está correta e
+-- devolve ZERO linha para todo mundo até o RH preencher o campo "Gestor" na
+-- ficha — que é um seletor que já existe na tela, não um campo novo. Isso
+-- está dito NA TELA (ver RHOnboardingView) em vez de virar um quadro vazio
+-- mudo, que seria indistinguível de "não tem ninguém em onboarding".
+--
+-- ⚠ ETAPA TERMINAL FICA DE FORA. Medido no mesmo dia: 13 das 15 fichas estão
+-- em "removido" (terminal), etapa que o próprio board do RH não mostra. Sem
+-- este filtro, 87% do que o gestor veria sob o título "minha equipe em
+-- onboarding" seria gente que já saiu do quadro — e "removido" carrega um
+-- sinal que não é inócuo (contratação cancelada, cadastro duplicado).
 
 create or replace function public.get_onboarding_da_minha_equipe()
 returns table (
@@ -62,28 +85,26 @@ as $$
     from public.rh_colaboradores c
    where (select auth.uid()) is not null
      and c.employee_status <> 'desligado'
+     -- Só quem está de fato NO quadro: etapa não terminal, mesmo critério que
+     -- RHOnboardingView usa pra montar as colunas do Kanban do RH.
+     and exists (
+       select 1 from public.rh_pipeline_stages s
+        where s.domain = 'onboarding'
+          and s.stage_key = c.onboarding_stage
+          and s.terminal = false
+     )
      and (
-       -- 1. subordinado direto
+       -- 1. a ficha aponta pra mim como gestor (rh_colaboradores.gestor_id)
        exists (
-         select 1 from public.profiles p
-          where p.id = c.profile_id
-            and p.supervisor_id = (select auth.uid())
+         select 1 from public.rh_colaboradores g
+          where g.id = c.gestor_id
+            and g.profile_id = (select auth.uid())
        )
-       -- 2. responsável pela vaga que originou a ficha
+       -- 2. sou responsável pela vaga que originou a ficha
        or exists (
          select 1 from public.rh_vagas v
           where v.id = c.vaga_id
             and (select auth.uid()) = any (v.responsible_ids)
-       )
-       -- 3. mesmo departamento E eu sou gestor
-       or (
-         coalesce(c.department, '') <> ''
-         and exists (
-           select 1 from public.profiles p
-            where p.id = (select auth.uid())
-              and coalesce(p.department, '') = c.department
-         )
-         and (public.current_user_is_manager() or public.current_user_is_marketing_manager())
        )
      )
    order by c.full_name;
@@ -100,4 +121,4 @@ revoke all on function public.get_onboarding_da_minha_equipe() from public, anon
 grant execute on function public.get_onboarding_da_minha_equipe() to authenticated;
 
 comment on function public.get_onboarding_da_minha_equipe() is
-  'Onboarding da equipe do usuário logado, somente leitura e com lista de colunas fixa (sem salário, documento, CPF ou custom_fields). Equipe = subordinado direto (profiles.supervisor_id) OU ficha vinda de vaga em que ele é responsável OU mesmo departamento sendo ele gestor. Ver 20260914110000.';
+  'Onboarding da equipe do usuário logado, somente leitura e com lista de colunas fixa (sem salário, documento, CPF ou custom_fields). Equipe = ficha cujo gestor_id aponta pra ele (a hierarquia de RH, mesma de equipeDe) OU ficha vinda de vaga em que ele é responsável. Só etapas não terminais. Ver 20260914110000.';

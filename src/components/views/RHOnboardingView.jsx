@@ -1229,9 +1229,9 @@ function EquipeEmOnboarding({ equipe, stages, loading, erro }) {
       <div style={{ background: "var(--warning-bg)", color: "var(--warning)", borderRadius: 10, padding: "12px 14px", fontSize: 12.5, lineHeight: 1.6 }}>
         <div style={{ fontWeight: 700, marginBottom: 3 }}>Nenhuma pessoa da sua equipe em onboarding</div>
         Isso pode ser porque não há ninguém entrando agora — ou porque o vínculo ainda não
-        está cadastrado. Você acompanha aqui quem tem você como responsável direto, quem
-        entrou por uma vaga em que você é responsável, ou quem é do seu departamento.
-        Se você esperava ver alguém, peça ao RH para preencher um desses vínculos.
+        está cadastrado. Você acompanha aqui quem tem <strong>você</strong> como gestor na
+        ficha, e quem entrou por uma vaga em que você é responsável. Se você esperava ver
+        alguém, peça ao RH para preencher o campo “Gestor” na ficha dessa pessoa.
       </div>
     );
   }
@@ -1281,7 +1281,10 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
   // Equipe do gestor (TRAVA 03). Só carrega pra quem NÃO é do RH — quem é RH
   // já vê todo mundo no Kanban abaixo, e a RPC seria uma chamada a mais sem
-  // nada de novo pra mostrar.
+  // nada de novo pra mostrar. "Minha equipe" é rh_colaboradores.gestor_id, a
+  // MESMA definição de equipeDe (utils/rh-hierarquia.js) — nunca
+  // profiles.supervisor_id, que é o supervisor comercial e decide escopo de
+  // lead (separação fechada na migration 20260910120000).
   const { equipe, loading: loadingEquipe, error: erroEquipe } = useOnboardingEquipe({ enabled: !isRHUser });
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
   const vagasById = useMemo(() => new Map(vagas.map((v) => [v.id, v])), [vagas]);
