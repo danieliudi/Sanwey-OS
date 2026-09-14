@@ -361,7 +361,9 @@ página/etapa, auditoria de export.
 ## 4.1 Entidades com etapa/status
 
 `rh_pipeline_stages` é a tabela única de etapas, particionada por `domain` —
-**79 etapas em 14 domínios [prod]**, das quais 19 terminais.
+**79 etapas em 14 domínios [prod]**, das quais 19 terminais (reconferido em
+14/09/2026: os três números não mudaram). Nenhuma das 79 tem `description`
+preenchida nem `card_preview_fields` com conteúdo.
 
 | Domínio | Etapas | Escopo |
 |---|---|---|
@@ -394,6 +396,10 @@ Executivo.
 
 **b) Transição permitida** — `pipeline_stage_transitions`, com uma regra de
 leitura que importa: **existe linha → usa `allowed`; não existe → aberto.**
+Em 14/09/2026 a tabela tem **84 linhas [prod]**, todas do domínio `comercial`
+(42 por frente, `industria` e `resibag`), das quais 22 marcam `allowed =
+false`. Para o Funil de Vendas a regra passou a barrar de fato; para os outros
+13 domínios, que não têm linha nenhuma, continua valendo "aberto".
 
 **c) Visibilidade condicional** — `visible_if` / `required_if`, avaliados por
 `evalFieldCondition` no formato `{ fieldKey, operator, value }`. `resolveVisibleFields()`
@@ -411,7 +417,8 @@ inclusive admin; `test` deixa só admin e quem tem `profile_module_overrides.all
 ## 4.3 Automações — o que dispara e o que faz
 
 Tabela `automations` (`module` = "crm" | "marketing", `company_id` = empresa ou
-"all"). **7 regras cadastradas, todas ativas [prod].**
+"all"). **7 regras cadastradas, todas ativas [prod]** (reconferido em
+14/09/2026: os dois números não mudaram).
 
 | Gatilho (`TRIGGER_TYPES`) | Quando |
 |---|---|
@@ -515,24 +522,35 @@ Esta é a categoria mais cara do levantamento: infraestrutura pronta, testada,
 citada como pilar de reaproveitamento no `CLAUDE.md`, com **zero configuração
 em produção**.
 
-| Motor | Configurado [prod] | Onde está o código |
-|---|---|---|
-| **Campo condicional** (`visible_if`) | **0** de 136 definições | `field-conditions.js`, usado em 17 arquivos |
-| **Obrigatoriedade condicional** (`required_if`) | **0** de 136 | idem |
-| **Validação de formato** (`validation_rule`) | **0** de 136 | `field-validation.js` (CNPJ com checksum, regex, range, not_future, not_past) |
-| **Transição permitida** (`pipeline_stage_transitions`) | **0 linhas** | `use-pipeline-transitions.js` + `PipelineStagesModal` |
-| **Descrição de etapa** (`description`) | **0** de 79 etapas | feature entregue em 01/09/2026 |
-| **Preview de campo no card** (`card_preview_fields`) | **0** de 79 etapas | `rh_pipeline_stages` |
+| Motor | Configurado [prod] 14/09/2026 | Em 03/09/2026 | Onde está o código |
+|---|---|---|---|
+| **Campo condicional** (`visible_if`) | **0** de 148 definições | 0 de 136 | `field-conditions.js`, usado em 17 arquivos |
+| **Obrigatoriedade condicional** (`required_if`) | **0** de 148 | 0 de 136 | idem |
+| **Validação de formato** (`validation_rule`) | **0** de 148 | 0 de 136 | `field-validation.js` (CNPJ com checksum, regex, range, not_future, not_past, min_length, not_in) |
+| **Transição permitida** (`pipeline_stage_transitions`) | **84 linhas** | 0 linhas | `use-pipeline-transitions.js` + `PipelineStagesModal` |
+| **Descrição de etapa** (`description`) | **0** de 79 etapas | 0 de 79 | feature entregue em 01/09/2026 |
+| **Preview de campo no card** (`card_preview_fields`) | **0** de 79 etapas | 0 de 79 | `rh_pipeline_stages` |
 
-As 136 definições são 86 do CRM (7 etapas) + 50 de RH (18 etapas); 50 e 13
-delas estão marcadas `required` — ou seja, **a obrigatoriedade estática é
-usada, e nada além disso**.
+As 148 definições são 86 do CRM (7 etapas) + 62 de RH (21 etapas); 50 e 11
+delas estão marcadas `required`. Fora dessas duas famílias existe uma terceira
+tabela de campo por etapa, `personal_task_stage_fields`, com **0 linhas** — ou
+seja, **a obrigatoriedade estática continua sendo a única coisa configurada**
+nos três casos.
 
-**O caso mais grave é `pipeline_stage_transitions` com 0 linhas.** A regra de
-leitura é: *existe linha → usa `allowed`; não existe → aberto*. Com a tabela
-vazia, **toda etapa pode ir pra toda etapa, em todos os quadros**. O guarda-
-corpo de transição existe em código, tem tela de configuração, e hoje não
-impede nada. Um negócio pode pular de Prospecção direto pra Ganho.
+**O que mudou desde 03/09**: `pipeline_stage_transitions` saiu de 0 para **84
+linhas** — 42 por frente comercial (`industria` e `resibag`), todas no domínio
+`comercial`, cobrindo as 7 etapas de origem do Funil. Delas, **62 marcam
+`allowed = true` e 22 marcam `allowed = false`**. A regra de leitura é: *existe
+linha → usa `allowed`; não existe → aberto*. Com a tabela preenchida para o
+Funil, as 22 transições marcadas falsas passaram a ser efetivamente barradas
+ali — um negócio não pula mais de qualquer etapa para qualquer etapa nesse
+quadro.
+
+A afirmação de 03/09 ("o caso mais grave é `pipeline_stage_transitions` com 0
+linhas") **não descreve mais o estado do banco** e fica registrada aqui só
+como histórico. O escopo do que foi configurado é o Funil de Vendas: nenhum
+dos outros 13 domínios de `rh_pipeline_stages` tem linha de transição, e para
+eles a regra "não existe → aberto" continua valendo.
 
 ## 5.3 Inconsistências de schema
 
@@ -547,9 +565,14 @@ impede nada. Um negócio pode pular de Prospecção direto pra Ganho.
 | `profiles` | `role` | `roles` | text |
 
 Três problemas de uma vez: o par existe em 5 tabelas; **o mesmo conceito
-"dono" é `text` em `leads` e `uuid` em `marketing_campaigns`**; e
-`marketing_tasks` tem só `assignee_ids`, sem escalar — o padrão duplicado nem
-é aplicado de forma consistente.
+"dono" é `text` em `leads` e `uuid` em `marketing_campaigns`** (e o array
+acompanha: `_text` num, `_uuid` no outro); e o padrão duplicado nem é aplicado
+de forma consistente — reconferido em 14/09/2026, **nove tabelas têm só o
+array, sem escalar nenhum**: `marketing_tasks` (`assignee_ids`), `clients` e
+`posvenda_cases` (`owner_ids`), `comex_export_operations` e
+`comex_import_operations` (`owner_ids`), `rh_candidatos` e `rh_vagas`
+(`responsible_ids`). Ou seja, o par escalar+array é minoria: 5 tabelas contra
+9 que já fazem só o array.
 
 Em `profiles` isso já produziu comportamento silencioso documentado: o gatilho
 `profiles_sync_roles` reinjeta o escalar dentro do array, então
@@ -564,6 +587,9 @@ e a operação parece ter dado certo.
 | `posvenda_cases` | `company_id` **text** | uma empresa |
 | `clients` | `company_ids` **array** | várias |
 | `marketing_campaigns` / `deliverables` / `tasks` / `purchase_requests` | `company_ids` **array** | várias |
+| `comex_import_operations` / `comex_export_operations` | `company_ids` **array** | várias |
+| `rh_vagas`, `document_library`, `uniform_*` | `company_ids` **array** | várias |
+| `orders`, `proposals`, `products`, `market_signals`, `sales_cases`, `whatsapp_conversations`, `automations`, `esg_*`, `chat_channels`, `agent_actions` | `company_id` **text** | uma |
 
 Um cliente pode pertencer a duas frentes; o negócio dele, não. A conversão
 negócio → caso de pós-venda mantém o singular, mas o cliente ligado aos dois é
@@ -571,18 +597,29 @@ plural. Toda policy de RLS precisa saber qual das duas formas está tratando.
 
 ### c) `notes` é três coisas diferentes com o mesmo nome [prod]
 
-- **`jsonb`** (fio de comentários) em `leads`, `marketing_campaigns`,
+Levantamento refeito em 14/09/2026 — **24 tabelas têm coluna `notes`**,
+partidas em dois tipos:
+
+- **`jsonb`** (fio de comentários) em 11: `leads`, `marketing_campaigns`,
   `marketing_deliverables`, `marketing_tasks`, `marketing_purchase_requests`,
-  `posvenda_cases`, `personal_tasks`.
-- **`text`** (campo livre) em `clients` e `rh_colaboradores`.
+  `posvenda_cases`, `personal_tasks`, `bug_reports`, `rh_aplicacoes`,
+  `rh_candidatos`, `comex_import_operations` / `comex_export_operations`.
+- **`text`** (campo livre) em 13: `clients`, `rh_colaboradores`, `rh_ferias`,
+  `rh_avaliacoes`, `rh_fornecedores`, `rh_fornecedor_contratos`,
+  `rh_colaborador_beneficios`, `marketing_suppliers`, `marketing_requests`,
+  `marketing_budgets`, `marketing_expenses`, `lead_captures`, `lead_samples`,
+  `uniform_people`.
 
 Mesmo rótulo na interface, semântica diferente por trás.
 
 ### d) Log de evento guardado dentro da linha
 
-`activities` é `jsonb` em `leads`, `marketing_campaigns`,
-`marketing_deliverables`, `marketing_tasks`, `marketing_purchase_requests`,
-`rh_colaboradores` [prod]. Consequências: sem FK pro autor, sem RLS por item,
+`activities` é `jsonb` em **15 tabelas** [prod, 14/09/2026 — eram 6 na
+listagem de 03/09]: `leads`, `marketing_campaigns`, `marketing_deliverables`,
+`marketing_tasks`, `marketing_purchase_requests`, `rh_colaboradores`,
+`rh_aplicacoes`, `rh_avaliacoes`, `rh_ferias`, `rh_movimentacoes`,
+`rh_treinamento_atribuicoes`, `rh_vagas`, `bug_reports`,
+`comex_import_operations`, `comex_export_operations`. Consequências: sem FK pro autor, sem RLS por item,
 não dá pra consultar "tudo que fulano fez" sem varrer todas as tabelas, e
 duas escritas concorrentes no mesmo card sobrescrevem o array inteiro.
 
@@ -600,12 +637,21 @@ sistema.
 
 Mesmos 16 tipos, mesmas 3 colunas condicionais, chaves primárias diferentes.
 Marketing/Entregas/Compras não usam nem um nem outro — têm card inline
-próprio.
+próprio. Desde 03/09 apareceu uma **terceira** tabela com o mesmo formato,
+`personal_task_stage_fields` (16 colunas, **0 linhas** [prod]), ao lado de
+`personal_task_stages`.
 
 ### f) Anexo em quatro lugares diferentes
 
-Bucket dedicado por domínio (13 buckets), tabela `rh_attachments`,
-`lead_attachments`, e referência dentro de `custom_fields`/`notes`.
+Bucket dedicado por domínio (**14 buckets** [prod, 14/09/2026]: `avatars`,
+`chat-attachments`, `chat-stickers`, `comunicado-anexos`, `crm-comprovantes`,
+`deliverable-attachments`, `document-library`, `lead-attachments`,
+`marketing-attachments`, `personal-task-attachments`, `rh-attachments`,
+`rh-curriculos`, `rh-documentos-assinatura`, `rh-documentos-colaborador`),
+tabela `rh_attachments`, `lead_attachments`, e referência dentro de
+`custom_fields`/`notes`. Dois buckets são públicos: `avatars` e
+`chat-stickers` (decisão registrada em `docs/decisoes-de-seguranca.md`,
+BX-08).
 
 ## 5.4 Excesso de interação
 
@@ -645,8 +691,8 @@ pré-seleciona a etapa.
 | Categoria | Achado que mais pesa |
 |---|---|
 | **Endereçamento** | nenhum registro tem URL — sem link, sem voltar, sem F5 |
-| **Motor ocioso** | 136 campos configurados, 0 usam condição ou validação; 0 transições cadastradas ⇒ toda etapa vai pra toda etapa |
+| **Motor ocioso** | 148 campos configurados, 0 usam condição ou validação. As transições deixaram de ser o pior caso: 84 linhas cadastradas (22 bloqueios) cobrem o Funil de Vendas; os outros 13 domínios seguem sem nenhuma |
 | **Superfície vazia** | 3 itens de menu L1 (`Pós-venda`, `Pedidos`, `Biblioteca`) com 0 registros |
-| **Schema** | escalar+array em 5 tabelas, `owner` é text num lugar e uuid noutro, `notes` é jsonb ou text conforme a tabela |
+| **Schema** | escalar+array em 5 tabelas (contra 9 que já só têm array), `owner` é text num lugar e uuid noutro, `notes` é jsonb em 11 tabelas e text em 13, `activities` é log dentro da linha em 15 |
 | **Fluxo** | criar em outro módulo nunca leva até lá |
 | **Governança** | quem reporta bug não consegue acompanhar |
