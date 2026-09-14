@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
 import { VIDEO_TUTORIALS } from "../data/tutorials";
@@ -55,6 +55,12 @@ import { VIDEO_TUTORIALS } from "../data/tutorials";
 // todas, é exatamente o momento que essa feature existe pra cobrir.
 export function useScreenTips(currentUser, screenKey, { skip = false } = {}) {
   const [screenTipsSeenMap, setScreenTipsSeenMap] = usePersistentState(STORAGE_KEYS.screenTipsSeen, {});
+  // Reabertura manual pelo "?" da barra superior. Vive em estado, não no
+  // localStorage: pedir a dica de novo não desfaz o "já vi" — sair da tela e
+  // voltar não traz o painel de volta sozinho. Antes de 14/09/2026 não existia
+  // caminho nenhum de volta: fechou uma vez, acabou pra sempre naquele
+  // navegador, sem nem um lugar pra pedir de novo.
+  const [forcado, setForcado] = useState(null);
   const userId = currentUser?.id;
   const seenForUser = (userId && screenTipsSeenMap[userId]) || {};
 
@@ -66,21 +72,46 @@ export function useScreenTips(currentUser, screenKey, { skip = false } = {}) {
     return [...new Set(lista.filter(Boolean))];
   }, [currentUser?.role, currentUser?.roles]);
 
-  const tip = useMemo(() => {
-    if (skip || !userId || !screenKey || seenForUser[screenKey]) return null;
+  // O guia da tela atual, independente de já ter sido visto — é o que
+  // alimenta tanto o painel quanto o botão "?" (que só aparece quando há o
+  // que reabrir).
+  const guia = useMemo(() => {
+    if (!screenKey) return null;
     for (const papel of papeis) {
-      const achado = (VIDEO_TUTORIALS[papel] || []).find(v => v.route === screenKey);
-      if (achado?.quickStart) return achado.quickStart;
+      // Várias rotas têm MAIS DE UM guia (o Funil tem 7, Viagens tem 6) —
+      // vence o primeiro do array, que por convenção é o introdutório, e é o
+      // certo pra quem está chegando. A exceção é marcada no próprio guia com
+      // `semDicaDeChegada`: guia que descreve uma FUNCIONALIDADE presente em
+      // várias telas (e não a tela da sua `route`) não disputa o painel.
+      // Hoje só `v-desc1` está marcado — sem isso ele ganhava de `v-set1` por
+      // estar antes no array, e Configurações abria falando do lápis de
+      // descrição de página, que nem fica nessa tela.
+      const achado = (VIDEO_TUTORIALS[papel] || [])
+        .find(v => v.route === screenKey && !v.semDicaDeChegada && v.quickStart?.resumo);
+      if (achado) return achado;
     }
     return null;
-  }, [skip, userId, screenKey, seenForUser, papeis]);
+  }, [screenKey, papeis]);
+
+  // Guia sem `resumo` não monta painel nenhum — em vez de cair no formato
+  // antigo de texto corrido. É o que torna a migração dos 93 guias gradual:
+  // quem ainda não tem as duas frases simplesmente não interrompe ninguém.
+  const tip = useMemo(() => {
+    if (!guia) return null;
+    if (forcado === screenKey) return { ...guia.quickStart, steps: guia.quickStart.steps };
+    if (skip || !userId || seenForUser[screenKey]) return null;
+    return guia.quickStart;
+  }, [guia, forcado, screenKey, skip, userId, seenForUser]);
 
   const dismiss = () => {
+    setForcado(null);
     if (!userId || !screenKey) return;
     setScreenTipsSeenMap(m => ({ ...m, [userId]: { ...(m[userId] || {}), [screenKey]: true } }));
   };
 
-  return { tip, dismiss };
+  const reabrir = () => setForcado(screenKey);
+
+  return { tip, guia, dismiss, reabrir, temGuia: !!guia };
 }
 
 export default useScreenTips;

@@ -114,6 +114,26 @@
   }
 }
 
+/* Destaque do "Comece por" da dica de tela — o painel leva a pessoa até o
+   elemento e pisca o contorno por 2s, em vez de só descrever onde ele está
+   (decidido com o Daniel 14/09/2026). Usa --accent porque é indicação de
+   caminho, não erro nem alerta. Respeita prefers-reduced-motion: sem
+   animação, o contorno simplesmente aparece e some. */
+.dica-alvo {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+  animation: dica-pulso 2s ease-out;
+}
+@keyframes dica-pulso {
+  0%   { outline-color: var(--accent); }
+  70%  { outline-color: var(--accent); }
+  100% { outline-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dica-alvo { animation: none; }
+}
+
 /* ─── Dark mode ───────────────────────────────────────────────────────────── */
 [data-theme="dark"] {
   --bg:            #1A1A18;

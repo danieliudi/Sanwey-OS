@@ -24,6 +24,22 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.13.0 — o "?" que reabre a dica da tela. Ganha spotlight (e não a decisão
+  // de pular, como as três entradas abaixo) por um motivo simples: é o único
+  // caso recente em que o alvo está SEMPRE montado. O botão vive na barra
+  // superior, aparece em toda tela que tem guia, e não depende de abrir modal,
+  // card ou aba — que foi exatamente o que matou os spotlights de 5.9, 5.10 e
+  // 5.11 (alvo ausente se auto-marca como visto).
+  //
+  // A rota é `dashboard` porque é o pouso pós-login de todo cargo interno: é
+  // onde todo mundo passa, e o botão já está lá.
+  {
+    id: "dica-de-tela-reabrir",
+    route: "dashboard",
+    target: '[data-tour="dica-de-tela-reabrir"]',
+    text: "A dica de cada tela agora cabe em 3 linhas — e este botão traz ela de volta quando você quiser, quantas vezes quiser.",
+    version: "5.13.0",
+  },
   // 5.12.0 — a pergunta "Onde foi" mora DENTRO do modal Nova Despesa, que não
   // existe na tela até alguém abrir. Mesmo raciocínio do "vaga-posicoes"
   // abaixo: ancora no botão que abre o modal, que é o caminho real até a

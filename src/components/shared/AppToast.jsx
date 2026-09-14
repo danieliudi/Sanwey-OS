@@ -75,6 +75,16 @@ export function AppToast({
         zIndex: TOAST_Z,
         ...pos,
         maxWidth: 380,
+        // Teto de altura + rolagem, 14/09/2026. Sem isto o toast é ancorado ao
+        // rodapé e CRESCE PRA CIMA sem limite: quando o conteúdo passa da
+        // altura da janela, o começo sai por cima da viewport e não há como
+        // voltar. Foi como o Daniel recebeu a dica da Visão Geral de RH — os
+        // 3 primeiros itens de 8 estavam fora da tela, inalcançáveis.
+        // `60vh` deixa o toast sempre menor que a janela; `auto` só mostra a
+        // barra quando ela é necessária, então nada muda pros toasts curtos
+        // (update, novidades, erro de etapa), que são a maioria dos usos.
+        maxHeight: "60vh",
+        overflowY: "auto",
         padding: "12px 14px",
         background: v.background,
         border: `1px solid ${v.borderColor}`,

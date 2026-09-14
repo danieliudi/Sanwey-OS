@@ -38,6 +38,31 @@
 
 export const CHANGELOG = [
   {
+    version: "5.13.0",
+    items: [
+      {
+        kind: "novo",
+        text: "A dica que aparece ao abrir uma tela pela primeira vez deixou de ser um bloco de texto corrido. Agora são três linhas: o que a tela é, por onde começar, e um link para o guia completo em Ajuda & Tutoriais — que continua inteiro, nada foi cortado de lá.",
+      },
+      {
+        kind: "novo",
+        text: "Onde a dica aponta para um lugar específico da tela, ela agora tem um botão que te leva até lá e destaca o elemento, em vez de só descrever onde ele fica.",
+      },
+      {
+        kind: "novo",
+        text: "Novo botão de interrogação na barra superior: traz de volta a dica da tela em que você está, quantas vezes quiser. Antes, fechou uma vez, acabou para sempre naquele navegador.",
+      },
+      {
+        kind: "novo",
+        text: "41 telas passaram a ter dica de chegada — antes eram 14. Funil de Vendas, Clientes, Pós-venda, Viagens, Comex e quase toda a área de RH tinham guia escrito e não mostravam nada.",
+      },
+      {
+        kind: "correcao",
+        text: "Um aviso longo demais podia crescer para fora da janela e deixar o começo do texto inalcançável, sem barra de rolagem. Agora todo aviso tem altura máxima e rola quando precisa.",
+      },
+    ],
+  },
+  {
     version: "5.12.1",
     items: [
       {

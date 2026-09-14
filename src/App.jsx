@@ -132,56 +132,25 @@ import { ChangelogToast } from "./components/shared/ChangelogToast";
 import { useAppUpdate } from "./hooks/use-app-update";
 import { useChangelogNotice } from "./hooks/use-changelog-notice";
 import { useScreenTips } from "./hooks/use-screen-tips";
+import { ScreenTipCard } from "./components/shared/ScreenTipCard";
 import { useAgentsCoachmark } from "./hooks/use-agents-coachmark";
 import { AgentsSidebarCoachmark } from "./components/shell/AgentsSidebarCoachmark";
 import { useFeatureSpotlight } from "./hooks/use-feature-spotlight";
 import { FeatureSpotlight } from "./components/shared/FeatureSpotlight";
 import { NotFoundView } from "./components/shared/NotFoundView";
 
-// Onboarding contextual por tela: reaproveita o quickStart que já existe em
-// VIDEO_TUTORIALS (src/data/tutorials.js), também visível na tela "Ajuda &
-// Tutoriais". Esta lista é a LISTA DE PERMISSÃO — quais seções mostram dica.
-// O casamento com o texto é feito por `route` dentro do use-screen-tips.js,
-// que é o mesmo id usado aqui.
+// Dica de chegada por tela: o conteúdo vem de VIDEO_TUTORIALS
+// (src/data/tutorials.js), casado por `route` — o MESMO id de `section` usado
+// aqui. Ver o cabeçalho de use-screen-tips.js pro histórico do bug que isso
+// corrigiu em 14/09/2026.
 //
-// CORREÇÃO DE 14/09/2026: isto era um mapa `section -> rótulo humano`
-// ("crm" -> "Negócios", "rh-overview" -> "Visão Geral") e o rótulo era a chave
-// de busca. Como três seções usam o rótulo "Visão Geral", a busca devolvia a
-// dica da tela vizinha — 12 das 154 combinações seção × cargo mostravam o
-// texto de OUTRA tela, e "crm" não mostrava nada porque nenhum guia se chama
-// "Negócios". Ver o cabeçalho do use-screen-tips.js pro racional completo. O
-// rótulo saiu de cena; sobrou só a decisão de QUAIS telas têm dica, que é o
-// que esta lista sempre quis dizer.
-//
-// Deliberadamente NÃO foi ampliada nesta correção: 29 outras rotas já têm guia
-// escrito e continuam sem dica. Ligar todas de uma vez multiplicaria por três
-// o problema que originou este conserto (o painel é um bloco de texto corrido,
-// hoje sem altura máxima nem rolagem) — é decisão do Daniel, com mockup, não
-// efeito colateral de um bug fix.
-//
-// "Usuários", "Construtor de pipeline" e "Histórico do funil" ficam de fora:
-// as 3 telas que descrevem foram absorvidas por outra rota (Usuários → dentro
-// de Configurações; Construtor de pipeline → botão dentro do Kanban de "crm";
-// Histórico do funil → aba dentro do Executivo).
-const SECOES_COM_DICA_DE_TELA = new Set([
-  "crm",
-  "signals",
-  "automations",
-  "executive",
-  "marketing",
-  "marketing-entregas",
-  "marketing-despesas",
-  // Estas duas continuam sem guia escrito em nenhum cargo: ficam aqui pra
-  // acender sozinhas no dia em que alguém escrever o texto, em vez de virar
-  // uma linha esquecida noutro lugar.
-  "marketing-feiras",
-  "marketing-conteudo",
-  "marketing-home",
-  "rh-overview",
-  "rh-funcionarios",
-  "rh-recrutamento",
-  "rh-ferias",
-]);
+// NÃO existe mais lista de permissão de telas. Existia porque o painel era um
+// bloco de texto corrido e ligar todas as telas seria insuportável: 29 rotas
+// tinham guia escrito e nenhuma dica. Com o formato de 3 linhas aprovado em
+// 14/09/2026, o critério deixou de ser "quais telas liberamos" e passou a ser
+// "quais guias já têm as duas frases curtas" — quem não tem `resumo` não monta
+// painel nenhum, e a migração é gradual por conteúdo, não por lista mantida
+// à mão em dois lugares que saem de sincronia.
 
 export default function App() {
   // Supabase drives auth when env vars are present. When not configured, we
@@ -1338,11 +1307,22 @@ export default function App() {
 
   // Toast de dica de tela — nunca junto do onboarding nem dos outros 2 toasts
   // (update disponível, novidades): só um AppToast visível por vez.
-  const { tip: screenTip, dismiss: dismissScreenTip } = useScreenTips(
+  const { tip: screenTip, dismiss: dismissScreenTip, reabrir: reabrirScreenTip, temGuia: temDicaDeTela } = useScreenTips(
     currentUser,
-    SECOES_COM_DICA_DE_TELA.has(section) ? section : null,
+    section,
     { skip: showOnboarding || needRefresh || agentsCoachmarkVisible || changelogItems.length > 0 }
   );
+
+  // "Comece por" que leva até o elemento de verdade, em vez de só descrever
+  // onde ele está (decidido com o Daniel 14/09/2026). Rola até o alvo e pisca
+  // o contorno por 2s — sem mudar de rota, sem clicar por ninguém.
+  const irParaAlvoDaDica = useCallback((seletor) => {
+    const alvo = document.querySelector(seletor);
+    if (!alvo) return;                       // alvo ausente não vira erro: só não faz nada
+    alvo.scrollIntoView({ behavior: "smooth", block: "center" });
+    alvo.classList.add("dica-alvo");
+    setTimeout(() => alvo.classList.remove("dica-alvo"), 2000);
+  }, []);
 
   // Tour guiado contextual (ver src/data/feature-spotlights.js) — aponta pra
   // um elemento real da tela quando o usuário naturalmente visita a rota
@@ -2321,6 +2301,7 @@ export default function App() {
           }}
           onNavigate={handleNotificationNavigate}
           onHelpClick={() => setSection("tutorials")}
+          onReabrirDica={temDicaDeTela ? reabrirScreenTip : undefined}
         />
 
         <OfflineBanner isOnline={isOnline} cacheAge={cacheAge} />
@@ -3045,11 +3026,13 @@ export default function App() {
       )}
 
       {screenTip && (
-        <AppToast title={`${screenTip.icon} ${sectionTitle}`} onDismiss={dismissScreenTip}>
-          <ol className="list-decimal pl-4 space-y-0.5">
-            {screenTip.steps.map((s, i) => <li key={i}>{s}</li>)}
-          </ol>
-        </AppToast>
+        <ScreenTipCard
+          tip={screenTip}
+          titulo={sectionTitle}
+          onDismiss={dismissScreenTip}
+          onVerGuia={() => { setTutoriaisInitialTab("tutoriais"); setSection("tutorials"); dismissScreenTip(); }}
+          onComecar={irParaAlvoDaDica}
+        />
       )}
 
       <FeatureSpotlight spotlight={featureSpotlight} onDismiss={dismissFeatureSpotlight} />
