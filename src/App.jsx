@@ -2166,9 +2166,20 @@ export default function App() {
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
-    // Portal: só acessa /meu-rh, qualquer outra rota digitada direto na URL
-    // volta pra lá — mesmo espírito do guard de agência acima.
-    if (isPortalOnly && section !== "meu-rh") {
+    // Portal: acessa Meu RH e, quando o Chat está ligado pra ele, o Chat —
+    // qualquer outra rota digitada direto na URL volta pra Meu RH, mesmo
+    // espírito do guard de agência acima.
+    //
+    // CORREÇÃO DE 14/09/2026 (auditoria de changelog × acesso por cargo): o
+    // guard era `section !== "meu-rh"` e mandava o Chat de volta também — mas
+    // o menu do portal MONTA o item "Chat" (linha 1801, condicionado a
+    // `chatEnabled`). Ou seja: o item aparecia, a pessoa clicava, e a tela
+    // voltava pra Meu RH sem dizer nada. Item de menu morto.
+    //
+    // A condição é a MESMA do menu de propósito: quem tem o Chat desligado no
+    // perfil não vê o item nem alcança a rota digitando.
+    const portalAlcanca = new Set(["meu-rh", ...(currentUser?.chatEnabled === false ? [] : ["chat"])]);
+    if (isPortalOnly && !portalAlcanca.has(section)) {
       setSection("meu-rh");
     }
     // Acesso por módulo: revogação por override direto na URL (o item já
@@ -2182,7 +2193,11 @@ export default function App() {
     // não passam pelo registro de módulos mas também não podem ficar dentro
     // de uma tela que foi tirada do ar.
     if ((isAgencia || isPortalOnly) && (moduleStates[section] || "live") === "off") {
-      setSection("dashboard");
+      // Destino por shell: nenhum dos dois alcança "dashboard" (Pendências) —
+      // mandar pra lá caía no guard de cima e dava dois saltos, ou pior, num
+      // lugar que o menu daquela pessoa nem tem. Corrigido 14/09/2026, na
+      // mesma auditoria que achou o Chat morto do portal.
+      setSection(isPortalOnly ? "meu-rh" : "marketing");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, isManager, isRHManager, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section, allowedModules, moduleStates]);

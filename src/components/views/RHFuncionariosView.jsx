@@ -1299,9 +1299,14 @@ function EmployeeDetailModal({
                     )}
                     {cargoOptions.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
+                  {/* Mesma correção do NovoColaboradorModal: `cargoOptions` é
+                      filtrado pelo departamento, então a frase de catálogo vazio
+                      mentia sempre que existiam cargos de outro departamento. */}
                   {cargoOptions.length === 0 && (
                     <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
-                      Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.
+                      {cargoTemplates.length === 0
+                        ? <>Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.</>
+                        : <>Nenhum cargo cadastrado no departamento {form.department} — escolha outro departamento, ou crie o cargo em Cargos &amp; Salários.</>}
                     </div>
                   )}
                 </div>

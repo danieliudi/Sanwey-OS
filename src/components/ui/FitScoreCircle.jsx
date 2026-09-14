@@ -8,7 +8,7 @@ function scoreColor(score) {
   return "var(--text-dim)";
 }
 
-function FitScoreCircleImpl({ score, size = 44 }) {
+function FitScoreCircleImpl({ score, size = 44, titulo }) {
   const color = scoreColor(score);
   const radius = (size - 6) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -17,7 +17,12 @@ function FitScoreCircleImpl({ score, size = 44 }) {
     <div
       className="relative flex items-center justify-center"
       style={{ width: size, height: size }}
-      title={`Fit score: ${score}/100 — pontuação de potencial do lead com base no perfil e comportamento`}
+      // O texto é PROP porque este componente não desenha só Fit score: o
+      // Onboarding de RH usa o mesmo anel pro progresso do checklist do
+      // colaborador (RHOnboardingView.jsx). O título fixo em "pontuação de
+      // potencial do lead" aparecia em cima do progresso de uma PESSOA —
+      // achado da auditoria de textos de ajuda, 14/09/2026.
+      title={titulo || `Fit score: ${score}/100 — pontuação de potencial do lead com base no perfil e comportamento`}
     >
       <svg width={size} height={size} className="absolute inset-0 -rotate-90">
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth="3" />

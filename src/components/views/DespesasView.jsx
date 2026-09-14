@@ -1747,7 +1747,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                           visual, sem deep-link pra solicitação de origem. */}
                       {expense.notes?.includes("Origem: compra ") && (
                         <span
-                          title="Criada automaticamente a partir de uma compra aprovada"
+                          title="Criada automaticamente a partir de uma compra paga"
                           className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold shrink-0"
                           style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
                         >

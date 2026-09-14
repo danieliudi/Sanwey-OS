@@ -38,6 +38,36 @@
 
 export const CHANGELOG = [
   {
+    version: "5.13.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "No portal do colaborador, o item Chat aparecia no menu e não abria — clicar devolvia para Meu RH sem dizer nada. Agora abre.",
+        roles: ["portal"],
+      },
+      {
+        kind: "correcao",
+        text: "O selo de despesa criada a partir de uma compra dizia \"compra aprovada\". A despesa só nasce quando a compra é marcada como PAGA — são quatro etapas de diferença, e quem aprovava concluía que a despesa já estava lançada.",
+        roles: ["marketing", "gerente_marketing", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Ao cadastrar um colaborador, escolher um departamento sem cargos dizia \"nenhum cargo cadastrado ainda — crie um primeiro\", mesmo com o catálogo cheio de cargos de outros departamentos. Agora a mensagem distingue os dois casos.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "No card do Onboarding, o anel de progresso do checklist mostrava \"Fit score — pontuação de potencial do lead\" ao passar o mouse. Era o texto do Funil de Vendas em cima do progresso de uma pessoa.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Em Compras, o aviso mandava escolher o fornecedor vencedor \"em Decisão\" — painel que tem esse nome em outra etapa. Agora aponta para o painel certo.",
+        roles: ["marketing", "gerente_marketing", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.13.2",
     items: [
       {
