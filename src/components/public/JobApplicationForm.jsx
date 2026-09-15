@@ -130,7 +130,22 @@ export default function JobApplicationForm() {
           // contentType pela EXTENSÃO, nunca `file.type` cru: o bucket só
           // aceita os dois MIME de utils/curriculo-upload.js, e navegador que
           // manda tipo vazio fazia o Storage recusar o arquivo.
-          .upload(resp.resume_object_path, file, { contentType: MIME_POR_EXTENSAO[ext] || "application/pdf", upsert: true });
+          // SEM `upsert`. Não é detalhe de estilo: `upsert: true` vira
+          // `INSERT ... ON CONFLICT DO UPDATE`, e isso obriga o Postgres a
+          // avaliar as policies de UPDATE de `storage.objects` — uma delas
+          // chama `is_own_colaborador_folder`, função de RH que o `anon` não
+          // pode executar. O upload inteiro morria com "permission denied for
+          // function is_own_colaborador_folder", sem nunca chegar na policy de
+          // INSERT, que estava perfeita. É a armadilha que o CLAUDE.md (regra
+          // 3.1) descreve ao contrário: função usada em policy de Storage
+          // precisa do grant a `anon`, senão quebra upload público.
+          //
+          // Upsert nunca foi necessário aqui: o caminho é
+          // `<candidato>/<token novo>-curriculo.<ext>`, com token de uso único
+          // gerado a cada envio. Colisão é impossível por construção.
+          // (Medido em 15/09/2026: INSERT puro como `anon` = OK; o mesmo
+          // INSERT com ON CONFLICT DO UPDATE = permission denied.)
+          .upload(resp.resume_object_path, file, { contentType: MIME_POR_EXTENSAO[ext] || "application/pdf" });
         if (uploadErr) {
           // O candidato JÁ foi gravado neste ponto (a RPC roda antes, pra
           // devolver o caminho de upload de uso único). Dizer "não foi
