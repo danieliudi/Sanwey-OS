@@ -4,6 +4,8 @@ import { SECOES, CAMPO, DESTINO } from "../../constants/checklist-visita";
 import { avaliarChecklist, completudeDasSecoes, respostasDoLead, sugestoesPendentes, CHAVE_SUGESTOES } from "../../utils/checklist-visita";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useConfigComercial } from "../../hooks/use-config-comercial";
+import { classificarCliente } from "../../utils/classe-cliente";
+import { COD1_UNIDADE, COD2_UNIDADE } from "../../constants/classe-cliente";
 
 // Checklist de visita — a tela que o vendedor usa DENTRO do cliente.
 //
@@ -43,6 +45,16 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
   const avaliacao = useMemo(() => avaliarChecklist(lead, rascunho, { limiar }), [lead, rascunho, limiar]);
   const secoes    = useMemo(() => completudeDasSecoes(lead, rascunho, avaliacao), [lead, rascunho, avaliacao]);
   const respostas = useMemo(() => respostasDoLead(lead, rascunho), [lead, rascunho]);
+
+  // Classe do Cliente — frequência × volume médio, do documento interno de
+  // 15/09/2026. É OUTRA medida que o score da visita e aparece separada de
+  // propósito: aquele mede a qualificação feita hoje, esta mede o histórico
+  // de compra de quem já compra. Um número só com os dois significados não
+  // significaria nenhum dos dois.
+  const classe = useMemo(() => classificarCliente({
+    pedidosAno: respostas.pedidos_ano,
+    pecasPorPedido: respostas.pecas_por_pedido,
+  }), [respostas.pedidos_ano, respostas.pecas_por_pedido]);
 
   // Sugestões da ata que o vendedor dispensou nesta sessão — some da tela na
   // hora, e some do banco no próximo "Salvar visita".
@@ -115,6 +127,40 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
           )}
         </div>
       </div>
+
+      {/* ── Classe do Cliente ───────────────────────────────────────────
+          Só aparece quando há o que mostrar: sem os dois campos, um bloco
+          vazio anunciando "—" seria ruído numa tela operada de pé. */}
+      {(classe.classificado || classe.motivo === "abaixo_do_piso" || classe.motivo === "fora_da_tabela") && (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "11px 13px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>Classe do Cliente</span>
+            <span style={{
+              fontSize: 12, fontWeight: 700, fontVariantNumeric: "tabular-nums",
+              borderRadius: 99, padding: "2px 10px", whiteSpace: "nowrap",
+              background: classe.classificado ? "var(--surface-alt)" : "var(--warning-bg)",
+              color:      classe.classificado ? "var(--text)"        : "var(--warning)",
+              border: `1px solid ${classe.classificado ? "var(--border)" : "color-mix(in srgb, var(--warning) 35%, transparent)"}`,
+            }}>
+              {classe.classificado ? classe.classe : "não classificado"}
+            </span>
+          </div>
+          {/* Regra 14: o número declara de onde veio. A conta aparece, e as
+              duas unidades aparecem nomeadas — são escalas diferentes e
+              confundi-las é o erro fácil aqui. */}
+          <div style={{ fontSize: 10.5, color: "var(--text-faint)", marginTop: 6, lineHeight: 1.45 }}>
+            {classe.classificado ? (
+              <>
+                COD.1 <b style={{ color: "var(--text-dim)" }}>{classe.cod1}</b> ({classe.faixaFrequencia} {COD1_UNIDADE})
+                {" · "}COD.2 <b style={{ color: "var(--text-dim)" }}>{classe.cod2}</b> ({classe.faixaVolume} {COD2_UNIDADE})
+                {" · "}<span style={{ fontVariantNumeric: "tabular-nums" }}>{classe.pecasAno.toLocaleString("pt-BR")}</span> peças/ano
+              </>
+            ) : (
+              <span style={{ color: "var(--warning)" }}>{classe.texto}</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── O que a ata ouviu ───────────────────────────────────────────
           Sugere, nunca grava: campo já respondido nem chega aqui, e o score

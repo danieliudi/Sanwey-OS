@@ -96,6 +96,13 @@ export const SECOES = [
       { chave: "volume_mensal_bags",  rotulo: "Volume mensal (bags)", tipo: CAMPO.NUMERO, destino: DESTINO.COLUNA, coluna: "volume_mensal_bags" },
       { chave: "volume_anual_bags",   rotulo: "Volume anual (bags)",  tipo: CAMPO.NUMERO, destino: DESTINO.COLUNA, coluna: "volume_anual_bags" },
       { chave: "frequencia_compra",   rotulo: "Frequência de compra", tipo: CAMPO.TEXTO,  destino: DESTINO.CUSTOM },
+      // Os dois campos da Classe do Cliente (documento interno de 15/09/2026,
+      // transcrito em constants/classe-cliente.js). NÃO vêm da folha impressa
+      // do checklist — vêm de outro documento, e é por isso que estão
+      // marcados. Unidades diferentes das linhas de volume acima, de
+      // propósito: aquelas são bags/mês, estas são pedidos/ano e peças/pedido.
+      { chave: "pedidos_ano",         rotulo: "Frequência (pedidos/ano)",     tipo: CAMPO.NUMERO, destino: DESTINO.CUSTOM },
+      { chave: "pecas_por_pedido",    rotulo: "Volume médio (peças/pedido)",  tipo: CAMPO.NUMERO, destino: DESTINO.CUSTOM },
       { chave: "sazonalidade",        rotulo: "Sazonalidade",         tipo: CAMPO.TEXTO,  destino: DESTINO.CUSTOM },
       { chave: "potencial_crescimento", rotulo: "Potencial de crescimento", tipo: CAMPO.TEXTO, destino: DESTINO.CUSTOM },
       { chave: "tipo_bag",            rotulo: "Tipo de bag",          tipo: CAMPO.ESCOLHA, destino: DESTINO.CUSTOM,

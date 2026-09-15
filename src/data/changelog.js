@@ -52,6 +52,11 @@ export const CHANGELOG = [
       },
       {
         kind: "novo",
+        text: "A aba Visita passou a calcular a Classe do Cliente (AA, BC, DF…) a partir da frequência de pedidos por ano e do volume médio por pedido, seguindo a tabela oficial do Grupo. Quem fica abaixo de 50 peças por pedido aparece como \"não classificado\" — que é o que a regra do prêmio diz. A conta fica à vista: qual faixa caiu em cada código e quantas peças por ano dão.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
         text: "Configurações → Geral → Comercial ganhou o limiar de \"alto volume\": a partir de quantos bags por mês uma conta pontua a pergunta que vale 20 dos 100 pontos do Checklist de Visita. É por frente — o que é alto volume para a Resibag não é o mesmo que para a Sanwey. Deixar vazio continua valendo: o item sai da conta e a tela explica, em vez de usar um número chutado.",
         roles: ["gerente", "admin"],
       },
