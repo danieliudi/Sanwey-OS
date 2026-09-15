@@ -3,16 +3,26 @@ import { AlertCircle, RotateCw } from "lucide-react";
 
 // "Nenhum registro" quando na verdade deu erro.
 //
-// Achado do Daniel em 15/09/2026, depois de aparecer em três telas ao mesmo
-// tempo — Funil de Vendas, RH · Funcionários e Sinais. É a mesma armadilha do
-// Postgres nas três: quando a RLS recusa a LEITURA, a resposta volta com
-// `error: null` e `data: []`. Sem nada que distinga, a tela acredita e
-// escreve "nenhum registro encontrado". Quem está olhando conclui que perdeu
-// a carteira.
+// Achado do Daniel em 15/09/2026, em três telas ao mesmo tempo — Funil de
+// Vendas, RH · Funcionários e Sinais. Nas três, uma falha de leitura chegava
+// na tela como lista vazia: `use-market-signals` tinha um
+// `catch { setSignals([]) }` que transformava QUALQUER falha em zero sinais,
+// `use-rh-colaboradores` descartava o `error` inteiro, e o App nunca lia o
+// `error` que `useLeads` já expunha. Rede caída, sessão expirada,
+// `permission denied for table` — tudo virava "nenhum registro encontrado", e
+// quem estava olhando concluía que tinha perdido a carteira.
 //
-// A diferença entre as duas frases é a informação inteira, e por isso esta é
-// a 3ª ocorrência que manda extrair (CLAUDE.md regra 4) em vez de repetir o
-// markup em cada view.
+// ── O QUE ESTE COMPONENTE NÃO COBRE, e é importante não prometer ─────────
+// Recusa de RLS na LEITURA (policy de SELECT que não casa) NÃO chega aqui:
+// o Postgres devolve `error: null` com `data: []`, sem nada que a distinga de
+// uma tabela legitimamente vazia. Pegar esse caso exigiria um sinal a mais do
+// banco, que hoje não existe. O caso de ESCRITA é diferente e já está coberto
+// noutro lugar, pelo `.select()` + checagem de zero linha (use-leads.js).
+// Comentário que descreve um modo de falha que o código não trata é
+// exatamente a armadilha que o CLAUDE.md já registrou duas vezes.
+//
+// Três telas com o mesmo defeito é a 3ª ocorrência que manda extrair
+// (CLAUDE.md regra 4) em vez de repetir o markup em cada view.
 //
 // TOKEN: `--danger`, e não `--warning`. A escolha não é estética — pela
 // convenção da plataforma `--warning` é "precisa de configuração, não é
@@ -39,7 +49,7 @@ export function ErroDeLeitura({ oQue = "os dados", onTentarDeNovo, detalhe }) {
         </b>
         <span style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--danger)" }}>
           Isto não quer dizer que a lista está vazia — quer dizer que a leitura
-          falhou. Pode ser conexão, ou permissão de acesso.
+          falhou. Pode ser conexão, sessão expirada ou permissão de acesso.
         </span>
         {detalhe && (
           <span style={{ display: "block", fontSize: 11, marginTop: 5, color: "var(--danger)", opacity: 0.8, wordBreak: "break-word" }}>
@@ -49,7 +59,14 @@ export function ErroDeLeitura({ oQue = "os dados", onTentarDeNovo, detalhe }) {
         {onTentarDeNovo && (
           <button
             type="button"
-            onClick={onTentarDeNovo}
+            // Chamada SEM argumento, de propósito: `onClick={onTentarDeNovo}`
+            // entregaria o SyntheticEvent do React como 1º parâmetro, e os
+            // refetch desta plataforma têm a assinatura
+            // `async (isActive = () => true)`. Default de parâmetro só vale
+            // para `undefined` — o evento não é undefined, virava `isActive`,
+            // e `isActive()` estourava TypeError. O botão não recarregava
+            // nada e ainda deixava o loading preso. (QA 15/09/2026.)
+            onClick={() => onTentarDeNovo()}
             style={{
               marginTop: 9, display: "inline-flex", alignItems: "center", gap: 6,
               background: "var(--surface)", color: "var(--danger)",

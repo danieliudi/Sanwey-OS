@@ -190,12 +190,14 @@ export function SignalsView({ activeCompany, signals, erroDeLeitura, onRecarrega
         </div>
       </FilterBar>
 
-      {scopedSignals.length === 0 ? (
+      {/* Com erro de leitura, quem fala é o aviso acima — "nenhum sinal" ao
+          lado dele repetiria o engano que o aviso desfaz. */}
+      {scopedSignals.length === 0 ? (erroDeLeitura ? null : (
         <EmptyState
           icon={Bell}
           title="Nenhum sinal no filtro atual"
           description="Ajuste os filtros para ver mais sinais."
-        />
+        />)
       ) : (
         <CardGrid density={density}>
           {scopedSignals.map(s => (

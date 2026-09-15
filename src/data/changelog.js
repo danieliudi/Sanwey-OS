@@ -58,7 +58,7 @@ export const CHANGELOG = [
       {
         kind: "correcao",
         toast: true,
-        text: "Quando a plataforma não conseguia ler seus dados, a tela dizia \"nenhum registro encontrado\" — indistinguível de uma lista de verdade vazia. Agora falha de leitura aparece como falha, em vermelho, com botão de tentar de novo. Vale no Funil de Vendas, em RH · Funcionários e em Sinais de Mercado.",
+        text: "Quando a leitura falhava — conexão caída, sessão expirada, permissão de acesso —, a tela dizia \"nenhum registro encontrado\", indistinguível de uma lista de verdade vazia. Agora a falha aparece como falha, em vermelho, com botão de tentar de novo, e a mensagem de lista vazia sai da frente. Vale no Funil de Vendas, em RH · Funcionários e em Sinais de Mercado.",
         roles: ["vendedor", "gerente", "admin", "rh", "gerente_rh", "diretoria", "marketing", "gerente_marketing"],
       },
     ],

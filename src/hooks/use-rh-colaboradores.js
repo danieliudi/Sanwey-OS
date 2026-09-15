@@ -129,6 +129,12 @@ export function useRHColaboradores({ userId, enabled = true } = {}) {
       if (err) { setError(err); return; }
       setError(null);
       setColaboradores((data || []).map(rowToColaborador));
+    } catch (e) {
+      // Sem isto, exceção LANÇADA (em vez de `error` devolvido) deixava o
+      // estado de erro nulo e rejeitava a promise do efeito sem ninguém
+      // pegar — a tela voltava a dizer "nenhum colaborador". Alinha com
+      // use-leads e use-market-signals, que já tratavam.
+      if (isActive()) setError(e);
     } finally {
       if (isActive()) setLoading(false);
     }

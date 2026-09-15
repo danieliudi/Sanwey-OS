@@ -176,7 +176,7 @@ export function SplitPanelDrawer({ onClose, header, left, leftFixo, center, righ
               {left && (
                 <button
                   onClick={() => setLeftOpen(v => !v)}
-                  className="lg:hidden w-full flex items-center justify-between px-5 py-3 text-xs font-semibold cursor-pointer shrink-0"
+                  className="drawer-toggle-mobile lg:hidden w-full flex items-center justify-between px-5 py-3 text-xs font-semibold cursor-pointer shrink-0"
                   style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
                   aria-expanded={leftOpen}
                 >
@@ -191,10 +191,16 @@ export function SplitPanelDrawer({ onClose, header, left, leftFixo, center, righ
                 {left}
               </div>
               {leftFixo && (
-                // order-first só no celular: lá a ferramenta vem antes do
-                // metadado. No desktop volta pra ordem do DOM, que é a de
-                // sempre.
-                <div className="p-5 pt-0 lg:pt-0 space-y-4 order-first lg:order-none">
+                // No celular a ferramenta vem logo depois do botão de
+                // "+ detalhes" e antes do metadado (ordem em index.css, não
+                // `order-first`: aquilo jogava o botão pro fim da página).
+                // No desktop volta pra ordem do DOM, que é a de sempre, e o
+                // `lg:pt-0` evita padding duplo embaixo do bloco `left`.
+                <div className="drawer-fixo-mobile p-5 lg:pt-0 space-y-4">
+                  {/* A régua que separava metadado e abas existia no `left` e
+                      foi cortada junto quando as abas saíram de lá. Volta só
+                      no desktop, que é onde os dois blocos se encostam. */}
+                  {left && <div className="hidden lg:block" style={{ borderTop: "1px solid var(--border)", margin: "2px 0" }} />}
                   {leftFixo}
                 </div>
               )}

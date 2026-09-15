@@ -60,15 +60,29 @@ import { escapeHtml } from "../../utils/html";
 
 export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
-  // Aba inicial por tamanho de tela, decidida uma vez na montagem: no celular
-  // o drawer abre na Visita (é lá que se usa o aparelho — de pé, no cliente);
-  // no computador continua abrindo no Form, que é onde quem trabalha sentado
-  // espera cair. `lg` do Tailwind = 1024px.
-  const [sideTab, setSideTab] = useState(() => (
+  // Aba inicial por tamanho de tela: no celular o drawer abre na Visita (é lá
+  // que se usa o aparelho — de pé, no cliente); no computador continua
+  // abrindo no Form, que é onde quem trabalha sentado espera cair. `lg` do
+  // Tailwind = 1024px.
+  //
+  // Reavaliada a CADA negócio aberto, e não uma vez só: o App renderiza este
+  // drawer incondicionalmente (ele devolve null lá dentro quando não há lead),
+  // então o componente monta uma vez por sessão e nunca desmonta. Com o valor
+  // decidido só no useState inicial, bastava tocar noutra aba uma vez pra
+  // todos os negócios seguintes abrirem nela pelo resto do dia — a promessa de
+  // "abre na Visita" valia pro primeiro card e mais nenhum. (QA 15/09/2026.)
+  const abaPadrao = () => (
     typeof window !== "undefined" && window.matchMedia?.("(max-width: 1023px)")?.matches
       ? "visita"
       : "form"
-  ));
+  );
+  const [sideTab, setSideTab] = useState(abaPadrao);
+  const leadAbertoRef = useRef(null);
+  useEffect(() => {
+    if (!lead?.id || leadAbertoRef.current === lead.id) return;
+    leadAbertoRef.current = lead.id;
+    setSideTab(abaPadrao());
+  }, [lead?.id]);
   const [emailPrefill, setEmailPrefill] = useState(null);
   const [copied, setCopied] = useState(false);
   const [quickCreateName, setQuickCreateName] = useState(null); // string | null — abre o mini-cadastro (com checagem de duplicata) quando != null

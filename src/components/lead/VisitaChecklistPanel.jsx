@@ -63,10 +63,11 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
       const restantes = Object.fromEntries(
         Object.entries(guardadas).filter(([k]) => k === "_em" || sugestoes.some(s => s.chave === k)),
       );
-      const respostas = {
-        ...rascunho,
-        [CHAVE_SUGESTOES]: Object.keys(restantes).filter(k => k !== "_em").length > 0 ? restantes : null,
-      };
+      const sobrou = Object.keys(restantes).filter(k => k !== "_em").length > 0;
+      const respostas = { ...rascunho };
+      // Só toca na chave se havia sugestão pra limpar — senão todo lead que
+      // nunca gravou ata ganhava um `checklist_sugestoes: null` no jsonb.
+      if (Object.keys(guardadas).length > 0) respostas[CHAVE_SUGESTOES] = sobrou ? restantes : null;
       await onSalvar?.({ respostas, score: avaliacao.pct, faixa: avaliacao.faixa?.id ?? null });
       setRascunho({});
       setDispensadas([]);
@@ -348,7 +349,7 @@ function BotaoMini({ children, onClick, neutro = false }) {
       type="button"
       onClick={onClick}
       style={{
-        minHeight: 30, padding: "4px 9px", borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+        minHeight: 32, padding: "5px 9px", borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: "pointer",
         border: `1px solid ${neutro ? "var(--border)" : "var(--accent)"}`,
         background: "var(--surface)",
         color: neutro ? "var(--text-dim)" : "var(--accent)",

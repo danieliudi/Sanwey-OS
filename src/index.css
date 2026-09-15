@@ -421,3 +421,15 @@ body {
     opacity: 1 !important;
   }
 }
+
+
+/* Drawer de detalhe — ordem da coluna esquerda no celular.
+   Nasceu do Checklist de Visita (15/09/2026): o bloco `leftFixo` sobe pro
+   topo, mas com `order-first` (-9999) o botão "+ detalhes do card" ia parar
+   DEPOIS de todo o conteúdo da aba — num aparelho de 844px, a ~960px de
+   rolagem. O controle do metadado ficava inalcançável na prática.
+   Ordem explícita resolve: botão, depois a ferramenta, depois o metadado. */
+@media (max-width: 1023px) {
+  .drawer-toggle-mobile { order: -2; }
+  .drawer-fixo-mobile   { order: -1; }
+}

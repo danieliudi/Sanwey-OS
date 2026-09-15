@@ -24,6 +24,15 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.15.0 — bloco "A ata sugeriu N respostas" na aba Visita, e a aba abrindo
+  // sozinha no celular. Decisão de PULAR o spotlight, registrada aqui (regra
+  // 12) pelo MESMO motivo da entrada de 5.14.0 logo abaixo, que este bloco
+  // não repete à toa: o alvo (`[data-tour="lead-tab-visita"]`) existe, mas só
+  // depois de alguém abrir um card — o drawer não está na tela até lá. Alvo
+  // ausente se auto-marca como visto (FeatureSpotlight.jsx), então o aviso
+  // morreria na primeira visita à rota, exatamente como aconteceu com 5.9,
+  // 5.10 e 5.11. Changelog (3 itens) e tutorial (`v-visita1`) cobrem.
+  //
   // 5.14.0 — aba "Visita" no drawer do negócio. Decisão de PULAR o spotlight,
   // registrada aqui (regra 12): o alvo é uma aba DENTRO do drawer, e o drawer
   // não existe na tela até alguém abrir um card. Alvo ausente se auto-marca

@@ -1874,7 +1874,9 @@ export function RHFuncionariosView({
 
   // Reaproveitado no corpo da tabela desktop e no bloco mobile — mesma
   // mensagem, sem duplicar o texto/ação "Limpar filtros" em dois lugares.
-  const filteredEmptyNote = filtered.length === 0
+  // Com erro de leitura o aviso acima já explica; dizer "nenhum funcionário"
+  // logo abaixo dele seria repetir o engano que ele desfaz.
+  const filteredEmptyNote = (filtered.length === 0 && !erroDeLeitura)
     ? (unifiedRows.length > 0
       ? { title: "Nenhum resultado pra estes filtros", description: "Nenhum colaborador bate com a busca e os filtros atuais.", showClear: true }
       : { title: "Nenhum funcionário encontrado", description: "Tente ajustar os filtros", showClear: false })
