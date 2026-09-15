@@ -537,6 +537,11 @@ export const CHANGELOG = [
         text: "Ficha do funcionário agora tem Gestor. Quem lidera alguém vê \"Lidera N pessoas\" na própria ficha e ganha o filtro \"Minha equipe\" na tabela.",
         roles: ["rh", "gerente_rh"],
       },
+      {
+        kind: "ajuste",
+        text: "Em Configurações → Módulos, o liga/desliga em três estados (Desligada / Em testes / Liberada) passa a listar as páginas no mesmo agrupamento do menu — Meu Espaço, Comercial, Marketing, RH, Inteligência e Configuração — incluindo Biblioteca de Documentos. Pendências, Configurações e Central de Bugs continuam sempre no ar.",
+        roles: ["admin"],
+      },
     ],
   },
   {
