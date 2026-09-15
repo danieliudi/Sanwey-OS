@@ -1,6 +1,6 @@
 # Varredura de QA em navegador real
 
-Duas varreduras que abrem a plataforma num Chromium de verdade — desktop
+Varreduras que abrem a plataforma num Chromium de verdade — desktop
 (1440×900) e celular (390×844) — e reportam exceção não tratada, erro de
 console, tela em branco e rolagem horizontal.
 
@@ -8,9 +8,38 @@ console, tela em branco e rolagem horizontal.
 npm i --no-save playwright && npx playwright install chromium   # uma vez
 npm run qa:smoke        # 52 rotas × 2 viewports, tela vazia
 npm run qa:interacao    # com dados: abre card, navega abas, testa o acordeão
+npm run qa:dados        # com dados: as rotas com todo board populado
+npm run qa:proposta     # bancada: os documentos da proposta, em papel
 ```
 
-Cada comando sobe o dev server, roda e derruba o servidor sozinho.
+As três primeiras sobem o dev server, rodam e derrubam o servidor sozinhas.
+
+## `qa:proposta` — a bancada dos documentos impressos
+
+Diferente das outras: **não varre nem aprova nada sozinha**. Sobe um Vite só
+com os dois documentos da proposta (`DocTecnica` e `DocPitch`) renderizados
+isolados, em largura de papel, com conteúdo de verdade — itens, imagens,
+matriz de conformidade e pendências — pra você OLHAR, em
+<http://localhost:5233>. Fica aberta até você parar (Ctrl-C).
+
+São quatro folhas, e as duas últimas são o ponto:
+
+| Folha | O que prova |
+|---|---|
+| `#folha-1` / `#folha-2` | ficha técnica e pitch **com** itens |
+| `#folha-3` / `#folha-4` | os mesmos **sem** item nenhum — o caminho de não-regressão |
+
+Existe por causa da regra 15 do `CLAUDE.md`: os dois gates do `prebuild`
+provam ausência de erro de execução, não presença do que foi especificado, e
+**nenhum deles exercita `@media print`**. Esta tela já teve dois defeitos que
+passaram por build e ESLint limpos e só apareceram no papel: os dois
+documentos saindo empilhados na mesma impressão, e preço unitário
+arredondado pro real inteiro (R$ 48,90 imprimindo "R$ 49" na mesma folha em
+que o subtotal dizia R$ 195.600).
+
+O conteúdo é fixo em `proposta-doc/main.jsx` e as imagens são SVG embutido de
+propósito: a prova é de LAYOUT, e depender de rede tornaria a captura
+não-determinística.
 
 ## Por que isso existe
 

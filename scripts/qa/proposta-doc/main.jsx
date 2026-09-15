@@ -48,6 +48,12 @@ const requisitos = [
 // FATOS_PADRAO é um mapa por frente — pegar a de industria (Sanwey).
 const fatos = FATOS_PADRAO.industria || Object.values(FATOS_PADRAO)[0];
 const S = avaliarProposta({ lead, rascunho, bloqueados, requisitos, fatos, itens });
+// A terceira folha é a que prova a NÃO-regressão, e é justo a que faltava:
+// a spec promete que "sem linha nenhuma, nada muda — as versões já geradas
+// continuam abrindo igual". Sem renderizá-la, essa promessa não era
+// verificada por nada. Aqui `qtd`/`preco` voltam ao Sumário, a seção de
+// itens some e a numeração das seções recua de 4 pra 3.
+const S_SEM_ITENS = avaliarProposta({ lead, rascunho, bloqueados, requisitos, fatos, itens: [] });
 
 // A imagem é embutida como SVG data: URI de propósito: a prova aqui é de
 // LAYOUT (a figura ocupa a célula, a legenda não descola), e depender de rede
@@ -70,6 +76,12 @@ createRoot(document.getElementById("raiz")).render(
     </div>
     <div id="folha-2" style={folha}>
       <DocPitch S={S} fatos={fatos} esgKg={412000} imagens={imagens} />
+    </div>
+    <div id="folha-3" style={folha}>
+      <DocTecnica S={S_SEM_ITENS} fatos={fatos} lead={lead} requisitos={requisitos} bloqueados={bloqueados} />
+    </div>
+    <div id="folha-4" style={folha}>
+      <DocPitch S={S_SEM_ITENS} fatos={fatos} esgKg={412000} imagens={[]} />
     </div>
   </div>,
 );
