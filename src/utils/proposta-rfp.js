@@ -57,6 +57,45 @@ const porCaminho = (obj, caminho) =>
 
 const vazio = (v) => v == null || v === "" || v === "—";
 
+// ── Itens da proposta ─────────────────────────────────────────────────────
+// A linha de item mora em `proposal_line_items` (tabela, com gatilho que
+// calcula o total NO BANCO), não num campo de texto — mesmo motivo de
+// marketing_expense_items: histórico auditável por versão e total que
+// ninguém soma na mão pra gravar.
+//
+// Com pelo menos uma linha preenchida, `qtd` e `preco` da Classe 2 saem de
+// cena. Não é preferência de layout: o mesmo número em dois lugares, com
+// duas origens diferentes, é exatamente o defeito que a regra 14 do
+// CLAUDE.md descreve. Sem linha nenhuma nada muda, e as versões geradas
+// antes desta mudança continuam abrindo idênticas.
+export const CAMPOS_SUBSTITUIDOS_POR_ITENS = ["qtd", "preco"];
+
+/** Linha em branco — o vendedor adicionou e ainda não digitou nada. */
+export function itemVazio(it) {
+  return vazio(it?.modelLabel) && vazio(it?.quantity) && vazio(it?.unitPrice);
+}
+
+/** Linha que sustenta um número: modelo, quantidade e preço, os três. */
+export function itemCompleto(it) {
+  return !vazio(it?.modelLabel)
+    && Number(it?.quantity) > 0
+    && Number(it?.unitPrice) > 0;
+}
+
+/**
+ * Soma das linhas PARA EXIBIR NA TELA e no documento — nunca pra gravar.
+ * O `proposals.total_value` que fica no banco é do gatilho
+ * `proposal_line_items_sync_total`; esta função existe porque quem está
+ * digitando preço precisa ver a soma antes de gerar a versão. Os dois
+ * aparecem com rótulos diferentes, de propósito.
+ */
+export function somaItens(itens = []) {
+  return itens.reduce(
+    (t, it) => t + (Number(it?.quantity) || 0) * (Number(it?.unitPrice) || 0),
+    0,
+  );
+}
+
 /** O que o negócio já responde da Classe 2 — o resto o vendedor digita. */
 export function rfpDoLead(lead) {
   const out = {};
@@ -76,11 +115,18 @@ export function rfpDoLead(lead) {
  * `rascunho` é sempre a última palavra — inclusive vazio, pra que dê pra
  * limpar um campo que veio do negócio sem ele voltar sozinho.
  */
-export function avaliarProposta({ lead, rascunho = {}, bloqueados = {}, requisitos = [], fatos = {} }) {
+export function avaliarProposta({ lead, rascunho = {}, bloqueados = {}, requisitos = [], fatos = {}, itens = [] }) {
   const doLead = rfpDoLead(lead);
   const rfp = { ...doLead, ...rascunho };
 
+  // Linha só conta como existente depois de o vendedor digitar algo nela —
+  // clicar em "Item" e não preencher não pode apagar `qtd`/`preco` da tela.
+  const itensUsados = itens.filter((it) => !itemVazio(it));
+  const temItens = itensUsados.length > 0;
+  const itensIncompletos = itensUsados.filter((it) => !itemCompleto(it)).length;
+
   const faltamRfp = CAMPOS_RFP
+    .filter((c) => !(temItens && CAMPOS_SUBSTITUIDOS_POR_ITENS.includes(c.chave)))
     .filter((c) => vazio(rfp[c.chave]))
     .map((c) => c.rotulo);
 
@@ -98,7 +144,7 @@ export function avaliarProposta({ lead, rascunho = {}, bloqueados = {}, requisit
 
   const requisitosAbertos = requisitos.filter((r) => vazio(r.resposta)).length;
 
-  const rascunhoMarcado = faltamRfp.length > 0 || pendentes.length > 0 || requisitosAbertos > 0;
+  const rascunhoMarcado = faltamRfp.length > 0 || pendentes.length > 0 || requisitosAbertos > 0 || itensIncompletos > 0;
 
   return {
     rfp,
@@ -108,6 +154,12 @@ export function avaliarProposta({ lead, rascunho = {}, bloqueados = {}, requisit
     pendentes,
     requisitosAbertos,
     fatosFaltando,
+    itensUsados,
+    temItens,
+    itensIncompletos,
+    // Rótulo "Soma das linhas" na tela — ver somaItens() acima pro porquê de
+    // ela conviver com o total do gatilho em vez de substituí-lo.
+    somaLinhas: somaItens(itensUsados),
     // "Sai como rascunho" é diferente de "não sai". A peça sempre imprime —
     // o que muda é a marca d'água e o aviso. Travar a impressão faria o
     // vendedor voltar pro Word, que é o resultado que ninguém quer.

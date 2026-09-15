@@ -38,6 +38,27 @@
 
 export const CHANGELOG = [
   {
+    version: "5.19.0",
+    items: [
+      {
+        kind: "novo",
+        text: "A proposta passou a aceitar VÁRIOS modelos, cada um com a sua quantidade, preço e certificação. Antes era um preço só para a proposta inteira — uma RFP de big bag quase nunca cota um modelo só. O primeiro item já vem preenchido com o que o negócio respondeu.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "novo",
+        text: "O Pitch agora leva imagens escolhidas da Biblioteca de Documentos (até 4). A proposta guarda a referência ao documento, não uma cópia: trocou o arquivo na Biblioteca, a próxima proposta já sai com a imagem nova.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Preço unitário passou a sair com centavos. Antes R$ 48,90 imprimia \"R$ 49\" na mesma folha em que o subtotal dizia R$ 195.600 — o comprador multiplicava e achava outro número.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+        toast: true,
+      },
+    ],
+  },
+  {
     version: "5.18.0",
     items: [
       {

@@ -1,7 +1,8 @@
 {
   "name": "grupo-sanwey",
   "private": true,
-"version": "5.18.0",  "type": "module",
+  "version": "5.19.0",
+  "type": "module",
   "description": "Grupo Sanwey · Commercial Intelligence platform (multi-tenant)",
   "scripts": {
     "dev": "vite",
@@ -14,6 +15,7 @@
     "qa:smoke": "node scripts/qa/run.mjs rotas",
     "qa:interacao": "node scripts/qa/run.mjs interacao",
     "qa:dados": "node scripts/qa/run.mjs dados",
+    "qa:proposta": "vite --config scripts/qa/vite.proposta.config.js --port 5233",
     "doc:check": "node scripts/mapa-funcional-check.mjs",
     "test:abm": "node --import ./scripts/register-esm.mjs scripts/abm-smoke.mjs",
     "test:rastreio": "node --import ./scripts/register-esm.mjs scripts/account-collapse-smoke.mjs",

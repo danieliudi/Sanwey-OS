@@ -24,6 +24,15 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.19.0 — tabela multi-modelo e imagens do Pitch. NÃO ganham entrada
+  // própria: as duas moram DENTRO do painel de Proposta, e alvo que só
+  // existe depois de abrir um card se auto-marca como visto
+  // (FeatureSpotlight.jsx) — a armadilha registrada nas entradas de 5.9,
+  // 5.10, 5.11, 5.14 e 5.15. Em vez de uma segunda entrada condenada, sobe
+  // a VERSÃO desta aqui, que é o caminho previsto no cabeçalho pra feature
+  // que mudou de um jeito que invalida o aviso antigo: quem já viu a de
+  // 5.18.0 vê de novo, com o texto atualizado.
+  //
   // 5.18.0 — a aba "PDF" virou "Proposta", com o gerador de RFP. Ganha
   // spotlight (e não a decisão de pular das entradas abaixo) porque aqui o
   // alvo é a PRÓPRIA ABA na barra de abas, montada junto com o drawer — não
@@ -34,8 +43,8 @@ export const FEATURE_SPOTLIGHTS = [
     id: "proposta-rfp",
     route: "crm",
     target: '[data-tour="lead-tab-pdf"]',
-    text: "A aba PDF virou \"Proposta\": o gerador já vem preenchido com o que o negócio sabe, e cada geração vira uma versão com data e autor.",
-    version: "5.18.0",
+    text: "A aba PDF virou \"Proposta\": o gerador vem preenchido com o que o negócio sabe, aceita vários modelos com preço por linha e leva imagens da Biblioteca.",
+    version: "5.19.0",
   },
   // 5.15.0 — bloco "A ata sugeriu N respostas" na aba Visita, e a aba abrindo
   // sozinha no celular. Decisão de PULAR o spotlight, registrada aqui (regra

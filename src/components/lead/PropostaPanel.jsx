@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { FileDown, Printer, Plus, Trash2, Check, AlertCircle, Lock } from "lucide-react";
+import { FileDown, Printer, Plus, Trash2, Check, AlertCircle, Lock, ImageIcon } from "lucide-react";
 import { useProposals } from "../../hooks/use-proposals";
 import { useConfigComercial } from "../../hooks/use-config-comercial";
 import { useEsgReports } from "../../hooks/use-esg-carbon";
 import { CAMPOS_FATOS, fatosDivergentes } from "../../constants/fatos-canonicos";
-import { CAMPOS_RFP, CAMPOS_BLOQUEADOS, avaliarProposta } from "../../utils/proposta-rfp";
-import { formatBRL } from "../../utils/currency";
+import { CAMPOS_RFP, CAMPOS_BLOQUEADOS, CAMPOS_SUBSTITUIDOS_POR_ITENS, avaliarProposta } from "../../utils/proposta-rfp";
+import { SANBAG_MODELS } from "../../data/sanbag-models";
+import { useDocumentLibrary } from "../../hooks/use-document-library";
+import { formatBRL, formatBRLCentavos } from "../../utils/currency";
 import { formatDateBR, toLocalISODate } from "../../utils/date";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { ErroDeLeitura } from "../shared/ErroDeLeitura";
@@ -47,11 +49,31 @@ function fmtTonnesCO2e(kg) {
 let timerLimpeza = null;
 let imprimindo = false;
 
-function printarDoc(qual) {
+// `window.print()` NÃO espera imagem carregar. O documento fica em
+// `display:none` até a hora de imprimir — o navegador até busca `<img>` aí
+// dentro, mas não há garantia de que terminou quando o diálogo abre, e a
+// folha sai com moldura vazia no lugar da foto. Nenhum dos dois gates da
+// regra 3.2 exercita `@media print`, então isto só apareceria no papel.
+// Teto de 4s: imagem que não vem (URL assinada expirada, rede caída) não
+// pode prender o botão pra sempre — imprime sem ela.
+function esperarImagens(alvo) {
+  const imgs = Array.from(alvo.querySelectorAll("img")).filter((i) => !i.complete);
+  if (imgs.length === 0) return Promise.resolve();
+  return Promise.race([
+    Promise.all(imgs.map((img) => new Promise((ok) => {
+      img.addEventListener("load", ok, { once: true });
+      img.addEventListener("error", ok, { once: true });
+    }))),
+    new Promise((ok) => setTimeout(ok, 4000)),
+  ]);
+}
+
+async function printarDoc(qual) {
   if (imprimindo) return;
   const alvo = document.getElementById(`proposta-doc-${qual}`);
   if (!alvo) return;
   imprimindo = true;
+  await esperarImagens(alvo);
 
   // A classe entra SÓ no documento escolhido. Pôr nos dois e esconder o outro
   // com `display:none` inline NÃO funciona: a regra de `index.css` é
@@ -90,7 +112,7 @@ function printarDoc(qual) {
 }
 
 export function PropostaPanel({ lead, currentUser, onAddActivity }) {
-  const { proposal, versoes, loading, error, persist } = useProposals(lead.id, lead.companyId);
+  const { proposal, versoes, lineItems, loading, error, persist } = useProposals(lead.id, lead.companyId);
   const { fatosDe, metaFatosDe, error: erroConfig } = useConfigComercial();
 
   // Selo ESG — portado da aba antiga em vez de descartado junto com ela. É o
@@ -115,6 +137,10 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
   }));
   const [bloqueados, setBloqueados] = useState({});
   const [requisitos, setRequisitos] = useState([]);
+  const [itens, setItens] = useState([]);
+  // Só as REFERÊNCIAS da biblioteca ({id, title, file_path}). A URL assinada
+  // vale 1h e vive em `urlsImagem`, fora do snapshot — ver o efeito abaixo.
+  const [imagens, setImagens] = useState([]);
   const [salvando, setSalvando] = useState(false);
 
   // HIDRATAÇÃO, e ela precisa ser efeito e não estado inicial: `useProposals`
@@ -137,12 +163,72 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
     setRascunho(r => ({ ...r, ...(salvo.rfp || {}) }));
     setBloqueados(salvo.bloqueados || {});
     setRequisitos(salvo.requisitos || []);
+    setImagens(Array.isArray(salvo.imagens) ? salvo.imagens : []);
   }, [loading, proposal]);
+
+  // As linhas de item NÃO vêm do snapshot: elas são linhas de verdade em
+  // `proposal_line_items`, lidas pelo hook. O snapshot guarda o retrato do
+  // documento; a tabela guarda o dado. Ler as duas faria a tela escolher
+  // entre duas versões da mesma coisa.
+  const itensHidratadosRef = useRef(false);
+  useEffect(() => {
+    if (itensHidratadosRef.current || loading) return;
+    itensHidratadosRef.current = true;
+    if (lineItems.length === 0) return;
+    setItens(lineItems.map(li => ({
+      modelLabel: li.model_label || "",
+      quantity: li.quantity ?? "",
+      unitPrice: li.unit_price ?? "",
+      certificationNote: li.certification_note || "",
+    })));
+  }, [loading, lineItems]);
+
+  // ── Imagens do Pitch ──────────────────────────────────────────────────────
+  // Bucket `document-library` é privado: a URL é assinada por 1h e refeita a
+  // cada abertura. Guardar a assinada no snapshot faria a v1 abrir quebrada
+  // no dia seguinte — por isso o snapshot só carrega id/título/caminho.
+  const { documents: docsBiblioteca, getSignedUrl, error: erroBiblioteca } = useDocumentLibrary();
+  const imagensDisponiveis = useMemo(() => docsBiblioteca.filter(d =>
+    (d.mime_type || "").startsWith("image/")
+    && (!Array.isArray(d.company_ids) || d.company_ids.length === 0 || d.company_ids.includes(lead.companyId))
+  ), [docsBiblioteca, lead.companyId]);
+
+  const [urlsImagem, setUrlsImagem] = useState({});
+  useEffect(() => {
+    let vivo = true;
+    // `in`, não truthy: assinatura que FALHOU grava `null` e fica marcada
+    // como tentada. Filtrando por valor verdadeiro, o caminho sem URL
+    // continuava "faltando", o efeito rodava de novo a cada render e a tela
+    // entrava em laço de requisição — o `urlsImagem` na dependência é o que
+    // fecha o ciclo.
+    const faltando = imagens.filter(img => img.file_path && !(img.file_path in urlsImagem));
+    if (faltando.length === 0) return;
+    (async () => {
+      const pares = await Promise.all(
+        faltando.map(async (img) => [img.file_path, await getSignedUrl(img.file_path)]),
+      );
+      if (!vivo) return;
+      setUrlsImagem(prev => ({ ...prev, ...Object.fromEntries(pares) }));
+    })();
+    return () => { vivo = false; };
+  }, [imagens, urlsImagem, getSignedUrl]);
+
+  const MAX_IMAGENS = 4;
+  const alternarImagem = (doc) => setImagens((atual) => {
+    if (atual.some(i => i.id === doc.id)) return atual.filter(i => i.id !== doc.id);
+    if (atual.length >= MAX_IMAGENS) return atual;
+    return [...atual, { id: doc.id, title: doc.title, file_path: doc.file_path }];
+  });
+
+  const imagensParaDoc = useMemo(
+    () => imagens.map(img => ({ ...img, url: urlsImagem[img.file_path] })).filter(i => i.url),
+    [imagens, urlsImagem],
+  );
   const [aviso, setAviso] = useState(null);
 
   const S = useMemo(
-    () => avaliarProposta({ lead, rascunho, bloqueados, requisitos, fatos }),
-    [lead, rascunho, bloqueados, requisitos, fatos],
+    () => avaliarProposta({ lead, rascunho, bloqueados, requisitos, fatos, itens }),
+    [lead, rascunho, bloqueados, requisitos, fatos, itens],
   );
 
   const editar = (chave, valor) => setRascunho(r => ({ ...r, [chave]: valor }));
@@ -155,8 +241,11 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
     try {
       await persist({
         draftText: null,
-        // Sem `items`: este painel não gerencia linha de item. Passar `[]`
-        // apagava as que existissem e zerava o total via trigger.
+        // Só manda `items` quando há linha de verdade. `[]` num negócio que
+        // nunca teve item continua sendo `undefined` pro hook — ele distingue
+        // "não gerencio linha" de "apaguei todas", e passar `[]` sem querer
+        // zerava o total pelo gatilho.
+        ...(S.itensUsados.length > 0 || lineItems.length > 0 ? { items: S.itensUsados } : {}),
         createdBy: currentUser?.id,
         // Snapshot, não espelho: o que o cliente recebeu naquele dia fica como
         // estava, mesmo que o negócio mude depois.
@@ -165,7 +254,9 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
         // a etiqueta "· do negócio" nunca mais apareceria. O documento
         // impresso continua sendo retrato do dia porque `fatos` e os valores
         // efetivos vão junto.
-        rfpSnapshot: { rfp: rascunho, efetivo: S.rfp, bloqueados, requisitos, fatos, esgKg, geradoEm: new Date().toISOString() },
+        // `imagens` guarda id/título/caminho — NUNCA a URL assinada, que
+        // expira em 1h e deixaria o retrato quebrado amanhã.
+        rfpSnapshot: { rfp: rascunho, efetivo: S.rfp, bloqueados, requisitos, fatos, esgKg, imagens, itens: S.itensUsados, geradoEm: new Date().toISOString() },
         novaVersao: true,
       });
       // A atividade "proposta gerada" existia na aba antiga (era a Fase 3
@@ -277,7 +368,7 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
           </span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-          {CAMPOS_RFP.map((c) => {
+          {CAMPOS_RFP.filter(c => !(S.temItens && CAMPOS_SUBSTITUIDOS_POR_ITENS.includes(c.chave))).map((c) => {
             const veioDoLead = S.doLead[c.chave] !== undefined && rascunho[c.chave] === undefined;
             const valor = S.rfp[c.chave] ?? "";
             return (
@@ -305,7 +396,30 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
             );
           })}
         </div>
+        {S.temItens && (
+          <p style={{ fontSize: 10.5, color: "var(--text-faint)", margin: "9px 0 0", lineHeight: 1.5 }}>
+            Quantidade e preço saíram daqui porque a proposta tem itens — cada um com o seu, logo abaixo.
+          </p>
+        )}
       </div>
+
+      {/* ── Itens da proposta ───────────────────────────────────────────── */}
+      <ItensDaProposta
+        itens={itens}
+        setItens={setItens}
+        S={S}
+        proposal={proposal}
+        versoes={versoes}
+      />
+
+      {/* ── Imagens do Pitch ────────────────────────────────────────────── */}
+      <ImagensDoPitch
+        disponiveis={imagensDisponiveis}
+        selecionadas={imagens}
+        alternar={alternarImagem}
+        max={MAX_IMAGENS}
+        erro={erroBiblioteca}
+      />
 
       {/* ── Matriz de conformidade ──────────────────────────────────────── */}
       <div style={cardSt}>
@@ -436,8 +550,213 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
         <DocTecnica S={S} fatos={fatos} lead={lead} requisitos={requisitos} bloqueados={bloqueados} />
       </div>
       <div id="proposta-doc-2" data-proposta-doc style={{ display: "none" }}>
-        <DocPitch S={S} fatos={fatos} esgKg={esgKg} />
+        <DocPitch S={S} fatos={fatos} esgKg={esgKg} imagens={imagensParaDoc} />
       </div>
+    </div>
+  );
+}
+
+// ── Itens da proposta ──────────────────────────────────────────────────────
+// Restaura o CPQ que a aba anterior tinha e que se perdeu na reescrita: a
+// tabela `proposal_line_items` seguiu em produção, com gatilho e policies,
+// mas sem NINGUÉM escrevendo nela desde 15/09/2026.
+function ItensDaProposta({ itens, setItens, S, proposal, versoes }) {
+  const editar = (i, campo, valor) =>
+    setItens(xs => xs.map((x, j) => (j === i ? { ...x, [campo]: valor } : x)));
+
+  // A primeira linha nasce com o que o NEGÓCIO já respondeu (produto, qtd,
+  // preço da Classe 2). Se ela nascesse vazia, o vendedor redigitaria o que
+  // o funil sabe — que é justamente o ganho de a proposta morar aqui dentro.
+  const adicionar = () => setItens(xs => xs.length === 0
+    ? [{
+      modelLabel: S.rfp.produto || "",
+      quantity: S.rfp.qtd || "",
+      unitPrice: S.rfp.preco || "",
+      certificationNote: "",
+    }]
+    : [...xs, { modelLabel: "", quantity: "", unitPrice: "", certificationNote: "" }]);
+
+  // Nota de certificação: o modelo sugere, o vendedor manda. Só preenche
+  // campo VAZIO — sobrescrever o que ele escreveu seria perder texto sem aviso.
+  const escolherModelo = (i, valor) => setItens(xs => xs.map((x, j) => {
+    if (j !== i) return x;
+    const dica = SANBAG_MODELS.find(m => m.label === valor)?.certificationHint;
+    return { ...x, modelLabel: valor, certificationNote: x.certificationNote || dica || "" };
+  }));
+
+  const totalGravado = Number(proposal?.total_value);
+  const temTotalGravado = Number.isFinite(totalGravado) && versoes.length > 0;
+  // Centavos de diferença entre o numeric do Postgres e o float do JS não são
+  // "edição não gerada" — meio centavo de tolerância.
+  const divergente = temTotalGravado && Math.abs(totalGravado - S.somaLinhas) > 0.005;
+
+  return (
+    <div style={cardSt}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+        <b style={{ fontSize: 12, fontWeight: 700 }}>Itens da proposta</b>
+        <button
+          type="button"
+          onClick={adicionar}
+          style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 7, padding: "4px 9px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+        >
+          <Plus size={11} /> Item
+        </button>
+      </div>
+
+      {itens.length === 0 && (
+        <p style={{ fontSize: 11.5, color: "var(--text-faint)", margin: 0, lineHeight: 1.5 }}>
+          Uma RFP de big bag quase nunca cota um modelo só. Com itens aqui, quantidade e preço saem
+          da ficha acima e cada linha leva o seu — o primeiro já vem preenchido com o que o negócio respondeu.
+        </p>
+      )}
+
+      {itens.map((it, i) => (
+        <div key={i} style={{ borderTop: "1px solid var(--border)", paddingTop: 8, marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+            <input
+              list="sanbag-modelos"
+              placeholder="Modelo"
+              value={it.modelLabel}
+              onChange={(e) => escolherModelo(i, e.target.value)}
+              style={{ ...inputSt, fontSize: 13 }}
+            />
+            <button
+              type="button"
+              onClick={() => setItens(xs => xs.filter((_, j) => j !== i))}
+              title="Remover item"
+              aria-label="Remover item"
+              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", padding: 6, flexShrink: 0 }}
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <label style={rotuloSt}>Quantidade (un)</label>
+              <input
+                type="number"
+                min="0"
+                value={it.quantity}
+                onChange={(e) => editar(i, "quantity", e.target.value)}
+                style={{ ...inputSt, fontSize: 13 }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <label style={rotuloSt}>Preço unitário</label>
+              <CurrencyInput
+                value={it.unitPrice}
+                onChange={(v) => editar(i, "unitPrice", v)}
+                style={{ ...inputSt, fontSize: 13 }}
+                ariaLabel={`Preço unitário do item ${i + 1}`}
+              />
+            </div>
+          </div>
+          <input
+            placeholder="Certificação que sustenta este modelo"
+            value={it.certificationNote}
+            onChange={(e) => editar(i, "certificationNote", e.target.value)}
+            style={{ ...inputSt, fontSize: 13 }}
+          />
+          <div style={{ fontSize: 10.5, color: "var(--text-faint)", textAlign: "right" }}>
+            {formatBRLCentavos((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0))}
+          </div>
+        </div>
+      ))}
+
+      <datalist id="sanbag-modelos">
+        {SANBAG_MODELS.map(m => <option key={m.label} value={m.label} />)}
+      </datalist>
+
+      {S.temItens && (
+        <div style={{ borderTop: "1px solid var(--border)", marginTop: 9, paddingTop: 8, fontSize: 11.5, lineHeight: 1.6 }}>
+          {/* Regra 14 do CLAUDE.md: os dois números aparecem com a origem
+              escrita. A soma é do que está na tela agora; o total é o que o
+              gatilho calculou no banco na última geração. Mostrar um só, sem
+              dizer qual, é o que faz alguém mandar preço errado pro cliente. */}
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+            <span style={{ color: "var(--text-dim)" }}>Soma das linhas (nesta tela)</span>
+            <b>{formatBRLCentavos(S.somaLinhas)}</b>
+          </div>
+          {temTotalGravado && (
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 2 }}>
+              <span style={{ color: "var(--text-dim)" }}>Total da v{versoes[0].version} · calculado no banco</span>
+              <b>{formatBRLCentavos(totalGravado)}</b>
+            </div>
+          )}
+          {divergente && (
+            <p style={{ color: "var(--warning)", margin: "5px 0 0", fontSize: 10.5 }}>
+              A soma atual difere do total da última versão — há edição ainda não gerada.
+            </p>
+          )}
+          {S.itensIncompletos > 0 && (
+            <p style={{ color: "var(--warning)", margin: "5px 0 0", fontSize: 10.5 }}>
+              {S.itensIncompletos} {S.itensIncompletos === 1 ? "item sem" : "itens sem"} modelo, quantidade ou preço — a proposta sai como rascunho.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Imagens do Pitch ───────────────────────────────────────────────────────
+// Vêm da Biblioteca de Documentos, não embutidas na peça. O gerador em HTML
+// que originou esta tela carregava ~1,3 MB de base64 dentro do arquivo: cada
+// cópia com as próprias imagens, envelhecendo junto — a mesma doença da
+// tagline descontinuada que sobreviveu lá dentro.
+function ImagensDoPitch({ disponiveis, selecionadas, alternar, max, erro }) {
+  const cheio = selecionadas.length >= max;
+  return (
+    <div style={cardSt}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+        <ImageIcon size={12} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
+        <b style={{ fontSize: 12, fontWeight: 700 }}>Imagens do Pitch</b>
+        <span style={{ fontSize: 10.5, color: "var(--text-faint)", marginLeft: "auto" }}>
+          {selecionadas.length}/{max}
+        </span>
+      </div>
+
+      {erro && <ErroDeLeitura oQue="a Biblioteca de Documentos" detalhe={erro} />}
+
+      {!erro && disponiveis.length === 0 && (
+        <p style={{ fontSize: 11.5, color: "var(--text-faint)", margin: 0, lineHeight: 1.5 }}>
+          Nenhuma imagem desta frente na Biblioteca de Documentos. Suba lá (JPEG, PNG ou WebP) e ela
+          aparece aqui para toda proposta — em vez de viajar dentro de cada arquivo.
+        </p>
+      )}
+
+      {disponiveis.map((d) => {
+        const marcada = selecionadas.some(i => i.id === d.id);
+        return (
+          <label
+            key={d.id}
+            style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "6px 0",
+              borderTop: "1px solid var(--border)", fontSize: 12.5,
+              cursor: !marcada && cheio ? "not-allowed" : "pointer",
+              opacity: !marcada && cheio ? 0.5 : 1,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={marcada}
+              disabled={!marcada && cheio}
+              onChange={() => alternar(d)}
+              style={{ flexShrink: 0 }}
+            />
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {d.title}
+            </span>
+          </label>
+        );
+      })}
+
+      {disponiveis.length > 0 && (
+        <p style={{ fontSize: 10.5, color: "var(--text-faint)", margin: "8px 0 0", lineHeight: 1.5 }}>
+          Entram no Pitch, não na ficha técnica. A peça guarda a referência ao documento — trocou o
+          arquivo na Biblioteca, a próxima proposta já sai com a imagem nova.
+        </p>
+      )}
     </div>
   );
 }
@@ -473,7 +792,50 @@ function Rodape({ fatos }) {
   );
 }
 
-function DocTecnica({ S, fatos, requisitos, bloqueados }) {
+// Tabela de itens impressa — a MESMA nos dois documentos, porque é o mesmo
+// fato. A soma vem de S.somaLinhas (utils/proposta-rfp.js), a única conta que
+// o cliente faz, e ela está rotulada lá e aqui.
+function TabelaItens({ S }) {
+  return (
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr>
+          <th style={thSt}>Modelo</th>
+          <th style={{ ...thSt, textAlign: "right" }}>Qtd</th>
+          <th style={{ ...thSt, textAlign: "right" }}>Preço un.</th>
+          <th style={{ ...thSt, textAlign: "right" }}>Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {S.itensUsados.map((it, i) => (
+          <tr key={i}>
+            <td style={tdSt}>
+              {pend(it.modelLabel)}
+              {it.certificationNote && (
+                <div style={{ fontSize: 10.5, color: P_DIM }}>{it.certificationNote}</div>
+              )}
+            </td>
+            <td style={{ ...tdSt, textAlign: "right" }}>
+              {Number(it.quantity) > 0 ? Number(it.quantity).toLocaleString("pt-BR") : pend(null)}
+            </td>
+            <td style={{ ...tdSt, textAlign: "right" }}>
+              {Number(it.unitPrice) > 0 ? formatBRLCentavos(Number(it.unitPrice)) : pend(null)}
+            </td>
+            <td style={{ ...tdSt, textAlign: "right" }}>
+              {formatBRLCentavos((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0))}
+            </td>
+          </tr>
+        ))}
+        <tr>
+          <td colSpan={3} style={{ ...tdSt, textAlign: "right", fontWeight: 700, borderBottom: "none" }}>Total</td>
+          <td style={{ ...tdSt, textAlign: "right", fontWeight: 700, borderBottom: "none" }}>{formatBRLCentavos(S.somaLinhas)}</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+export function DocTecnica({ S, fatos, requisitos, bloqueados }) {
   const r = S.rfp;
   const conf = [
     ...(fatos.homologacao ? [{ e: "Homologação de produto", c: fatos.homologacao, n: "INMETRO" }] : []),
@@ -498,8 +860,12 @@ function DocTecnica({ S, fatos, requisitos, bloqueados }) {
           {[
             ["Produto ofertado", pend(r.produto)],
             ["Dimensão", r.dimensao || "a definir"],
-            ["Quantidade", r.qtd ? `${Number(r.qtd).toLocaleString("pt-BR")} un` : pend(null)],
-            ["Preço unitário", r.preco ? formatBRL(Number(r.preco)) : pend(null)],
+            // Com itens, quantidade e preço viram a tabela logo abaixo — o
+            // mesmo número em dois lugares é o defeito que a regra 14 descreve.
+            ...(S.temItens ? [] : [
+              ["Quantidade", r.qtd ? `${Number(r.qtd).toLocaleString("pt-BR")} un` : pend(null)],
+              ["Preço unitário", r.preco ? formatBRLCentavos(Number(r.preco)) : pend(null)],
+            ]),
             ["Prazo de entrega", pend(r.prazo)],
             ["Incoterm", r.incoterm || "a definir"],
             ["Validade da proposta", pend(r.validade)],
@@ -515,7 +881,14 @@ function DocTecnica({ S, fatos, requisitos, bloqueados }) {
         </tbody>
       </table>
 
-      <h2 style={h2St}>2 · Matriz de conformidade</h2>
+      {S.temItens && (
+        <>
+          <h2 style={h2St}>2 · Itens cotados</h2>
+          <TabelaItens S={S} />
+        </>
+      )}
+
+      <h2 style={h2St}>{S.temItens ? 3 : 2} · Matriz de conformidade</h2>
       <p style={{ fontSize: 10.5, color: P_DIM, margin: "0 0 5px" }}>
         Cada linha é uma afirmação que o comprador pode levar para a auditoria dele. Nenhuma sai sem norma nomeada.
       </p>
@@ -528,14 +901,14 @@ function DocTecnica({ S, fatos, requisitos, bloqueados }) {
         </tbody>
       </table>
 
-      <h2 style={h2St}>3 · Contato</h2>
+      <h2 style={h2St}>{S.temItens ? 4 : 3} · Contato</h2>
       <p style={{ margin: 0 }}>{pend(r.vendedor)}{r.contato ? ` · comprador: ${r.contato}` : ""}</p>
       <Rodape fatos={fatos} />
     </div>
   );
 }
 
-function DocPitch({ S, fatos, esgKg = 0 }) {
+export function DocPitch({ S, fatos, esgKg = 0, imagens = [] }) {
   const r = S.rfp;
   return (
     <div style={docSt}>
@@ -547,16 +920,45 @@ function DocPitch({ S, fatos, esgKg = 0 }) {
         {fatos.endosso && <p style={{ color: "#B0B0B0", margin: "10px 0 0", fontSize: 12 }}>{fatos.endosso}</p>}
       </div>
 
+      {imagens.length > 0 && (
+        // `break-inside: avoid` pra a legenda não descolar da foto na quebra
+        // de página. Grid de 2 colunas: com 1 imagem ela ocupa a linha toda
+        // pelo `minmax`, com 4 fecham duas linhas cheias.
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10, marginBottom: 20 }}>
+          {imagens.map((img) => (
+            <figure key={img.id} style={{ margin: 0, breakInside: "avoid" }}>
+              <img
+                src={img.url}
+                alt={img.title || ""}
+                style={{ width: "100%", height: 150, objectFit: "cover", display: "block", borderRadius: 3 }}
+              />
+              <figcaption style={{ fontSize: 10, color: P_DIM, marginTop: 4 }}>{img.title}</figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+
       <div style={{ fontSize: 9.5, letterSpacing: "0.12em", textTransform: "uppercase", color: P_DIM, fontWeight: 700 }}>Documento 2 · proposta comercial</div>
       <h1 style={h1St}>{pend(r.cliente)}</h1>
       <p style={{ color: P_DIM, margin: "0 0 4px" }}>{[r.aplicacao, r.data && formatDateBR(r.data)].filter(Boolean).join(" · ")}</p>
 
       <h2 style={h2St}>O que está sendo proposto</h2>
-      <p>
-        {pend(r.produto)}{r.dimensao ? `, ${r.dimensao}` : ""}
-        {r.qtd ? `, ${Number(r.qtd).toLocaleString("pt-BR")} unidades` : ""}
-        {r.aplicacao ? `, para ${r.aplicacao}` : ""}.
-      </p>
+      {S.temItens ? (
+        <>
+          <p>
+            {S.itensUsados.length} {S.itensUsados.length === 1 ? "modelo cotado" : "modelos cotados"}
+            {r.dimensao ? `, ${r.dimensao}` : ""}
+            {r.aplicacao ? `, para ${r.aplicacao}` : ""}.
+          </p>
+          <TabelaItens S={S} />
+        </>
+      ) : (
+        <p>
+          {pend(r.produto)}{r.dimensao ? `, ${r.dimensao}` : ""}
+          {r.qtd ? `, ${Number(r.qtd).toLocaleString("pt-BR")} unidades` : ""}
+          {r.aplicacao ? `, para ${r.aplicacao}` : ""}.
+        </p>
+      )}
 
       <h2 style={h2St}>O que a embalagem comprova em auditoria</h2>
       <p>{fatos.homologacao || <span style={{ color: P_DIM }}>Homologação não preenchida na base da marca.</span>}</p>
@@ -566,7 +968,7 @@ function DocPitch({ S, fatos, esgKg = 0 }) {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <tbody>
           {[
-            ["Preço unitário", r.preco ? formatBRL(Number(r.preco)) : pend(null)],
+            ...(S.temItens ? [] : [["Preço unitário", r.preco ? formatBRLCentavos(Number(r.preco)) : pend(null)]]),
             ["Prazo de entrega", pend(r.prazo)],
             ["Incoterm", r.incoterm || "a definir"],
             ["Validade", pend(r.validade)],

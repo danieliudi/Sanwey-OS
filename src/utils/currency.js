@@ -16,6 +16,23 @@ export function formatBRL(value) {
   return brlFull.format(n);
 }
 
+// Centavos, sempre os dois. `formatBRL` arredonda pro real inteiro de
+// propósito (cartão de KPI não quer "R$ 1.284.332,47"), mas há um lugar onde
+// isso é errado: PREÇO UNITÁRIO de proposta comercial. R$ 48,90 saindo como
+// "R$ 49" na mesma folha em que o subtotal diz R$ 195.600 faz o documento se
+// contradizer — o comprador multiplica 4.000 × 49 e acha R$ 196.000.
+// Achado na captura da regra 15 em 15/09/2026; build e ESLint não veem isto.
+// Não mexa em `formatBRL`: são 74+ chamadas que querem o real inteiro.
+const brlCentavos = new Intl.NumberFormat("pt-BR", {
+  style: "currency", currency: "BRL",
+  minimumFractionDigits: 2, maximumFractionDigits: 2,
+});
+export function formatBRLCentavos(value) {
+  const n = typeof value === "string" ? Number(value) : value;
+  if (!Number.isFinite(n)) return "R$ 0,00";
+  return brlCentavos.format(n);
+}
+
 // "R$ 123k" / "R$ 1.2M" — compact display used across KPI cards.
 export function formatBRLCompact(rawValue, { decimals = 0 } = {}) {
   const value = typeof rawValue === "string" ? Number(rawValue) : rawValue;
