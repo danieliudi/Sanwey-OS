@@ -90,3 +90,38 @@ Biblioteca, que é onde ela já é versionada e tem escopo por frente.
 
 Captura de tela na largura real dos dois documentos **com conteúdo**, não só a
 prova de isolamento de impressão que a entrega anterior deixou registrada.
+
+---
+
+## Revisão de 15/09/2026 — o que os dois revisores acharam
+
+QA e Segurança rodaram em paralelo e **acharam o mesmo bloqueante de forma
+independente**, o que é o sinal de que ele era real e não opinião.
+
+| # | Grau | O que era | Estado |
+|---|---|---|---|
+| 1 | ALTO | Linha começada e não terminada mandava **string vazia** pra coluna `numeric NOT NULL` (`''::numeric` = erro 22P02). O throw acontecia DEPOIS de a versão já existir: sobrava uma v{n} com snapshot de itens, zero itens e total zero — uma a cada clique em "Gerar". Regressão de uma guarda que a aba anterior tinha. | corrigido: coerção no `use-proposals.js`, zero é o valor de pendência |
+| 2 | MÉDIO | Card "Estado da peça" não listava item incompleto: chip dizia "Sai como rascunho" e a linha de motivos terminava num `" · "` solto | corrigido |
+| 3 | MÉDIO | `loading` da Biblioteca descartado — a tela afirmava "nenhuma imagem, suba lá" enquanto carregava | corrigido |
+| 4 | MÉDIO | Imagem cuja assinatura falhou sumia do papel em silêncio, com a caixa ainda marcada | corrigido: aviso no card + etiqueta "NÃO ABRIU" na linha |
+| 5 | MÉDIO | "Total da v1 · calculado no banco: **R$ 0,00**" em versão gerada antes de itens existirem (`total_value` é `DEFAULT 0`) — o rótulo que dá autoridade ao número dizendo que a proposta valia zero | corrigido: só aparece se a versão tiver linha |
+| 6 | BAIXO | Ficha técnica dizia "Produto ofertado" no singular enquanto o Pitch do mesmo dia dizia "3 modelos cotados" | corrigido: sai do Sumário quando há itens |
+| 7 | BAIXO | Ramo morto "`company_ids` vazio = todas as frentes" — estado inalcançável que, inserido por SQL, viraria o único documento a aparecer em TODA frente | removido |
+| 8 | BAIXO | `DELETE` de itens sem checagem de zero-linha | documentado: num DELETE, zero linha é o caso normal — a checagem quebraria o caminho feliz; quem cobre é a policy, que usa o mesmo predicado em `USING` e `WITH CHECK` |
+| 9 | BAIXO | `qa:proposta` só renderizava o caminho COM itens | corrigido: 4 folhas, as duas últimas sem item nenhum |
+
+### Aberto — precisa de decisão do Daniel, não de código
+
+**Imagem pode atravessar frentes, para 4 usuários.** A RLS de
+`document_library` escopa por empresa do **usuário**, não do **negócio**: para
+1 admin e 3 vendedores/gerentes de mais de uma frente, ela entrega Resibag e
+Sanwey, e o único controle que alinha a imagem à frente do lead é o filtro no
+cliente. Não é vazamento de acesso (essas pessoas já podem ler os dois
+documentos) — é **mistura de marca num PDF que vai ao cliente final**.
+
+A tabela-irmã mais próxima, `lead_document_refs`, tem exatamente a mesma
+lacuna, então este caminho espelha o precedente em vez de inventar modelo
+próprio. Amarrar no servidor exige trocar o jsonb do snapshot por tabela
+filha sob RLS com `WITH CHECK` comparando a frente do documento com a do
+lead — **migration nova, logo confirmação explícita do Daniel** (regra 5).
+Registrado aqui e no comentário do próprio código; nada foi aplicado.

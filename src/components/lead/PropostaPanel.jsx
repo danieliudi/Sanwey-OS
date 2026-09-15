@@ -187,10 +187,25 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
   // Bucket `document-library` é privado: a URL é assinada por 1h e refeita a
   // cada abertura. Guardar a assinada no snapshot faria a v1 abrir quebrada
   // no dia seguinte — por isso o snapshot só carrega id/título/caminho.
-  const { documents: docsBiblioteca, getSignedUrl, error: erroBiblioteca } = useDocumentLibrary();
+  const { documents: docsBiblioteca, getSignedUrl, loading: carregandoBiblioteca, error: erroBiblioteca } = useDocumentLibrary();
+  // Sem ramo de "company_ids vazio = todas as frentes": esse estado NÃO existe
+  // — `DocumentLibraryView` recusa salvar sem ao menos uma empresa, e a RLS da
+  // biblioteca usa `company_ids && current_user_companies()`, que é falso pra
+  // array vazio (o documento nem apareceria). O ramo era morto e perigoso: se
+  // alguém inserisse por SQL, seria o único documento a aparecer em TODA
+  // frente neste seletor. Achado da revisão de Segurança de 15/09/2026.
+  //
+  // LIMITE CONHECIDO, registrado em vez de fingido: este filtro é do CLIENTE.
+  // A RLS de `document_library` escopa por empresa do USUÁRIO, não do negócio
+  // — para admin e para vendedor/gerente de mais de uma frente, ela entrega as
+  // duas, e só esta linha alinha o documento à frente do lead. Amarrar isso no
+  // servidor exige tabela filha com RLS no lugar do jsonb do snapshot, ou seja
+  // migration nova — decisão do Daniel (regra 5). A tabela-irmã mais próxima,
+  // `lead_document_refs`, tem exatamente a mesma lacuna, então este caminho
+  // espelha o precedente em vez de inventar modelo de permissão próprio.
   const imagensDisponiveis = useMemo(() => docsBiblioteca.filter(d =>
     (d.mime_type || "").startsWith("image/")
-    && (!Array.isArray(d.company_ids) || d.company_ids.length === 0 || d.company_ids.includes(lead.companyId))
+    && Array.isArray(d.company_ids) && d.company_ids.includes(lead.companyId)
   ), [docsBiblioteca, lead.companyId]);
 
   const [urlsImagem, setUrlsImagem] = useState({});
@@ -224,6 +239,14 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
     () => imagens.map(img => ({ ...img, url: urlsImagem[img.file_path] })).filter(i => i.url),
     [imagens, urlsImagem],
   );
+  // `null` gravado = a assinatura FALHOU (RLS de Storage barrou, ou o painel
+  // ficou aberto mais de 1h e a URL venceu). Sem contar isto, o Pitch saía no
+  // papel sem as fotos e sem nenhum sinal na tela — e este arquivo e os dois
+  // vizinhos já tratam negação de RLS explicitamente em toda escrita. Achado
+  // da revisão de Segurança de 15/09/2026.
+  const imagensSemUrl = imagens.filter(
+    img => img.file_path in urlsImagem && !urlsImagem[img.file_path],
+  ).length;
   const [aviso, setAviso] = useState(null);
 
   const S = useMemo(
@@ -313,6 +336,12 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
                 S.faltamRfp.length ? `${S.faltamRfp.length} campo(s) em branco` : null,
                 S.pendentes.length ? `${S.pendentes.length} item(ns) sem confirmação` : null,
                 S.requisitosAbertos ? `${S.requisitosAbertos} cláusula(s) sem resposta` : null,
+                // `itensIncompletos` entrou em `rascunhoMarcado`
+                // (proposta-rfp.js) mas faltava aqui: com só um item pela
+                // metade e todo o resto fechado, o chip dizia "Sai como
+                // rascunho" e a linha de motivos terminava num " · " solto,
+                // sem motivo nenhum. Achado do QA de 15/09/2026.
+                S.itensIncompletos ? `${S.itensIncompletos} item(ns) sem modelo, quantidade ou preço` : null,
                 S.fatosFaltando.length ? `falta ${S.fatosFaltando.join(", ")} na base da marca` : null,
               ].filter(Boolean).join(" · ")}
             </>
@@ -410,6 +439,7 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
         S={S}
         proposal={proposal}
         versoes={versoes}
+        linhasGravadas={lineItems.length}
       />
 
       {/* ── Imagens do Pitch ────────────────────────────────────────────── */}
@@ -419,6 +449,9 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
         alternar={alternarImagem}
         max={MAX_IMAGENS}
         erro={erroBiblioteca}
+        semUrl={imagensSemUrl}
+        carregando={carregandoBiblioteca}
+        urls={urlsImagem}
       />
 
       {/* ── Matriz de conformidade ──────────────────────────────────────── */}
@@ -560,7 +593,7 @@ export function PropostaPanel({ lead, currentUser, onAddActivity }) {
 // Restaura o CPQ que a aba anterior tinha e que se perdeu na reescrita: a
 // tabela `proposal_line_items` seguiu em produção, com gatilho e policies,
 // mas sem NINGUÉM escrevendo nela desde 15/09/2026.
-function ItensDaProposta({ itens, setItens, S, proposal, versoes }) {
+function ItensDaProposta({ itens, setItens, S, proposal, versoes, linhasGravadas = 0 }) {
   const editar = (i, campo, valor) =>
     setItens(xs => xs.map((x, j) => (j === i ? { ...x, [campo]: valor } : x)));
 
@@ -585,7 +618,13 @@ function ItensDaProposta({ itens, setItens, S, proposal, versoes }) {
   }));
 
   const totalGravado = Number(proposal?.total_value);
-  const temTotalGravado = Number.isFinite(totalGravado) && versoes.length > 0;
+  // `linhasGravadas`, não `versoes.length`: `proposals.total_value` é
+  // `DEFAULT 0 NOT NULL`, então uma versão gerada pelo caminho antigo
+  // (qtd × preço, sem itens) tem total zero no banco. Exibi-la sob o rótulo
+  // "calculado no banco" dizia que a proposta que o cliente recebeu valia
+  // R$ 0,00 — e esse rótulo é justamente o que dá autoridade ao número.
+  // Regra 14 do CLAUDE.md. Achado do QA de 15/09/2026.
+  const temTotalGravado = Number.isFinite(totalGravado) && versoes.length > 0 && linhasGravadas > 0;
   // Centavos de diferença entre o numeric do Postgres e o float do JS não são
   // "edição não gerada" — meio centavo de tolerância.
   const divergente = temTotalGravado && Math.abs(totalGravado - S.somaLinhas) > 0.005;
@@ -704,7 +743,7 @@ function ItensDaProposta({ itens, setItens, S, proposal, versoes }) {
 // que originou esta tela carregava ~1,3 MB de base64 dentro do arquivo: cada
 // cópia com as próprias imagens, envelhecendo junto — a mesma doença da
 // tagline descontinuada que sobreviveu lá dentro.
-function ImagensDoPitch({ disponiveis, selecionadas, alternar, max, erro }) {
+function ImagensDoPitch({ disponiveis, selecionadas, alternar, max, erro, semUrl = 0, carregando = false, urls = {} }) {
   const cheio = selecionadas.length >= max;
   return (
     <div style={cardSt}>
@@ -718,15 +757,37 @@ function ImagensDoPitch({ disponiveis, selecionadas, alternar, max, erro }) {
 
       {erro && <ErroDeLeitura oQue="a Biblioteca de Documentos" detalhe={erro} />}
 
-      {!erro && disponiveis.length === 0 && (
+      {semUrl > 0 && (
+        // `--warning` e não `--danger`: pela convenção do CLAUDE.md o vermelho
+        // é bloqueio do input do usuário, e isto é permissão/expiração — não é
+        // o vendedor que resolve digitando melhor.
+        <p style={{ fontSize: 11, color: "var(--warning)", background: "var(--warning-bg)", borderRadius: 7, padding: "6px 9px", margin: "0 0 8px", lineHeight: 1.45 }}>
+          {semUrl === 1 ? "1 imagem desta proposta não pôde ser aberta" : `${semUrl} imagens desta proposta não puderam ser abertas`}
+          {" "}— verifique suas permissões na Biblioteca, ou recarregue a página se ela está aberta há mais de uma hora. O Pitch sai sem {semUrl === 1 ? "ela" : "elas"}.
+        </p>
+      )}
+
+      {/* Sem esta guarda, a tela AFIRMAVA "nenhuma imagem, suba lá" enquanto a
+          Biblioteca ainda carregava — instruindo a pessoa a subir de novo um
+          arquivo que já existe. É a classe de bug "campo sem opções
+          renderizando vazio" que o CLAUDE.md lista, na versão pior. */}
+      {!erro && carregando && (
+        <p style={{ fontSize: 11.5, color: "var(--text-faint)", margin: 0 }}>Carregando a Biblioteca…</p>
+      )}
+
+      {!erro && !carregando && disponiveis.length === 0 && (
         <p style={{ fontSize: 11.5, color: "var(--text-faint)", margin: 0, lineHeight: 1.5 }}>
           Nenhuma imagem desta frente na Biblioteca de Documentos. Suba lá (JPEG, PNG ou WebP) e ela
           aparece aqui para toda proposta — em vez de viajar dentro de cada arquivo.
         </p>
       )}
 
-      {disponiveis.map((d) => {
+      {!carregando && disponiveis.map((d) => {
         const marcada = selecionadas.some(i => i.id === d.id);
+        // Marcada mas sem URL = tentamos assinar e falhou. Sem dizer isto na
+        // própria linha, o vendedor vê a caixa marcada, o contador "2/4", e
+        // o papel sai com uma imagem a menos.
+        const falhou = marcada && (d.file_path in urls) && !urls[d.file_path];
         return (
           <label
             key={d.id}
@@ -747,6 +808,11 @@ function ImagensDoPitch({ disponiveis, selecionadas, alternar, max, erro }) {
             <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {d.title}
             </span>
+            {falhou && (
+              <span style={{ marginLeft: "auto", flexShrink: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.06em", padding: "1px 6px", borderRadius: 4, background: "var(--warning-bg)", color: "var(--warning)" }}>
+                NÃO ABRIU
+              </span>
+            )}
           </label>
         );
       })}
@@ -858,14 +924,17 @@ export function DocTecnica({ S, fatos, requisitos, bloqueados }) {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <tbody>
           {[
-            ["Produto ofertado", pend(r.produto)],
-            ["Dimensão", r.dimensao || "a definir"],
-            // Com itens, quantidade e preço viram a tabela logo abaixo — o
-            // mesmo número em dois lugares é o defeito que a regra 14 descreve.
+            // "Produto ofertado" sai junto com quantidade e preço quando há
+            // itens: mostrava só o modelo que semeou a linha 1, no singular,
+            // e a tabela logo abaixo dizia outra coisa — os dois documentos
+            // do mesmo dia discordavam de quantos modelos estavam cotados.
+            // Mesmo número em dois lugares é o defeito da regra 14.
             ...(S.temItens ? [] : [
+              ["Produto ofertado", pend(r.produto)],
               ["Quantidade", r.qtd ? `${Number(r.qtd).toLocaleString("pt-BR")} un` : pend(null)],
               ["Preço unitário", r.preco ? formatBRLCentavos(Number(r.preco)) : pend(null)],
             ]),
+            ["Dimensão", r.dimensao || "a definir"],
             ["Prazo de entrega", pend(r.prazo)],
             ["Incoterm", r.incoterm || "a definir"],
             ["Validade da proposta", pend(r.validade)],

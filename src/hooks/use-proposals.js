@@ -123,18 +123,36 @@ export function useProposals(leadId, companyId) {
     // destruí-las.
     const gerenciaItens = Array.isArray(items);
     if (gerenciaItens) {
+      // Sem checagem de zero-linha aqui, ao contrário das outras escritas
+      // deste arquivo — e é de propósito. Num DELETE, zero linha afetada é o
+      // caso NORMAL (versão recém-criada não tem item nenhum), então não dá
+      // pra distinguir "RLS barrou" de "não havia o que apagar": a checagem
+      // que protege o UPDATE acima quebraria o caminho feliz aqui.
+      // O que cobre esse flanco é a policy: `proposal_line_items_all` usa o
+      // MESMO predicado em USING e WITH CHECK, então DELETE barrado implica
+      // INSERT barrado — e esse volta 42501, capturado logo abaixo.
       const { error: delErr } = await supabase.from(ITEMS_TABLE).delete().eq("proposal_id", p.id);
       if (delErr) throw new Error(delErr.message);
     }
 
     let insertedItems = [];
     if (gerenciaItens && items.length > 0) {
+      // Coerção obrigatória, não defensiva: `quantity` e `unit_price` são
+      // `numeric NOT NULL`, e a tela manda STRING VAZIA numa linha que o
+      // vendedor começou e não terminou (modelo digitado, preço em branco —
+      // que é justamente a linha que a proposta deve imprimir como PENDENTE).
+      // `''::numeric` é erro 22P02 no Postgres, e o throw acontecia DEPOIS de
+      // a versão já ter sido criada acima: sobrava uma linha em `proposals`
+      // com snapshot de itens, zero itens e total zero — uma a cada clique em
+      // "Gerar". Achado ALTO da revisão de Segurança de 15/09/2026.
+      // Zero é o valor pretendido pra pendência (é o default da coluna) e
+      // mantém o total do gatilho honesto: linha sem preço não soma nada.
       const { data: ins, error: insErr } = await supabase.from(ITEMS_TABLE).insert(
         items.map(it => ({
           proposal_id: p.id,
-          model_label: it.modelLabel,
-          quantity: it.quantity,
-          unit_price: it.unitPrice,
+          model_label: it.modelLabel || "",
+          quantity: Number(it.quantity) || 0,
+          unit_price: Number(it.unitPrice) || 0,
           certification_note: it.certificationNote || null,
         }))
       ).select();
