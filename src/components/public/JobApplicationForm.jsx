@@ -302,7 +302,7 @@ export default function JobApplicationForm() {
 
         <Field
           label="Currículo"
-          hint={resumeRequired ? "PDF ou DOCX, até 10MB" : "PDF ou DOCX, até 10MB — opcional para esta vaga"}
+          hint={resumeRequired ? "PDF, DOCX ou foto do currículo — até 10MB" : "PDF, DOCX ou foto do currículo — até 10MB, opcional para esta vaga"}
           required={resumeRequired}
         >
           <label style={{
@@ -312,12 +312,17 @@ export default function JobApplicationForm() {
           }}>
             <Upload size={16} style={{ color: ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: file ? "#201a1a" : "#6B7280", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {file ? file.name : "Selecionar arquivo…"}
+              {file ? file.name : "Selecionar arquivo ou tirar foto…"}
             </span>
             {file && <FileText size={14} style={{ color: "#16A34A", flexShrink: 0 }} />}
             <input
               type="file"
-              accept=".pdf,.docx"
+              // `image/*` no accept é o que faz o celular oferecer a CÂMERA
+              // junto da galeria e dos arquivos. Sem ele, quem só tem o
+              // currículo em papel não tem caminho nenhum. As extensões
+              // continuam listadas porque no desktop é o accept que filtra o
+              // seletor de arquivo.
+              accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,image/*"
               onChange={e => handleFile(e.target.files?.[0] || null)}
               style={{ display: "none" }}
             />
