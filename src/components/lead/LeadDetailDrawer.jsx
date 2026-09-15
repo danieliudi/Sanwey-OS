@@ -32,7 +32,7 @@ import { useLeadSamples } from "../../hooks/use-lead-samples";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { Modal } from "../ui/Modal";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
-import { ProposalPanel } from "./ProposalPanel";
+import { PropostaPanel } from "./PropostaPanel";
 import { AtaVozPanel } from "./AtaVozPanel";
 import { VisitaChecklistPanel } from "./VisitaChecklistPanel";
 import { dividirRespostas } from "../../utils/checklist-visita";
@@ -1130,8 +1130,12 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
             {/* Mantido montado (display:none) quando a aba não está ativa pra
                 não perder o rascunho da proposta ao trocar de aba; key={lead.id}
                 reseta ao navegar pra outro lead. Achado da 2ª auditoria. */}
+            {/* A aba "PDF" (ProposalPanel) virou "Proposta" em 15/09/2026: o
+                gerador de RFP toma o lugar dela. A antiga tinha ZERO propostas
+                criadas em produção nas duas tabelas — não havia nada a migrar,
+                e conviver com as duas daria na mesma coisa de novo. */}
             <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
-              <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} onAddActivity={onAddActivity} />
+              <PropostaPanel key={lead.id} lead={lead} currentUser={currentUser} />
             </div>
         </>
       )}
@@ -1343,7 +1347,7 @@ const SIDE_TABS = [
   { id: "ia",           label: "IA",          icon: Sparkles },
   { id: "anexos",       label: "Anexos",      icon: Paperclip },
   { id: "checklists",   label: "Checklists",  icon: ListChecks },
-  { id: "pdf",          label: "PDF",         icon: FileDown },
+  { id: "pdf",          label: "Proposta",    icon: FileDown },
 ];
 
 function SideTabs({ activeTab, onChange }) {

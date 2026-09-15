@@ -11,6 +11,11 @@ const ITEMS_TABLE = "proposal_line_items";
 
 export function useProposals(leadId, companyId) {
   const [proposal, setProposal] = useState(null);
+  // Todas as versões, da mais nova pra mais velha. A Fase 1 guardava uma
+  // proposta só por negócio; com o gerador de RFP (15/09/2026) cada "Gerar"
+  // cria uma VERSÃO nova, porque é isso que se pergunta na revisão: qual foi
+  // a que o cliente recebeu. A coluna `version` já existia sem uso.
+  const [versoes, setVersoes] = useState([]);
   const [lineItems, setLineItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,9 +29,9 @@ export function useProposals(leadId, companyId) {
         .from(PROPOSALS_TABLE)
         .select("*")
         .eq("lead_id", leadId)
-        .order("version", { ascending: false })
-        .limit(1);
+        .order("version", { ascending: false });
       if (pErr) throw pErr;
+      setVersoes(proposals || []);
       const current = proposals?.[0] || null;
       setProposal(current);
       if (current) {
@@ -53,19 +58,26 @@ export function useProposals(leadId, companyId) {
   // insert) — volume baixo por proposta, não vale reconciliar diff. Chamado
   // só nos pontos de "Gerar"/"Gerar novamente" (ver ProposalPanel.jsx),
   // nunca a cada tecla digitada na tabela.
-  const persist = useCallback(async ({ draftText, items, createdBy }) => {
+  const persist = useCallback(async ({ draftText, items, createdBy, rfpSnapshot, novaVersao = false }) => {
     if (!isSupabaseConfigured || !leadId) return null;
     let p = proposal;
-    if (!p) {
+    // `novaVersao` cria uma linha nova em vez de sobrescrever a atual. É o
+    // caminho do gerador de RFP: a proposta que o cliente recebeu não pode
+    // ser reescrita por cima quando o vendedor gera a próxima.
+    if (!p || novaVersao) {
+      const proxima = (versoes[0]?.version ?? 0) + 1;
       const { data, error: err } = await supabase.from(PROPOSALS_TABLE).insert({
         lead_id: leadId, company_id: companyId, created_by: createdBy || null,
+        version: proxima,
       }).select().single();
       if (err) throw new Error(err.message);
       p = data;
     }
 
+    const patch = { ai_draft_text: draftText };
+    if (rfpSnapshot !== undefined) patch.rfp_snapshot = rfpSnapshot;
     const { data: textoSalvo, error: textErr } = await supabase.from(PROPOSALS_TABLE)
-      .update({ ai_draft_text: draftText })
+      .update(patch)
       .eq("id", p.id)
       .select();
     if (textErr) throw new Error(textErr.message);
@@ -100,11 +112,15 @@ export function useProposals(leadId, companyId) {
       .from(PROPOSALS_TABLE).select("*").eq("id", p.id).single();
     if (refetchErr) throw new Error(refetchErr.message);
     setProposal(p2);
+    setVersoes(prev => {
+      const semEla = prev.filter(v => v.id !== p2.id);
+      return [p2, ...semEla].sort((a, b) => (b.version ?? 0) - (a.version ?? 0));
+    });
     setLineItems(insertedItems);
     return p2;
-  }, [proposal, leadId, companyId]);
+  }, [proposal, versoes, leadId, companyId]);
 
-  return { proposal, lineItems, loading, error, persist, refetch: fetchAll };
+  return { proposal, versoes, lineItems, loading, error, persist, refetch: fetchAll };
 }
 
 export default useProposals;

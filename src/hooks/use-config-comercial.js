@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
+import { fatosDaFrente } from "../constants/fatos-canonicos";
 
 // Configuração comercial por frente — hoje só o limiar de "alto volume".
 //
@@ -89,6 +90,49 @@ export function useConfigComercial({ companyId } = {}) {
     [config],
   );
 
+  // Classe 1 da proposta: o que está configurado, com o padrão versionado em
+  // constants/fatos-canonicos.js por baixo. Nunca devolve vazio — proposta
+  // sem razão social não é proposta.
+  const fatosDe = useCallback(
+    (frente) => fatosDaFrente(frente, config?.[frente]?.fatos_canonicos),
+    [config],
+  );
+  const metaFatosDe = useCallback(
+    (frente) => ({
+      atualizadoEm:  config?.[frente]?.fatos_atualizados_em ?? null,
+      atualizadoPor: config?.[frente]?.fatos_atualizados_por ?? null,
+      configurados:  config?.[frente]?.fatos_canonicos ?? null,
+    }),
+    [config],
+  );
+
+  /**
+   * Grava os fatos canônicos de uma frente. Registra QUANDO e QUEM junto, e
+   * não é burocracia: o risco conhecido de deixar isto editável é a tela
+   * divergir da base de marca, e sem data e autor a divergência não aparece.
+   */
+  const salvarFatos = useCallback(async (frente, fatos, userId) => {
+    if (!isSupabaseConfigured) return { ok: false, motivo: "Supabase não configurado." };
+    const agora = new Date().toISOString();
+    const { data, error: err } = await supabase
+      .from(TABELA)
+      .upsert({
+        company_id: frente,
+        fatos_canonicos: fatos,
+        fatos_atualizados_em: agora,
+        fatos_atualizados_por: userId ?? null,
+        updated_at: agora,
+        updated_by: userId ?? null,
+      }, { onConflict: "company_id" })
+      .select();
+    if (err) return { ok: false, motivo: err.message };
+    if (!data || data.length === 0) {
+      return { ok: false, motivo: "Sem permissão para alterar os fatos da marca. Só admin e gerente podem." };
+    }
+    await fetchAll();
+    return { ok: true };
+  }, [fetchAll]);
+
   return {
     config,
     loading,
@@ -96,6 +140,10 @@ export function useConfigComercial({ companyId } = {}) {
     limiar: companyId ? limiarDe(companyId) : null,
     limiarDe,
     salvarLimiar,
+    fatos: companyId ? fatosDe(companyId) : null,
+    fatosDe,
+    metaFatosDe,
+    salvarFatos,
     refetch: fetchAll,
   };
 }
