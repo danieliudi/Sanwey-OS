@@ -2,12 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, Upload, FileText } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
+import { validarCurriculo, extensaoDe, MIME_POR_EXTENSAO } from "../../utils/curriculo-upload";
 
 // Banco de talentos (Onda 2, item 5): candidatura pública SEM vaga específica.
 // Mesma casca visual do JobApplicationForm (/vagas/:slug), mas grava direto no
 // banco de talentos via submit_talent_pool_application — sem rh_aplicacoes.
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -18,13 +18,9 @@ const ALLOWED_TYPES = [
 // Storage ANTES de chegar na RLS — com o candidato já gravado e o currículo
 // não. Daqui pra frente o tipo é derivado da extensão, que é o que o nome do
 // arquivo garante.
-const MIME_POR_EXTENSAO = {
-  pdf:  "application/pdf",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-};
-function extensaoDe(nome) {
-  return (nome || "").split(".").pop()?.toLowerCase() || "";
-}
+// MIME_POR_EXTENSAO, extensaoDe e a validação vêm de
+// utils/curriculo-upload.js — eram cópias daqui, e a divergência entre as
+// duas cópias foi o que quebrou o formulário de vagas.
 const ACCENT = "#CC2936";
 const UNIDADES = [
   { id: "", label: "Não tenho preferência" },
@@ -58,11 +54,8 @@ export default function TalentPoolForm() {
   const handleFile = (f) => {
     setFileError(null);
     if (!f) { setFile(null); return; }
-    // Valida pela EXTENSÃO, não pelo `file.type`: navegador que devolve tipo
-    // vazio fazia a tela recusar um .pdf perfeitamente válido.
-    const ext = extensaoDe(f.name);
-    if (!MIME_POR_EXTENSAO[ext]) { setFileError("Envie um arquivo PDF ou DOCX."); return; }
-    if (f.size > MAX_FILE_SIZE) { setFileError("O arquivo deve ter no máximo 10MB."); return; }
+    const r = validarCurriculo(f);
+    if (!r.ok) { setFileError(r.erro); return; }
     setFile(f);
   };
 

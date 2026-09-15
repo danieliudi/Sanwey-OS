@@ -38,6 +38,22 @@
 
 export const CHANGELOG = [
   {
+    version: "5.15.1",
+    items: [
+      {
+        kind: "correcao",
+        toast: true,
+        text: "No formulário público de vagas, o candidato não conseguia anexar o currículo: a tela recusava um PDF válido com \"Envie um arquivo PDF ou DOCX\" quando o navegador dele não informava o tipo do arquivo — o que acontece em boa parte dos celulares. Agora vale a extensão do arquivo, e não o que o navegador diz. O Banco de Talentos já tinha essa correção; o formulário de vagas, não.",
+        roles: ["rh", "gerente_rh", "admin", "diretoria"],
+      },
+      {
+        kind: "correcao",
+        text: "Se mesmo assim o currículo não subir, o candidato deixa de ver \"não foi possível enviar sua candidatura\" — que o fazia reenviar tudo de novo. A mensagem passa a dizer que os dados foram registrados e para onde mandar o arquivo.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.15.0",
     items: [
       {
