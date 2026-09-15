@@ -63,10 +63,16 @@ alter table public.crm_config_comercial enable row level security;
 -- Leitura liberada porque o score é calculado no navegador de quem abre o
 -- card: sem SELECT, o vendedor veria "alto volume fora da conta" para
 -- sempre. Não há nada sensível aqui — é um número de política comercial.
+-- TO authenticated, e não o default TO public: o default inclui `anon`, e com
+-- o grant padrão do Supabase um visitante anônimo leria a configuração
+-- comercial. A irmã que esta policy espelha (`rh_pipeline_stages_read`) é
+-- TO authenticated — "espelha a tabela-irmã" tem que ser verdade, não só
+-- estar escrito. (Achado de revisão, 15/09/2026.)
 drop policy if exists crm_config_comercial_read on public.crm_config_comercial;
 create policy crm_config_comercial_read
   on public.crm_config_comercial
   for select
+  to authenticated
   using (true);
 
 -- Escrita por cargo, via roles[] e nunca via profiles.role (regra 2.1 /

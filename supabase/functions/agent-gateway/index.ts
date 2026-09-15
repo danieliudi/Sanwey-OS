@@ -164,12 +164,54 @@ async function resolveEsteiraAssignee(admin: any, preferredUserId: string | null
   }
 }
 
+// A URL da imagem vem do PAYLOAD de um agente externo, e esta function faz
+// `fetch` nela do lado de dentro da infraestrutura. Bloquear só o loopback
+// deixava passar `10.x`, `192.168.x`, `172.16-31.x`, `169.254.169.254` (o
+// endpoint de metadados de nuvem), `0.0.0.0` e qualquer hostname interno — e
+// o corpo da resposta ia parar num anexo que a agência baixa. É SSRF com
+// exfiltração pronta. (Achado de revisão, 15/09/2026.)
+//
+// Só https, e só host que não seja endereço privado/reservado nem nome sem
+// ponto (hostname interno). Não resolve DNS — a checagem é sobre o que está
+// escrito na URL; um domínio público apontando para IP privado ainda passa,
+// e mitigar isso exigiria resolver antes de buscar. Registrado como limite
+// conhecido, não como cobertura.
+const FAIXAS_PRIVADAS = [
+  /^10\./,
+  /^127\./,
+  /^0\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+];
+
 function isPublicImageUrl(url: string): boolean {
   try {
     const u = new URL(url);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
-    const host = u.hostname.toLowerCase();
-    return host !== 'localhost' && host !== '127.0.0.1' && host !== '[::1]';
+    // Só https: http dentro da rede é justamente o caminho que interessa a
+    // quem está sondando, e imagem pública não precisa dele.
+    if (u.protocol !== 'https:') return false;
+
+    const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    if (!host) return false;
+    if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.internal') || host.endsWith('.local')) return false;
+
+    // IPv6: qualquer forma de loopback/link-local/unique-local fica fora.
+    if (host.includes(':')) {
+      if (host === '::1' || host === '::' ) return false;
+      if (host.startsWith('fe80') || host.startsWith('fc') || host.startsWith('fd')) return false;
+      // IPv4 mapeado em IPv6 (::ffff:10.0.0.1)
+      const mapeado = host.split(':').pop() ?? '';
+      if (FAIXAS_PRIVADAS.some((r) => r.test(mapeado))) return false;
+      return true;
+    }
+
+    if (FAIXAS_PRIVADAS.some((r) => r.test(host))) return false;
+
+    // Hostname sem ponto é nome interno de rede, nunca um domínio público.
+    if (!host.includes('.')) return false;
+
+    return true;
   } catch {
     return false;
   }

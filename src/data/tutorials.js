@@ -610,12 +610,24 @@ VIDEO_TUTORIALS.diretoria = VIDEO_TUTORIALS.admin;
 // principal e recebia a ajuda de outra pessoa. Mesma classe do MD-11 do
 // CLAUDE.md, aqui em conteúdo em vez de permissão.
 export function papeisDoUsuario(user) {
-  const lista = [user?.role, ...(user?.roles || []), "vendedor"];
-  return [...new Set(lista.filter(Boolean))];
+  const proprios = [...new Set([user?.role, ...(user?.roles || [])].filter(Boolean))];
+
+  // "vendedor" entra como ÚLTIMO RECURSO, não como acréscimo a todo mundo.
+  //
+  // Antes ele era empurrado sempre, e o efeito colateral era grave: agência e
+  // portal — cargos EXTERNOS, gente de fora do Grupo — passavam a ver em
+  // Ajuda & Tutoriais todos os guias do Funil de Vendas, Clientes e Pós-venda.
+  // Os dois já têm guias próprios, então nunca precisaram do fallback.
+  // (Achado de revisão, 15/09/2026.)
+  //
+  // O caso que o fallback existe pra resolver continua coberto: alguém cujo
+  // cargo não tem guia nenhum cadastrado não fica com a tela vazia.
+  const temGuiaProprio = proprios.some(p => (VIDEO_TUTORIALS[p] || []).length > 0);
+  return temGuiaProprio ? proprios : [...proprios, "vendedor"];
 }
 
-// A lista de guias de uma pessoa: união dos arrays de todos os cargos dela,
-// na ordem acima, sem repetir guia.
+// A lista de guias de uma pessoa: união dos arrays dos cargos dela, sem
+// repetir guia.
 export function guiasDoUsuario(user) {
   return unirGuias(...papeisDoUsuario(user).map(p => VIDEO_TUTORIALS[p] || []));
 }

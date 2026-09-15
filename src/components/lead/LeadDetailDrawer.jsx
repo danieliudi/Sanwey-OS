@@ -965,6 +965,12 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
             {visitaMontada && (
               <div style={{ display: sideTab === "visita" ? "block" : "none" }}>
               <VisitaChecklistPanel
+                // `key` pelo lead: o painel guarda o rascunho da visita em
+                // estado local e este drawer NUNCA desmonta (o App o renderiza
+                // sempre). Sem a key, trocar de negócio sem fechar o drawer —
+                // pela notificação ou pela paleta — levava o rascunho do
+                // cliente A junto e o gravava no B. (Achado de revisão.)
+                key={lead.id}
                 lead={lead}
                 salvando={visitaSalvando}
                 onGravarAta={onAddActivity ? () => setAtaFloatingOpen(true) : undefined}
