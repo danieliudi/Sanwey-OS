@@ -34,6 +34,7 @@
 // o caminho que o formulário oferece.
 export const MIME_POR_EXTENSAO = {
   pdf:  "application/pdf",
+  doc:  "application/msword",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   jpg:  "image/jpeg",
   jpeg: "image/jpeg",
@@ -41,10 +42,30 @@ export const MIME_POR_EXTENSAO = {
   webp: "image/webp",
 };
 
+// Quantos arquivos o candidato pode mandar. DOIS, decidido com o Daniel em
+// 15/09/2026: currículo em papel quase sempre tem duas páginas, e aceitar um
+// só significava receber metade.
+//
+// O banco tem folga de propósito — a policy de Storage permite até 6 objetos
+// por pasta. O limite de 2 é da aplicação, pra manter a tela simples; subir
+// esse número não exige mexer em RLS.
+export const MAX_ARQUIVOS_CURRICULO = 2;
+
 // Extensões que são foto — a triagem por IA e a tela de RH precisam saber
 // disso pra tratar como imagem em vez de documento.
 export const EXTENSOES_DE_FOTO = ["jpg", "jpeg", "png", "webp"];
 export const ehFoto = (ext) => EXTENSOES_DE_FOTO.includes((ext || "").toLowerCase());
+
+// `.doc` (Word antigo, binário OLE) entrou a pedido do Daniel para não barrar
+// candidato nenhum — mas a triagem por IA NÃO consegue lê-lo: o extrator de
+// texto da plataforma é de `.docx` (XML), e não existe leitor de `.doc` aqui.
+// Currículo em `.doc` chega, é guardado e o RH abre na mão; ele só não entra
+// na análise automática. Deixar isso implícito era o caminho para o candidato
+// aparecer como "falha na análise" sem ninguém entender por quê.
+export const ehLegivelPelaIA = (ext) => {
+  const e = (ext || "").toLowerCase();
+  return e === "pdf" || e === "docx" || ehFoto(e);
+};
 
 // 10 MB — é o `file_size_limit` do bucket. Recusar aqui dá mensagem clara;
 // deixar passar dá erro genérico do Storage depois do envio.
@@ -67,7 +88,7 @@ export function validarCurriculo(file) {
   const ext = extensaoDe(file.name);
   const mime = MIME_POR_EXTENSAO[ext];
   if (!mime) {
-    return { ok: false, erro: "Envie um PDF, um DOCX ou uma foto do currículo (JPG, PNG).", ext, mime: null };
+    return { ok: false, erro: "Envie PDF, Word (DOC/DOCX) ou foto (JPG, PNG).", ext, mime: null };
   }
   if (file.size > MAX_CURRICULO_BYTES) {
     return { ok: false, erro: "O arquivo deve ter no máximo 10MB.", ext, mime };

@@ -38,6 +38,26 @@
 
 export const CHANGELOG = [
   {
+    version: "5.17.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O candidato pode enviar DOIS arquivos de currículo — frente e verso, ou duas páginas. O segundo campo só aparece depois do primeiro escolhido, e é sempre opcional. Currículo em papel quase sempre tem duas páginas, e antes só cabia uma.",
+        roles: ["rh", "gerente_rh", "admin", "diretoria"],
+      },
+      {
+        kind: "novo",
+        text: "Word antigo (.doc) passou a ser aceito, junto de PDF, DOCX, JPG e PNG. Atenção: currículo em .doc é guardado e abre normalmente, mas NÃO entra na triagem por IA — a plataforma não tem leitor desse formato. O RH lê na mão.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Na ficha do candidato, cada arquivo tem seu botão (\"Currículo · 1\" e \"Currículo · 2\"). A triagem por IA lê as duas páginas juntas, na ordem em que o candidato enviou.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.16.0",
     items: [
       {

@@ -34,6 +34,10 @@ function joinAplicacao(aplicacao, candidatosById) {
     // reconstruído como "<id>/curriculo.<ext>". Ver
     // 20261020_sec_rh_curriculos_upload_token.sql.
     resume_object_path: cand.resume_object_path || null,
+    // 2º arquivo (15/09/2026): currículo em papel tem duas páginas, e quem
+    // fotografa manda uma foto por página.
+    resume_extra_path: cand.resume_extra_path || null,
+    resume_extra_ext: cand.resume_extra_ext || null,
     source: cand.source || null,
     // Coluna existe desde a FASE 5 (20260714_multi_responsible_foundation)
     // mas nunca tinha sido lida aqui — sem isso o card de candidato não sabe
