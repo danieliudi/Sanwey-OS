@@ -132,39 +132,25 @@ import { ChangelogToast } from "./components/shared/ChangelogToast";
 import { useAppUpdate } from "./hooks/use-app-update";
 import { useChangelogNotice } from "./hooks/use-changelog-notice";
 import { useScreenTips } from "./hooks/use-screen-tips";
+import { ScreenTipCard } from "./components/shared/ScreenTipCard";
 import { useAgentsCoachmark } from "./hooks/use-agents-coachmark";
 import { AgentsSidebarCoachmark } from "./components/shell/AgentsSidebarCoachmark";
 import { useFeatureSpotlight } from "./hooks/use-feature-spotlight";
 import { FeatureSpotlight } from "./components/shared/FeatureSpotlight";
 import { NotFoundView } from "./components/shared/NotFoundView";
 
-// Onboarding contextual por tela: reaproveita o quickStart que já existe em
-// VIDEO_TUTORIALS (src/data/tutorials.js), hoje só visível na tela separada
-// "Tutoriais". Mapeia o id de `section` (rota) pro `description`
-// correspondente em VIDEO_TUTORIALS — só as combinações que genuinamente
-// existem nos dois lados hoje. "Usuários", "Construtor de pipeline" e
-// "Histórico do funil" (conteúdo do papel gerente) ficam de fora de
-// propósito: as 3 telas que descrevem foram absorvidas por outra rota
-// (Usuários → dentro de Configurações; Construtor de pipeline → botão
-// dentro do próprio Kanban de "crm"; Histórico do funil → aba dentro do
-// Executivo) e não têm mais uma `section` própria pra receber a dica sem
-// colidir com o mapeamento já escolhido pra "crm"/"executive" abaixo.
-const SECTION_SCREEN_TIP_KEYS = {
-  crm: "Negócios",
-  signals: "Sinais",
-  automations: "Automações",
-  executive: "Executivo",
-  marketing: "Campanhas",
-  "marketing-entregas": "Entregas",
-  "marketing-despesas": "Despesas",
-  "marketing-feiras": "Relatório de Feiras",
-  "marketing-conteudo": "Relatório de Conteúdo",
-  "marketing-home": "Visão Geral",
-  "rh-overview": "Visão Geral",
-  "rh-funcionarios": "Funcionários",
-  "rh-recrutamento": "Recrutamento",
-  "rh-ferias": "Férias",
-};
+// Dica de chegada por tela: o conteúdo vem de VIDEO_TUTORIALS
+// (src/data/tutorials.js), casado por `route` — o MESMO id de `section` usado
+// aqui. Ver o cabeçalho de use-screen-tips.js pro histórico do bug que isso
+// corrigiu em 14/09/2026.
+//
+// NÃO existe mais lista de permissão de telas. Existia porque o painel era um
+// bloco de texto corrido e ligar todas as telas seria insuportável: 29 rotas
+// tinham guia escrito e nenhuma dica. Com o formato de 3 linhas aprovado em
+// 14/09/2026, o critério deixou de ser "quais telas liberamos" e passou a ser
+// "quais guias já têm as duas frases curtas" — quem não tem `resumo` não monta
+// painel nenhum, e a migração é gradual por conteúdo, não por lista mantida
+// à mão em dois lugares que saem de sincronia.
 
 export default function App() {
   // Supabase drives auth when env vars are present. When not configured, we
@@ -326,6 +312,10 @@ export default function App() {
     addLeadActivity,
     loadDemoLeads,
     clearAllLeads: clearAllLeadsRemote,
+    // Falha de leitura precisa chegar na tela: sem isto a recusa de RLS
+    // aparecia como "Nenhum lead encontrado" (ver ErroDeLeitura.jsx).
+    error: leadsErro,
+    refetch: recarregarLeads,
     isOnline,
     cacheAge,
   } = useLeads({
@@ -366,7 +356,7 @@ export default function App() {
   // abre uma segunda.
   const { totalUnread: chatUnread, incomingMessage: chatIncomingMessage } = useChat({ userId: currentUser?.id });
 
-  const { signals } = useMarketSignals();
+  const { signals, error: sinaisErro, refetch: recarregarSinais } = useMarketSignals();
 
   const { crossReferrals, approve: approveCross, reject: rejectCross } = useCrossReferrals(leads);
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
@@ -1321,11 +1311,22 @@ export default function App() {
 
   // Toast de dica de tela — nunca junto do onboarding nem dos outros 2 toasts
   // (update disponível, novidades): só um AppToast visível por vez.
-  const { tip: screenTip, dismiss: dismissScreenTip } = useScreenTips(
+  const { tip: screenTip, dismiss: dismissScreenTip, reabrir: reabrirScreenTip, temGuia: temDicaDeTela } = useScreenTips(
     currentUser,
-    SECTION_SCREEN_TIP_KEYS[section],
+    section,
     { skip: showOnboarding || needRefresh || agentsCoachmarkVisible || changelogItems.length > 0 }
   );
+
+  // "Comece por" que leva até o elemento de verdade, em vez de só descrever
+  // onde ele está (decidido com o Daniel 14/09/2026). Rola até o alvo e pisca
+  // o contorno por 2s — sem mudar de rota, sem clicar por ninguém.
+  const irParaAlvoDaDica = useCallback((seletor) => {
+    const alvo = document.querySelector(seletor);
+    if (!alvo) return;                       // alvo ausente não vira erro: só não faz nada
+    alvo.scrollIntoView({ behavior: "smooth", block: "center" });
+    alvo.classList.add("dica-alvo");
+    setTimeout(() => alvo.classList.remove("dica-alvo"), 2000);
+  }, []);
 
   // Tour guiado contextual (ver src/data/feature-spotlights.js) — aponta pra
   // um elemento real da tela quando o usuário naturalmente visita a rota
@@ -2066,9 +2067,10 @@ export default function App() {
     });
 
     // Acesso por módulo: só filtra itens que de fato fazem parte do
-    // registro de módulos (dashboard/tutorials/settings/automations ficam
-    // de fora — controlados só por cargo, como sempre). Grupo que fica
-    // vazio depois do filtro some do menu.
+    // registro de módulos. Fora de propósito: dashboard (pouso/fallback),
+    // settings (a própria tela de config) e central-bugs (reporte aberto).
+    // tutorials e automations ENTRAM no registro — a chave global vale pra eles.
+    // Grupo que fica vazio depois do filtro some do menu.
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
@@ -2134,7 +2136,7 @@ export default function App() {
       setSection("marketing");
     }
     // Pure marketing users shouldn't access CRM sections
-    const crmSections = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "abm"];
+    const crmSections = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "abm", "document-library"];
     if (isPureMarketing && crmSections.includes(section)) {
       setSection("dashboard");
     }
@@ -2169,9 +2171,20 @@ export default function App() {
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
-    // Portal: só acessa /meu-rh, qualquer outra rota digitada direto na URL
-    // volta pra lá — mesmo espírito do guard de agência acima.
-    if (isPortalOnly && section !== "meu-rh") {
+    // Portal: acessa Meu RH e, quando o Chat está ligado pra ele, o Chat —
+    // qualquer outra rota digitada direto na URL volta pra Meu RH, mesmo
+    // espírito do guard de agência acima.
+    //
+    // CORREÇÃO DE 14/09/2026 (auditoria de changelog × acesso por cargo): o
+    // guard era `section !== "meu-rh"` e mandava o Chat de volta também — mas
+    // o menu do portal MONTA o item "Chat" (linha 1801, condicionado a
+    // `chatEnabled`). Ou seja: o item aparecia, a pessoa clicava, e a tela
+    // voltava pra Meu RH sem dizer nada. Item de menu morto.
+    //
+    // A condição é a MESMA do menu de propósito: quem tem o Chat desligado no
+    // perfil não vê o item nem alcança a rota digitando.
+    const portalAlcanca = new Set(["meu-rh", ...(currentUser?.chatEnabled === false ? [] : ["chat"])]);
+    if (isPortalOnly && !portalAlcanca.has(section)) {
       setSection("meu-rh");
     }
     // Acesso por módulo: revogação por override direto na URL (o item já
@@ -2185,7 +2198,11 @@ export default function App() {
     // não passam pelo registro de módulos mas também não podem ficar dentro
     // de uma tela que foi tirada do ar.
     if ((isAgencia || isPortalOnly) && (moduleStates[section] || "live") === "off") {
-      setSection("dashboard");
+      // Destino por shell: nenhum dos dois alcança "dashboard" (Pendências) —
+      // mandar pra lá caía no guard de cima e dava dois saltos, ou pior, num
+      // lugar que o menu daquela pessoa nem tem. Corrigido 14/09/2026, na
+      // mesma auditoria que achou o Chat morto do portal.
+      setSection(isPortalOnly ? "meu-rh" : "marketing");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, isManager, isRHManager, canSeeExecutive, isInsightsUser, canSeeMarketIntel, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section, allowedModules, moduleStates]);
@@ -2304,6 +2321,7 @@ export default function App() {
           }}
           onNavigate={handleNotificationNavigate}
           onHelpClick={() => setSection("tutorials")}
+          onReabrirDica={temDicaDeTela ? reabrirScreenTip : undefined}
         />
 
         <OfflineBanner isOnline={isOnline} cacheAge={cacheAge} />
@@ -2441,6 +2459,8 @@ export default function App() {
               <SignalsView
                 activeCompany={activeCompany}
                 signals={signals}
+                erroDeLeitura={sinaisErro}
+                onRecarregar={recarregarSinais}
                 clients={clients}
                 onAddLead={handleAddLead}
                 accessibleCompanies={accessibleCompanies}
@@ -2482,6 +2502,8 @@ export default function App() {
               accessibleCompanies={accessibleCompanies}
               onCompanyChange={setActiveCompany}
               leads={leads}
+              leadsErro={leadsErro}
+              onRecarregarLeads={recarregarLeads}
               pipelines={pipelines}
               users={users}
               onLeadClick={setSelectedLead}
@@ -3028,11 +3050,13 @@ export default function App() {
       )}
 
       {screenTip && (
-        <AppToast title={`${screenTip.icon} ${sectionTitle}`} onDismiss={dismissScreenTip}>
-          <ol className="list-decimal pl-4 space-y-0.5">
-            {screenTip.steps.map((s, i) => <li key={i}>{s}</li>)}
-          </ol>
-        </AppToast>
+        <ScreenTipCard
+          tip={screenTip}
+          titulo={sectionTitle}
+          onDismiss={dismissScreenTip}
+          onVerGuia={() => { setTutoriaisInitialTab("tutoriais"); setSection("tutorials"); dismissScreenTip(); }}
+          onComecar={irParaAlvoDaDica}
+        />
       )}
 
       <FeatureSpotlight spotlight={featureSpotlight} onDismiss={dismissFeatureSpotlight} />

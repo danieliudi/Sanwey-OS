@@ -1,10 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
+// Devolve DUAS listas de propósito:
+//   `categorias`      — só as ativas. É o que vai em seletor e no editor de
+//                       referências: ninguém deve escolher categoria aposentada.
+//   `categoriasTodas` — ativas e inativas. É o que a tela do gestor usa pra
+//                       avaliar despesa ANTIGA: `crm_viagem_despesas.categoria`
+//                       guarda o NOME como texto, então aposentar uma categoria
+//                       não pode apagar a referência com que o histórico dela é
+//                       lido (achado do QA em 14/09/2026 — antes disso o hook
+//                       filtrava `ativo` na consulta e todo o histórico caía em
+//                       "sem referência" no dia da migration).
 export function useCRMViagemCategorias({ userId } = {}) {
-  const [categorias, setCategorias] = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [categoriasTodas, setCategoriasTodas] = useState([]);
+  const [loading, setLoading]                 = useState(true);
 
   // `isActive` é a guarda por execução do efeito (não um ref da instância)
   // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
@@ -12,9 +22,9 @@ export function useCRMViagemCategorias({ userId } = {}) {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { data } = await supabase.from("crm_viagem_categorias").select("*").eq("ativo", true).order("nome", { ascending: true });
+      const { data } = await supabase.from("crm_viagem_categorias").select("*").order("nome", { ascending: true });
       if (!isActive()) return;
-      setCategorias(data || []);
+      setCategoriasTodas(data || []);
     } finally {
       if (isActive()) setLoading(false);
     }
@@ -40,7 +50,7 @@ export function useCRMViagemCategorias({ userId } = {}) {
   const createCategoria = useCallback(async (nome) => {
     const { data: nova, error } = await supabase.from("crm_viagem_categorias").insert({ nome, created_by: userId }).select().single();
     if (error) throw new Error(error.message);
-    setCategorias(prev => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setCategoriasTodas(prev => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)));
     return nova;
   }, [userId]);
 
@@ -50,8 +60,35 @@ export function useCRMViagemCategorias({ userId } = {}) {
     // Zero linha = RLS barrou. Sem isso a categoria sumia da lista na tela
     // (o filter abaixo) e voltava no próximo refetch, sem explicação.
     if (!data || data.length === 0) throw new Error("Não foi possível desativar a categoria — verifique suas permissões.");
-    setCategorias(prev => prev.filter(c => c.id !== id));
+    // Marca inativa em vez de tirar da lista: `categorias` (derivada) já some
+    // com ela dos seletores, e `categoriasTodas` segue lendo o histórico.
+    setCategoriasTodas(prev => prev.map(c => c.id === id ? { ...c, ativo: false } : c));
   }, []);
 
-  return { categorias, loading, createCategoria, desativarCategoria, refetch: fetchAll };
+  // Referência de gasto por contexto (14/09/2026). `null` limpa a referência,
+  // e categoria sem referência não gera alerta nenhum — é assim que Pedágio
+  // convive com Almoço na mesma lista sem inventar um teto que não existe.
+  //
+  // Mesma checagem de zero linha do desativarCategoria acima: a RLS negando
+  // UPDATE devolve `error: null, data: []`, e sem isto o valor sumiria da
+  // tela e voltaria no próximo refetch sem explicação nenhuma.
+  const atualizarReferencias = useCallback(async (id, { capital, interior }) => {
+    const limpar = (v) => {
+      if (v === "" || v == null) return null;
+      const n = Number(String(v).replace(",", "."));
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    const patch = { referencia_capital: limpar(capital), referencia_interior: limpar(interior) };
+    const { data, error } = await supabase
+      .from("crm_viagem_categorias").update(patch).eq("id", id).select();
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) {
+      throw new Error("Não foi possível salvar a referência — verifique suas permissões.");
+    }
+    setCategoriasTodas(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  }, []);
+
+  const categorias = useMemo(() => categoriasTodas.filter(c => c.ativo), [categoriasTodas]);
+
+  return { categorias, categoriasTodas, loading, createCategoria, desativarCategoria, atualizarReferencias, refetch: fetchAll };
 }

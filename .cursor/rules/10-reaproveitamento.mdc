@@ -64,10 +64,26 @@ dívida, não padrão.
 
 ## Não crie uma terceira família
 
-Já existem duas implementações paralelas de algumas coisas (CRM e RH):
-`StageFieldInput` / `RHStageFieldInput`, `LeadKanbanCard` / `RHKanbanCard`.
-Decida explicitamente a qual família o que você está construindo se parece e
-siga essa. **Nunca crie uma terceira variante.**
+Já existem duas implementações paralelas de algumas coisas (CRM e RH). Decida
+explicitamente a qual família o que você está construindo se parece e siga
+essa. **Nunca crie uma terceira variante.**
+
+O que É duplicação real hoje (conferido 14/09/2026):
+
+- **Card do Kanban**: `LeadKanbanCard.jsx` (247 linhas) / `RHKanbanCard.jsx`
+  (105 linhas). Marketing/Entregas/Compras têm card inline próprio, nenhum
+  dos dois.
+- **Conteúdo das abas do drawer**: `LeadDetailDrawer` monta as abas inline /
+  `RHDetailDrawerShell` serve 6 telas de RH. O *shell* externo já é único
+  (`SplitPanelDrawer`).
+- **Tabela de definição de campo**: `pipeline_stage_fields` (por `stage_id`) /
+  `rh_pipeline_stage_fields` (por `domain` + `stage_key`).
+
+O que **NÃO** é mais, apesar do nome sugerir:
+
+- `StageFieldInput` / `RHStageFieldInput` — os dois arquivos têm 1 linha cada e
+  reexportam `shared/StageFieldInput.jsx`. Sobrou o nome do import.
+- `RHMobileKanbanAccordion` — componente único, serve 14 views, Funil incluído.
 
 Exceção deliberada, não "arrume": Compras (`ComprasMarketingView.jsx`) usa
 `PURCHASE_STAGES` fixo no código em vez de `rh_pipeline_stages` — as transições

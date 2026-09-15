@@ -47,4 +47,11 @@ if (missingBars.length) {
   process.exit(1);
 }
 
+const kanban = [".polish-kanban-card", ".polish-kanban-card.is-dragging", "--shadow-drag"];
+const missingKanban = kanban.filter((t) => !css.includes(t));
+if (missingKanban.length) {
+  console.error("polish-tokens: faltando classes Kanban (fase 3):", missingKanban.join(", "));
+  process.exit(1);
+}
+
 console.log("polish-tokens: ok");

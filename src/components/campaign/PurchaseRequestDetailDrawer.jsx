@@ -741,16 +741,16 @@ export function PurchaseRequestDetailDrawer({
               <span style={{ flex: "1 1 12rem", lineHeight: 1.45 }}>
                 {canApprove
                   ? (isCotacao && quoteOptions.length > 0 && winnerIndex === ""
-                    ? "Pra liberar estes campos, escolha o fornecedor vencedor em Decisão (à direita) e aprove."
+                    ? "Pra liberar estes campos, escolha o fornecedor vencedor em Aprovar solicitação (à direita) e aprove."
                     : "Pra liberar estes campos, aprove a solicitação — botão Aprovar à direita, ou use o atalho abaixo.")
-                  : "Pra liberar estes campos, alguém de marketing precisa aprovar a solicitação na coluna da direita (Decisão)."}
+                  : "Pra liberar estes campos, alguém de marketing precisa aprovar a solicitação no painel à direita."}
               </span>
               {canApprove && isPending && (
                 <button
                   type="button"
                   onClick={handleApprove}
                   disabled={actionLoading || !canApproveNow}
-                  title={!canApproveNow ? "Escolha o fornecedor vencedor em Decisão antes de aprovar" : undefined}
+                  title={!canApproveNow ? "Escolha o fornecedor vencedor acima antes de aprovar" : undefined}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
                   style={{
                     background: "var(--success-bg)",

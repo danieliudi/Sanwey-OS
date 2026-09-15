@@ -448,9 +448,17 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
                   )}
                   {cargoOptions.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
+                {/* Dois casos diferentes, duas frases diferentes: `cargoOptions`
+                    é filtrado pelo departamento escolhido logo acima (linha 86),
+                    então "nenhum cargo cadastrado" era falso sempre que havia
+                    cargo no catálogo e nenhum daquele departamento — e mandava
+                    a pessoa criar um cargo que já existe. Achado da auditoria de
+                    estados vazios, 14/09/2026. */}
                 {cargoOptions.length === 0 && (
                   <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
-                    Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.
+                    {cargoTemplates.length === 0
+                      ? <>Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.</>
+                      : <>Nenhum cargo cadastrado no departamento {form.department} — escolha outro departamento, ou crie o cargo em Cargos &amp; Salários.</>}
                   </div>
                 )}
               </div>

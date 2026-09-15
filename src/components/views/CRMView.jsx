@@ -49,6 +49,7 @@ import { FilterBar } from "../shared/FilterBar";
 import { PageTitle } from "../shared/PageTitle";
 import { semAcento } from "../../utils/text-search";
 import { daysSince } from "../../utils/date";
+import { ErroDeLeitura } from "../shared/ErroDeLeitura";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 
@@ -352,7 +353,7 @@ function KpiCard({ label, value, sub }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, pipelineTransitions, onViewExistingLead, clients, onCreateClient, onCreateClientContact, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage, campaigns = [] }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, pipelineTransitions, onViewExistingLead, clients, onCreateClient, onCreateClientContact, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage, campaigns = [], leadsErro, onRecarregarLeads }) {
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
@@ -887,6 +888,16 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         </Modal>
       </KanbanBoardHeader>
 
+      {/* Recusa de RLS na leitura volta com `data: []` e sem erro — sem este
+          aviso o vendedor via "Nenhum lead encontrado" e concluía que tinha
+          perdido a carteira. Fica ACIMA do board, não no lugar do board: a
+          lista em cache, quando existe, continua valendo alguma coisa. */}
+      {leadsErro && (
+        <div className="px-4 lg:px-6">
+          <ErroDeLeitura oQue="seus negócios" onTentarDeNovo={onRecarregarLeads} detalhe={leadsErro?.message} />
+        </div>
+      )}
+
       {onAddLead && stages.filter(s => !s.terminal).length > 0 && (
         <KanbanFab
           label="Nova oportunidade"
@@ -906,6 +917,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         />
       ) : viewMode === "table" ? (
         <LeadTableView
+          houveErro={Boolean(leadsErro)}
           leads={scopedLeads}
           stages={stages}
           users={usersById}
@@ -1263,7 +1275,7 @@ function SortIcon({ col, sortCol, sortDir }) {
     : <ArrowDown size={11} style={{ color: "var(--accent)", flexShrink: 0 }} />;
 }
 
-function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGroupView }) {
+function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGroupView, houveErro = false }) {
   const [sortCol, setSortCol] = useState("stageChangedAt");
   const [sortDir, setSortDir] = useState("desc");
   const [hoveredRow, setHoveredRow] = useState(null);
@@ -1326,12 +1338,15 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
     {/* Mobile: cards empilhados (abaixo de md a tabela de 8 colunas cortava
         Responsável/Última mov. pra fora da tela) */}
     <div className="md:hidden space-y-2">
-      {sorted.length === 0 ? (
+      {/* Com erro de leitura a lista vazia não é informação — quem fala é o
+          aviso acima. Afirmar "nenhum lead" ao lado dele seria repetir
+          exatamente o engano que o aviso existe pra desfazer. */}
+      {sorted.length === 0 ? (houveErro ? null : (
         <div className="flex flex-col items-center justify-center py-12 gap-2" style={{ color: "var(--text-dim)" }}>
           <List size={28} strokeWidth={1} />
           <span className="text-xs">Nenhum lead encontrado</span>
         </div>
-      ) : sorted.map(lead => {
+      )) : sorted.map(lead => {
         const stage = stageMap[lead.stage];
         const resolvedOwners = getLeadOwnerIds(lead).map(id => users?.get?.(id)).filter(Boolean);
         const companyInfo = isGroupView ? COMPANIES[lead.companyId] : null;
@@ -1444,7 +1459,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
           {sorted.length === 0 ? (
             <tr>
               <td colSpan={TABLE_COLS.length} style={{ padding: "32px 12px", textAlign: "center", color: "var(--text-dim)", fontSize: 13 }}>
-                Nenhum lead encontrado
+                {houveErro ? "—" : "Nenhum lead encontrado"}
               </td>
             </tr>
           ) : sorted.map((lead, idx) => {

@@ -8,6 +8,7 @@ import { StatCard } from "../ui/StatCard";
 import { EmptyState } from "../ui/EmptyState";
 import { Card, CardGrid, GridListToggle } from "../shared/Card";
 import { FilterBar } from "../shared/FilterBar";
+import { ErroDeLeitura } from "../shared/ErroDeLeitura";
 
 const URGENCY_FILTERS = [
   { key: "all", label: "Todos" },
@@ -35,7 +36,7 @@ const URGENCY_STATUS_LABEL = {
   informativo: "Info",
 };
 
-export function SignalsView({ activeCompany, signals, clients = [], onAddLead, accessibleCompanies }) {
+export function SignalsView({ activeCompany, signals, erroDeLeitura, onRecarregar, clients = [], onAddLead, accessibleCompanies }) {
   const isGroupView = activeCompany === "all";
   const [urgencyFilter, setUrgencyFilter] = useState("all");
   const [density, setDensity] = useState("grid");
@@ -137,6 +138,11 @@ export function SignalsView({ activeCompany, signals, clients = [], onAddLead, a
         </div>
       </div>
 
+      {/* Leitura que falhou nunca vira "nenhum sinal" — ver ErroDeLeitura.jsx */}
+      {erroDeLeitura && (
+        <ErroDeLeitura oQue="os sinais de mercado" onTentarDeNovo={onRecarregar} detalhe={erroDeLeitura?.message} />
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <StatCard icon={Bell} value={scopedSignals.length} label="Sinais monitorados" />
         <StatCard
@@ -184,12 +190,14 @@ export function SignalsView({ activeCompany, signals, clients = [], onAddLead, a
         </div>
       </FilterBar>
 
-      {scopedSignals.length === 0 ? (
+      {/* Com erro de leitura, quem fala é o aviso acima — "nenhum sinal" ao
+          lado dele repetiria o engano que o aviso desfaz. */}
+      {scopedSignals.length === 0 ? (erroDeLeitura ? null : (
         <EmptyState
           icon={Bell}
           title="Nenhum sinal no filtro atual"
           description="Ajuste os filtros para ver mais sinais."
-        />
+        />)
       ) : (
         <CardGrid density={density}>
           {scopedSignals.map(s => (

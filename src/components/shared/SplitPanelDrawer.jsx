@@ -22,6 +22,16 @@ import { StageNavigator, StageMoveRegistryContext } from "./StageNavigator";
 // vs. +13%/+7%) de propósito: era a coluna mais espremida em conteúdo real
 // (formulário da etapa) e continua sendo a área principal.
 //
+// leftFixo (opcional): parte da coluna esquerda que NÃO colapsa no celular.
+// Nasceu do Checklist de Visita (15/09/2026): as abas do drawer de negócio
+// moram em `left`, e no celular o bloco inteiro fecha por padrão atrás de
+// "+ detalhes" — ou seja, a tela desenhada pra ser usada de pé na frente do
+// cliente estava a três toques de distância justamente no celular. O que
+// colapsa é metadado ("+ detalhes"); o que é ferramenta fica sempre à vista.
+// No celular o bloco fixo sobe pro topo da coluna (order-first); no desktop
+// a ordem é a de sempre — metadado primeiro, abas depois —, então os 24
+// chamadores que não passam `leftFixo` não mudam em nada.
+//
 // onDelete (opcional): botão de excluir no header, com confirmação inline —
 // mesmo padrão do LeadDetailDrawer (Trash2 → "Confirmar exclusão"/"Cancelar"),
 // pra dar paridade de exclusão aos kanbans de RH que usam este shell.
@@ -30,7 +40,7 @@ import { StageNavigator, StageMoveRegistryContext } from "./StageNavigator";
 // o clique na linha abre o drawer e o menu do card não existe. Hover em
 // --surface-alt de propósito, diferente do hover do excluir (--danger-bg):
 // não é a mesma família de ação, e a cor é o que diz isso antes do clique.
-export function SplitPanelDrawer({ onClose, header, left, center, right, onDelete, deleteLabel = "Excluir card", onArchive, archived = false, archiveLabel }) {
+export function SplitPanelDrawer({ onClose, header, left, leftFixo, center, right, onDelete, deleteLabel = "Excluir card", onArchive, archived = false, archiveLabel }) {
   // Componente só existe montado quando o drawer está aberto (o pai
   // renderiza condicionalmente) — trava o scroll do body enquanto estiver
   // montado, destrava no unmount. Achado da auditoria de fricção de 18/07.
@@ -160,17 +170,17 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
         <StageMoveRegistryContext.Provider value={moveRegistry}>
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
             <aside
-              className="w-full lg:w-[340px] lg:flex-none lg:shrink-0 lg:overflow-y-auto border-b lg:border-b-0 lg:border-r"
+              className="w-full lg:w-[340px] lg:flex-none lg:shrink-0 lg:overflow-y-auto border-b lg:border-b-0 lg:border-r flex flex-col"
               style={{ borderColor: "var(--border)" }}
             >
               {left && (
                 <button
                   onClick={() => setLeftOpen(v => !v)}
-                  className="lg:hidden w-full flex items-center justify-between px-5 py-3 text-xs font-semibold cursor-pointer"
+                  className="drawer-toggle-mobile lg:hidden w-full flex items-center justify-between px-5 py-3 text-xs font-semibold cursor-pointer shrink-0"
                   style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
                   aria-expanded={leftOpen}
                 >
-                  {leftOpen ? "− detalhes" : "+ detalhes"}
+                  {leftOpen ? "− detalhes" : `+ detalhes${leftFixo ? " do card" : ""}`}
                   <ChevronDown
                     size={14}
                     style={{ transition: "transform 0.2s", transform: leftOpen ? "rotate(180deg)" : "rotate(0deg)" }}
@@ -180,6 +190,20 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
               <div className={`p-5 space-y-4 ${leftOpen ? "block" : "hidden"} lg:block`}>
                 {left}
               </div>
+              {leftFixo && (
+                // No celular a ferramenta vem logo depois do botão de
+                // "+ detalhes" e antes do metadado (ordem em index.css, não
+                // `order-first`: aquilo jogava o botão pro fim da página).
+                // No desktop volta pra ordem do DOM, que é a de sempre, e o
+                // `lg:pt-0` evita padding duplo embaixo do bloco `left`.
+                <div className="drawer-fixo-mobile p-5 lg:pt-0 space-y-4">
+                  {/* A régua que separava metadado e abas existia no `left` e
+                      foi cortada junto quando as abas saíram de lá. Volta só
+                      no desktop, que é onde os dois blocos se encostam. */}
+                  {left && <div className="hidden lg:block" style={{ borderTop: "1px solid var(--border)", margin: "2px 0" }} />}
+                  {leftFixo}
+                </div>
+              )}
             </aside>
             <main className="flex-1 min-w-0 lg:overflow-y-auto p-5 space-y-4">
               {center}

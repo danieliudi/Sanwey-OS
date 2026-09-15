@@ -56,6 +56,7 @@ import { formatDateBR, toLocalISODate } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
 import { matchDocumentToColaborador } from "../../utils/rh-document-matching";
 import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
+import { ErroDeLeitura } from "../shared/ErroDeLeitura";
 
 const BENEFICIO_STATUS_COLORS = {
   solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
@@ -1299,9 +1300,14 @@ function EmployeeDetailModal({
                     )}
                     {cargoOptions.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
+                  {/* Mesma correção do NovoColaboradorModal: `cargoOptions` é
+                      filtrado pelo departamento, então a frase de catálogo vazio
+                      mentia sempre que existiam cargos de outro departamento. */}
                   {cargoOptions.length === 0 && (
                     <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
-                      Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.
+                      {cargoTemplates.length === 0
+                        ? <>Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.</>
+                        : <>Nenhum cargo cadastrado no departamento {form.department} — escolha outro departamento, ou crie o cargo em Cargos &amp; Salários.</>}
                     </div>
                   )}
                 </div>
@@ -1663,7 +1669,7 @@ export function RHFuncionariosView({
   onOpenTreinamento,
   onOpenFerias,
 }) {
-  const { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador, refetch } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, loading, error: erroDeLeitura, createColaborador, updateColaborador, deleteColaborador, refetch } = useRHColaboradores({ userId: currentUser?.id });
   const [density, setDensity] = useTableDensity("rh-funcionarios-table-density");
   const cellPadY = density === "compact" ? "py-1.5" : "py-3";
   const headPadY = density === "compact" ? "py-1.5" : "py-2.5";
@@ -1868,7 +1874,9 @@ export function RHFuncionariosView({
 
   // Reaproveitado no corpo da tabela desktop e no bloco mobile — mesma
   // mensagem, sem duplicar o texto/ação "Limpar filtros" em dois lugares.
-  const filteredEmptyNote = filtered.length === 0
+  // Com erro de leitura o aviso acima já explica; dizer "nenhum funcionário"
+  // logo abaixo dele seria repetir o engano que ele desfaz.
+  const filteredEmptyNote = (filtered.length === 0 && !erroDeLeitura)
     ? (unifiedRows.length > 0
       ? { title: "Nenhum resultado pra estes filtros", description: "Nenhum colaborador bate com a busca e os filtros atuais.", showClear: true }
       : { title: "Nenhum funcionário encontrado", description: "Tente ajustar os filtros", showClear: false })
@@ -1981,6 +1989,15 @@ export function RHFuncionariosView({
 
   return (
     <div>
+
+      {/* Leitura recusada pela RLS volta com lista vazia e sem erro — sem isto
+          a tela dizia "nenhum colaborador" pra quem só não tinha permissão.
+          Ver ErroDeLeitura.jsx. */}
+      {erroDeLeitura && (
+        <div className="mb-4">
+          <ErroDeLeitura oQue="a lista de colaboradores" onTentarDeNovo={refetch} detalhe={erroDeLeitura?.message} />
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">

@@ -38,6 +38,174 @@
 
 export const CHANGELOG = [
   {
+    version: "5.15.0",
+    items: [
+      {
+        kind: "novo",
+        text: "No celular, o negócio abre direto na aba \"Visita\" — e ela deixou de ficar escondida atrás de \"+ detalhes\". A tela feita para ser usada de pé, na frente do cliente, estava a três toques de distância justamente no aparelho onde serve. No computador nada muda: continua abrindo no Form.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Gravou a conversa? A ata agora devolve o que ouviu para o checklist: dor, concorrente e próximo passo aparecem no topo da aba Visita como sugestão, com \"Usar\" ou \"Não\" em cada uma. Nada é gravado sem você aceitar, e o que você já respondeu nem entra na lista.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "A aba Visita passou a calcular a Classe do Cliente (AA, BC, DF…) a partir da frequência de pedidos por ano e do volume médio por pedido, seguindo a tabela oficial do Grupo. Quem fica abaixo de 50 peças por pedido aparece como \"não classificado\" — que é o que a regra do prêmio diz. A conta fica à vista: qual faixa caiu em cada código e quantas peças por ano dão.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Configurações → Geral → Comercial ganhou o limiar de \"alto volume\": a partir de quantos bags por mês uma conta pontua a pergunta que vale 20 dos 100 pontos do Checklist de Visita. É por frente — o que é alto volume para a Resibag não é o mesmo que para a Sanwey. Deixar vazio continua valendo: o item sai da conta e a tela explica, em vez de usar um número chutado.",
+        roles: ["gerente", "admin"],
+      },
+      {
+        kind: "correcao",
+        toast: true,
+        text: "Quando a leitura falhava — conexão caída, sessão expirada, permissão de acesso —, a tela dizia \"nenhum registro encontrado\", indistinguível de uma lista de verdade vazia. Agora a falha aparece como falha, em vermelho, com botão de tentar de novo, e a mensagem de lista vazia sai da frente. Vale no Funil de Vendas, em RH · Funcionários e em Sinais de Mercado.",
+        roles: ["vendedor", "gerente", "admin", "rh", "gerente_rh", "diretoria", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
+    version: "5.14.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Nova aba \"Visita\" dentro do negócio, com o Checklist Comercial de Vendas que o vendedor leva impresso. Durante a visita ela mostra o que ainda FALTA PERGUNTAR, em vez de pedir para preencher 60 campos: as perguntas aparecem do jeito que se fala, da que mais pesa para a que menos pesa.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "A qualificação de 0 a 100 da folha impressa passou a ser calculada sozinha a partir do que foi coletado, nunca marcada à mão — e a faixa A, B ou C sai junto. Marcar \"decisor identificado\" sem ter o nome do decisor era o jeito mais fácil de o score virar ficção.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "A data do próximo contato preenchida na visita é a mesma que alimenta a sua fila de Pendências — a regra do rodapé da folha (nenhum lead sem próxima ação e data) passou a valer sozinha.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+    ],
+  },
+  {
+    version: "5.13.3",
+    items: [
+      {
+        kind: "correcao",
+        text: "No portal do colaborador, o item Chat aparecia no menu e não abria — clicar devolvia para Meu RH sem dizer nada. Agora abre.",
+        roles: ["portal"],
+      },
+      {
+        kind: "correcao",
+        text: "O selo de despesa criada a partir de uma compra dizia \"compra aprovada\". A despesa só nasce quando a compra é marcada como PAGA — são quatro etapas de diferença, e quem aprovava concluía que a despesa já estava lançada.",
+        roles: ["marketing", "gerente_marketing", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Ao cadastrar um colaborador, escolher um departamento sem cargos dizia \"nenhum cargo cadastrado ainda — crie um primeiro\", mesmo com o catálogo cheio de cargos de outros departamentos. Agora a mensagem distingue os dois casos.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "No card do Onboarding, o anel de progresso do checklist mostrava \"Fit score — pontuação de potencial do lead\" ao passar o mouse. Era o texto do Funil de Vendas em cima do progresso de uma pessoa.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Em Compras, o aviso mandava escolher o fornecedor vencedor \"em Decisão\" — painel que tem esse nome em outra etapa. Agora aponta para o painel certo.",
+        roles: ["marketing", "gerente_marketing", "admin"],
+      },
+    ],
+  },
+  {
+    version: "5.13.2",
+    items: [
+      {
+        kind: "correcao",
+        text: "Em Ajuda & Tutoriais, quem é da diretoria via o cabeçalho \"Conteúdo para Diretoria\" e, logo abaixo, a lista de guias de vendedor. Agora a lista é a do seu cargo de verdade.",
+        roles: ["diretoria", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Diretoria e admin passam a receber também os guias de Marketing e de RH. Antes só tinham os de Comercial, apesar de acessarem a plataforma inteira — quem mais navegava era quem menos recebia ajuda.",
+        roles: ["diretoria", "admin"],
+      },
+      {
+        kind: "correcao",
+        text: "Quem tem um segundo cargo passa a ver os guias dos dois, tanto em Ajuda quanto na dica de chegada. Antes valia só o cargo principal.",
+      },
+    ],
+  },
+  {
+    version: "5.13.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "As colunas dos quadros Kanban paravam bem antes do fim da janela, deixando uma faixa vazia no rodapé. Agora vão até embaixo. A reserva de espaço que existia para o botão flutuante de criar card só vale quando o quadro tem colunas demais para caber na tela — que é quando essa reserva serve para alguma coisa.",
+      },
+    ],
+  },
+  {
+    version: "5.13.0",
+    items: [
+      {
+        kind: "novo",
+        text: "A dica que aparece ao abrir uma tela pela primeira vez deixou de ser um bloco de texto corrido. Agora são três linhas: o que a tela é, por onde começar, e um link para o guia completo em Ajuda & Tutoriais — que continua inteiro, nada foi cortado de lá.",
+      },
+      {
+        kind: "novo",
+        text: "Onde a dica aponta para um lugar específico da tela, ela agora tem um botão que te leva até lá e destaca o elemento, em vez de só descrever onde ele fica.",
+      },
+      {
+        kind: "novo",
+        text: "Novo botão de interrogação na barra superior: traz de volta a dica da tela em que você está, quantas vezes quiser. Antes, fechou uma vez, acabou para sempre naquele navegador.",
+      },
+      {
+        kind: "novo",
+        text: "41 telas passaram a ter dica de chegada — antes eram 14. Funil de Vendas, Clientes, Pós-venda, Viagens, Comex e quase toda a área de RH tinham guia escrito e não mostravam nada.",
+      },
+      {
+        kind: "correcao",
+        text: "Um aviso longo demais podia crescer para fora da janela e deixar o começo do texto inalcançável, sem barra de rolagem. Agora todo aviso tem altura máxima e rola quando precisa.",
+      },
+    ],
+  },
+  {
+    version: "5.12.1",
+    items: [
+      {
+        kind: "correcao",
+        toast: true,
+        text: "A dica que aparece quando você abre uma tela pela primeira vez estava mostrando o texto de OUTRA tela em alguns casos — quem abria a Visão Geral de RH, por exemplo, lia a explicação da Visão Geral do Comercial, falando de leads e funil de vendas. Corrigido: agora a dica é sempre a da tela em que você está. O Funil de Vendas, que não tinha dica nenhuma, também voltou a ter.",
+      },
+      {
+        kind: "correcao",
+        text: "Fechar a dica de uma tela marcava outras duas como lidas junto, e elas nunca mais apareciam. Agora cada tela tem a sua. Quem tem mais de um cargo também passa a ver a dica do cargo certo.",
+      },
+    ],
+  },
+  {
+    version: "5.12.0",
+    items: [
+      {
+        kind: "novo",
+        text: "Ao lançar uma despesa, agora existe uma pergunta a mais — \"Onde foi\": Capital ou Interior. São dois toques, e é o que define contra qual valor de referência o gasto é comparado: almoço de estrada não é comparado com almoço de centro urbano. Nada bloqueia o lançamento; se o valor passar da referência, aparece um aviso pedindo uma linha de explicação.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Na aba Gestão de Viagens & Despesas, cada despesa chega classificada em vez de só \"estourou\": a linha diz se está dentro do esperado, acima da referência daquela rota, ou acima de qualquer referência — e o mês fecha com os dois totais separados. É para não precisar abrir comprovante por comprovante para saber qual excesso é logística e qual vira conversa.",
+        roles: ["gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Nova seção \"Referências de gasto por categoria\" na aba Gestão, onde gerente e admin definem quanto se espera gastar em cada categoria, com valores diferentes para Capital e Interior. Categoria sem referência simplesmente não gera alerta — é o certo para Pedágio, por exemplo. As categorias também passaram a espelhar as do Zoho.",
+        roles: ["gerente", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.11.0",
     items: [
       {
@@ -374,6 +542,11 @@ export const CHANGELOG = [
         text: "Ficha do funcionário agora tem Gestor. Quem lidera alguém vê \"Lidera N pessoas\" na própria ficha e ganha o filtro \"Minha equipe\" na tabela.",
         roles: ["rh", "gerente_rh"],
       },
+      {
+        kind: "ajuste",
+        text: "Em Configurações → Módulos, o liga/desliga em três estados (Desligada / Em testes / Liberada) passa a listar as páginas no mesmo agrupamento do menu — Meu Espaço, Comercial, Marketing, RH, Inteligência e Configuração — incluindo Biblioteca de Documentos. Pendências, Configurações e Central de Bugs continuam sempre no ar.",
+        roles: ["admin"],
+      },
     ],
   },
   {
@@ -413,6 +586,15 @@ export const CHANGELOG = [
       {
         kind: "ajuste",
         text: "No Funil de Vendas, o detalhe do negócio deixou de mostrar o atalho \"Adicionar e-mail\" e os cards de Probabilidade, Fechamento e Follow-up na coluna esquerda.",
+      },
+    ],
+  },
+  {
+    version: "4.97.8",
+    items: [
+      {
+        kind: "ajuste",
+        text: "No Kanban, os cards levantam e tombam levemente enquanto você arrasta (Funil de Vendas, RH, Campanhas e Entregas) — fica claro qual card está na mão.",
       },
     ],
   },
@@ -474,6 +656,11 @@ export const CHANGELOG = [
         kind: "ajuste",
         text: "Nas Entregas, SLA e Brief deixam de travar a movimentação em Encaminhado à Agência — a Beehave combina prazo/brief e preenche depois. Observações de triagem continuam visíveis em Em Produção. No Histórico, cada passagem mostra o que estava preenchido naquela etapa naquele momento (idas e voltas ficam com detalhes diferentes).",
         roles: ["admin", "marketing", "gerente_marketing", "agencia", "diretoria", "rh", "gerente_rh"],
+      },
+      {
+        kind: "correcao",
+        text: "Quando a esteira aprova um pacote de conteúdo, a entrega de marketing chega pra agência com instruções (peças a produzir), imagens anexadas quando a URL é pública, e o responsável preenchido com quem aprovou — antes ia só título e descrição, sem dono no card. Se a entrega for apagada, em Aprovados aparece \"Gerar entrega de novo\".",
+        roles: ["admin", "marketing", "gerente_marketing", "agencia", "diretoria"],
       },
     ],
   },

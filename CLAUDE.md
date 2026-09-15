@@ -104,8 +104,8 @@ lado a lado — uma pra CRM/Pipeline, outra pra RH. Não é mentira dizer que
 
 | Conceito | Versão CRM | Versão RH |
 |---|---|---|
-| Input de campo customizado | `src/components/lead/StageFieldInput.jsx` | `src/components/rh-pipeline/RHStageFieldInput.jsx` (switch de tipos idêntico, copiado) |
-| Card do Kanban | `src/components/lead/LeadKanbanCard.jsx` (só Pipeline) | `src/components/rh-pipeline/RHKanbanCard.jsx` (5 boards de RH) — Marketing/Entregas/Compras têm card próprio, inline, nenhum dos dois |
+| Input de campo customizado | **não é mais duplicação** — os dois arquivos (`src/components/lead/StageFieldInput.jsx` e `src/components/rh-pipeline/RHStageFieldInput.jsx`) têm **1 linha cada** e reexportam o mesmo módulo, `src/components/shared/StageFieldInput.jsx` (230 linhas). Esta linha dizia "switch de tipos idêntico, copiado" e induzia a tratar como duplicado o que já foi unificado — o que sobra é o nome do import. Corrigido 14/09/2026, conferido no código. | idem — mesmo módulo |
+| Card do Kanban | `src/components/lead/LeadKanbanCard.jsx` (247 linhas, só Pipeline) | `src/components/rh-pipeline/RHKanbanCard.jsx` (105 linhas, 5 boards de RH) — Marketing/Entregas/Compras têm card próprio, inline, nenhum dos dois. **Esta continua sendo duplicação real**, ao contrário da linha do input acima |
 | Acordeão mobile do board | **não é mais duplicação** — `RHMobileKanbanAccordion.jsx` foi consolidado e hoje serve 14 views, o Funil de Vendas incluído (`CRMView.jsx:932`). Esta linha dizia "não existe pro Pipeline / só RH" e induzia à conclusão errada de que o Funil não tem Kanban no celular. Corrigido 01/09/2026, conferido no código. | idem — mesmo componente |
 | Abas internas do drawer de detalhe (Form/Atividades/Histórico/IA/Anexos...) | `LeadDetailDrawer.jsx` compõe as próprias abas inline, dentro do slot `left` do `SplitPanelDrawer` (ver regra 1) | `RHDetailDrawerShell.jsx` (6 telas de RH) — também montado dentro do slot `left` do mesmo `SplitPanelDrawer` |
 

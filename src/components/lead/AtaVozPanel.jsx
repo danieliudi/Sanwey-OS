@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAudioRecorder, formatRecordingTime, blobToBase64, AUDIO_MAX_SECONDS } from "../../hooks/use-audio-recorder";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
 import { formatDateBR, parseDateInput, toLocalISODate } from "../../utils/date";
+import { CHAVE_SUGESTOES, sugestoesDaAta } from "../../utils/checklist-visita";
 
 // Ata de visita por voz — o vendedor fala um minuto, confere o que a IA
 // entendeu e salva. Aprovado com o Daniel em 13/08/2026 (mockup das 4 telas,
@@ -483,8 +484,23 @@ export function AtaVozPanel({
       // Etapa do funil não se move sozinha (regra 3 do cabeçalho).
       // `nextFollowUp` em camelCase: patchToRow (use-leads.js) é quem traduz
       // pra coluna next_follow_up — mandar snake_case aqui seria ignorado.
-      if (draft.proximo_passo_data && onUpdate) {
-        await onUpdate(targetLeadId, { nextFollowUp: draft.proximo_passo_data });
+      //
+      // O resto do que a IA extraiu (dor, concorrente, objeção, próximo passo)
+      // vira SUGESTÃO pro Checklist de Visita — guardada num campo próprio de
+      // custom_fields, nunca gravada por cima da resposta do vendedor. É a aba
+      // Visita que mostra e ele que aceita uma a uma. Só no caminho do lead
+      // que já existe: em lead recém-criado a partir de cliente, o card nasce
+      // do próprio resumo e não há checklist aberto pra sugerir nada.
+      const patchDoLead = {};
+      if (draft.proximo_passo_data) patchDoLead.nextFollowUp = draft.proximo_passo_data;
+
+      const sugestoes = targetLeadId === lead?.id ? sugestoesDaAta(draft, new Date().toISOString()) : null;
+      if (sugestoes) {
+        patchDoLead.customFields = { ...(lead?.customFields || {}), [CHAVE_SUGESTOES]: sugestoes };
+      }
+
+      if (onUpdate && Object.keys(patchDoLead).length > 0) {
+        await onUpdate(targetLeadId, patchDoLead);
       }
       descartar();
       onSaved?.();

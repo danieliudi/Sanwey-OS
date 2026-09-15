@@ -24,6 +24,57 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.15.0 — bloco "A ata sugeriu N respostas" na aba Visita, e a aba abrindo
+  // sozinha no celular. Decisão de PULAR o spotlight, registrada aqui (regra
+  // 12) pelo MESMO motivo da entrada de 5.14.0 logo abaixo, que este bloco
+  // não repete à toa: o alvo (`[data-tour="lead-tab-visita"]`) existe, mas só
+  // depois de alguém abrir um card — o drawer não está na tela até lá. Alvo
+  // ausente se auto-marca como visto (FeatureSpotlight.jsx), então o aviso
+  // morreria na primeira visita à rota, exatamente como aconteceu com 5.9,
+  // 5.10 e 5.11. Changelog (3 itens) e tutorial (`v-visita1`) cobrem.
+  //
+  // 5.14.0 — aba "Visita" no drawer do negócio. Decisão de PULAR o spotlight,
+  // registrada aqui (regra 12): o alvo é uma aba DENTRO do drawer, e o drawer
+  // não existe na tela até alguém abrir um card. Alvo ausente se auto-marca
+  // como visto (FeatureSpotlight.jsx) — é a mesma armadilha das entradas de
+  // 5.9, 5.10 e 5.11. Ancorar no card do Kanban também não serve: o card é
+  // repetido e o seletor pegaria um qualquer. Changelog e tutorial cobrem, e
+  // a aba fica visível assim que o drawer abre, que é onde ela serve.
+  // 5.13.0 — o "?" que reabre a dica da tela. Ganha spotlight (e não a decisão
+  // de pular, como as três entradas abaixo) por um motivo simples: é o único
+  // caso recente em que o alvo está SEMPRE montado. O botão vive na barra
+  // superior, aparece em toda tela que tem guia, e não depende de abrir modal,
+  // card ou aba — que foi exatamente o que matou os spotlights de 5.9, 5.10 e
+  // 5.11 (alvo ausente se auto-marca como visto).
+  //
+  // A rota é `dashboard` porque é o pouso pós-login de todo cargo interno: é
+  // onde todo mundo passa, e o botão já está lá.
+  {
+    id: "dica-de-tela-reabrir",
+    route: "dashboard",
+    target: '[data-tour="dica-de-tela-reabrir"]',
+    text: "A dica de cada tela agora cabe em 3 linhas — e este botão traz ela de volta quando você quiser, quantas vezes quiser.",
+    version: "5.13.0",
+  },
+  // 5.12.0 — a pergunta "Onde foi" mora DENTRO do modal Nova Despesa, que não
+  // existe na tela até alguém abrir. Mesmo raciocínio do "vaga-posicoes"
+  // abaixo: ancora no botão que abre o modal, que é o caminho real até a
+  // novidade, e que fica na aba padrão de quem lança despesa.
+  //
+  // A OUTRA metade desta entrega (classificação na linha do gestor e a seção
+  // "Referências de gasto") NÃO ganha spotlight, e a decisão fica registrada
+  // aqui pela regra 12: as duas moram na aba "Gestão", que não é a aba padrão
+  // nem de gerente nem de admin (CRMViagensView monta "Minhas viagens"
+  // primeiro pros dois). Alvo ausente se auto-marca como visto
+  // (FeatureSpotlight.jsx), então o aviso morreria na primeira visita à tela,
+  // antes de a pessoa chegar na aba onde a novidade está. Changelog cobre.
+  {
+    id: "despesa-contexto-capital-interior",
+    route: "crm-viagens",
+    target: '[data-tour="nova-despesa-contexto"]',
+    text: "Ao lançar uma despesa agora tem uma pergunta a mais: Capital ou Interior. São dois toques, e é o que faz o almoço de estrada não ser comparado com o de centro urbano.",
+    version: "5.12.0",
+  },
   // 5.11.0 ("Minha equipe em onboarding") — decisão de PULAR o spotlight,
   // registrada aqui (regra 12). É UI nova e não-óbvia, então a pergunta é
   // legítima; o motivo de pular é que a seção só é montada pra quem é gestor
@@ -89,6 +140,10 @@ export const FEATURE_SPOTLIGHTS = [
   // muda é o NÚMERO da prévia de alcance, que a tela de Comunicação já mostra
   // por conta própria antes de enviar. Vai pelo changelog, com `roles` de RH.
   {
+    // ALVO CONDICIONAL (registrado 14/09/2026, achado da varredura visual do
+    // Cowork): o botão é `{canWrite && …}` em RHBemEstarView.jsx:491 — só
+    // existe pra quem pode escrever. Pros demais, alvo ausente se auto-marca
+    // como visto, que é o comportamento certo aqui.
     id: "programas-novo",
     route: "rh-bem-estar",
     target: '[data-tour="programas-novo"]',
@@ -116,6 +171,10 @@ export const FEATURE_SPOTLIGHTS = [
   // Comunicação — inclusive pra quem precisava dele. Mesmo motivo do campo
   // Gestor, na 4.98.0. Vai pelo toast do changelog, com `roles` de RH.
   {
+    // ALVO CONDICIONAL (registrado 14/09/2026, achado da varredura visual do
+    // Cowork): vive DENTRO do formulário de novo comunicado
+    // (RHComunicacaoView.jsx:160), não na tela em repouso — só existe depois
+    // de abrir a composição.
     id: "comunicado-canais",
     route: "rh-comunicacao",
     target: '[data-tour="comunicado-canais"]',
@@ -149,6 +208,10 @@ export const FEATURE_SPOTLIGHTS = [
     version: "4.97.0",
   },
   {
+    // ALVO CONDICIONAL (registrado 14/09/2026, achado da varredura visual do
+    // Cowork): está no fundo de uma aba interna de Configurações
+    // (SettingsView.jsx:2377) — a rota abre noutra aba, então o alvo não
+    // existe na 1ª carga.
     id: "captura-utm-dica",
     route: "settings",
     target: '[data-tour="captura-utm-dica"]',
@@ -565,6 +628,14 @@ export const FEATURE_SPOTLIGHTS = [
   {
     id: "rh-busca-card",
     route: "rh-onboarding",
+    // EM ABERTO (14/09/2026): a varredura visual do Cowork não achou este alvo
+    // na 1ª carga de /rh/onboarding com usuário admin. Diferente dos três
+    // acima, este NÃO é condicional — a busca é declarada fora do bloco de
+    // `viewMode` (RHOnboardingView.jsx:1673-1679, seguindo a regra 11) e o
+    // `FilterBar` repassa o atributo (FilterBar.jsx:35). Ou a medição
+    // aconteceu antes de a view terminar de carregar, ou há algo que a leitura
+    // de código não mostra. Precisa de navegador pra fechar — não inventar
+    // explicação.
     target: '[data-tour="rh-onboarding-busca-card"]',
     text: "Novo: os boards de RH ganharam busca. Digite o nome do colaborador (ou cargo, departamento, vaga) e o quadro filtra na hora, em qualquer visão.",
     version: "4.90.1",
@@ -654,6 +725,12 @@ export const FEATURE_SPOTLIGHTS = [
   // alvo de "Prestações a decidir"). Some-se a isso que o público são 3
   // pessoas (1 admin + 2 gerentes), que ouvem a novidade direto. Coberto pelo
   // changelog 4.93.0.
+  //
+  // 4.98.0 — lista completa em Configurações → Módulos: DECIDIDO PULAR o
+  // spotlight. O painel só monta na aba Administração → Módulos, e o
+  // mecanismo ancora na rota `settings` (qualquer aba). Apontar um
+  // `data-tour` que não existe no Perfil (pouso da tela) marcaria o aviso
+  // como visto sem nunca aparecer. Público = admin. Coberto pelo changelog.
 ];
 
 export default FEATURE_SPOTLIGHTS;

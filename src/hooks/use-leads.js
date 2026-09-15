@@ -28,8 +28,18 @@ function rowToLead(r) {
     trigger: r.trigger,
     triggerLabel: r.trigger_label,
     campaignId: r.campaign_id ?? null,
+    // Origem do lead (seção 1 do Checklist de Visita). Tem CHECK em produção
+    // com 5 valores — a lista em constants/checklist-visita.js é essa mesma.
+    canalOrigem: r.canal_origem ?? null,
     evidence: r.evidence,
     fitScore: r.fit_score ?? 0,
+    // Checklist de visita (14/09/2026). `scoreComercial` é DISTINTO de
+    // `fitScore`: aquele mede potencial de perfil, este mede a qualificação
+    // feita na visita. Nulo quando a visita nunca foi preenchida — 0 seria
+    // uma afirmação ("qualifiquei e deu zero"), nulo é a ausência dela.
+    volumeMensalBags: r.volume_mensal_bags ?? null,
+    volumeAnualBags: r.volume_anual_bags ?? null,
+    scoreComercial: r.score_comercial ?? null,
     sku: r.sku,
     skuName: r.sku_name,
     unitPrice: Number(r.unit_price || 0),
@@ -86,6 +96,9 @@ function leadToRow(l, extras = {}) {
     campaign_id: l.campaignId ?? null,
     evidence: l.evidence ?? null,
     fit_score: l.fitScore ?? 0,
+    volume_mensal_bags: l.volumeMensalBags ?? null,
+    volume_anual_bags: l.volumeAnualBags ?? null,
+    score_comercial: l.scoreComercial ?? null,
     sku: l.sku ?? null,
     sku_name: l.skuName ?? null,
     unit_price: l.unitPrice ?? 0,
@@ -126,7 +139,11 @@ function patchToRow(patch) {
     contactEmail: "contact_email",
     triggerLabel: "trigger_label",
     campaignId: "campaign_id",
+    canalOrigem: "canal_origem",
     fitScore: "fit_score",
+    volumeMensalBags: "volume_mensal_bags",
+    volumeAnualBags: "volume_anual_bags",
+    scoreComercial: "score_comercial",
     skuName: "sku_name",
     unitPrice: "unit_price",
     closeDate: "close_date",

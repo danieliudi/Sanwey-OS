@@ -3,7 +3,7 @@ import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
   ShieldCheck, Image, Upload, PanelBottom, Menu as MenuIcon, Inbox, Briefcase,
-  ToggleLeft, Lock,
+  ToggleLeft, Lock, Target,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { AvatarCropModal } from "../shared/AvatarCropModal";
@@ -16,6 +16,8 @@ import {
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
 import { Tabs } from "../shared/Tabs";
+import { useConfigComercial } from "../../hooks/use-config-comercial";
+import { ErroDeLeitura } from "../shared/ErroDeLeitura";
 import { ModuleStatesPanel } from "../settings/ModuleStatesPanel";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useChatStickers } from "../../hooks/use-chat-stickers";
@@ -38,6 +40,109 @@ const CHAT_MANAGER_ROLES = ["admin", "gerente", "gerente_marketing", "gerente_rh
 function isChatManagerUser(user) {
   const roles = Array.isArray(user?.roles) ? user.roles : (user?.role ? [user.role] : []);
   return roles.some(r => CHAT_MANAGER_ROLES.includes(r));
+}
+
+// ── Comercial · o limiar de "alto volume" ────────────────────────────────
+//
+// Decidido com o Daniel em 15/09/2026 (opção B do mockup "Quatro decisões").
+// É o número que faz a pergunta de MAIOR peso do Checklist de Visita
+// pontuar — 20 dos 100. Enquanto estiver vazio, o item sai do numerador E do
+// denominador do score, e a tela do vendedor diz por quê: razão sem
+// denominador honesto não sustenta decisão (regra 14).
+//
+// Por frente de propósito: o que é alto volume pra Resibag não é o mesmo que
+// pra Sanbag.
+function ConfigComercialSection({ currentUser }) {
+  const { limiarDe, salvarLimiar, loading, error } = useConfigComercial();
+  const [rascunho, setRascunho] = useState({});
+  const [salvando, setSalvando] = useState(null);
+  const [aviso, setAviso] = useState(null);
+
+  // "all" é visão consolidada, não uma frente que vende — fica de fora.
+  const frentes = COMPANY_IDS.filter(id => id !== "all");
+
+  const valorNaTela = (id) => {
+    if (rascunho[id] !== undefined) return rascunho[id];
+    const v = limiarDe(id);
+    return v == null ? "" : String(v);
+  };
+
+  const salvar = async (id) => {
+    const bruto = valorNaTela(id).trim();
+    // Vazio volta pro estado "não definido", que é legítimo — melhor tirar o
+    // item da conta do que deixar um número errado pontuando a carteira.
+    const valor = bruto === "" ? null : Number(bruto);
+    if (valor !== null && (!Number.isFinite(valor) || valor <= 0)) {
+      setAviso({ tipo: "erro", texto: "O limiar precisa ser um número maior que zero — ou vazio, para não definir." });
+      return;
+    }
+    setSalvando(id);
+    const r = await salvarLimiar(id, valor, currentUser?.id);
+    setSalvando(null);
+    if (r.ok) {
+      setRascunho(d => { const n = { ...d }; delete n[id]; return n; });
+      setAviso({ tipo: "ok", texto: valor === null ? "Limiar removido." : `Limiar salvo: ${valor} bags/mês.` });
+    } else {
+      setAviso({ tipo: "erro", texto: r.motivo });
+    }
+  };
+
+  return (
+    <Section
+      title="Limiar de alto volume"
+      description="A partir de quantos bags por mês uma conta pontua “alto volume” no Checklist de Visita — a pergunta que vale 20 dos 100 pontos da qualificação. Deixe vazio para não definir: o item sai da conta e a tela do vendedor explica o porquê, em vez de usar um número chutado."
+    >
+      {error && (
+        <div className="mb-3">
+          <ErroDeLeitura oQue="a configuração comercial" detalhe={error?.message} />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {frentes.map(id => {
+          const c = COMPANIES[id];
+          const sujo = rascunho[id] !== undefined;
+          return (
+            <div key={id} className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium" style={{ color: "var(--text)", minWidth: 110 }}>
+                {c?.name || id}
+              </span>
+              <input
+                type="number"
+                min="1"
+                inputMode="numeric"
+                disabled={loading}
+                value={valorNaTela(id)}
+                onChange={e => setRascunho(d => ({ ...d, [id]: e.target.value }))}
+                placeholder="não definido"
+                className="rounded-lg border px-3 py-2"
+                style={{ background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text)", fontSize: 16, width: 150 }}
+                aria-label={`Limiar de alto volume — ${c?.name || id}`}
+              />
+              <span className="text-xs" style={{ color: "var(--text-dim)" }}>bags/mês</span>
+              {sujo && (
+                <button
+                  type="button"
+                  onClick={() => salvar(id)}
+                  disabled={salvando === id}
+                  className="rounded-lg px-3 py-2 text-xs font-bold"
+                  style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer", opacity: salvando === id ? 0.6 : 1 }}
+                >
+                  {salvando === id ? "Salvando…" : "Salvar"}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {aviso && (
+        <p className="text-xs mt-3" style={{ color: aviso.tipo === "erro" ? "var(--danger)" : "var(--text-dim)" }}>
+          {aviso.texto}
+        </p>
+      )}
+    </Section>
+  );
 }
 
 function Section({ title, description, children }) {
@@ -611,6 +716,10 @@ export function SettingsView({
     if (isManager)       t.push({ id: "empresas",  label: "Empresas",        icon: Globe });
     if (canSeeExecutive) t.push({ id: "executivo", label: "Painel Executivo", icon: Sliders });
     if (isChatManager)   t.push({ id: "chat",      label: "Chat",            icon: Image });
+    // Comercial: o limiar de "alto volume" do Checklist de Visita. Mesmo gate
+    // da RLS da tabela (admin/gerente) — mostrar a aba pra quem a policy vai
+    // recusar seria oferecer um botão que não funciona.
+    if (isManager)       t.push({ id: "comercial", label: "Comercial",       icon: Target });
     return t;
   }, [isManager, canSeeExecutive, isChatManager]);
 
@@ -1324,6 +1433,10 @@ export function SettingsView({
                     pessoal e existe pra todo cargo — esta página passou a ser
                     só configuração da empresa. */}
                 <Tabs tabs={geralTabs} active={tab} onChange={setGeralTab} />
+
+                {tab === "comercial" && isManager && (
+                  <ConfigComercialSection currentUser={currentUser} />
+                )}
 
                 {tab === "empresas" && isManager && (
                 <Section

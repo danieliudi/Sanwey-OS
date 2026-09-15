@@ -4,7 +4,7 @@ import {
   Calendar, Linkedin, Newspaper, MessageSquareWarning, Search, ChevronDown,
   Check, Trash2, Mail, Mic,
   Clock, GitBranch, CalendarClock, History,
-  FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
+  FileText, Activity, Paperclip, ListChecks, ClipboardList, FileDown, Plus, Upload, Download,
   File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake, BookOpen,
   MessageCircle,
 } from "lucide-react";
@@ -34,6 +34,9 @@ import { Modal } from "../ui/Modal";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { ProposalPanel } from "./ProposalPanel";
 import { AtaVozPanel } from "./AtaVozPanel";
+import { VisitaChecklistPanel } from "./VisitaChecklistPanel";
+import { dividirRespostas } from "../../utils/checklist-visita";
+import { AppToast } from "../shared/AppToast";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
 import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
@@ -57,7 +60,29 @@ import { escapeHtml } from "../../utils/html";
 
 export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
-  const [sideTab, setSideTab] = useState("form");
+  // Aba inicial por tamanho de tela: no celular o drawer abre na Visita (é lá
+  // que se usa o aparelho — de pé, no cliente); no computador continua
+  // abrindo no Form, que é onde quem trabalha sentado espera cair. `lg` do
+  // Tailwind = 1024px.
+  //
+  // Reavaliada a CADA negócio aberto, e não uma vez só: o App renderiza este
+  // drawer incondicionalmente (ele devolve null lá dentro quando não há lead),
+  // então o componente monta uma vez por sessão e nunca desmonta. Com o valor
+  // decidido só no useState inicial, bastava tocar noutra aba uma vez pra
+  // todos os negócios seguintes abrirem nela pelo resto do dia — a promessa de
+  // "abre na Visita" valia pro primeiro card e mais nenhum. (QA 15/09/2026.)
+  const abaPadrao = () => (
+    typeof window !== "undefined" && window.matchMedia?.("(max-width: 1023px)")?.matches
+      ? "visita"
+      : "form"
+  );
+  const [sideTab, setSideTab] = useState(abaPadrao);
+  const leadAbertoRef = useRef(null);
+  useEffect(() => {
+    if (!lead?.id || leadAbertoRef.current === lead.id) return;
+    leadAbertoRef.current = lead.id;
+    setSideTab(abaPadrao());
+  }, [lead?.id]);
   const [emailPrefill, setEmailPrefill] = useState(null);
   const [copied, setCopied] = useState(false);
   const [quickCreateName, setQuickCreateName] = useState(null); // string | null — abre o mini-cadastro (com checagem de duplicata) quando != null
@@ -72,6 +97,13 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   // header do drawer abre por cima, de qualquer aba, sem trocar de contexto.
   // A ata continua aparecendo na lista de Atividades depois de salva.
   const [ataFloatingOpen, setAtaFloatingOpen] = useState(false);
+  const [visitaSalvando, setVisitaSalvando] = useState(false);
+  const [visitaErro, setVisitaErro] = useState(null);
+  // A aba de Visita é montada na primeira abertura e NUNCA desmonta: o
+  // rascunho do checklist vive nela, e desmontar ao trocar de aba jogava fora
+  // o que o vendedor tinha acabado de digitar na frente do cliente.
+  const [visitaMontada, setVisitaMontada] = useState(false);
+  useEffect(() => { if (sideTab === "visita") setVisitaMontada(true); }, [sideTab]);
 
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
@@ -811,8 +843,15 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
               </Button>
             </div>
 
-            <div style={{ borderTop: "1px solid var(--border)", margin: "2px 0" }} />
-
+        </>
+      )}
+      /* As abas saem de `left` e entram em `leftFixo`: no celular `left`
+         colapsa por padrão atrás de "+ detalhes do card", e a aba Visita —
+         a tela feita pra ser usada de pé, na frente do cliente — ficava
+         escondida justamente no aparelho onde ela serve. Metadado colapsa;
+         ferramenta não. No desktop nada muda. */
+      leftFixo={(
+        <>
             <SideTabs activeTab={sideTab} onChange={setSideTab} />
 
             {/* ── Tab: Form (só o Formulário Inicial — snapshot da criação) ── */}
@@ -919,6 +958,56 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
             )}
 
             {/* ── Tab: Email ── */}
+            {/* ── Tab: Visita (o checklist comercial em campo) ────────────
+                Durante a visita esta aba é guia, não formulário: mostra o que
+                ainda não foi perguntado e deixa a ata preencher o resto. Ver
+                o cabeçalho de VisitaChecklistPanel.jsx. */}
+            {visitaMontada && (
+              <div style={{ display: sideTab === "visita" ? "block" : "none" }}>
+              <VisitaChecklistPanel
+                // `key` pelo lead: o painel guarda o rascunho da visita em
+                // estado local e este drawer NUNCA desmonta (o App o renderiza
+                // sempre). Sem a key, trocar de negócio sem fechar o drawer —
+                // pela notificação ou pela paleta — levava o rascunho do
+                // cliente A junto e o gravava no B. (Achado de revisão.)
+                key={lead.id}
+                lead={lead}
+                salvando={visitaSalvando}
+                onGravarAta={onAddActivity ? () => setAtaFloatingOpen(true) : undefined}
+                onSalvar={async ({ respostas, score }) => {
+                  setVisitaSalvando(true);
+                  setVisitaErro(null);
+                  try {
+                    // Quem decide o que é coluna e o que é custom_fields é o
+                    // `destino` declarado em constants/checklist-visita.js —
+                    // não uma desestruturação aqui, que esquecia campo (o
+                    // decisor e a origem do lead iam parar em custom_fields e
+                    // nunca chegavam na coluna). Campo novo na folha impressa
+                    // não exige mexer neste arquivo.
+                    const { colunas, custom } = dividirRespostas(respostas, lead);
+                    const patch = {
+                      ...colunas,
+                      customFields: { ...(lead.customFields || {}), ...custom },
+                      // Grava o PERCENTUAL, não a soma bruta: `score_comercial`
+                      // tem CHECK 0-100 e as faixas da folha (A 80-100) são
+                      // lidas sobre o percentual. Gravar a soma com um item
+                      // fora da conta deixava a faixa A inalcançável.
+                      scoreComercial: score,
+                    };
+                    await onUpdate?.(lead.id, patch);
+                  } catch (e) {
+                    // RLS recusando gravação volta como erro e não como lista
+                    // vazia — engolir isso fazia o vendedor achar que salvou.
+                    setVisitaErro(e?.message || "Não foi possível salvar a visita.");
+                    throw e;
+                  } finally {
+                    setVisitaSalvando(false);
+                  }
+                }}
+              />
+              </div>
+            )}
+
             {sideTab === "email" && (
               <EmailPanel lead={lead} currentUser={currentUser} onAddActivity={onAddActivity} initialDraft={emailPrefill} />
             )}
@@ -1141,6 +1230,13 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
         </div>
       </Modal>
     )}
+    {/* Falha ao salvar a visita: RLS recusando gravação devolve erro, e sem
+        isto o vendedor saía do cliente achando que tinha salvo. */}
+    {visitaErro && (
+      <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setVisitaErro(null)}>
+        {visitaErro}
+      </AppToast>
+    )}
     </>
   );
 }
@@ -1235,6 +1331,11 @@ const SIDE_TAB_HINTS = {
 
 const SIDE_TABS = [
   { id: "form",         label: "Form",        icon: FileText },
+  // Checklist de visita — 2ª posição, não 1ª: é a aba primária DURANTE a
+  // visita, mas trocar a aba padrão mudaria a abertura do drawer pra todo
+  // mundo, inclusive pra quem nunca sai da mesa. Mockup aprovado com o Daniel
+  // em 14/09/2026.
+  { id: "visita",       label: "Visita",      icon: ClipboardList },
   { id: "email",        label: "Email",       icon: Mail },
   { id: "whatsapp",     label: "WhatsApp",    icon: MessageCircle },
   { id: "atividades",   label: "Atividades",  icon: Activity },

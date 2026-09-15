@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Search, Moon, Sun, LifeBuoy, Bug } from "lucide-react";
+import { Search, Moon, Sun, LifeBuoy, Bug, HelpCircle } from "lucide-react";
 import { NotificationCenter } from "./NotificationCenter";
 
 // Achado da 2ª auditoria: o badge do atalho de busca mostrava só um ícone
@@ -71,6 +71,7 @@ export function TopBar({
   onNavigate,
   onHelpClick,
   onReportBug,
+  onReabrirDica,
 }) {
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const { dark, toggle: toggleTheme } = useTheme();
@@ -175,6 +176,24 @@ export function TopBar({
             aria-label="Buscar"
           >
             <Search size={20} strokeWidth={2} />
+          </button>
+        )}
+
+        {/* Reabrir a dica desta tela. Só aparece quando a tela TEM guia — botão
+            que não faz nada é pior que botão ausente. Fica aqui, e não no
+            cabeçalho de cada página, por um motivo prático: é um lugar só, e
+            já vale pras 55 telas. Até 14/09/2026 não existia caminho de volta
+            nenhum — fechou a dica uma vez, acabou pra sempre naquele
+            navegador. */}
+        {onReabrirDica && (
+          <button
+            data-tour="dica-de-tela-reabrir"
+            onClick={onReabrirDica}
+            title="Ver a dica desta tela"
+            style={{ width: 40, height: 40, background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer", borderRadius: "var(--radius-sm)", display: "flex", alignItems: "center", justifyContent: "center" }}
+            aria-label="Ver a dica desta tela"
+          >
+            <HelpCircle size={19} strokeWidth={2} />
           </button>
         )}
 

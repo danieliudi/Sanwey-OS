@@ -21,6 +21,9 @@ import { useCallback, useEffect, useState } from "react";
 // depende da altura do próprio board, então usá-la criava um cálculo
 // circular que só piorava a cada resize em vez de convergir.
 
+// (Ver a nota de 14/09/2026 dentro do `update()`: este desconto passou a
+// valer SÓ quando o board tem rolagem horizontal de verdade.)
+//
 // O KanbanFab é `position: fixed` no canto inferior esquerdo, então ele ocupa
 // os últimos ~58px da janela SEM que o board saiba disso — e o board, que
 // reservava só `marginBottom` (16px), terminava por baixo dele. Efeito
@@ -65,7 +68,24 @@ export function useAvailableHeight(marginBottom = 16, deps = [], trailingRef = n
     const update = () => {
       const top = el.getBoundingClientRect().top;
       const trailingHeight = trailingRef?.current ? trailingRef.current.getBoundingClientRect().height : 0;
-      setHeight(Math.max(280, Math.round(window.innerHeight - top - trailingHeight - marginBottom - alturaDoFab())));
+      // A reserva do FAB só existe quando o board REALMENTE tem rolagem
+      // horizontal. Correção de 14/09/2026, pedida pelo Daniel: "não precisa
+      // encaixar horizontalmente, só verticalmente."
+      //
+      // O desconto de 02/09 protegia duas coisas: a barra de rolagem
+      // horizontal do board (que é a razão de este hook existir) e o último
+      // card da 1ª coluna. Mas ele descontava a altura do botão da LARGURA
+      // INTEIRA do board, por causa de um botão que ocupa só o canto inferior
+      // esquerdo — e quando não há rolagem horizontal, não há barra nenhuma a
+      // proteger. O efeito era ~66px de faixa morta no rodapé de todo board
+      // que cabe na tela, que é a maioria (o Meu To-do tem 4 colunas).
+      //
+      // Sem barra, o botão passa a flutuar sobre o rodapé da 1ª coluna — que
+      // é o comportamento normal de um FAB, e é o do Pipefy, a referência que
+      // originou este botão.
+      const temScrollHorizontal = el.scrollWidth > el.clientWidth + 1;
+      const reservaFab = temScrollHorizontal ? alturaDoFab() : 0;
+      setHeight(Math.max(280, Math.round(window.innerHeight - top - trailingHeight - marginBottom - reservaFab)));
     };
     update();
     // Segunda medição no quadro seguinte: o KanbanFab costuma montar DEPOIS
