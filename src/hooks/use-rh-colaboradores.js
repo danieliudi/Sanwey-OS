@@ -113,6 +113,10 @@ function colaboradorToRow(c, extras = {}) {
 export function useRHColaboradores({ userId, enabled = true } = {}) {
   const [colaboradores, setColaboradores] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Ver ErroDeLeitura.jsx: `data` vazio por RLS é indistinguível de tabela
+  // vazia, e o `error` era descartado aqui — a tela dizia "nenhum
+  // colaborador" para quem simplesmente não tinha permissão de ler.
+  const [error, setError] = useState(null);
 
   // `isActive` é a guarda por execução do efeito (não um ref da instância)
   // — ver o porquê em use-chat.js. Default sempre-ativo p/ chamada manual.
@@ -120,8 +124,10 @@ export function useRHColaboradores({ userId, enabled = true } = {}) {
     if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { data } = await supabase.from("rh_colaboradores").select("*").order("full_name", { ascending: true });
+      const { data, error: err } = await supabase.from("rh_colaboradores").select("*").order("full_name", { ascending: true });
       if (!isActive()) return;
+      if (err) { setError(err); return; }
+      setError(null);
       setColaboradores((data || []).map(rowToColaborador));
     } finally {
       if (isActive()) setLoading(false);
@@ -194,5 +200,5 @@ export function useRHColaboradores({ userId, enabled = true } = {}) {
     setColaboradores(prev => prev.filter(c => c.id !== id));
   }, []);
 
-  return { colaboradores, loading, createColaborador, updateColaborador, changeOnboardingStage, deleteColaborador, refetch: fetchAll };
+  return { colaboradores, loading, error, createColaborador, updateColaborador, changeOnboardingStage, deleteColaborador, refetch: fetchAll };
 }

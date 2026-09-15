@@ -49,6 +49,7 @@ import { FilterBar } from "../shared/FilterBar";
 import { PageTitle } from "../shared/PageTitle";
 import { semAcento } from "../../utils/text-search";
 import { daysSince } from "../../utils/date";
+import { ErroDeLeitura } from "../shared/ErroDeLeitura";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 
@@ -352,7 +353,7 @@ function KpiCard({ label, value, sub }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, pipelineTransitions, onViewExistingLead, clients, onCreateClient, onCreateClientContact, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage, campaigns = [] }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, pipelineTransitions, onViewExistingLead, clients, onCreateClient, onCreateClientContact, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage, campaigns = [], leadsErro, onRecarregarLeads }) {
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
@@ -886,6 +887,16 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           </div>
         </Modal>
       </KanbanBoardHeader>
+
+      {/* Recusa de RLS na leitura volta com `data: []` e sem erro — sem este
+          aviso o vendedor via "Nenhum lead encontrado" e concluía que tinha
+          perdido a carteira. Fica ACIMA do board, não no lugar do board: a
+          lista em cache, quando existe, continua valendo alguma coisa. */}
+      {leadsErro && (
+        <div className="px-4 lg:px-6">
+          <ErroDeLeitura oQue="seus negócios" onTentarDeNovo={onRecarregarLeads} detalhe={leadsErro?.message} />
+        </div>
+      )}
 
       {onAddLead && stages.filter(s => !s.terminal).length > 0 && (
         <KanbanFab

@@ -225,4 +225,57 @@ export function dividirRespostas(respostas, lead) {
   return { colunas, custom };
 }
 
+/* ── A ata devolvendo o que ouviu ─────────────────────────────────────────
+ *
+ * A edge function `crm-ata-voz` já extrai dor, concorrente, objeção e próximo
+ * passo da conversa gravada — isso funciona desde antes do checklist existir.
+ * Só que esses campos morriam na ata: o checklist ao lado continuava dizendo
+ * que ninguém tinha perguntado, logo depois de o cliente ter falado.
+ *
+ * SUGERE, NUNCA GRAVA. O vendedor é quem decide se a máquina ouviu direito, e
+ * campo que ele já respondeu nem aparece na lista. Escrever por cima do que
+ * uma pessoa digitou na frente do cliente, com transcrição automática, é a
+ * forma mais rápida de ninguém mais confiar na tela.
+ */
+export const CHAVE_SUGESTOES = "checklist_sugestoes";
+
+// Campo da ata → chave do checklist. Deliberadamente curto: `pessoas` NÃO vira
+// `decisor` (quem estava na sala não é necessariamente quem assina, e esse
+// item vale 10 pontos), e `resumo` não vira `necessidade_principal` (resumo é
+// a reunião inteira, não a necessidade).
+export const DA_ATA = {
+  dor:           "dor_principal",
+  concorrente:   "concorrente_principal",
+  proximo_passo: "objetivo_proximo",
+  objecao:       "pendencias",
+};
+
+/** O que a ata tem a oferecer, já no formato que o checklist entende. */
+export function sugestoesDaAta(draft, quando) {
+  const out = {};
+  for (const [daAta, doChecklist] of Object.entries(DA_ATA)) {
+    const valor = draft?.[daAta];
+    if (typeof valor === "string" && valor.trim()) out[doChecklist] = valor.trim();
+  }
+  if (Object.keys(out).length === 0) return null;
+  return { ...out, _em: quando };
+}
+
+/**
+ * As sugestões que ainda fazem sentido mostrar: fora as que o vendedor já
+ * respondeu (na coluna, no custom_fields ou no rascunho aberto) e fora as que
+ * ele dispensou nesta sessão.
+ */
+export function sugestoesPendentes(lead, rascunho = {}, dispensadas = []) {
+  const cf = lead?.customFields || lead?.custom_fields || {};
+  const guardadas = cf[CHAVE_SUGESTOES];
+  if (!guardadas || typeof guardadas !== "object") return [];
+  const d = respostasDoLead(lead, rascunho);
+  return Object.entries(guardadas)
+    .filter(([chave]) => chave !== "_em")
+    .filter(([chave]) => !dispensadas.includes(chave))
+    .filter(([chave]) => !temValor(d[chave]))
+    .map(([chave, valor]) => ({ chave, valor, rotulo: CAMPO_POR_CHAVE[chave]?.rotulo || chave }));
+}
+
 export default avaliarChecklist;

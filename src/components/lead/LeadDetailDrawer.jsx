@@ -60,7 +60,15 @@ import { escapeHtml } from "../../utils/html";
 
 export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, onEditFields, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
-  const [sideTab, setSideTab] = useState("form");
+  // Aba inicial por tamanho de tela, decidida uma vez na montagem: no celular
+  // o drawer abre na Visita (é lá que se usa o aparelho — de pé, no cliente);
+  // no computador continua abrindo no Form, que é onde quem trabalha sentado
+  // espera cair. `lg` do Tailwind = 1024px.
+  const [sideTab, setSideTab] = useState(() => (
+    typeof window !== "undefined" && window.matchMedia?.("(max-width: 1023px)")?.matches
+      ? "visita"
+      : "form"
+  ));
   const [emailPrefill, setEmailPrefill] = useState(null);
   const [copied, setCopied] = useState(false);
   const [quickCreateName, setQuickCreateName] = useState(null); // string | null — abre o mini-cadastro (com checagem de duplicata) quando != null
@@ -821,8 +829,15 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
               </Button>
             </div>
 
-            <div style={{ borderTop: "1px solid var(--border)", margin: "2px 0" }} />
-
+        </>
+      )}
+      /* As abas saem de `left` e entram em `leftFixo`: no celular `left`
+         colapsa por padrão atrás de "+ detalhes do card", e a aba Visita —
+         a tela feita pra ser usada de pé, na frente do cliente — ficava
+         escondida justamente no aparelho onde ela serve. Metadado colapsa;
+         ferramenta não. No desktop nada muda. */
+      leftFixo={(
+        <>
             <SideTabs activeTab={sideTab} onChange={setSideTab} />
 
             {/* ── Tab: Form (só o Formulário Inicial — snapshot da criação) ── */}

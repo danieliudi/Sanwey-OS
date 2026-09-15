@@ -312,6 +312,10 @@ export default function App() {
     addLeadActivity,
     loadDemoLeads,
     clearAllLeads: clearAllLeadsRemote,
+    // Falha de leitura precisa chegar na tela: sem isto a recusa de RLS
+    // aparecia como "Nenhum lead encontrado" (ver ErroDeLeitura.jsx).
+    error: leadsErro,
+    refetch: recarregarLeads,
     isOnline,
     cacheAge,
   } = useLeads({
@@ -352,7 +356,7 @@ export default function App() {
   // abre uma segunda.
   const { totalUnread: chatUnread, incomingMessage: chatIncomingMessage } = useChat({ userId: currentUser?.id });
 
-  const { signals } = useMarketSignals();
+  const { signals, error: sinaisErro, refetch: recarregarSinais } = useMarketSignals();
 
   const { crossReferrals, approve: approveCross, reject: rejectCross } = useCrossReferrals(leads);
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
@@ -2454,6 +2458,8 @@ export default function App() {
               <SignalsView
                 activeCompany={activeCompany}
                 signals={signals}
+                erroDeLeitura={sinaisErro}
+                onRecarregar={recarregarSinais}
                 clients={clients}
                 onAddLead={handleAddLead}
                 accessibleCompanies={accessibleCompanies}
@@ -2495,6 +2501,8 @@ export default function App() {
               accessibleCompanies={accessibleCompanies}
               onCompanyChange={setActiveCompany}
               leads={leads}
+              leadsErro={leadsErro}
+              onRecarregarLeads={recarregarLeads}
               pipelines={pipelines}
               users={users}
               onLeadClick={setSelectedLead}

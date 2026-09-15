@@ -56,6 +56,7 @@ import { formatDateBR, toLocalISODate } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
 import { matchDocumentToColaborador } from "../../utils/rh-document-matching";
 import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
+import { ErroDeLeitura } from "../shared/ErroDeLeitura";
 
 const BENEFICIO_STATUS_COLORS = {
   solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
@@ -1668,7 +1669,7 @@ export function RHFuncionariosView({
   onOpenTreinamento,
   onOpenFerias,
 }) {
-  const { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador, refetch } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, loading, error: erroDeLeitura, createColaborador, updateColaborador, deleteColaborador, refetch } = useRHColaboradores({ userId: currentUser?.id });
   const [density, setDensity] = useTableDensity("rh-funcionarios-table-density");
   const cellPadY = density === "compact" ? "py-1.5" : "py-3";
   const headPadY = density === "compact" ? "py-1.5" : "py-2.5";
@@ -1986,6 +1987,15 @@ export function RHFuncionariosView({
 
   return (
     <div>
+
+      {/* Leitura recusada pela RLS volta com lista vazia e sem erro — sem isto
+          a tela dizia "nenhum colaborador" pra quem só não tinha permissão.
+          Ver ErroDeLeitura.jsx. */}
+      {erroDeLeitura && (
+        <div className="mb-4">
+          <ErroDeLeitura oQue="a lista de colaboradores" onTentarDeNovo={refetch} detalhe={erroDeLeitura?.message} />
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">

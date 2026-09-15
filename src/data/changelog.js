@@ -38,6 +38,27 @@
 
 export const CHANGELOG = [
   {
+    version: "5.15.0",
+    items: [
+      {
+        kind: "novo",
+        text: "No celular, o negócio abre direto na aba \"Visita\" — e ela deixou de ficar escondida atrás de \"+ detalhes\". A tela feita para ser usada de pé, na frente do cliente, estava a três toques de distância justamente no aparelho onde serve. No computador nada muda: continua abrindo no Form.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Gravou a conversa? A ata agora devolve o que ouviu para o checklist: dor, concorrente e próximo passo aparecem no topo da aba Visita como sugestão, com \"Usar\" ou \"Não\" em cada uma. Nada é gravado sem você aceitar, e o que você já respondeu nem entra na lista.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "correcao",
+        toast: true,
+        text: "Quando a plataforma não conseguia ler seus dados, a tela dizia \"nenhum registro encontrado\" — indistinguível de uma lista de verdade vazia. Agora falha de leitura aparece como falha, em vermelho, com botão de tentar de novo. Vale no Funil de Vendas, em RH · Funcionários e em Sinais de Mercado.",
+        roles: ["vendedor", "gerente", "admin", "rh", "gerente_rh", "diretoria", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "5.14.0",
     items: [
       {

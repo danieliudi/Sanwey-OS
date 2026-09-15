@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { Mic, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { Mic, ChevronDown, ChevronRight, Check, Sparkles } from "lucide-react";
 import { SECOES, CAMPO, DESTINO } from "../../constants/checklist-visita";
-import { avaliarChecklist, completudeDasSecoes, respostasDoLead } from "../../utils/checklist-visita";
+import { avaliarChecklist, completudeDasSecoes, respostasDoLead, sugestoesPendentes, CHAVE_SUGESTOES } from "../../utils/checklist-visita";
 import { CurrencyInput } from "../ui/CurrencyInput";
 
 // Checklist de visita — a tela que o vendedor usa DENTRO do cliente.
@@ -38,13 +38,32 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
   const secoes    = useMemo(() => completudeDasSecoes(lead, rascunho, avaliacao), [lead, rascunho, avaliacao]);
   const respostas = useMemo(() => respostasDoLead(lead, rascunho), [lead, rascunho]);
 
-  const sujo = Object.keys(rascunho).length > 0;
+  // Sugestões da ata que o vendedor dispensou nesta sessão — some da tela na
+  // hora, e some do banco no próximo "Salvar visita".
+  const [dispensadas, setDispensadas] = useState([]);
+  const sugestoes = useMemo(
+    () => sugestoesPendentes(lead, rascunho, dispensadas),
+    [lead, rascunho, dispensadas],
+  );
+
+  const sujo = Object.keys(rascunho).length > 0 || dispensadas.length > 0;
   const editar = (chave, valor) => setRascunho(r => ({ ...r, [chave]: valor }));
 
   const salvar = async () => {
     try {
-      await onSalvar?.({ respostas: rascunho, score: avaliacao.pct, faixa: avaliacao.faixa?.id ?? null });
+      // O que sobrou de sugestão vai junto: aceita (virou rascunho) e
+      // dispensada saem, o resto continua esperando a próxima abertura.
+      const guardadas = (lead?.customFields || {})[CHAVE_SUGESTOES] || {};
+      const restantes = Object.fromEntries(
+        Object.entries(guardadas).filter(([k]) => k === "_em" || sugestoes.some(s => s.chave === k)),
+      );
+      const respostas = {
+        ...rascunho,
+        [CHAVE_SUGESTOES]: Object.keys(restantes).filter(k => k !== "_em").length > 0 ? restantes : null,
+      };
+      await onSalvar?.({ respostas, score: avaliacao.pct, faixa: avaliacao.faixa?.id ?? null });
       setRascunho({});
+      setDispensadas([]);
     } catch {
       // O rascunho FICA: quem mostra o erro é o drawer (toast), e limpar o que
       // o vendedor digitou depois de uma falha de rede é perder a visita.
@@ -88,6 +107,52 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
           )}
         </div>
       </div>
+
+      {/* ── O que a ata ouviu ───────────────────────────────────────────
+          Sugere, nunca grava: campo já respondido nem chega aqui, e o score
+          só se move depois do "Usar". */}
+      {sugestoes.length > 0 && (
+        <div style={{
+          background: "color-mix(in srgb, var(--accent) 7%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--accent) 35%, transparent)",
+          borderRadius: 12, padding: "11px 12px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <Sparkles size={13} style={{ color: "var(--accent)", flexShrink: 0 }} />
+            <b style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>
+              A ata sugeriu {sugestoes.length} {sugestoes.length === 1 ? "resposta" : "respostas"}
+            </b>
+          </div>
+          {sugestoes.map((s, i) => (
+            <div key={s.chave} style={{
+              display: "flex", alignItems: "flex-start", gap: 8, padding: "7px 0",
+              borderTop: i === 0 ? "none" : "1px solid color-mix(in srgb, var(--accent) 18%, transparent)",
+            }}>
+              <span style={{ minWidth: 0, flex: 1 }}>
+                <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {s.rotulo}
+                </span>
+                <span style={{ fontSize: 12.5, lineHeight: 1.4, color: "var(--text)" }}>{s.valor}</span>
+              </span>
+              <span style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+                <BotaoMini onClick={() => editar(s.chave, s.valor)}>Usar</BotaoMini>
+                <BotaoMini neutro onClick={() => setDispensadas(d => [...d, s.chave])}>Não</BotaoMini>
+              </span>
+            </div>
+          ))}
+          {sugestoes.length > 1 && (
+            <div style={{ marginTop: 9 }}>
+              <BotaoMini onClick={() => setRascunho(r => {
+                const novo = { ...r };
+                sugestoes.forEach(s => { novo[s.chave] = s.valor; });
+                return novo;
+              })}>
+                Usar todas
+              </BotaoMini>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Falta perguntar ─────────────────────────────────────────────── */}
       {avaliacao.faltantes.length > 0 && (
@@ -267,6 +332,24 @@ function CampoDoChecklist({ campo, valor, onChange }) {
         <input type="text" value={valor} onChange={(e) => onChange(e.target.value)} style={inputSt} />
       )}
     </div>
+  );
+}
+
+function BotaoMini({ children, onClick, neutro = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        minHeight: 30, padding: "4px 9px", borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+        border: `1px solid ${neutro ? "var(--border)" : "var(--accent)"}`,
+        background: "var(--surface)",
+        color: neutro ? "var(--text-dim)" : "var(--accent)",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
