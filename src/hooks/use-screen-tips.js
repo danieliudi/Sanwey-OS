@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
 import { VIDEO_TUTORIALS, papeisDoUsuario } from "../data/tutorials";
@@ -48,13 +48,42 @@ import { VIDEO_TUTORIALS, papeisDoUsuario } from "../data/tutorials";
 // "Visão Geral" marcava as TRÊS como vistas de uma vez, e as outras duas
 // nunca mais apareciam para aquele usuário.
 //
-// Difere de propósito do useChangelogNotice num ponto: NÃO existe "marcar a
-// 1ª tela como vista em silêncio, sem mostrar". Pro changelog isso faz
-// sentido (usuário novo não precisa de retrospectiva). Aqui o objetivo é o
-// oposto — a dica da 1ª tela que um usuário novo abre é a mais valiosa de
-// todas, é exatamente o momento que essa feature existe pra cobrir.
-export function useScreenTips(currentUser, screenKey, { skip = false } = {}) {
+// ── CORREÇÃO DE 15/09/2026: a dica voltava a cada atualização ─────────────
+//
+// O Daniel relatou que "toda vez que atualizo a plataforma, esse guia volta a
+// aparecer, mesmo eu não sendo usuário novo". Não era a chave de
+// armazenamento (`V` é fixa em "v4"; deploy não apaga nada). Eram duas coisas
+// somadas, as duas medidas antes de mexer:
+//
+//   1. Em 14/09/2026 (v5.13.0), 114 telas ganharam `quickStart.resumo` DE UMA
+//      VEZ — o campo saiu de 0 para 114 num único commit. Antes disso nenhuma
+//      dica montava painel. Pra quem já usava a plataforma, isso não é "uma
+//      dica": é uma interrupção por tela, em toda tela que ele abrir daí em
+//      diante. E repete a cada lote de guias migrados, ou seja, a cada
+//      atualização.
+//   2. `dismiss()` só roda no "X" e no "Ver guia completo". Sair da tela pelo
+//      menu NÃO marca como vista — então a mesma dica voltava na visita
+//      seguinte, indefinidamente.
+//
+// A decisão anterior (registrada logo abaixo e agora revista) era não ter
+// linha de base em silêncio, ao contrário do useChangelogNotice. O raciocínio
+// estava certo pro caso que ele mirava — a 1ª tela de um usuário NOVO é o
+// momento mais valioso da feature — e errado pro caso que ele não previu: 114
+// guias chegando de uma vez pra quem já sabe usar a plataforma.
+//
+// Agora, a pedido do Daniel (15/09/2026): **dica automática é para usuário
+// novo**. Quem já usava continua tendo o guia inteiro, a um clique, pelo "?"
+// da barra superior — que já existe desde a v5.13.0 e já ganhou spotlight
+// próprio. Cada mecanismo com um trabalho só: dica de tela ensina quem está
+// chegando, spotlight avisa a novidade a quem já está, changelog conta o que
+// mudou, tour desenha o mapa, Tutoriais é a referência.
+//
+// A escolha é GRAVADA por usuário, não recalculada: `showOnboarding` vira
+// false no instante em que a pessoa fecha o modal de boas-vindas, então
+// recalcular desligaria a dica do usuário novo no primeiro clique dele.
+export function useScreenTips(currentUser, screenKey, { skip = false, usuarioNovo = false } = {}) {
   const [screenTipsSeenMap, setScreenTipsSeenMap] = usePersistentState(STORAGE_KEYS.screenTipsSeen, {});
+  const [autoMap, setAutoMap] = usePersistentState(STORAGE_KEYS.screenTipsAuto, {});
   // Reabertura manual pelo "?" da barra superior. Vive em estado, não no
   // localStorage: pedir a dica de novo não desfaz o "já vi" — sair da tela e
   // voltar não traz o painel de volta sozinho. Antes de 14/09/2026 não existia
@@ -63,6 +92,18 @@ export function useScreenTips(currentUser, screenKey, { skip = false } = {}) {
   const [forcado, setForcado] = useState(null);
   const userId = currentUser?.id;
   const seenForUser = (userId && screenTipsSeenMap[userId]) || {};
+
+  // Gravado na PRIMEIRA vez que este código vê o usuário, e nunca reescrito.
+  // `usuarioNovo` é o mesmo `showOnboarding` do App.jsx — true só enquanto a
+  // pessoa ainda não fechou o modal de boas-vindas.
+  useEffect(() => {
+    if (!userId) return;
+    setAutoMap(m => (userId in m ? m : { ...m, [userId]: usuarioNovo }));
+  }, [userId, usuarioNovo, setAutoMap]);
+  // `undefined` (ainda não gravou) conta como NÃO automático: numa plataforma
+  // que já está em uso, o caso comum é o usuário existente, e errar pro lado
+  // de não interromper é o lado certo — o "?" continua ali.
+  const recebeDicaAutomatica = Boolean(userId && autoMap[userId]);
 
   // Cargo principal primeiro, secundários depois, sem repetir. A ordem vive em
   // `papeisDoUsuario` (data/tutorials.js) e é a MESMA que a tela de Ajuda usa —
@@ -95,10 +136,13 @@ export function useScreenTips(currentUser, screenKey, { skip = false } = {}) {
   // quem ainda não tem as duas frases simplesmente não interrompe ninguém.
   const tip = useMemo(() => {
     if (!guia) return null;
+    // O "?" ignora tudo: é o pedido explícito da pessoa, e é o caminho de
+    // volta pra quem não recebe a dica sozinho.
     if (forcado === screenKey) return { ...guia.quickStart, steps: guia.quickStart.steps };
     if (skip || !userId || seenForUser[screenKey]) return null;
+    if (!recebeDicaAutomatica) return null;
     return guia.quickStart;
-  }, [guia, forcado, screenKey, skip, userId, seenForUser]);
+  }, [guia, forcado, screenKey, skip, userId, seenForUser, recebeDicaAutomatica]);
 
   const dismiss = () => {
     setForcado(null);

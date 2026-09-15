@@ -17,6 +17,12 @@ export const STORAGE_KEYS = {
   leadFormConfig: `gs_${V}_lead_form_config`,
   changelogSeen: `gs_${V}_changelog_seen`,
   screenTipsSeen: `gs_${V}_screen_tips_seen`,
+  // Decidido UMA vez por usuário, na primeira vez que este código o vê: ele
+  // recebe dica de tela sozinho, ou só quando pedir pelo "?" — ver
+  // use-screen-tips.js. Precisa ser gravado, e não recalculado, porque o
+  // sinal de origem (`showOnboarding`) vira false assim que a pessoa fecha o
+  // modal de boas-vindas.
+  screenTipsAuto: `gs_${V}_screen_tips_auto`,
   agentsCoachmarkSeen: `gs_${V}_agents_coachmark_seen`,
   featureSpotlightsSeen: `gs_${V}_feature_spotlights_seen`,
   platformTourSeen: `gs_${V}_platform_tour_seen`,

@@ -75,8 +75,13 @@ export const FEATURE_SPOTLIGHTS = [
     id: "dica-de-tela-reabrir",
     route: "dashboard",
     target: '[data-tour="dica-de-tela-reabrir"]',
-    text: "A dica de cada tela agora cabe em 3 linhas — e este botão traz ela de volta quando você quiser, quantas vezes quiser.",
-    version: "5.13.0",
+    text: "A dica de cada tela agora mora aqui: clique quando quiser, quantas vezes quiser. Ela deixou de aparecer sozinha para quem já usa a plataforma.",
+    // 5.19.1 — sobe a versão de propósito, pra reaparecer a QUEM JÁ VIU a de
+    // 5.13.0. É o caso que o cabeçalho deste arquivo prevê: a feature mudou
+    // de um jeito que invalida o aviso antigo. E aqui não é cosmético — a
+    // dica de tela parou de aparecer sozinha pra usuário existente, então
+    // quem não souber do "?" simplesmente perde o guia sem entender por quê.
+    version: "5.19.1",
   },
   // 5.12.0 — a pergunta "Onde foi" mora DENTRO do modal Nova Despesa, que não
   // existe na tela até alguém abrir. Mesmo raciocínio do "vaga-posicoes"

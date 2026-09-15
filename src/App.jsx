@@ -1314,7 +1314,7 @@ export default function App() {
   const { tip: screenTip, dismiss: dismissScreenTip, reabrir: reabrirScreenTip, temGuia: temDicaDeTela } = useScreenTips(
     currentUser,
     section,
-    { skip: showOnboarding || needRefresh || agentsCoachmarkVisible || changelogItems.length > 0 }
+    { skip: showOnboarding || needRefresh || agentsCoachmarkVisible || changelogItems.length > 0, usuarioNovo: showOnboarding }
   );
 
   // "Comece por" que leva até o elemento de verdade, em vez de só descrever
