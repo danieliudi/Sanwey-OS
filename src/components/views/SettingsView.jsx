@@ -70,7 +70,9 @@ function isChatManagerUser(user) {
 // não oferecer um botão que a RLS vai recusar.
 function FatosDaMarcaSection({ currentUser }) {
   const { fatosDe, metaFatosDe, salvarFatos, loading, error } = useConfigComercial();
-  const [frente, setFrente] = useState(() => COMPANY_IDS.find(id => id !== "all") || "resibag");
+  // Abre na Resibag: é a frente de onde o gerador nasceu, e COMPANY_IDS começa
+  // por "industria" — o gerente abria em Configurações e via a frente errada.
+  const [frente, setFrente] = useState(() => (COMPANY_IDS.includes("resibag") ? "resibag" : COMPANY_IDS[0]));
   const [rascunho, setRascunho] = useState({});
   const [salvando, setSalvando] = useState(false);
   const [aviso, setAviso] = useState(null);
@@ -86,16 +88,32 @@ function FatosDaMarcaSection({ currentUser }) {
 
   const salvar = async () => {
     setSalvando(true);
-    const completo = Object.fromEntries(CAMPOS_FATOS.map(c => [c.chave, valor(c.chave)]));
+    // Grava SÓ o que foi tocado, mesclado com o que já estava configurado.
+    //
+    // Gravar `valor(chave)` de todos os 11 campos (que cai em `atuais`, já
+    // mesclado com o padrão) congelava o objeto inteiro: a partir da primeira
+    // edição, `configurados` teria as 11 chaves e o padrão do repositório
+    // viraria decorativo pra sempre. No dia em que a base de marca mudasse e
+    // alguém atualizasse FATOS_PADRAO, a plataforma continuaria afirmando a
+    // versão antiga — que é EXATAMENTE o modo de falha da tagline
+    // "resíduos industriais" que esta tela existe pra eliminar. Seria trocar
+    // cópia envelhecida no HTML por cópia envelhecida no jsonb.
+    const completo = { ...(meta.configurados || {}), ...rascunho };
     const r = await salvarFatos(frente, completo, currentUser?.id);
     setSalvando(false);
     if (r.ok) { setRascunho({}); setAviso({ tipo: "ok", texto: "Fatos salvos. Valem para toda proposta desta frente." }); }
     else setAviso({ tipo: "erro", texto: r.motivo });
   };
 
-  const restaurar = () => {
-    setRascunho(Object.fromEntries(CAMPOS_FATOS.map(c => [c.chave, padrao[c.chave] || ""])));
-    setAviso({ tipo: "ok", texto: "Valores do repositório carregados. Clique em Salvar para aplicar." });
+  // Volta pra "nunca editado" gravando objeto VAZIO, e não os valores do
+  // padrão campo a campo: gravar os valores manteria as chaves configuradas e
+  // o problema acima voltava pela outra porta.
+  const restaurar = async () => {
+    setSalvando(true);
+    const r = await salvarFatos(frente, {}, currentUser?.id);
+    setSalvando(false);
+    if (r.ok) { setRascunho({}); setAviso({ tipo: "ok", texto: "Voltou aos valores do repositório." }); }
+    else setAviso({ tipo: "erro", texto: r.motivo });
   };
 
   return (

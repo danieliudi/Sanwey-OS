@@ -104,6 +104,12 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   // o que o vendedor tinha acabado de digitar na frente do cliente.
   const [visitaMontada, setVisitaMontada] = useState(false);
   useEffect(() => { if (sideTab === "visita") setVisitaMontada(true); }, [sideTab]);
+  // Mesmo motivo da aba Visita: montar sempre fazia TODO negócio aberto pagar
+  // as consultas do painel de proposta (relatórios de ESG da frente inteira,
+  // propostas do negócio, configuração comercial) e abrir um canal Realtime
+  // novo a cada troca de card, mesmo que ninguém encostasse na aba.
+  const [propostaMontada, setPropostaMontada] = useState(false);
+  useEffect(() => { if (sideTab === "pdf") setPropostaMontada(true); }, [sideTab]);
 
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
@@ -1134,9 +1140,11 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
                 gerador de RFP toma o lugar dela. A antiga tinha ZERO propostas
                 criadas em produção nas duas tabelas — não havia nada a migrar,
                 e conviver com as duas daria na mesma coisa de novo. */}
-            <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
-              <PropostaPanel key={lead.id} lead={lead} currentUser={currentUser} />
-            </div>
+            {propostaMontada && (
+              <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
+                <PropostaPanel key={lead.id} lead={lead} currentUser={currentUser} onAddActivity={onAddActivity} />
+              </div>
+            )}
         </>
       )}
       center={(

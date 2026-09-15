@@ -16,8 +16,6 @@ import { CAMPOS_FATOS } from "../constants/fatos-canonicos";
 // de propósito: é o mesmo problema — afirmação que ninguém checou indo pra
 // fora com o nome da empresa em cima.
 
-export const CLASSE = { CANONICO: 1, RFP: 2, BLOQUEADO: 3 };
-
 // ── Classe 2 · o que muda a cada RFP ──────────────────────────────────────
 // `de` é o campo do lead que preenche sozinho. É o ganho inteiro de estar
 // dentro do funil: sete destes eram redigitados a cada proposta.
@@ -32,7 +30,7 @@ export const CAMPOS_RFP = [
   { chave: "produto",   rotulo: "Linha / modelo ofertado",             de: "skuName" },
   { chave: "aplicacao", rotulo: "Aplicação / resíduo" },
   { chave: "qtd",       rotulo: "Quantidade (un)",  tipo: "numero",    de: "quantity" },
-  { chave: "preco",     rotulo: "Preço unit. (R$)", tipo: "dinheiro",  de: "unitPrice" },
+  { chave: "preco",     rotulo: "Preço unitário", tipo: "dinheiro",  de: "unitPrice" },
   { chave: "prazo",     rotulo: "Prazo de entrega" },
   { chave: "incoterm",  rotulo: "Incoterm / frete", tipo: "escolha",
     opcoes: ["CIF — conforme raio contratado", "FOB — planta Taboão da Serra/SP", "A definir com o comprador"] },

@@ -40,3 +40,15 @@ comment on column public.crm_config_comercial.fatos_atualizados_em is
 -- RLS: nenhuma policy nova. As duas tabelas já têm RLS ligada e as policies
 -- existentes são de TABELA, não de coluna — valem para coluna nova sem
 -- alteração. Conferido que não há GRANT por coluna em nenhuma das duas.
+
+-- ── Versão única por negócio (achado de revisão, 15/09/2026) ──────────────
+-- `version` era calculada no cliente a partir da lista lida na abertura do
+-- drawer, e `useProposals` não assina Realtime. Dois vendedores no mesmo
+-- negócio geravam os dois `version = 2` — e "qual proposta o cliente
+-- recebeu" passava a ter duas respostas, que é exatamente a pergunta que o
+-- versionamento existe pra responder.
+--
+-- O índice transforma a corrida em ERRO em vez de duplicata silenciosa; o
+-- cliente pega o próximo número e tenta de novo (ver use-proposals.js).
+create unique index if not exists proposals_lead_version_uniq
+  on public.proposals (lead_id, version);

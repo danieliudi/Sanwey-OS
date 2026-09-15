@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FileDown, Printer, Plus, Trash2, Check, AlertCircle, Lock } from "lucide-react";
 import { useProposals } from "../../hooks/use-proposals";
 import { useConfigComercial } from "../../hooks/use-config-comercial";
@@ -33,32 +33,63 @@ const rotuloSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", text
 const inputSt = { width: "100%", background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px", fontSize: 16 };
 const cardSt = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 13px" };
 
+// ESG & Carbono — mesma formatação de ESGCarbonoView (kgToT/fmtT), só com o
+// sufixo CO2e pro contexto de proposta. Não reimplementar diferente.
+function fmtTonnesCO2e(kg) {
+  const t = (Number(kg) || 0) / 1000;
+  return `${t.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t CO2e`;
+}
+
+// Só UMA impressão por vez, e o handle do timer vive fora da função: sem
+// isso, imprimir a Ficha e clicar no Pitch em seguida fazia a limpeza da
+// primeira rodar NO MEIO da segunda — tirava `printing-doc`, removia o
+// <style> que já era o da segunda, e o que ia pro papel era a UI do app.
+let timerLimpeza = null;
+let imprimindo = false;
+
 function printarDoc(qual) {
+  if (imprimindo) return;
   const alvo = document.getElementById(`proposta-doc-${qual}`);
   if (!alvo) return;
+  imprimindo = true;
+
+  // A classe entra SÓ no documento escolhido. Pôr nos dois e esconder o outro
+  // com `display:none` inline NÃO funciona: a regra de `index.css` é
+  // `display: block !important` dentro de @media print, e `!important` de
+  // folha de autor vence estilo inline sem `!important`. Os dois saíam
+  // empilhados na mesma coordenada (`position:absolute; top:0`) — o Doc 2
+  // impresso por cima do Doc 1. A aba antiga nunca viu isso porque tinha um
+  // documento só. É a regra 15 do CLAUDE.md em estado puro: build, ESLint e
+  // varredura passam, porque nenhum deles exercita @media print.
   document.querySelectorAll("[data-proposta-doc]").forEach((el) => {
-    el.classList.toggle("doc-print-only", true);
-    el.style.display = el === alvo ? "" : "none";
+    el.classList.toggle("doc-print-only", el === alvo);
   });
+
   const style = document.createElement("style");
   style.id = "proposta-print-page";
   style.textContent = "@media print { @page { size: A4 portrait; margin: 1.6cm; } }";
   document.head.appendChild(style);
   document.body.classList.add("printing-doc");
+
   const limpar = () => {
+    if (timerLimpeza) { clearTimeout(timerLimpeza); timerLimpeza = null; }
     document.body.classList.remove("printing-doc");
     document.getElementById("proposta-print-page")?.remove();
-    document.querySelectorAll("[data-proposta-doc]").forEach((el) => { el.style.display = "none"; });
+    document.querySelectorAll("[data-proposta-doc]").forEach((el) => {
+      el.classList.remove("doc-print-only");
+    });
     window.removeEventListener("afterprint", limpar);
+    imprimindo = false;
   };
   window.addEventListener("afterprint", limpar);
   window.print();
-  // Alguns navegadores não disparam afterprint de forma confiável — mesmo
-  // fallback que a aba antiga já usava.
-  setTimeout(limpar, 1500);
+  // Firefox e Safari NÃO bloqueiam em `window.print()` — só Chrome e Edge. Lá
+  // o timer dispara com o preview aberto, então a folga tem que ser larga. A
+  // aba antiga usava 3s; 1,5s era estreito demais.
+  timerLimpeza = setTimeout(limpar, 3000);
 }
 
-export function PropostaPanel({ lead, currentUser }) {
+export function PropostaPanel({ lead, currentUser, onAddActivity }) {
   const { proposal, versoes, loading, error, persist } = useProposals(lead.id, lead.companyId);
   const { fatosDe, metaFatosDe, error: erroConfig } = useConfigComercial();
 
@@ -78,16 +109,35 @@ export function PropostaPanel({ lead, currentUser }) {
     [lead.companyId, metaFatos.configurados],
   );
 
-  const salvo = proposal?.rfp_snapshot || {};
   const [rascunho, setRascunho] = useState(() => ({
     vendedor: currentUser?.name || "",
     data: toLocalISODate(new Date()),
-    ...(salvo.rfp || {}),
   }));
-  const [bloqueados, setBloqueados] = useState(() => salvo.bloqueados || {});
-  const [requisitos, setRequisitos] = useState(() => salvo.requisitos || []);
-  const [aba, setAba] = useState(1);
+  const [bloqueados, setBloqueados] = useState({});
+  const [requisitos, setRequisitos] = useState([]);
   const [salvando, setSalvando] = useState(false);
+
+  // HIDRATAÇÃO, e ela precisa ser efeito e não estado inicial: `useProposals`
+  // é assíncrono e o primeiro render SEMPRE tem `proposal === null`. Lendo o
+  // snapshot só no inicializador de `useState`, a tela abria em branco com
+  // "Última: v1" no topo — o vendedor reabria o negócio e perdia tudo que
+  // tinha digitado, e o "Gerar v2" seguinte gravava um snapshot vazio por
+  // cima. O histórico versionado, que é a tese desta tela, registraria
+  // regressão em vez de iteração.
+  //
+  // O ref garante uma vez só: o hook refaz fetch, e sem isso a hidratação
+  // atropelaria o que o vendedor está digitando naquele momento. É o mesmo
+  // padrão que a aba antiga usava e que se perdeu na reescrita.
+  const hidratadoRef = useRef(false);
+  useEffect(() => {
+    if (hidratadoRef.current || loading) return;
+    hidratadoRef.current = true;
+    const salvo = proposal?.rfp_snapshot;
+    if (!salvo) return;
+    setRascunho(r => ({ ...r, ...(salvo.rfp || {}) }));
+    setBloqueados(salvo.bloqueados || {});
+    setRequisitos(salvo.requisitos || []);
+  }, [loading, proposal]);
   const [aviso, setAviso] = useState(null);
 
   const S = useMemo(
@@ -105,12 +155,33 @@ export function PropostaPanel({ lead, currentUser }) {
     try {
       await persist({
         draftText: null,
-        items: [],
+        // Sem `items`: este painel não gerencia linha de item. Passar `[]`
+        // apagava as que existissem e zerava o total via trigger.
         createdBy: currentUser?.id,
         // Snapshot, não espelho: o que o cliente recebeu naquele dia fica como
         // estava, mesmo que o negócio mude depois.
-        rfpSnapshot: { rfp: S.rfp, bloqueados, requisitos, fatos, esgKg, geradoEm: new Date().toISOString() },
+        // Guarda o RASCUNHO, não `S.rfp` (que é o mesclado com o negócio):
+        // salvar o mesclado faria toda chave existir no rascunho ao reabrir, e
+        // a etiqueta "· do negócio" nunca mais apareceria. O documento
+        // impresso continua sendo retrato do dia porque `fatos` e os valores
+        // efetivos vão junto.
+        rfpSnapshot: { rfp: rascunho, efetivo: S.rfp, bloqueados, requisitos, fatos, esgKg, geradoEm: new Date().toISOString() },
         novaVersao: true,
+      });
+      // A atividade "proposta gerada" existia na aba antiga (era a Fase 3
+      // dela, com comentário próprio: o buraco "proposta gerada não é
+      // registrada"). Some se eu não repuser, e some em silêncio — o
+      // versionamento em tabela não aparece na linha do tempo do negócio,
+      // que é onde o gerente olha.
+      const valor = Number(lead.value);
+      onAddActivity?.(lead.id, {
+        type: "proposal_generated",
+        userId: currentUser?.id || null,
+        userName: currentUser?.name || null,
+        body: Number.isFinite(valor) && valor > 0
+          ? `Proposta v${(versoes[0]?.version ?? 0) + 1} gerada — negócio em ${formatBRL(valor)}`
+          : `Proposta v${(versoes[0]?.version ?? 0) + 1} gerada`,
+        meta: { versao: (versoes[0]?.version ?? 0) + 1, cliente: S.rfp.cliente || null, rfp: S.rfp.rfp || null },
       });
       setAviso({ tipo: "ok", texto: "Versão gerada." });
     } catch (e) {
@@ -157,6 +228,16 @@ export function PropostaPanel({ lead, currentUser }) {
           )}
         </div>
       </div>
+
+      {/* O selo é decidido por um dado que o vendedor não vê (relatório de
+          ESG da frente). Se ele não souber antes de imprimir se a peça sai
+          com selo, descobre depois — e "saiu com selo ou não" importa pro
+          comprador industrial. A aba antiga avisava; esta voltou a avisar. */}
+      {esgKg > 0 && (
+        <p style={{ fontSize: 11, color: "var(--text-dim)", margin: 0, lineHeight: 1.5 }}>
+          O <b>Selo ESG</b> entra no Pitch — {fmtTonnesCO2e(esgKg)} apurados no relatório mais recente desta frente.
+        </p>
+      )}
 
       {/* ── Classe 1 · fatos da marca ───────────────────────────────────── */}
       <div style={cardSt}>
@@ -282,7 +363,13 @@ export function PropostaPanel({ lead, currentUser }) {
       <div style={cardSt}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
           <b style={{ fontSize: 12, fontWeight: 700 }}>Só sai com confirmação</b>
-          <span style={{ fontSize: 9.5, fontFamily: "ui-monospace, monospace", fontWeight: 700, letterSpacing: "0.08em", color: "var(--danger)", background: "var(--danger-bg)", borderRadius: 99, padding: "1px 7px", marginLeft: "auto" }}>
+          {/* `--warning`, não `--danger`: pela convenção do CLAUDE.md o
+              vermelho é bloqueio de input do usuário, e o âmbar é "precisa de
+              atenção/configuração, não é responsabilidade de quem preenche
+              resolver" — que é exatamente isto. Quem confirma NCM é o fiscal,
+              não o vendedor. O chip "Sai como rascunho" lá em cima já usava
+              âmbar; o mesmo fato aparecia em duas cores. */}
+          <span style={{ fontSize: 9.5, fontFamily: "ui-monospace, monospace", fontWeight: 700, letterSpacing: "0.08em", color: "var(--warning)", background: "var(--warning-bg)", borderRadius: 99, padding: "1px 7px", marginLeft: "auto" }}>
             CLASSE 3 · {S.confirmados.length}/{CAMPOS_BLOQUEADOS.length}
           </span>
         </div>
@@ -298,7 +385,7 @@ export function PropostaPanel({ lead, currentUser }) {
                 <b style={{ fontSize: 12 }}>{c.rotulo}</b>
                 <span style={{
                   fontSize: 9.5, fontWeight: 700, letterSpacing: "0.06em", padding: "1px 6px", borderRadius: 4, whiteSpace: "nowrap",
-                  background: ok ? "var(--success-bg)" : "var(--danger-bg)", color: ok ? "var(--success)" : "var(--danger)",
+                  background: ok ? "var(--success-bg)" : "var(--warning-bg)", color: ok ? "var(--success)" : "var(--warning)",
                 }}>
                   {ok ? "CONFIRMADO" : "PENDENTE"}
                 </span>
@@ -391,7 +478,9 @@ function DocTecnica({ S, fatos, requisitos, bloqueados }) {
   const conf = [
     ...(fatos.homologacao ? [{ e: "Homologação de produto", c: fatos.homologacao, n: "INMETRO" }] : []),
     ...(fatos.sgq ? [{ e: "Sistema de gestão da qualidade", c: fatos.sgq, n: "ISO 9001:2015" }] : []),
-    ...(fatos.codigo_onu ? [{ e: "Marcação ONU", c: fatos.codigo_onu, n: "Marca ONU" }] : []),
+    // Sempre presente, mesmo vazia: numa matriz que o comprador leva pra
+    // auditoria, linha que some sem deixar rastro é pior que "PENDENTE".
+    { e: "Marcação ONU", c: fatos.codigo_onu, n: "Marca ONU" },
     ...requisitos.filter(x => x.exigencia).map(x => ({ e: x.exigencia, c: x.resposta, n: x.norma })),
   ];
   return (
@@ -444,13 +533,6 @@ function DocTecnica({ S, fatos, requisitos, bloqueados }) {
       <Rodape fatos={fatos} />
     </div>
   );
-}
-
-// ESG & Carbono — mesma formatação de ESGCarbonoView (kgToT/fmtT), só com o
-// sufixo CO2e pro contexto de proposta. Não reimplementar diferente.
-function fmtTonnesCO2e(kg) {
-  const t = (Number(kg) || 0) / 1000;
-  return `${t.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t CO2e`;
 }
 
 function DocPitch({ S, fatos, esgKg = 0 }) {

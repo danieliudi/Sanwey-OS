@@ -24,6 +24,19 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.18.0 — a aba "PDF" virou "Proposta", com o gerador de RFP. Ganha
+  // spotlight (e não a decisão de pular das entradas abaixo) porque aqui o
+  // alvo é a PRÓPRIA ABA na barra de abas, montada junto com o drawer — não
+  // depende de abrir modal nem de já estar dentro de um painel. É a mesma
+  // condição que fez 5.13.0 ganhar spotlight enquanto 5.9, 5.10 e 5.11
+  // tiveram que pular.
+  {
+    id: "proposta-rfp",
+    route: "crm",
+    target: '[data-tour="lead-tab-pdf"]',
+    text: "A aba PDF virou \"Proposta\": o gerador já vem preenchido com o que o negócio sabe, e cada geração vira uma versão com data e autor.",
+    version: "5.18.0",
+  },
   // 5.15.0 — bloco "A ata sugeriu N respostas" na aba Visita, e a aba abrindo
   // sozinha no celular. Decisão de PULAR o spotlight, registrada aqui (regra
   // 12) pelo MESMO motivo da entrada de 5.14.0 logo abaixo, que este bloco
@@ -454,13 +467,12 @@ export const FEATURE_SPOTLIGHTS = [
     text: "Novo: a Biblioteca de Documentos guarda certificado, datasheet e ficha técnica reutilizáveis — clique aqui pra ver.",
     version: "4.61.0",
   },
-  {
-    id: "proposal-line-items",
-    route: "crm",
-    target: '[data-tour="proposal-line-items"]',
-    text: "Novo: monte a lista de itens (modelo, quantidade, preço) antes de gerar a proposta — clique em \"Adicionar item\".",
-    version: "4.61.0",
-  },
+  // 4.61.0 — "proposal-line-items" REMOVIDA em 15/09/2026. O alvo era o botão
+  // "Adicionar item" do ProposalPanel, que deixou de existir quando a aba PDF
+  // virou o gerador de proposta de RFP. Alvo ausente é dispensado em silêncio
+  // pelo FeatureSpotlight (ORPHAN_TIMEOUT_MS), mas custava 4s de atraso ao
+  // próximo spotlight da rota "crm" pra quem ainda não tinha visto este —
+  // `use-feature-spotlight` devolve só o primeiro pendente.
   // 4.61.0 — leva de 7 features do Funil de Vendas (comitê de compra, gate
   // de etapa por valor, alerta de concorrente, fit_score, WhatsApp fase 1):
   // DECIDIDO PULAR spotlight nas 5, cada uma por motivo próprio, coberto
