@@ -3,6 +3,7 @@ import { Mic, ChevronDown, ChevronRight, Check, Sparkles } from "lucide-react";
 import { SECOES, CAMPO, DESTINO } from "../../constants/checklist-visita";
 import { avaliarChecklist, completudeDasSecoes, respostasDoLead, sugestoesPendentes, CHAVE_SUGESTOES } from "../../utils/checklist-visita";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { useConfigComercial } from "../../hooks/use-config-comercial";
 
 // Checklist de visita — a tela que o vendedor usa DENTRO do cliente.
 //
@@ -27,6 +28,11 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 // Marcar "decisor identificado" sem ter o nome do decisor é como um score de
 // priorização vira ficção.
 export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = false }) {
+  // O limiar de "alto volume" é configuração por frente (Configurações →
+  // Comercial), não constante: ver use-config-comercial.js. Enquanto estiver
+  // nulo o item de 20 pontos fica fora da conta, e a tela diz isso.
+  const { limiar, error: erroConfig } = useConfigComercial({ companyId: lead?.companyId });
+
   const [aberta, setAberta] = useState(null);      // id da seção expandida
   const [rascunho, setRascunho] = useState({});    // edições ainda não salvas
 
@@ -34,7 +40,7 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
   // `customFields`: campo que mora em coluna (volume, decisor, data do próximo
   // contato) era relido da coluna a cada tecla e revertia o que estava sendo
   // digitado — ficava gravável uma vez só (QA 14/09/2026).
-  const avaliacao = useMemo(() => avaliarChecklist(lead, rascunho), [lead, rascunho]);
+  const avaliacao = useMemo(() => avaliarChecklist(lead, rascunho, { limiar }), [lead, rascunho, limiar]);
   const secoes    = useMemo(() => completudeDasSecoes(lead, rascunho, avaliacao), [lead, rascunho, avaliacao]);
   const respostas = useMemo(() => respostasDoLead(lead, rascunho), [lead, rascunho]);
 
@@ -102,7 +108,8 @@ export function VisitaChecklistPanel({ lead, onSalvar, onGravarAta, salvando = f
           {avaliacao.total} de {avaliacao.possivel} possíveis{avaliacao.faixa ? ` · ${avaliacao.faixa.rotulo}` : ""}
           {avaliacao.naoAvaliaveis.length > 0 && (
             <> · <span style={{ color: "var(--warning)" }}>
-              {avaliacao.naoAvaliaveis.map(i => i.rotulo).join(", ")} fora da conta (limiar não configurado)
+              {avaliacao.naoAvaliaveis.map(i => i.rotulo).join(", ")} fora da conta
+              {erroConfig ? " (não consegui ler a configuração comercial)" : " (limiar não definido em Configurações → Comercial)"}
             </span></>
           )}
         </div>

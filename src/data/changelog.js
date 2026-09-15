@@ -51,6 +51,11 @@ export const CHANGELOG = [
         roles: ["vendedor", "gerente", "admin"],
       },
       {
+        kind: "novo",
+        text: "Configurações → Geral → Comercial ganhou o limiar de \"alto volume\": a partir de quantos bags por mês uma conta pontua a pergunta que vale 20 dos 100 pontos do Checklist de Visita. É por frente — o que é alto volume para a Resibag não é o mesmo que para a Sanwey. Deixar vazio continua valendo: o item sai da conta e a tela explica, em vez de usar um número chutado.",
+        roles: ["gerente", "admin"],
+      },
+      {
         kind: "correcao",
         toast: true,
         text: "Quando a plataforma não conseguia ler seus dados, a tela dizia \"nenhum registro encontrado\" — indistinguível de uma lista de verdade vazia. Agora falha de leitura aparece como falha, em vermelho, com botão de tentar de novo. Vale no Funil de Vendas, em RH · Funcionários e em Sinais de Mercado.",

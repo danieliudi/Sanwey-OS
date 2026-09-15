@@ -31,11 +31,14 @@ const numero = (v) => { const n = Number(v); return Number.isFinite(n) ? n : nul
 // true = marcado · false = coletado e não pontua · null = não avaliável hoje
 // (sai do numerador E do denominador — ver LIMIAR_ALTO_VOLUME_BAGS).
 const PROVA = {
-  alto_volume: (d) => {
-    if (LIMIAR_ALTO_VOLUME_BAGS == null) return null;  // ver a constante
+  // O limiar chega de fora (tabela `crm_config_comercial`, por frente). A
+  // constante do arquivo de constantes segue como último recurso — hoje
+  // nula, que é o estado honesto de "ninguém definiu ainda".
+  alto_volume: (d, limiar) => {
+    if (limiar == null) return null;
     const v = numero(d.volume_mensal_bags);
     if (v == null) return false;
-    return v >= LIMIAR_ALTO_VOLUME_BAGS;
+    return v >= limiar;
   },
   necessidade:      (d) => temTexto(d.necessidade_principal),
   target:           (d) => temValor(d.target_cliente_bag) || temValor(d.preco_atual_bag),
@@ -127,15 +130,19 @@ export function respostasDoLead(lead, rascunho = {}) {
  * denominador. A tela mostra "45 de 80", nunca "45 de 100" com um item que
  * nunca poderia somar.
  */
-export function avaliarChecklist(lead, rascunho = {}) {
+export function avaliarChecklist(lead, rascunho = {}, opcoes = {}) {
   const d = respostasDoLead(lead, rascunho);
+  // `limiar` vem de Configurações → Comercial, por frente. Nulo = não
+  // configurado: o item de maior peso sai do numerador E do denominador, e a
+  // tela diz por quê (regra 14).
+  const limiar = opcoes.limiar ?? LIMIAR_ALTO_VOLUME_BAGS;
 
   let total = 0, possivel = 0;
   const marcados = [], faltantes = [], naoAvaliaveis = [];
 
   for (const item of PESOS) {
     const prova = PROVA[item.id];
-    const r = prova ? prova(d) : false;
+    const r = prova ? prova(d, limiar) : false;
     const coletado = DADO[item.id] ? DADO[item.id](d) : false;
 
     if (r === null) naoAvaliaveis.push(item);
