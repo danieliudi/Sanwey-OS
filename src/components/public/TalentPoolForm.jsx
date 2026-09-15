@@ -39,8 +39,11 @@ function formatPhone(digits) {
 
 export default function TalentPoolForm() {
   const [form, setForm] = useState({ nome: "", email: "", telefone: "", linkedin: "", unidade: "", consentimento: false });
+  // Até dois arquivos — ver MAX_ARQUIVOS_CURRICULO em utils/curriculo-upload.js
   const [file, setFile] = useState(null);
+  const [file2, setFile2] = useState(null);
   const [fileError, setFileError] = useState(null);
+  const [fileError2, setFileError2] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(null);
@@ -51,12 +54,14 @@ export default function TalentPoolForm() {
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
-  const handleFile = (f) => {
-    setFileError(null);
-    if (!f) { setFile(null); return; }
+  const handleFile = (f, qual = 1) => {
+    const erro = qual === 2 ? setFileError2 : setFileError;
+    const guarda = qual === 2 ? setFile2 : setFile;
+    erro(null);
+    if (!f) { guarda(null); return; }
     const r = validarCurriculo(f);
-    if (!r.ok) { setFileError(r.erro); return; }
-    setFile(f);
+    if (!r.ok) { erro(r.erro); return; }
+    guarda(f);
   };
 
   const canSubmit = useMemo(() => (
@@ -78,7 +83,8 @@ export default function TalentPoolForm() {
     setSubmitting(true);
     setError(null);
     try {
-      const ext = extensaoDe(file.name) || "pdf";
+      const ext  = extensaoDe(file.name) || "pdf";
+      const ext2 = file2 ? extensaoDe(file2.name) : null;
       // MD-03(b) da auditoria de segurança (20/08/2026): a RPC devolvia o
       // UUID cru do candidato (reaproveitável pra sempre por quem soubesse
       // o e-mail de outra pessoa); agora devolve um path de upload de uso
@@ -91,11 +97,14 @@ export default function TalentPoolForm() {
         p_consentimento_lgpd: form.consentimento,
         p_resume_ext: ext,
         p_frente: form.unidade || null,
+        p_resume_ext_2: ext2,
       });
       if (rpcErr) throw rpcErr;
 
-      const { error: uploadErr } = await supabase.storage
-        .from("rh-curriculos")
+      const enviar = async (arq, caminho, extensao) => {
+        if (!arq || !caminho) return null;
+        const { error: e } = await supabase.storage
+          .from("rh-curriculos")
         // contentType pela extensão, nunca `file.type` cru — ver
         // MIME_POR_EXTENSAO acima.
         // SEM `upsert`. Não é detalhe de estilo: `upsert: true` vira
@@ -113,7 +122,12 @@ export default function TalentPoolForm() {
         // gerado a cada envio. Colisão é impossível por construção.
         // (Medido em 15/09/2026: INSERT puro como `anon` = OK; o mesmo
         // INSERT com ON CONFLICT DO UPDATE = permission denied.)
-        .upload(resp.resume_object_path, file, { contentType: MIME_POR_EXTENSAO[ext] || "application/pdf" });
+          .upload(caminho, arq, { contentType: MIME_POR_EXTENSAO[extensao] || "application/pdf" });
+        return e;
+      };
+
+      const uploadErr = (await enviar(file, resp.resume_object_path, ext))
+        || (await enviar(file2, resp.resume_object_path_2, ext2));
       if (uploadErr) {
         // O candidato JÁ foi gravado neste ponto (a RPC roda antes, pra
         // devolver o caminho de upload de uso único). Sem esta distinção, a
@@ -205,7 +219,7 @@ export default function TalentPoolForm() {
           </select>
         </Field>
 
-        <Field label="Currículo" hint="PDF, DOCX ou foto do currículo — até 10MB" required>
+        <Field label="Currículo" hint="PDF, Word ou foto — até 10MB cada. Pode enviar 2 arquivos (frente e verso, ou 2 páginas)." required>
           <label style={{
             display: "flex", alignItems: "center", gap: 10,
             border: `1px dashed ${fileError ? "#DC2626" : "#D1D5DB"}`, borderRadius: 8,
@@ -219,12 +233,45 @@ export default function TalentPoolForm() {
             <input
               type="file"
               // `image/*` faz o celular oferecer a câmera junto da galeria.
-              accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,image/*"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,image/*"
               onChange={e => handleFile(e.target.files?.[0] || null)}
               style={{ display: "none" }}
             />
           </label>
           {fileError && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6 }}>{fileError}</div>}
+
+          {/* Só aparece depois do 1º escolhido — ver JobApplicationForm. */}
+          {file && (
+            <div style={{ marginTop: 8 }}>
+              <label style={{
+                display: "flex", alignItems: "center", gap: 10,
+                border: `1px dashed ${fileError2 ? "#DC2626" : "#D1D5DB"}`, borderRadius: 8,
+                padding: "12px", cursor: "pointer", background: "#F9FAFB",
+              }}>
+                <Upload size={15} style={{ color: ACCENT, flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5, color: file2 ? "#201a1a" : "#6B7280", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {file2 ? file2.name : "2ª página ou verso (opcional)…"}
+                </span>
+                {file2 && <FileText size={13} style={{ color: "#16A34A", flexShrink: 0 }} />}
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,image/*"
+                  onChange={e => handleFile(e.target.files?.[0] || null, 2)}
+                  style={{ display: "none" }}
+                />
+              </label>
+              {file2 && (
+                <button
+                  type="button"
+                  onClick={() => { setFile2(null); setFileError2(null); }}
+                  style={{ marginTop: 6, background: "none", border: "none", padding: 0, color: "#6B7280", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Remover o 2º arquivo
+                </button>
+              )}
+              {fileError2 && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6 }}>{fileError2}</div>}
+            </div>
+          )}
         </Field>
 
         <p style={{ fontSize: 12, color: "#5c5f60", lineHeight: 1.5, margin: 0 }}>

@@ -28,8 +28,12 @@ export default function JobApplicationForm() {
 
   const [vaga, setVaga] = useState(undefined); // undefined = loading, null = não encontrada
   const [form, setForm] = useState({ nome: "", email: "", telefone: "", linkedin: "", unidade: "", consentimento: false });
+  // Até dois arquivos: currículo em papel quase sempre tem duas páginas, e
+  // quem fotografa manda uma foto por página. `file2` é sempre opcional.
   const [file, setFile] = useState(null);
+  const [file2, setFile2] = useState(null);
   const [fileError, setFileError] = useState(null);
+  const [fileError2, setFileError2] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(null);
@@ -67,16 +71,17 @@ export default function JobApplicationForm() {
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
-  const handleFile = (f) => {
-    setFileError(null);
-    if (!f) { setFile(null); return; }
+  const handleFile = (f, qual = 1) => {
     // Pela EXTENSÃO, nunca por `file.type`: navegador que devolve tipo vazio
     // fazia a tela recusar um .pdf perfeitamente válido, e o candidato ficava
-    // sem conseguir anexar nada. Mesma correção que o Banco de Talentos já
-    // tinha — ver utils/curriculo-upload.js.
+    // sem conseguir anexar nada. Ver utils/curriculo-upload.js.
+    const erro = qual === 2 ? setFileError2 : setFileError;
+    const guarda = qual === 2 ? setFile2 : setFile;
+    erro(null);
+    if (!f) { guarda(null); return; }
     const r = validarCurriculo(f);
-    if (!r.ok) { setFileError(r.erro); return; }
-    setFile(f);
+    if (!r.ok) { erro(r.erro); return; }
+    guarda(f);
   };
 
   // Vagas operacionais/chão-de-fábrica não exigem currículo formatado —
@@ -104,7 +109,8 @@ export default function JobApplicationForm() {
     setSubmitting(true);
     setError(null);
     try {
-      const ext = file ? extensaoDe(file.name) : null;
+      const ext  = file  ? extensaoDe(file.name)  : null;
+      const ext2 = file2 ? extensaoDe(file2.name) : null;
       // MD-03(b) da auditoria de segurança (20/08/2026): a RPC devolvia o
       // UUID cru do candidato (reaproveitável pra sempre por quem soubesse
       // o e-mail de outra pessoa); agora devolve { candidate_id,
@@ -120,12 +126,18 @@ export default function JobApplicationForm() {
         p_consentimento_lgpd: form.consentimento,
         p_resume_ext: ext,
         p_frente: form.unidade || null,
+        // Os DOIS tokens saem desta mesma chamada, de propósito: uma RPC
+        // separada de "me dá mais um token pro candidato X" receberia o UUID
+        // vindo do cliente, e quem soubesse um UUID qualquer penduraria
+        // arquivo na pasta de outra pessoa — o buraco que o MD-03(b) fechou.
+        p_resume_ext_2: ext2,
       });
       if (rpcErr) throw rpcErr;
       const candidateId = resp.candidate_id;
 
-      if (file && resp.resume_object_path) {
-        const { error: uploadErr } = await supabase.storage
+      const enviar = async (arq, caminho, extensao) => {
+        if (!arq || !caminho) return null;
+        const { error: e } = await supabase.storage
           .from("rh-curriculos")
           // contentType pela EXTENSÃO, nunca `file.type` cru: o bucket só
           // aceita os dois MIME de utils/curriculo-upload.js, e navegador que
@@ -145,28 +157,35 @@ export default function JobApplicationForm() {
           // gerado a cada envio. Colisão é impossível por construção.
           // (Medido em 15/09/2026: INSERT puro como `anon` = OK; o mesmo
           // INSERT com ON CONFLICT DO UPDATE = permission denied.)
-          .upload(resp.resume_object_path, file, { contentType: MIME_POR_EXTENSAO[ext] || "application/pdf" });
-        if (uploadErr) {
-          // O candidato JÁ foi gravado neste ponto (a RPC roda antes, pra
-          // devolver o caminho de upload de uso único). Dizer "não foi
-          // possível enviar sua candidatura" fazia a pessoa reenviar, criando
-          // um token novo a cada tentativa — enquanto o RH via um candidato
-          // sem currículo e sem nenhuma pista do motivo. Foi assim que 11
-          // tokens foram gerados e nenhum consumido entre 10 e 15/09/2026.
-          //
-          // NÃO passa por friendlyError de propósito: ele reconhece
-          // "permission denied"/"row-level security" e devolveria a frase
-          // genérica, apagando o que mais importa aqui — que os dados FORAM
-          // salvos. O detalhe técnico vai pro console, que é onde se
-          // diagnostica, e não pra tela de um formulário público.
-          try { console.error("[erro] upload do currículo", uploadErr); } catch { /* noop */ }
-          setError(
-            "Seus dados foram registrados, mas o currículo não subiu. " +
-            "Envie o arquivo para rh@sanwey.com.br que anexamos na sua candidatura."
-          );
-          setSubmitting(false);
-          return;
-        }
+          .upload(caminho, arq, { contentType: MIME_POR_EXTENSAO[extensao] || "application/pdf" });
+        return e;
+      };
+
+      // O 1º arquivo manda primeiro. Se ele falhar, nem tenta o 2º: a
+      // mensagem seria a mesma e duas falhas em sequência só demoram mais.
+      const uploadErr = (await enviar(file, resp.resume_object_path, ext))
+        || (await enviar(file2, resp.resume_object_path_2, ext2));
+
+      if (uploadErr) {
+        // O candidato JÁ foi gravado neste ponto (a RPC roda antes, pra
+        // devolver o caminho de upload de uso único). Dizer "não foi
+        // possível enviar sua candidatura" fazia a pessoa reenviar, criando
+        // um token novo a cada tentativa — enquanto o RH via um candidato
+        // sem currículo e sem nenhuma pista do motivo. Foi assim que 11
+        // tokens foram gerados e nenhum consumido entre 10 e 15/09/2026.
+        //
+        // NÃO passa por friendlyError de propósito: ele reconhece
+        // "permission denied"/"row-level security" e devolveria a frase
+        // genérica, apagando o que mais importa aqui — que os dados FORAM
+        // salvos. O detalhe técnico vai pro console, que é onde se
+        // diagnostica, e não pra tela de um formulário público.
+        try { console.error("[erro] upload do currículo", uploadErr); } catch { /* noop */ }
+        setError(
+          "Seus dados foram registrados, mas o currículo não subiu. " +
+          "Envie o arquivo para rh@sanwey.com.br que anexamos na sua candidatura."
+        );
+        setSubmitting(false);
+        return;
       }
 
       // Confirmação por e-mail — fire-and-forget: não bloqueia a tela de
@@ -302,7 +321,9 @@ export default function JobApplicationForm() {
 
         <Field
           label="Currículo"
-          hint={resumeRequired ? "PDF, DOCX ou foto do currículo — até 10MB" : "PDF, DOCX ou foto do currículo — até 10MB, opcional para esta vaga"}
+          hint={resumeRequired
+            ? "PDF, Word ou foto — até 10MB cada. Pode enviar 2 arquivos (frente e verso, ou 2 páginas)."
+            : "PDF, Word ou foto — até 10MB cada, opcional para esta vaga. Pode enviar 2 arquivos."}
           required={resumeRequired}
         >
           <label style={{
@@ -322,12 +343,47 @@ export default function JobApplicationForm() {
               // currículo em papel não tem caminho nenhum. As extensões
               // continuam listadas porque no desktop é o accept que filtra o
               // seletor de arquivo.
-              accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,image/*"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,image/*"
               onChange={e => handleFile(e.target.files?.[0] || null)}
               style={{ display: "none" }}
             />
           </label>
           {fileError && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6 }}>{fileError}</div>}
+
+          {/* O 2º campo só aparece depois do 1º escolhido: quem tem um PDF
+              inteiro não precisa nem saber que existe um segundo slot, e quem
+              fotografou a primeira página já vê onde vai a segunda. */}
+          {file && (
+            <div style={{ marginTop: 8 }}>
+              <label style={{
+                display: "flex", alignItems: "center", gap: 10,
+                border: `1px dashed ${fileError2 ? "#DC2626" : "#D1D5DB"}`, borderRadius: 8,
+                padding: "12px", cursor: "pointer", background: "#F9FAFB",
+              }}>
+                <Upload size={15} style={{ color: ACCENT, flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5, color: file2 ? "#201a1a" : "#6B7280", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {file2 ? file2.name : "2ª página ou verso (opcional)…"}
+                </span>
+                {file2 && <FileText size={13} style={{ color: "#16A34A", flexShrink: 0 }} />}
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,image/*"
+                  onChange={e => handleFile(e.target.files?.[0] || null, 2)}
+                  style={{ display: "none" }}
+                />
+              </label>
+              {file2 && (
+                <button
+                  type="button"
+                  onClick={() => { setFile2(null); setFileError2(null); }}
+                  style={{ marginTop: 6, background: "none", border: "none", padding: 0, color: "#6B7280", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Remover o 2º arquivo
+                </button>
+              )}
+              {fileError2 && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6 }}>{fileError2}</div>}
+            </div>
+          )}
         </Field>
 
         <p style={{ fontSize: 12, color: "#5c5f60", lineHeight: 1.5, margin: 0 }}>

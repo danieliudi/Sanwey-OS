@@ -90,7 +90,7 @@ import { FilterBar } from "../shared/FilterBar";
 import { PageTitle } from "../shared/PageTitle";
 import { semAcento } from "../../utils/text-search";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
-import { ehFoto, MIME_POR_EXTENSAO } from "../../utils/curriculo-upload";
+import { ehFoto, ehLegivelPelaIA, MIME_POR_EXTENSAO } from "../../utils/curriculo-upload";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -214,7 +214,12 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
     // o currículo, e o modelo lê imagem. Deixar de fora significaria o
     // candidato de produção nunca aparecer na triagem — justamente quem o
     // recurso foi criado pra alcançar.
-    () => talentPoolFiltrado.filter(c => c.resume_ext === "pdf" || c.resume_ext === "docx" || ehFoto(c.resume_ext)),
+    // `.doc` (Word antigo) fica de fora: o extrator de texto da plataforma é
+    // de `.docx`, e não existe leitor de `.doc` aqui. Currículo em `.doc`
+    // chega, é guardado e o RH abre na mão — só não entra na análise
+    // automática. Incluí-lo faria o candidato aparecer como "falha na
+    // análise" sem ninguém entender por quê.
+    () => talentPoolFiltrado.filter(c => ehLegivelPelaIA(c.resume_ext)),
     [talentPoolFiltrado]
   );
   const semCurriculo = useMemo(() => talentPoolFiltrado.filter(c => !c.resume_ext).length, [talentPoolFiltrado]);
@@ -249,10 +254,16 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
     const out = [];
     for (const cand of analisaveisCandidatos) {
       try {
-        const { data: blob, error: dlErr } = await supabase.storage
-          .from("rh-curriculos")
-          .download(cand.resume_object_path);
-        if (dlErr || !blob) throw new Error("Currículo indisponível");
+        const baixar = async (caminho) => {
+          if (!caminho) return null;
+          const { data: b, error: e } = await supabase.storage.from("rh-curriculos").download(caminho);
+          return (e || !b) ? null : b;
+        };
+        const blob = await baixar(cand.resume_object_path);
+        if (!blob) throw new Error("Currículo indisponível");
+        // O 2º arquivo é opcional e a falta dele NÃO derruba a análise: um
+        // currículo fotografado pela metade ainda diz mais que nenhum.
+        const blob2 = ehLegivelPelaIA(cand.resume_extra_ext) ? await baixar(cand.resume_extra_path) : null;
         // Três caminhos, não dois. Antes era "pdf ou senão DOCX", e uma foto
         // caía no ramo do DOCX — `extractDocxText` num JPEG devolve lixo ou
         // estoura, e o candidato apareceria como falha de análise sem ninguém
@@ -264,9 +275,15 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
             { type: "text", text: `Vaga: ${necessidade}` },
           ];
         } else if (ehFoto(cand.resume_ext)) {
-          userContent = [
+          const paginas = [
             { type: "image", source: { type: "base64", media_type: MIME_POR_EXTENSAO[cand.resume_ext] || "image/jpeg", data: await blobToBase64(blob) } },
-            { type: "text", text: `Vaga: ${necessidade}\n\nO currículo acima é uma FOTO de um documento em papel. Se algum trecho estiver ilegível, diga isso na justificativa em vez de supor.` },
+          ];
+          if (blob2 && ehFoto(cand.resume_extra_ext)) {
+            paginas.push({ type: "image", source: { type: "base64", media_type: MIME_POR_EXTENSAO[cand.resume_extra_ext] || "image/jpeg", data: await blobToBase64(blob2) } });
+          }
+          userContent = [
+            ...paginas,
+            { type: "text", text: `Vaga: ${necessidade}\n\n${paginas.length > 1 ? "As imagens acima são as PÁGINAS de um mesmo currículo em papel, na ordem em que o candidato enviou." : "O currículo acima é uma FOTO de um documento em papel."} Se algum trecho estiver ilegível, diga isso na justificativa em vez de supor.` },
           ];
         } else {
           userContent = [
@@ -358,7 +375,7 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
               </div>
 
               <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 12 }}>
-                {analisaveisCandidatos.length} candidato{analisaveisCandidatos.length !== 1 ? "s" : ""} com currículo (PDF, DOCX ou foto) no talent pool
+                {analisaveisCandidatos.length} candidato{analisaveisCandidatos.length !== 1 ? "s" : ""} com currículo analisável (PDF, DOCX ou foto) no talent pool
                 {semCurriculo > 0 && ` · ${semCurriculo} sem currículo`}
               </div>
 
@@ -2227,18 +2244,31 @@ function CandidatoDrawer({
         </div>
       </div>
 
+      {/* Um botão por arquivo. O candidato pode ter mandado duas páginas, e
+          abrir só a primeira esconderia metade do currículo — sem nenhum
+          sinal na tela de que existe uma segunda. */}
       {candidato.resume_ext && (
-        <button
-          onClick={async () => {
-            const { data, error: err } = await supabase.storage
-              .from("rh-curriculos")
-              .createSignedUrl(candidato.resume_object_path, 3600);
-            if (!err && data?.signedUrl) window.open(data.signedUrl, "_blank", "noreferrer");
-          }}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-        >
-          Ver currículo ({candidato.resume_ext.toUpperCase()})
-        </button>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {[
+            { path: candidato.resume_object_path, ext: candidato.resume_ext, rotulo: candidato.resume_extra_path ? "Currículo · 1" : "Ver currículo" },
+            ...(candidato.resume_extra_path
+              ? [{ path: candidato.resume_extra_path, ext: candidato.resume_extra_ext, rotulo: "Currículo · 2" }]
+              : []),
+          ].map((arq) => (
+            <button
+              key={arq.path}
+              onClick={async () => {
+                const { data, error: err } = await supabase.storage
+                  .from("rh-curriculos")
+                  .createSignedUrl(arq.path, 3600);
+                if (!err && data?.signedUrl) window.open(data.signedUrl, "_blank", "noreferrer");
+              }}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >
+              {arq.rotulo} ({(arq.ext || "").toUpperCase()})
+            </button>
+          ))}
+        </div>
       )}
 
       {/* Fit score / justificativa da triagem por IA */}
