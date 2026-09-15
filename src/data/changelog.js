@@ -38,6 +38,17 @@
 
 export const CHANGELOG = [
   {
+    version: "5.15.2",
+    items: [
+      {
+        kind: "correcao",
+        toast: true,
+        text: "O currículo do candidato voltou a subir de verdade. A correção anterior resolveu metade do problema (a tela recusava arquivo válido); a outra metade era o envio em si, que falhava em silêncio por um detalhe de permissão do armazenamento. Vale para o formulário de vagas e para o Banco de Talentos.",
+        roles: ["rh", "gerente_rh", "admin", "diretoria"],
+      },
+    ],
+  },
+  {
     version: "5.15.1",
     items: [
       {
