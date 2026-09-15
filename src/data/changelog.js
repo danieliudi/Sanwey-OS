@@ -580,6 +580,15 @@ export const CHANGELOG = [
     ],
   },
   {
+    version: "4.97.8",
+    items: [
+      {
+        kind: "ajuste",
+        text: "No Kanban, os cards levantam e tombam levemente enquanto você arrasta (Funil de Vendas, RH, Campanhas e Entregas) — fica claro qual card está na mão.",
+      },
+    ],
+  },
+  {
     version: "4.97.7",
     items: [
       {

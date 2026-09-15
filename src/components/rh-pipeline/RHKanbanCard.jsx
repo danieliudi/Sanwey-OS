@@ -3,6 +3,7 @@ import { Check, X as XIcon } from "lucide-react";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
 import { terminalCardBackground, terminalAccentOpacity } from "../shared/terminal-card-style";
+import { startKanbanCardDrag, endKanbanCardDrag } from "../../utils/kanban-card-drag";
 
 function stageKeyOf(s) {
   return s?.stageKey ?? s?.id;
@@ -10,6 +11,7 @@ function stageKeyOf(s) {
 
 function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, onDuplicateCard, deleteLabel, deleteConfirmMessage, agingDays, completeness, unread, children, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const cardRef = useRef(null);
 
   const currentStage = stages?.find(s => stageKeyOf(s) === stage);
@@ -22,32 +24,18 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
     ? stages.filter(s => stageKeyOf(s) !== stage && !s.terminal)
     : [];
 
-  const shadowBase  = `var(--shadow-card)`;
-  const shadowHover = `var(--shadow-pop)`;
-
   return (
     <div
       ref={cardRef}
       draggable={!!onDragStart}
-      onDragStart={() => onDragStart?.(id)}
-      onDragEnd={() => onDragEnd?.()}
+      onDragStart={(e) => { startKanbanCardDrag(e, setDragging); onDragStart?.(id); }}
+      onDragEnd={(e) => { endKanbanCardDrag(e, setDragging); onDragEnd?.(); }}
       onClick={() => { if (!menuOpen) onClick?.(id); }}
-      className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
+      className={`p-3.5 rounded-lg cursor-pointer polish-kanban-card${dragging ? " is-dragging" : ""}`}
       style={{
         background: terminalCardBackground(isTerminal),
         border: "1px solid var(--border)",
-        boxShadow: shadowBase,
         position: "relative",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = shadowHover;
-        e.currentTarget.style.borderColor = "var(--border-strong)";
-        e.currentTarget.style.transform = "translateY(-1px)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = shadowBase;
-        e.currentTarget.style.borderColor = "var(--border)";
-        e.currentTarget.style.transform = "translateY(0)";
       }}
     >
       {/* Selo de etapa terminal (esquerda) + aging badge/menu (direita) */}
