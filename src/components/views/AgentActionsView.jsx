@@ -312,7 +312,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
 
       {/* Resolved state label */}
       {action.status !== "pending" && (
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
           <span
             className="text-[10px] font-bold px-2 py-0.5 rounded-full"
             style={{
@@ -322,6 +322,27 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
           >
             {action.status === "approved" ? "Aprovado" : action.status === "rejected" ? "Rejeitado" : "Ignorado"}
           </span>
+          {/* Peça da esteira já aprovada: se a entrega foi apagada, dá pra
+              republicar sem voltar o status pra pending. O gateway só cria
+              de novo quando não acha deliverable com o mesmo agent_action_id. */}
+          {action.status === "approved" && action.action_type === "sugestao_peca_conteudo" && (
+            <button
+              type="button"
+              onClick={() => onResolve(action.id, "approved")}
+              disabled={resolving === action.id}
+              title="Cria de novo a entrega de marketing se ela não existir (ex.: foi apagada)."
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-xl border transition-opacity"
+              style={{
+                borderColor: "var(--border-strong)",
+                color: "var(--text)",
+                background: "var(--surface)",
+                opacity: resolving === action.id ? 0.6 : 1,
+              }}
+            >
+              <RefreshCw size={11} className={resolving === action.id ? "animate-spin" : undefined} />
+              {resolving === action.id ? "Gerando…" : "Gerar entrega de novo"}
+            </button>
+          )}
         </div>
       )}
     </div>

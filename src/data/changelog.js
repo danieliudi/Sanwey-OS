@@ -638,6 +638,11 @@ export const CHANGELOG = [
         text: "Nas Entregas, SLA e Brief deixam de travar a movimentação em Encaminhado à Agência — a Beehave combina prazo/brief e preenche depois. Observações de triagem continuam visíveis em Em Produção. No Histórico, cada passagem mostra o que estava preenchido naquela etapa naquele momento (idas e voltas ficam com detalhes diferentes).",
         roles: ["admin", "marketing", "gerente_marketing", "agencia", "diretoria", "rh", "gerente_rh"],
       },
+      {
+        kind: "correcao",
+        text: "Quando a esteira aprova um pacote de conteúdo, a entrega de marketing chega pra agência com instruções (peças a produzir), imagens anexadas quando a URL é pública, e o responsável preenchido com quem aprovou — antes ia só título e descrição, sem dono no card. Se a entrega for apagada, em Aprovados aparece \"Gerar entrega de novo\".",
+        roles: ["admin", "marketing", "gerente_marketing", "agencia", "diretoria"],
+      },
     ],
   },
   {

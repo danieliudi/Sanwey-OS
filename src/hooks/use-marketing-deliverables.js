@@ -165,7 +165,16 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId, enab
 
   const createDeliverable = useCallback(async (deliverable) => {
     if (!isSupabaseConfigured || !canManage) return null;
-    const row = deliverableToRow(deliverable, { created_by: userId });
+    // Responsáveis vazios na criação deixavam a agência sem dono no card.
+    // Sempre quem criou; se o chamador já mandou assigneeIds, respeita.
+    const assigneeIds = Array.isArray(deliverable.assigneeIds) && deliverable.assigneeIds.length > 0
+      ? deliverable.assigneeIds
+      : (userId ? [userId] : []);
+    const row = deliverableToRow({
+      ...deliverable,
+      assigneeIds,
+      assignee: deliverable.assignee ?? assigneeIds[0] ?? null,
+    }, { created_by: userId });
     const { data, error: err } = await supabase
       .from(TABLE)
       .insert(row)

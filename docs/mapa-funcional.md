@@ -35,9 +35,9 @@ Todos conferidos no código em 03/09/2026:
 | …telas de verdade | **47** |
 | Rotas **públicas**, sem login (`src/main.jsx`) | **9** |
 | Componentes de view (`src/components/views/`) | **60** |
-| Hooks (`src/hooks/`) | **126** |
-| …que falam com o banco | **101** |
-| Tabelas referenciadas pelo front | **114** |
+| Hooks (`src/hooks/`) | **127** |
+| …que falam com o banco | **102** |
+| Tabelas referenciadas pelo front | **115** |
 | Funções RPC chamadas pelo front | **55** |
 | Edge functions **ativas em produção** | **30** |
 | …com fonte versionada no repo | **30** |
@@ -295,7 +295,7 @@ tabela deny-all deliberada). `rh_pesquisa_respostas` também é deny-all: só
 
 | Function | Quem chama | Precisa de |
 |---|---|---|
-| `agent-gateway` | agentes externos da esteira, por chave própria | 6 segredos `AGENT_GATEWAY_KEY_<AGENTE>` (CADENCIA, CROSS, ESTEIRA, SCOUT, SDR_Q, SENTINELA) + `RESEND_API_KEY` |
+| `agent-gateway` | agentes externos da esteira, por chave própria | 6 segredos `AGENT_GATEWAY_KEY_<AGENTE>` (CADENCIA, CROSS, ESTEIRA, SCOUT, SDR_Q, SENTINELA) + `RESEND_API_KEY`; opcionais ao publicar peça da esteira em Entregas: `ESTEIRA_DEFAULT_ASSIGNEE_USER_ID` ou `ESTEIRA_DEFAULT_ASSIGNEE_EMAIL` (fallback de responsável quando a aprovação não trouxe pessoa — default `iudiyano@gmail.com`) |
 | `agent-runner` | **pg_cron diário** (`agent_runner_daily_cron`, via `net.http_post`) | `AGENT_RUNNER_ENABLED` + `AI_ORG_*` |
 | `personal-tasks-agent` | API do Meu To-do, autenticada por **hash** de chave (`personal_tasks_api_keys`) | service role |
 | `sanwey-crm-mcp` | claude.ai como Custom Connector (MCP) | `SANWEY_MCP_TOKEN` |
