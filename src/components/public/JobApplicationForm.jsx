@@ -4,12 +4,9 @@ import { Loader2, CheckCircle2, AlertCircle, Upload, FileText } from "lucide-rea
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
 import { RH_OPERATIONAL_DEPARTMENTS } from "../../constants/rh-config";
+import { validarCurriculo, extensaoDe, MIME_POR_EXTENSAO } from "../../utils/curriculo-upload";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
+
 const ACCENT = "#CC2936";
 const UNIDADES = [
   { id: "", label: "Não tenho preferência" },
@@ -73,8 +70,12 @@ export default function JobApplicationForm() {
   const handleFile = (f) => {
     setFileError(null);
     if (!f) { setFile(null); return; }
-    if (!ALLOWED_TYPES.includes(f.type)) { setFileError("Envie um arquivo PDF ou DOCX."); return; }
-    if (f.size > MAX_FILE_SIZE) { setFileError("O arquivo deve ter no máximo 10MB."); return; }
+    // Pela EXTENSÃO, nunca por `file.type`: navegador que devolve tipo vazio
+    // fazia a tela recusar um .pdf perfeitamente válido, e o candidato ficava
+    // sem conseguir anexar nada. Mesma correção que o Banco de Talentos já
+    // tinha — ver utils/curriculo-upload.js.
+    const r = validarCurriculo(f);
+    if (!r.ok) { setFileError(r.erro); return; }
     setFile(f);
   };
 
@@ -103,7 +104,7 @@ export default function JobApplicationForm() {
     setSubmitting(true);
     setError(null);
     try {
-      const ext = file ? (file.name.split(".").pop() || "pdf").toLowerCase() : null;
+      const ext = file ? extensaoDe(file.name) : null;
       // MD-03(b) da auditoria de segurança (20/08/2026): a RPC devolvia o
       // UUID cru do candidato (reaproveitável pra sempre por quem soubesse
       // o e-mail de outra pessoa); agora devolve { candidate_id,
@@ -126,8 +127,31 @@ export default function JobApplicationForm() {
       if (file && resp.resume_object_path) {
         const { error: uploadErr } = await supabase.storage
           .from("rh-curriculos")
-          .upload(resp.resume_object_path, file, { contentType: file.type, upsert: true });
-        if (uploadErr) throw uploadErr;
+          // contentType pela EXTENSÃO, nunca `file.type` cru: o bucket só
+          // aceita os dois MIME de utils/curriculo-upload.js, e navegador que
+          // manda tipo vazio fazia o Storage recusar o arquivo.
+          .upload(resp.resume_object_path, file, { contentType: MIME_POR_EXTENSAO[ext] || "application/pdf", upsert: true });
+        if (uploadErr) {
+          // O candidato JÁ foi gravado neste ponto (a RPC roda antes, pra
+          // devolver o caminho de upload de uso único). Dizer "não foi
+          // possível enviar sua candidatura" fazia a pessoa reenviar, criando
+          // um token novo a cada tentativa — enquanto o RH via um candidato
+          // sem currículo e sem nenhuma pista do motivo. Foi assim que 11
+          // tokens foram gerados e nenhum consumido entre 10 e 15/09/2026.
+          //
+          // NÃO passa por friendlyError de propósito: ele reconhece
+          // "permission denied"/"row-level security" e devolveria a frase
+          // genérica, apagando o que mais importa aqui — que os dados FORAM
+          // salvos. O detalhe técnico vai pro console, que é onde se
+          // diagnostica, e não pra tela de um formulário público.
+          try { console.error("[erro] upload do currículo", uploadErr); } catch { /* noop */ }
+          setError(
+            "Seus dados foram registrados, mas o currículo não subiu. " +
+            "Envie o arquivo para rh@sanwey.com.br que anexamos na sua candidatura."
+          );
+          setSubmitting(false);
+          return;
+        }
       }
 
       // Confirmação por e-mail — fire-and-forget: não bloqueia a tela de
