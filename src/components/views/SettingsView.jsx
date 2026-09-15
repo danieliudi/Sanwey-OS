@@ -18,6 +18,7 @@ import { Button } from "../ui/Button";
 import { Tabs } from "../shared/Tabs";
 import { useConfigComercial } from "../../hooks/use-config-comercial";
 import { ErroDeLeitura } from "../shared/ErroDeLeitura";
+import { CAMPOS_FATOS, FATOS_PADRAO, fatosDivergentes } from "../../constants/fatos-canonicos";
 import { ModuleStatesPanel } from "../settings/ModuleStatesPanel";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useChatStickers } from "../../hooks/use-chat-stickers";
@@ -52,6 +53,160 @@ function isChatManagerUser(user) {
 //
 // Por frente de propósito: o que é alto volume pra Resibag não é o mesmo que
 // pra Sanbag.
+// ── Fatos da marca na proposta (Classe 1) ────────────────────────────────
+//
+// O Daniel escolheu em 15/09/2026 deixar isto editável na tela, entre as três
+// opções do mockup. A escolha tem um risco conhecido e ele está endereçado
+// aqui, não escondido: a Classe 1 existe pra impedir que a proposta
+// contradiga a base de marca, e editável alguém pode desalinhar as duas.
+//
+// Duas proteções, e as duas são visuais de propósito — trava dura faria o
+// vendedor voltar pro Word:
+//   1. Campo diferente do padrão versionado no repositório aparece marcado
+//      como "editado", com o valor original ao lado.
+//   2. Data e autor da última alteração ficam gravados e à vista.
+//
+// Quem escreve é só admin/gerente — mesmo predicado da policy da tabela, pra
+// não oferecer um botão que a RLS vai recusar.
+function FatosDaMarcaSection({ currentUser }) {
+  const { fatosDe, metaFatosDe, salvarFatos, loading, error } = useConfigComercial();
+  // Abre na Resibag: é a frente de onde o gerador nasceu, e COMPANY_IDS começa
+  // por "industria" — o gerente abria em Configurações e via a frente errada.
+  const [frente, setFrente] = useState(() => (COMPANY_IDS.includes("resibag") ? "resibag" : COMPANY_IDS[0]));
+  const [rascunho, setRascunho] = useState({});
+  const [salvando, setSalvando] = useState(false);
+  const [aviso, setAviso] = useState(null);
+
+  const frentes = COMPANY_IDS.filter(id => id !== "all");
+  const atuais = fatosDe(frente);
+  const meta = metaFatosDe(frente);
+  const divergentes = fatosDivergentes(frente, meta.configurados);
+  const padrao = FATOS_PADRAO[frente] || {};
+
+  const valor = (chave) => (rascunho[chave] !== undefined ? rascunho[chave] : (atuais[chave] || ""));
+  const sujo = Object.keys(rascunho).length > 0;
+
+  const salvar = async () => {
+    setSalvando(true);
+    // Grava SÓ o que foi tocado, mesclado com o que já estava configurado.
+    //
+    // Gravar `valor(chave)` de todos os 11 campos (que cai em `atuais`, já
+    // mesclado com o padrão) congelava o objeto inteiro: a partir da primeira
+    // edição, `configurados` teria as 11 chaves e o padrão do repositório
+    // viraria decorativo pra sempre. No dia em que a base de marca mudasse e
+    // alguém atualizasse FATOS_PADRAO, a plataforma continuaria afirmando a
+    // versão antiga — que é EXATAMENTE o modo de falha da tagline
+    // "resíduos industriais" que esta tela existe pra eliminar. Seria trocar
+    // cópia envelhecida no HTML por cópia envelhecida no jsonb.
+    const completo = { ...(meta.configurados || {}), ...rascunho };
+    const r = await salvarFatos(frente, completo, currentUser?.id);
+    setSalvando(false);
+    if (r.ok) { setRascunho({}); setAviso({ tipo: "ok", texto: "Fatos salvos. Valem para toda proposta desta frente." }); }
+    else setAviso({ tipo: "erro", texto: r.motivo });
+  };
+
+  // Volta pra "nunca editado" gravando objeto VAZIO, e não os valores do
+  // padrão campo a campo: gravar os valores manteria as chaves configuradas e
+  // o problema acima voltava pela outra porta.
+  const restaurar = async () => {
+    setSalvando(true);
+    const r = await salvarFatos(frente, {}, currentUser?.id);
+    setSalvando(false);
+    if (r.ok) { setRascunho({}); setAviso({ tipo: "ok", texto: "Voltou aos valores do repositório." }); }
+    else setAviso({ tipo: "erro", texto: r.motivo });
+  };
+
+  return (
+    <Section
+      title="Fatos da marca na proposta"
+      description="A Classe 1 do gerador de proposta: razão social, CNPJ, contatos, homologação e assinatura. O vendedor não digita nada disso — ele lê daqui. Mudar aqui muda em toda proposta futura desta frente; as já geradas guardam o que valia no dia."
+    >
+      {error && <div className="mb-3"><ErroDeLeitura oQue="os fatos da marca" detalhe={error?.message} /></div>}
+
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        {frentes.map(id => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => { setFrente(id); setRascunho({}); setAviso(null); }}
+            className="rounded-lg px-3 py-1.5 text-xs font-bold"
+            style={{
+              background: frente === id ? "var(--text)" : "var(--surface)",
+              color: frente === id ? "var(--surface)" : "var(--text-dim)",
+              border: `1px solid ${frente === id ? "var(--text)" : "var(--border)"}`,
+              cursor: "pointer",
+            }}
+          >
+            {COMPANIES[id]?.name || id}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        {CAMPOS_FATOS.map(c => {
+          const mudou = divergentes.includes(c.chave) && rascunho[c.chave] === undefined;
+          return (
+            <div key={c.chave}>
+              <label className="text-[11px] font-semibold flex items-center gap-2 flex-wrap" style={{ color: "var(--text-dim)" }}>
+                {c.rotulo}
+                {mudou && (
+                  <span
+                    title={`No repositório: ${padrao[c.chave] || "(vazio)"}`}
+                    style={{ color: "var(--amber)", fontWeight: 700, fontSize: 10 }}
+                  >
+                    editado — no repositório: {padrao[c.chave] || "(vazio)"}
+                  </span>
+                )}
+              </label>
+              <input
+                type="text"
+                disabled={loading}
+                value={valor(c.chave)}
+                onChange={e => setRascunho(d => ({ ...d, [c.chave]: e.target.value }))}
+                className="w-full rounded-lg border px-3 py-2 mt-1"
+                style={{ background: "var(--surface-alt)", borderColor: mudou ? "var(--amber)" : "var(--border)", color: "var(--text)", fontSize: 16 }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-2 mt-4 flex-wrap">
+        {sujo && (
+          <button
+            type="button"
+            onClick={salvar}
+            disabled={salvando}
+            className="rounded-lg px-3 py-2 text-xs font-bold"
+            style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer", opacity: salvando ? 0.6 : 1 }}
+          >
+            {salvando ? "Salvando…" : "Salvar fatos"}
+          </button>
+        )}
+        {divergentes.length > 0 && (
+          <button
+            type="button"
+            onClick={restaurar}
+            className="rounded-lg px-3 py-2 text-xs font-semibold"
+            style={{ background: "var(--surface)", color: "var(--text-dim)", border: "1px solid var(--border)", cursor: "pointer" }}
+          >
+            Voltar aos valores do repositório
+          </button>
+        )}
+      </div>
+
+      <p className="text-xs mt-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
+        {meta.atualizadoEm
+          ? <>Última alteração em {formatDateBR(meta.atualizadoEm)}.{divergentes.length > 0 && <> <b style={{ color: "var(--amber)" }}>{divergentes.length} campo(s) diferente(s) do repositório</b> — vale conferir contra a base de marca.</>}</>
+          : "Nunca editado — valendo os valores versionados no repositório."}
+      </p>
+      {aviso && (
+        <p className="text-xs mt-2" style={{ color: aviso.tipo === "erro" ? "var(--danger)" : "var(--text-dim)" }}>{aviso.texto}</p>
+      )}
+    </Section>
+  );
+}
+
 function ConfigComercialSection({ currentUser }) {
   const { limiarDe, salvarLimiar, loading, error } = useConfigComercial();
   const [rascunho, setRascunho] = useState({});
@@ -1435,7 +1590,10 @@ export function SettingsView({
                 <Tabs tabs={geralTabs} active={tab} onChange={setGeralTab} />
 
                 {tab === "comercial" && isManager && (
-                  <ConfigComercialSection currentUser={currentUser} />
+                  <div className="space-y-4">
+                    <ConfigComercialSection currentUser={currentUser} />
+                    <FatosDaMarcaSection currentUser={currentUser} />
+                  </div>
                 )}
 
                 {tab === "empresas" && isManager && (

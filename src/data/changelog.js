@@ -38,6 +38,31 @@
 
 export const CHANGELOG = [
   {
+    version: "5.18.0",
+    items: [
+      {
+        kind: "novo",
+        text: "A aba \"PDF\" do negócio virou \"Proposta\": um gerador de proposta de RFP que já vem preenchido com o que o negócio sabe — cliente, CNPJ, comprador, produto, quantidade e preço deixam de ser redigitados. Sai em dois documentos: ficha técnica com matriz de conformidade, e proposta comercial.",
+        roles: ["vendedor", "gerente", "admin", "diretoria"],
+      },
+      {
+        kind: "novo",
+        text: "Cada \"Gerar\" cria uma VERSÃO, com data e autor. Na revisão dá para saber qual proposta o cliente recebeu — antes não dava, porque nenhuma ficava registrada.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Oito afirmações (NCM, capacidade de carga, empilhamento, garantia, lote mínimo, pagamento, endereço e registro INMETRO) só entram na proposta com valor E com quem confirmou. Sem isso, a peça imprime marcada RASCUNHO em vez de sair afirmando o que ninguém checou.",
+        roles: ["vendedor", "gerente", "admin"],
+      },
+      {
+        kind: "novo",
+        text: "Os dados da marca (razão social, CNPJ, contatos, homologação, assinatura) passaram a ficar em Configurações → Comercial, editáveis por gerente e admin. A tela avisa quando um campo está diferente do valor original e mostra quando foi alterado pela última vez.",
+        roles: ["gerente", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.17.0",
     items: [
       {

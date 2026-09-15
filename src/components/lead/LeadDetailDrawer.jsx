@@ -32,7 +32,7 @@ import { useLeadSamples } from "../../hooks/use-lead-samples";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { Modal } from "../ui/Modal";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
-import { ProposalPanel } from "./ProposalPanel";
+import { PropostaPanel } from "./PropostaPanel";
 import { AtaVozPanel } from "./AtaVozPanel";
 import { VisitaChecklistPanel } from "./VisitaChecklistPanel";
 import { dividirRespostas } from "../../utils/checklist-visita";
@@ -104,6 +104,12 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
   // o que o vendedor tinha acabado de digitar na frente do cliente.
   const [visitaMontada, setVisitaMontada] = useState(false);
   useEffect(() => { if (sideTab === "visita") setVisitaMontada(true); }, [sideTab]);
+  // Mesmo motivo da aba Visita: montar sempre fazia TODO negócio aberto pagar
+  // as consultas do painel de proposta (relatórios de ESG da frente inteira,
+  // propostas do negócio, configuração comercial) e abrir um canal Realtime
+  // novo a cada troca de card, mesmo que ninguém encostasse na aba.
+  const [propostaMontada, setPropostaMontada] = useState(false);
+  useEffect(() => { if (sideTab === "pdf") setPropostaMontada(true); }, [sideTab]);
 
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
@@ -1130,9 +1136,15 @@ export function LeadDetailDrawer({ lead, campaigns = [], onClose, onStageMoved, 
             {/* Mantido montado (display:none) quando a aba não está ativa pra
                 não perder o rascunho da proposta ao trocar de aba; key={lead.id}
                 reseta ao navegar pra outro lead. Achado da 2ª auditoria. */}
-            <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
-              <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} onAddActivity={onAddActivity} />
-            </div>
+            {/* A aba "PDF" (ProposalPanel) virou "Proposta" em 15/09/2026: o
+                gerador de RFP toma o lugar dela. A antiga tinha ZERO propostas
+                criadas em produção nas duas tabelas — não havia nada a migrar,
+                e conviver com as duas daria na mesma coisa de novo. */}
+            {propostaMontada && (
+              <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
+                <PropostaPanel key={lead.id} lead={lead} currentUser={currentUser} onAddActivity={onAddActivity} />
+              </div>
+            )}
         </>
       )}
       center={(
@@ -1343,7 +1355,7 @@ const SIDE_TABS = [
   { id: "ia",           label: "IA",          icon: Sparkles },
   { id: "anexos",       label: "Anexos",      icon: Paperclip },
   { id: "checklists",   label: "Checklists",  icon: ListChecks },
-  { id: "pdf",          label: "PDF",         icon: FileDown },
+  { id: "pdf",          label: "Proposta",    icon: FileDown },
 ];
 
 function SideTabs({ activeTab, onChange }) {
