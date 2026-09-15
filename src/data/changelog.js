@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "5.19.1",
+    items: [
+      {
+        kind: "correcao",
+        text: "A dica de tela parou de reaparecer a cada atualização para quem já usa a plataforma. Ela passa a ser para quem está chegando; você continua com o guia inteiro a um clique, no \"?\" ao lado do título da tela — quantas vezes quiser.",
+        toast: true,
+      },
+    ],
+  },
+  {
     version: "5.19.0",
     items: [
       {
