@@ -38,6 +38,21 @@
 
 export const CHANGELOG = [
   {
+    version: "5.16.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O candidato pode enviar uma FOTO do currículo, não só PDF ou DOCX. No celular, o campo passa a oferecer a câmera junto da galeria — quem tem o currículo só em papel tira a foto ali mesmo. Vale no formulário de vagas e no Banco de Talentos.",
+        roles: ["rh", "gerente_rh", "admin", "diretoria"],
+      },
+      {
+        kind: "novo",
+        text: "A triagem por IA passou a ler currículo fotografado, e esses candidatos entram na análise como qualquer outro. Quando algum trecho da foto estiver ilegível, a IA diz isso na justificativa em vez de supor.",
+        roles: ["rh", "gerente_rh", "admin"],
+      },
+    ],
+  },
+  {
     version: "5.15.2",
     items: [
       {

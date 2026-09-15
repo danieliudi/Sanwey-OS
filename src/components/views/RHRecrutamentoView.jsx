@@ -90,6 +90,7 @@ import { FilterBar } from "../shared/FilterBar";
 import { PageTitle } from "../shared/PageTitle";
 import { semAcento } from "../../utils/text-search";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
+import { ehFoto, MIME_POR_EXTENSAO } from "../../utils/curriculo-upload";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -209,7 +210,11 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
   // R9: busca livre sobre todo o talent pool (não amarrada a uma vaga) — a
   // vaga só é necessária pra "Adicionar à vaga" depois do resultado.
   const analisaveisCandidatos = useMemo(
-    () => talentPoolFiltrado.filter(c => c.resume_ext === "pdf" || c.resume_ext === "docx"),
+    // Foto conta como analisável: desde 15/09/2026 o candidato pode fotografar
+    // o currículo, e o modelo lê imagem. Deixar de fora significaria o
+    // candidato de produção nunca aparecer na triagem — justamente quem o
+    // recurso foi criado pra alcançar.
+    () => talentPoolFiltrado.filter(c => c.resume_ext === "pdf" || c.resume_ext === "docx" || ehFoto(c.resume_ext)),
     [talentPoolFiltrado]
   );
   const semCurriculo = useMemo(() => talentPoolFiltrado.filter(c => !c.resume_ext).length, [talentPoolFiltrado]);
@@ -248,14 +253,26 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
           .from("rh-curriculos")
           .download(cand.resume_object_path);
         if (dlErr || !blob) throw new Error("Currículo indisponível");
-        const userContent = cand.resume_ext === "pdf"
-          ? [
-              { type: "document", source: { type: "base64", media_type: "application/pdf", data: await blobToBase64(blob) } },
-              { type: "text", text: `Vaga: ${necessidade}` },
-            ]
-          : [
-              { type: "text", text: `Vaga: ${necessidade}\n\nCurrículo (texto extraído de DOCX):\n${await extractDocxText(blob)}` },
-            ];
+        // Três caminhos, não dois. Antes era "pdf ou senão DOCX", e uma foto
+        // caía no ramo do DOCX — `extractDocxText` num JPEG devolve lixo ou
+        // estoura, e o candidato apareceria como falha de análise sem ninguém
+        // entender por quê.
+        let userContent;
+        if (cand.resume_ext === "pdf") {
+          userContent = [
+            { type: "document", source: { type: "base64", media_type: "application/pdf", data: await blobToBase64(blob) } },
+            { type: "text", text: `Vaga: ${necessidade}` },
+          ];
+        } else if (ehFoto(cand.resume_ext)) {
+          userContent = [
+            { type: "image", source: { type: "base64", media_type: MIME_POR_EXTENSAO[cand.resume_ext] || "image/jpeg", data: await blobToBase64(blob) } },
+            { type: "text", text: `Vaga: ${necessidade}\n\nO currículo acima é uma FOTO de um documento em papel. Se algum trecho estiver ilegível, diga isso na justificativa em vez de supor.` },
+          ];
+        } else {
+          userContent = [
+            { type: "text", text: `Vaga: ${necessidade}\n\nCurrículo (texto extraído de DOCX):\n${await extractDocxText(blob)}` },
+          ];
+        }
         const text = await complete([
           { role: "system", content: TRIAGEM_SYSTEM_PROMPT },
           { role: "user", content: userContent },
@@ -341,7 +358,7 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
               </div>
 
               <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 12 }}>
-                {analisaveisCandidatos.length} candidato{analisaveisCandidatos.length !== 1 ? "s" : ""} com currículo (PDF ou DOCX) no talent pool
+                {analisaveisCandidatos.length} candidato{analisaveisCandidatos.length !== 1 ? "s" : ""} com currículo (PDF, DOCX ou foto) no talent pool
                 {semCurriculo > 0 && ` · ${semCurriculo} sem currículo`}
               </div>
 
