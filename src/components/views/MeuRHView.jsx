@@ -466,6 +466,9 @@ export function MeuRHView({ currentUser, notifyMentions, notifications, markNoti
           return (
             <button
               key={t.id}
+              // Barra de abas própria (não usa o `Tabs` compartilhado), então
+              // a âncora vem à mão — mesmo formato que `Tabs` gera sozinho.
+              data-tour={`meu-rh-aba-${t.id}`}
               onClick={() => setTab(t.id)}
               className="flex items-center gap-1.5"
               style={{

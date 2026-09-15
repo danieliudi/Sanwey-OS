@@ -24,6 +24,15 @@
 // existir (decisão registrada no mockup), mas isso não substitui a limpeza:
 // entrada morta aqui é dívida, não é inofensiva só porque não quebra nada.
 export const FEATURE_SPOTLIGHTS = [
+  // 5.20.0 — o botão "Me leva lá" dentro da dica de tela. Decisão de PULAR o
+  // spotlight, registrada aqui como manda a regra 12. O motivo é o mesmo das
+  // entradas de 5.9, 5.10, 5.11, 5.14 e 5.15, e desta vez é circular: o alvo
+  // do aviso seria um botão DENTRO do card de dica, e esse card — desde a
+  // 5.19.1 — só aparece sozinho pra usuário novo. Pra quem já usa, ele só
+  // existe depois de clicar no "?", então o alvo estaria ausente na chegada à
+  // rota e se auto-marcaria como visto (FeatureSpotlight.jsx), morrendo sem
+  // nunca ter aparecido. Quem clica no "?" já está olhando o card e vê o
+  // botão sem precisar de seta. Changelog cobre.
   // 5.19.0 — tabela multi-modelo e imagens do Pitch. NÃO ganham entrada
   // própria: as duas moram DENTRO do painel de Proposta, e alvo que só
   // existe depois de abrir um card se auto-marca como visto

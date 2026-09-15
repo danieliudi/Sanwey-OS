@@ -334,6 +334,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
             active={filter}
             onChange={setFilter}
             iconOnlyMobile
+            tourPrefix="pendencias"
           />
 
           {filtered.length === 0 ? (

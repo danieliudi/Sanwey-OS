@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { AppToast } from "./AppToast";
 
 // Painel de chegada numa tela — 1 frase do que a tela é, 1 primeira ação, e o
@@ -20,6 +20,30 @@ import { AppToast } from "./AppToast";
 // cada descarte estão no mockup. Não é a única resposta possível — é a
 // escolhida, registrada pra não ser redecidida do zero na próxima sessão.
 export function ScreenTipCard({ tip, titulo, onDismiss, onVerGuia, onComecar }) {
+  const alvoDesejado = typeof tip?.comece === "object" ? tip.comece.alvo : null;
+  // O botão só aparece se o elemento EXISTIR na tela agora. Sem esta checagem
+  // ele apareceria sempre que o guia declarasse um alvo, e clicar não faria
+  // nada quando o elemento não estivesse montado (lista vazia, aba fechada,
+  // cargo sem acesso àquele bloco) — `irParaAlvoDaDica` sai calado nesse caso.
+  // Botão morto é pior que botão ausente: ensina a pessoa a não confiar nele.
+  //
+  // Dois requestAnimationFrame em sequência, e não um só: é o mesmo achado de
+  // `use-onboarding-tour.js` — um rAF pode disparar ainda dentro do ciclo de
+  // commit em alguns navegadores, e a consulta rodaria contra o DOM de ANTES
+  // da tela terminar de montar. Não reimplementar diferente.
+  const [alvoPresente, setAlvoPresente] = useState(false);
+  useEffect(() => {
+    setAlvoPresente(false);
+    if (!alvoDesejado) return undefined;
+    let vivo = true, raf2 = null;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (vivo) setAlvoPresente(Boolean(document.querySelector(alvoDesejado)));
+      });
+    });
+    return () => { vivo = false; cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2); };
+  }, [alvoDesejado]);
+
   if (!tip?.resumo) return null;
 
   const passos = tip.steps?.length || 0;
@@ -27,7 +51,7 @@ export function ScreenTipCard({ tip, titulo, onDismiss, onVerGuia, onComecar }) 
   // `comece` aceita string (só texto) ou { texto, alvo } — quando tem `alvo`,
   // vira botão que leva até o elemento de verdade. Decidido com o Daniel
   // 14/09/2026 ("pode fazer"): ler onde clicar é pior que ser levado até lá.
-  const podeExecutar = typeof tip.comece === "object" && !!tip.comece?.alvo && !!onComecar;
+  const podeExecutar = Boolean(alvoDesejado) && alvoPresente && !!onComecar;
 
   return (
     <AppToast onDismiss={onDismiss}>

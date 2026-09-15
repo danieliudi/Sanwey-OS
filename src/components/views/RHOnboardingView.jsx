@@ -226,12 +226,17 @@ function statusConfig(status) {
   }
 }
 
-function TaskRow({ tarefa, users, canWrite, canToggle, onStatusChange, onDelete }) {
+function TaskRow({ tarefa, users, canWrite, canToggle, onStatusChange, onDelete, dataTour }) {
   const s = statusConfig(tarefa.status);
   const responsaveis = (tarefa.responsavel_ids || []).map(id => users?.find(u => u.id === id)).filter(Boolean);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
       <button
+        // Âncora do "Comece por" da dica de tela — vai na PRIMEIRA linha da
+        // lista, que é a que o guia manda marcar. Só na primeira: `alvo` é um
+        // seletor e `querySelector` pega a primeira ocorrência de qualquer
+        // jeito, mas marcar todas faria a âncora mentir sobre o que ela é.
+        data-tour={dataTour}
         onClick={() => canToggle && onStatusChange(tarefa.id, tarefa.status === "concluida" ? "pendente" : "concluida")}
         disabled={!canToggle}
         style={{
@@ -574,9 +579,10 @@ function OnboardingDrawer({
           <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 12 }}>Nenhuma tarefa ainda.</div>
         ) : (
           <div style={{ marginBottom: 12 }}>
-            {tarefas.map((t) => (
+            {tarefas.map((t, i) => (
               <TaskRow
                 key={t.id}
+                dataTour={i === 0 ? "onboarding-primeira-tarefa" : undefined}
                 tarefa={t}
                 users={users}
                 canWrite={canWrite}
@@ -1008,8 +1014,8 @@ function MeuChecklist({ colaborador, tarefas, users, onStatusChange }) {
         <EmptyState icon={ClipboardCheck} title="Nenhuma tarefa no seu checklist ainda" description="O RH ainda não montou seu checklist de integração — volte aqui em breve." />
       ) : (
         <div style={{ padding: "4px 16px 8px" }}>
-          {tarefas.map((t) => (
-            <TaskRow key={t.id} tarefa={t} users={users} canWrite={false} canToggle onStatusChange={onStatusChange} onDelete={() => {}} />
+          {tarefas.map((t, i) => (
+            <TaskRow key={t.id} dataTour={i === 0 ? "onboarding-primeira-tarefa" : undefined} tarefa={t} users={users} canWrite={false} canToggle onStatusChange={onStatusChange} onDelete={() => {}} />
           ))}
         </div>
       )}

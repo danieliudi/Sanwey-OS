@@ -16,7 +16,7 @@ const SIZES = {
 // antes da extração (4 abas + label "Perguntar à IA" não cabe em ~375px sem
 // isso). Opt-in: RHFornecedoresView/RHCargosView (2 abas, labels curtos)
 // nunca precisaram e continuam sem passar a prop.
-export function Tabs({ tabs, active, onChange, size = "md", iconOnlyMobile = false }) {
+export function Tabs({ tabs, active, onChange, size = "md", iconOnlyMobile = false, tourPrefix }) {
   const sz = SIZES[size] || SIZES.md;
   return (
     <div
@@ -36,6 +36,11 @@ export function Tabs({ tabs, active, onChange, size = "md", iconOnlyMobile = fal
         return (
           <button
             key={t.id}
+            // `tourPrefix` gera a âncora de cada aba aqui, uma vez, em vez de
+            // cada tela marcar as suas na mão. É o mesmo princípio do
+            // `NavItem` do Sidebar, que já repassa `data-tour` sozinho —
+            // regra 1 do CLAUDE.md: quem usa `Tabs` ganha âncora de graça.
+            {...(tourPrefix ? { "data-tour": `${tourPrefix}-aba-${t.id}` } : {})}
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange(t.id)}

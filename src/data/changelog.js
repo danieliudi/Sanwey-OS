@@ -38,6 +38,16 @@
 
 export const CHANGELOG = [
   {
+    version: "5.20.0",
+    items: [
+      {
+        kind: "novo",
+        text: "O \"Comece por\" da dica de tela virou um botão que leva você até o lugar certo, em vez de só descrever onde clicar. Começa em Pendências, Meu RH, Onboarding e Meu To-do — o botão só aparece quando aquilo existe mesmo na sua tela.",
+        roles: ["vendedor", "gerente", "admin", "rh", "gerente_rh", "marketing", "gerente_marketing"],
+      },
+    ],
+  },
+  {
     version: "5.19.1",
     items: [
       {

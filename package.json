@@ -1,7 +1,7 @@
 {
   "name": "grupo-sanwey",
   "private": true,
-  "version": "5.19.1",
+  "version": "5.20.0",
   "type": "module",
   "description": "Grupo Sanwey · Commercial Intelligence platform (multi-tenant)",
   "scripts": {
